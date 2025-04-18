@@ -1,0 +1,150 @@
+/* Wrapper to control layout */
+.view-classes-wrapper {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 2rem;
+  min-height: 100vh;
+  background-color: #ffffff;
+}
+
+/* Main card container */
+.view-classes-container {
+  max-width: 960px;
+  padding: 2rem;
+  background-color: #ffffff;
+  border-radius: 10px;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.05);
+  border: 1px solid #e0e0e0;
+  width: 100%;
+}
+
+/* Header */
+.view-classes-container h3 {
+  text-align: center;
+  margin-bottom: 1.5rem;
+  color: #0d47a1;
+  font-size: 1.6rem;
+  font-weight: 600;
+}
+
+/* Filter layout */
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.filters select {
+  padding: 0.65rem;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  min-width: 160px;
+  background-color: #fafafa;
+  font-size: 0.95rem;
+}
+
+.filters select:focus {
+  border-color: #0d47a1;
+  outline: none;
+  background-color: #fff;
+}
+
+/* Table */
+.class-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 1rem;
+}
+
+.class-table th,
+.class-table td {
+  border: 1px solid #ddd;
+  padding: 0.75rem;
+  text-align: center;
+  font-size: 0.95rem;
+}
+
+.class-table th {
+  background-color: #f0f4ff;
+  color: #0d47a1;
+  font-weight: 600;
+}
+
+.class-table tr:nth-child(even) {
+  background-color: #f9f9f9;
+}
+
+.class-table tr:hover {
+  background-color: #eef4ff;
+}
+
+/* Message */
+.message {
+  text-align: center;
+  margin-top: 1rem;
+  font-weight: 500;
+  color: #c62828;
+}
+
+/* Fix button color across browsers */
+.filters button {
+  background-color: #1565c0 !important;
+  color: white;
+  padding: 0.75rem 1.2rem;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background-color 0.3s ease;
+}
+
+.filters button:hover {
+  background-color: #0d47a1 !important;
+}
+
+/* Mobile View */
+@media (max-width: 600px) {
+  .view-classes-wrapper {
+    position: fixed; /* force full screen control */
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background-color: #ffffff; /* match dark background if needed */
+        display: flex;
+        justify-content: center;
+        align-items: left;
+        z-index: 5; /* ensure it sits above other layout elements */
+      }
+
+  .view-classes-container {
+    width: 100%;
+    max-width: 100%;
+    padding: 1.5rem;
+    margin: 0;
+    box-shadow: none;
+    border: none;
+  }
+
+  .view-classes-container h3 {
+    font-size: 1.4rem;
+    text-align: left;
+  }
+
+  .filters {
+    flex-direction: column;
+  }
+
+  .filters select,
+  .filters button {
+    width: 100%;
+  }
+
+  .class-table th,
+  .class-table td {
+    font-size: 0.9rem;
+    padding: 0.6rem;
+  }
+}

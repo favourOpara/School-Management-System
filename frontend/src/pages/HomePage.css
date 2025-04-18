@@ -1,0 +1,92 @@
+/* Reset and force full-height */
+html, body, #root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  font-family: Arial, sans-serif;
+}
+
+/* THIS is your full‑screen gradient background */
+.homepage-container {
+    display: flex;
+    flex-direction: column; /* ✅ Stack logo on top of card */
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    width: 100vw;
+    background: linear-gradient(
+      to right,
+      #67c947 0%,
+      #087ecb 100%
+    );
+  }
+  
+
+/* Centered login card */
+.login-card {
+  background: rgba(255, 255, 255, 0.1);
+  padding: 2rem;
+  border-radius: 10px;
+  width: 100%;
+  max-width: 360px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+  text-align: center;
+  color: #fff;
+}
+
+/* Heading */
+.login-card h2 {
+  margin-bottom: 1.5rem;
+  font-size: 1.5rem;
+}
+
+/* Form */
+.login-card form {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Inputs */
+.login-input {
+  padding: 0.75rem;
+  margin-bottom: 1rem;
+  border: none;
+  border-radius: 5px;
+  font-size: 1rem;
+}
+
+/* Button */
+.login-button {
+  padding: 0.75rem;
+  background: #000;
+  color: #fff;
+  border: none;
+  border-radius: 5px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+.login-button:hover {
+  background: #333;
+}
+
+/* Error */
+.login-error {
+  margin-top: 1rem;
+  color: #ffbbbb;
+  font-size: 0.9rem;
+}
+
+/* Mobile tweak */
+@media (max-width: 480px) {
+  .login-card {
+    margin: 0 1rem;
+    padding: 1.5rem;
+  }
+}
+/* Logo above the card */
+.logo-above {
+  width: 120px;
+  height: auto;
+  margin-bottom: 0.5rem;
+}

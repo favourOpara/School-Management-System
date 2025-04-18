@@ -1,0 +1,135 @@
+.class-form-wrapper {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: calc(100vh - 60px); /* Adjusts for header height */
+    padding: 1rem;
+  }
+  
+  /* Card Container */
+  .class-form-container {
+    max-width: 520px;
+    margin: 3rem auto;
+    padding: 2.5rem;
+    background-color: #ffffff;
+    border-radius: 10px;
+    box-shadow: 0 8px 20px rgba(13, 71, 161, 0.1);
+    border: 1px solid #e0e0e0;
+  }
+  
+  .class-form-container h3 {
+    text-align: center;
+    margin-bottom: 2rem;
+    color: #0d47a1;
+    font-size: 1.8rem;
+    font-weight: 600;
+  }
+  
+  /* Form Layout */
+  .class-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1.2rem;
+  }
+  
+  .class-form input,
+  .class-form textarea,
+  .class-form select {
+    padding: 0.85rem;
+    font-size: 1rem;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+    background-color: #fafafa;
+    transition: border 0.3s ease;
+  }
+  
+  .class-form input:focus,
+  .class-form textarea:focus,
+  .class-form select:focus {
+    border-color: #0d47a1;
+    background-color: #fff;
+  }
+  
+  .class-form textarea {
+    resize: vertical;
+    min-height: 80px;
+  }
+  
+  /* Button */
+  .class-form button {
+    padding: 0.9rem;
+    font-size: 1rem;
+    background-color: #1565c0;
+    color: white;
+    font-weight: 500;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+  }
+  
+  .class-form button:hover {
+    background-color: #0d47a1;
+  }
+  
+  /* Messages */
+  .form-message.success {
+    color: #2e7d32;
+    background-color: #e8f5e9;
+    padding: 0.7rem;
+    border-radius: 5px;
+    text-align: center;
+  }
+  
+  .form-message.error {
+    color: #c62828;
+    background-color: #ffebee;
+    padding: 0.7rem;
+    border-radius: 5px;
+    text-align: center;
+  }
+  
+  /* Mobile */
+  @media (max-width: 600px) {
+    .class-form-wrapper {
+        position: fixed; /* force full screen control */
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background-color: #ffffff; /* match dark background if needed */
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 5; /* ensure it sits above other layout elements */
+      }
+      
+    .class-form-container {
+      width: 100%;
+      max-width: 360px; /* fixed width for mobile card */
+      margin: 0 auto;
+      padding: 1.5rem;
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.05);
+    }
+  
+    .class-form-container h3 {
+      font-size: 1.5rem;
+      margin-bottom: 1.2rem;
+      text-align: center;
+    }
+  
+    .class-form input,
+    .class-form textarea,
+    .class-form select,
+    .class-form button {
+      font-size: 0.95rem;
+      padding: 0.75rem;
+    }
+  
+    .form-message.success,
+    .form-message.error {
+      font-size: 0.9rem;
+      padding: 0.6rem;
+    }
+  }
+  
