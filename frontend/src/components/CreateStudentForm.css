@@ -1,0 +1,140 @@
+/* Layout Wrapper for Admin Dashboard */
+.create-student-wrapper {
+  display: flex;
+  justify-content: flex-start;
+  align-items: flex-start;
+  padding: 1rem;
+  min-height: 100vh;
+  background-color: #ffffff;
+}
+
+/* Main Form Container */
+.create-student-container {
+  max-width: 900px;
+  padding: 2rem;
+  background-color: #ffffff;
+  border: 1px solid #e0e0e0;
+  border-radius: 10px;
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.05);
+  width: 100%;
+}
+
+/* Header */
+.create-student-container h3 {
+  text-align: center;
+  margin-bottom: 1.5rem;
+  color: #0d47a1;
+  font-size: 1.6rem;
+  font-weight: 600;
+}
+
+/* Form Layout - DESKTOP: Two-column row layout */
+.create-student-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.create-student-form input,
+.create-student-form select {
+  flex: 1 1 calc(50% - 1rem); /* two fields per row */
+  padding: 0.85rem;
+  font-size: 1rem;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  background-color: #fafafa;
+  transition: border 0.3s ease;
+}
+
+.create-student-form input:focus,
+.create-student-form select:focus {
+  border-color: #0d47a1;
+  background-color: #fff;
+}
+
+/* Full-width fields (for submit button and DOB if needed) */
+.create-student-form .full-width {
+  flex: 1 1 100%;
+}
+
+/* Submit Button */
+.create-student-form button {
+  padding: 0.9rem;
+  font-size: 1rem;
+  background-color: #1565c0;
+  color: white;
+  font-weight: 500;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.create-student-form button:hover {
+  background-color: #0d47a1;
+}
+
+/* Messages */
+.form-message.success {
+  color: #2e7d32;
+  background-color: #e8f5e9;
+  padding: 0.7rem;
+  border-radius: 5px;
+  text-align: center;
+}
+
+.form-message.error {
+  color: #c62828;
+  background-color: #ffebee;
+  padding: 0.7rem;
+  border-radius: 5px;
+  text-align: center;
+}
+
+/* Mobile View */
+@media (max-width: 600px) {
+  .create-student-wrapper {
+    position: fixed;
+    top: 30px;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: #ffffff;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    z-index: 5;
+  }
+
+  .create-student-container {
+    width: 100%;
+    max-width: 100%;
+    padding: 1.5rem;
+    margin: 0;
+    box-shadow: none;
+    border: none;
+  }
+
+  .create-student-container h3 {
+    font-size: 1.4rem;
+    text-align: left;
+  }
+
+  .create-student-form {
+    flex-direction: column;
+  }
+
+  .create-student-form input,
+  .create-student-form select,
+  .create-student-form button {
+    width: 100%;
+    font-size: 0.95rem;
+    padding: 0.75rem;
+  }
+
+  .form-message.success,
+  .form-message.error {
+    font-size: 0.9rem;
+    padding: 0.6rem;
+  }
+}

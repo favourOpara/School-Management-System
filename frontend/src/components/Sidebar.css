@@ -165,6 +165,8 @@ body {
 
   .sidebar-nav li {
     font-size: 20px;
+    font: Century Gothic;
+    font-weight: 500;
     color: #0e2d52; /* dark text */
   }
 

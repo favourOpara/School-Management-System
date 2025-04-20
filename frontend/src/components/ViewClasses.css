@@ -8,24 +8,26 @@
   background-color: #ffffff;
 }
 
-/* Main card container */
+/* Main container */
 .view-classes-container {
   max-width: 960px;
-  padding: 2rem;
-  background-color: #ffffff;
-  border-radius: 10px;
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.05);
-  border: 1px solid #e0e0e0;
   width: 100%;
+  background-color: #ffffff;
+  padding: 2rem;
+  border-radius: 10px;
+  border: 1px solid #e0e0e0;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.05);
 }
 
-/* Header */
-.view-classes-container h3 {
-  text-align: center;
+/* Section Titles */
+.section-header {
   margin-bottom: 1.5rem;
-  color: #0d47a1;
   font-size: 1.6rem;
   font-weight: 600;
+  color: #0d47a1;
+  text-align: center;
+  border-bottom: 1px solid #e0e0e0;
+  padding-bottom: 0.5rem;
 }
 
 /* Filter layout */
@@ -36,7 +38,8 @@
   margin-bottom: 1.5rem;
 }
 
-.filters select {
+.filters select,
+.filters input {
   padding: 0.65rem;
   border: 1px solid #ccc;
   border-radius: 5px;
@@ -45,52 +48,16 @@
   font-size: 0.95rem;
 }
 
-.filters select:focus {
+.filters select:focus,
+.filters input:focus {
   border-color: #0d47a1;
   outline: none;
   background-color: #fff;
 }
 
-/* Table */
-.class-table {
-  width: 100%;
-  border-collapse: collapse;
-  margin-top: 1rem;
-}
-
-.class-table th,
-.class-table td {
-  border: 1px solid #ddd;
-  padding: 0.75rem;
-  text-align: center;
-  font-size: 0.95rem;
-}
-
-.class-table th {
-  background-color: #f0f4ff;
-  color: #0d47a1;
-  font-weight: 600;
-}
-
-.class-table tr:nth-child(even) {
-  background-color: #f9f9f9;
-}
-
-.class-table tr:hover {
-  background-color: #eef4ff;
-}
-
-/* Message */
-.message {
-  text-align: center;
-  margin-top: 1rem;
-  font-weight: 500;
-  color: #c62828;
-}
-
-/* Fix button color across browsers */
+/* Buttons */
 .filters button {
-  background-color: #1565c0 !important;
+  background-color: #1565c0;
   color: white;
   padding: 0.75rem 1.2rem;
   border: none;
@@ -101,50 +68,83 @@
 }
 
 .filters button:hover {
-  background-color: #0d47a1 !important;
+  background-color: #0d47a1;
 }
 
-/* Mobile View */
-@media (max-width: 600px) {
-  .view-classes-wrapper {
-    position: fixed; /* force full screen control */
-        top: 0;
-        left: 0;
-        width: 100vw;
-        height: 100vh;
-        background-color: #ffffff; /* match dark background if needed */
-        display: flex;
-        justify-content: center;
-        align-items: left;
-        z-index: 5; /* ensure it sits above other layout elements */
-      }
+.delete-button {
+  background-color: #c62828;
+}
 
-  .view-classes-container {
-    width: 100%;
-    max-width: 100%;
-    padding: 1.5rem;
-    margin: 0;
-    box-shadow: none;
-    border: none;
-  }
+.delete-button:hover {
+  background-color: #b71c1c;
+}
 
-  .view-classes-container h3 {
-    font-size: 1.4rem;
-    text-align: left;
-  }
+/* Feedback messages */
+.form-message.success {
+  color: #2e7d32;
+  background-color: #e8f5e9;
+  padding: 0.7rem;
+  border-radius: 5px;
+  margin-top: 1rem;
+  text-align: center;
+}
 
+.form-message.error {
+  color: #c62828;
+  background-color: #ffebee;
+  padding: 0.7rem;
+  border-radius: 5px;
+  margin-top: 1rem;
+  text-align: center;
+}
+
+/* Tablet & Mobile Responsiveness */
+@media (max-width: 768px) {
   .filters {
     flex-direction: column;
   }
 
   .filters select,
+  .filters input,
   .filters button {
     width: 100%;
   }
+}
 
-  .class-table th,
-  .class-table td {
-    font-size: 0.9rem;
-    padding: 0.6rem;
+/* Mobile full-screen layout */
+@media (max-width: 600px) {
+  .view-classes-wrapper {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    overflow-y: scroll;
+    padding: 1rem;
+    background-color: #ffffff;
+    z-index: 5;
+  }
+
+  .view-classes-container {
+    padding: 1.5rem;
+    border: none;
+    box-shadow: none;
+    border-radius: 0;
+  }
+
+  .section-header {
+    font-size: 1.4rem;
+    text-align: left;
+  }
+
+  .filters {
+    gap: 0.8rem;
+  }
+
+  .filters select,
+  .filters input,
+  .filters button {
+    font-size: 0.95rem;
+    padding: 0.7rem;
   }
 }

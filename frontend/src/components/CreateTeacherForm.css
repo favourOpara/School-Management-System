@@ -1,15 +1,18 @@
-.class-form-wrapper {
+/* Wrapper for both desktop and mobile */
+.create-teacher-wrapper {
   display: flex;
   justify-content: center;
   align-items: center;
   min-height: calc(100vh - 60px);
   padding: 1rem;
+  background-color: #ffffff;
 }
 
-/* Card Container */
-.class-form-container {
+/* Card container */
+.create-teacher-container {
   max-width: 520px;
-  margin: 3rem auto;
+  width: 100%;
+  margin: 2rem auto;
   padding: 2.5rem;
   background-color: #ffffff;
   border-radius: 10px;
@@ -17,38 +20,7 @@
   border: 1px solid #e0e0e0;
 }
 
-/* Toggle Buttons */
-.toggle-buttons {
-  display: flex;
-  justify-content: center;
-  margin-bottom: 2rem;
-  gap: 1rem;
-}
-
-.toggle-buttons button {
-  flex: 1;
-  padding: 0.7rem 1rem;
-  font-size: 1rem;
-  border: 1px solid #0d47a1;
-  background-color: white;
-  color: #0d47a1;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
-
-.toggle-buttons button:hover {
-  background-color: #e3f2fd;
-}
-
-.toggle-buttons button.active {
-  background-color: #1565c0;
-  color: white;
-  font-weight: bold;
-}
-
-/* Headings */
-.class-form-container h3 {
+.create-teacher-container h3 {
   text-align: center;
   margin-bottom: 2rem;
   color: #0d47a1;
@@ -56,16 +28,14 @@
   font-weight: 600;
 }
 
-/* Form */
-.class-form {
+/* Form layout */
+.create-teacher-form {
   display: flex;
   flex-direction: column;
   gap: 1.2rem;
 }
 
-.class-form input,
-.class-form textarea,
-.class-form select {
+.create-teacher-form input {
   padding: 0.85rem;
   font-size: 1rem;
   border-radius: 6px;
@@ -74,20 +44,13 @@
   transition: border 0.3s ease;
 }
 
-.class-form input:focus,
-.class-form textarea:focus,
-.class-form select:focus {
+.create-teacher-form input:focus {
   border-color: #0d47a1;
   background-color: #fff;
 }
 
-.class-form textarea {
-  resize: vertical;
-  min-height: 80px;
-}
-
-/* Button */
-.class-form button {
+/* Submit Button */
+.create-teacher-form button {
   padding: 0.9rem;
   font-size: 1rem;
   background-color: #1565c0;
@@ -99,11 +62,11 @@
   transition: background-color 0.3s ease;
 }
 
-.class-form button:hover {
+.create-teacher-form button:hover {
   background-color: #0d47a1;
 }
 
-/* Messages */
+/* Feedback Message */
 .form-message.success {
   color: #2e7d32;
   background-color: #e8f5e9;
@@ -120,44 +83,32 @@
   text-align: center;
 }
 
-/* Mobile */
+/* Mobile responsiveness */
 @media (max-width: 600px) {
-  .class-form-wrapper {
+  .create-teacher-wrapper {
     position: fixed;
-    top: 30px;
+    top: 0;
     left: 0;
     width: 100vw;
     height: 100vh;
     background-color: #ffffff;
     display: flex;
     justify-content: center;
-    align-items: flex-start;
+    align-items: center;
     z-index: 5;
   }
 
-  .class-form-container {
-    width: 100%;
+  .create-teacher-container {
     max-width: 360px;
-    margin: 0 auto;
     padding: 1.5rem;
-    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.05);
   }
 
-  .toggle-buttons {
-    flex-direction: column;
-    gap: 0.7rem;
-  }
-
-  .class-form-container h3 {
+  .create-teacher-container h3 {
     font-size: 1.5rem;
-    margin-bottom: 1.2rem;
-    text-align: center;
   }
 
-  .class-form input,
-  .class-form textarea,
-  .class-form select,
-  .class-form button {
+  .create-teacher-form input,
+  .create-teacher-form button {
     font-size: 0.95rem;
     padding: 0.75rem;
   }

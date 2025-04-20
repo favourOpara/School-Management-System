@@ -1,9 +1,8 @@
-// Sidebar.jsx
 import React, { useState } from 'react';
 import {
   Menu, X,
   User, LayoutDashboard, Users, BookOpen,
-  LogOut, Settings, Shield, PlusCircle, Eye
+  LogOut, Settings, Shield, PlusCircle, Eye, Book
 } from 'lucide-react';
 import './Sidebar.css';
 
@@ -17,7 +16,6 @@ const getGreeting = () => {
 const Sidebar = ({ activeTab, setActiveTab }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [openDropdown, setOpenDropdown] = useState(null);
-  const greeting = getGreeting();
 
   const handleLogout = () => {
     localStorage.clear();
@@ -89,8 +87,11 @@ const Sidebar = ({ activeTab, setActiveTab }) => {
             </li>
             {openDropdown === 'users' && (
               <ul className="sidebar-submenu">
-                <li onClick={() => handleTabClick('create-user')}>
-                  <PlusCircle /><span>Create User</span>
+                <li onClick={() => handleTabClick('create-teacher')}>
+                  <PlusCircle /><span>Create Teacher</span>
+                </li>
+                <li onClick={() => handleTabClick('create-student')}>
+                  <PlusCircle /><span>Create Student</span>
                 </li>
                 <li onClick={() => handleTabClick('view-users')}>
                   <Eye /><span>View Users</span>
@@ -109,6 +110,22 @@ const Sidebar = ({ activeTab, setActiveTab }) => {
                 </li>
                 <li onClick={() => handleTabClick('view-classes')}>
                   <Eye /><span>View Classes</span>
+                </li>
+              </ul>
+            )}
+
+            {/* 🔥 NEW Manage Subjects Section */}
+            <li onClick={() => handleDropdownToggle('subjects')}>
+              <Book />
+              <span>Manage Subjects</span>
+            </li>
+            {openDropdown === 'subjects' && (
+              <ul className="sidebar-submenu">
+                <li onClick={() => handleTabClick('create-subject')}>
+                  <PlusCircle /><span>Create Subject</span>
+                </li>
+                <li onClick={() => handleTabClick('view-subjects')}>
+                  <Eye /><span>View Subjects</span>
                 </li>
               </ul>
             )}
