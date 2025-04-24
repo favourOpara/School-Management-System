@@ -30,7 +30,6 @@ const CreateTeacherForm = ({ onSuccess }) => {
       setFormData({
         username: '',
         password: '',
-        email: '',
         first_name: '',
         last_name: ''
       });
@@ -52,15 +51,47 @@ const CreateTeacherForm = ({ onSuccess }) => {
       <div className="create-teacher-container">
         <h3>Create Teacher</h3>
         <form onSubmit={handleSubmit} className="create-teacher-form">
-          <input type="text" name="first_name" placeholder="First Name" value={formData.first_name} onChange={handleChange} required />
-          <input type="text" name="last_name" placeholder="Last Name" value={formData.last_name} onChange={handleChange} required />
-          <input type="text" name="username" placeholder="Username" value={formData.username} onChange={handleChange} required />
-          <input type="password" name="password" placeholder="Password" value={formData.password} onChange={handleChange} required />
+          <input
+            type="text"
+            name="first_name"
+            placeholder="First Name"
+            value={formData.first_name}
+            onChange={handleChange}
+            required
+          />
+          <input
+            type="text"
+            name="last_name"
+            placeholder="Last Name"
+            value={formData.last_name}
+            onChange={handleChange}
+            required
+          />
+          <input
+            type="text"
+            name="username"
+            placeholder="Username"
+            value={formData.username}
+            onChange={handleChange}
+            required
+          />
+          <input
+            type="password"
+            name="password"
+            placeholder="Password"
+            value={formData.password}
+            onChange={handleChange}
+            required
+          />
 
           <button type="submit">Create Teacher</button>
         </form>
 
-        {message && <p className={`form-message ${message.includes('successfully') ? 'success' : 'error'}`}>{message}</p>}
+        {message && (
+          <p className={`form-message ${message.includes('successfully') ? 'success' : 'error'}`}>
+            {message}
+          </p>
+        )}
       </div>
     </div>
   );

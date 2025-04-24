@@ -2,16 +2,9 @@ import React, { useState } from 'react';
 import {
   Menu, X,
   User, LayoutDashboard, Users, BookOpen,
-  LogOut, Settings, Shield, PlusCircle, Eye, Book
+  LogOut, Settings, Shield, PlusCircle, Eye, Book, ClipboardList
 } from 'lucide-react';
 import './Sidebar.css';
-
-const getGreeting = () => {
-  const hour = new Date().getHours();
-  if (hour < 12) return 'Good morning';
-  if (hour < 17) return 'Good afternoon';
-  return 'Good evening';
-};
 
 const Sidebar = ({ activeTab, setActiveTab }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -41,7 +34,8 @@ const Sidebar = ({ activeTab, setActiveTab }) => {
       </div>
 
       <div className={`sidebar ${isOpen ? 'open' : ''}`}>
-        <button className="close-btn" onClick={() => setIsOpen(false)}>
+        {/* Only show close button in mobile */}
+        <button className="close-btn mobile-only" onClick={() => setIsOpen(false)}>
           <X />
         </button>
 
@@ -77,6 +71,9 @@ const Sidebar = ({ activeTab, setActiveTab }) => {
                 </li>
                 <li onClick={() => handleTabClick('reports')}>
                   <Eye /><span>Reports</span>
+                </li>
+                <li onClick={() => handleTabClick('activity-logs')}>
+                  <ClipboardList /><span>Activity Logs</span>
                 </li>
               </ul>
             )}
@@ -114,7 +111,6 @@ const Sidebar = ({ activeTab, setActiveTab }) => {
               </ul>
             )}
 
-            {/* 🔥 NEW Manage Subjects Section */}
             <li onClick={() => handleDropdownToggle('subjects')}>
               <Book />
               <span>Manage Subjects</span>

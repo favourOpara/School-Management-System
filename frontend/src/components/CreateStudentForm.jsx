@@ -1,3 +1,4 @@
+// src/components/CreateStudentForm.jsx
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import './CreateStudentForm.css';
@@ -22,47 +23,53 @@ const CreateStudentForm = ({ onSuccess }) => {
   const token = localStorage.getItem('accessToken');
 
   useEffect(() => {
-    const fetchClasses = async () => {
+    const fetchData = async () => {
       try {
-        const res = await axios.get('http://127.0.0.1:8000/api/academics/classes/', {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        setClassrooms(res.data);
-        const years = [...new Set(res.data.map(cls => cls.academic_year))];
-        setAcademicYears(years);
+        const [classRes, sessionRes] = await Promise.all([
+          axios.get('http://127.0.0.1:8000/api/academics/classes/', {
+            headers: { Authorization: `Bearer ${token}` }
+          }),
+          axios.get('http://127.0.0.1:8000/api/academics/sessions/', {
+            headers: { Authorization: `Bearer ${token}` }
+          })
+        ]);
+
+        setClassrooms(classRes.data);
+
+        const years = sessionRes.data.map(session => session.academic_year);
+        const uniqueYears = [...new Set(years)];
+        setAcademicYears(uniqueYears);
       } catch (err) {
-        console.error('Error fetching classrooms', err);
+        console.error('Error fetching classes or sessions:', err);
       }
     };
 
-    fetchClasses();
+    fetchData();
   }, [token]);
 
   const handleChange = e => {
     setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async e => {
     e.preventDefault();
     setMessage('');
 
     if (formData.password !== formData.confirm_password) {
-      setMessage("Passwords do not match.");
+      setMessage('Passwords do not match.');
       return;
     }
 
-    const studentPayload = {
+    const payload = {
       ...formData,
-      role: 'student' // role is required by backend
+      role: 'student'
     };
 
     try {
-      const response = await axios.post(
+      await axios.post(
         'http://127.0.0.1:8000/api/users/create-user/',
-        studentPayload,
-        {
-          headers: { Authorization: `Bearer ${token}` }
-        }
+        payload,
+        { headers: { Authorization: `Bearer ${token}` } }
       );
 
       setMessage('Student created successfully.');
@@ -82,11 +89,12 @@ const CreateStudentForm = ({ onSuccess }) => {
       if (onSuccess) onSuccess();
     } catch (err) {
       console.error('Error creating student:', err);
-      if (err.response && err.response.data) {
-        const detail =
-          typeof err.response.data === 'string'
-            ? err.response.data
-            : JSON.stringify(err.response.data, null, 2);
+      if (err.response?.data) {
+        const errors = Object.entries(err.response.data)
+          .map(([field, msgs]) => `${field}: ${Array.isArray(msgs) ? msgs.join(', ') : msgs}`)
+          .join('\n');
+        setMessage(errors || 'Failed to create student. Please try again.');
+      } else {
         setMessage('Failed to create student. Please try again.');
       }
     }
@@ -111,11 +119,9 @@ const CreateStudentForm = ({ onSuccess }) => {
           </select>
 
           <select name="classroom" value={formData.classroom} onChange={handleChange} required>
-            <option value="">Select Classroom</option>
+            <option value="">Select Class</option>
             {classrooms.map(cls => (
-              <option key={cls.id} value={cls.id}>
-                {cls.name}
-              </option>
+              <option key={cls.id} value={cls.id}>{cls.name}</option>
             ))}
           </select>
 
@@ -131,7 +137,11 @@ const CreateStudentForm = ({ onSuccess }) => {
           <button type="submit">Create Student</button>
         </form>
 
-        {message && <p className={`form-message ${message.includes('successfully') ? 'success' : 'error'}`}>{message}</p>}
+        {message && (
+          <p className={`form-message ${message.includes('successfully') ? 'success' : 'error'}`}>
+            {message}
+          </p>
+        )}
       </div>
     </div>
   );

@@ -1,0 +1,204 @@
+/* Wrapper to control layout */
+.view-subjects-wrapper {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 2rem;
+  min-height: 100vh;
+  background-color: #ffffff;
+}
+
+/* Main container */
+.view-subjects-container {
+  max-width: 960px;
+  width: 100%;
+  background-color: #ffffff;
+  padding: 2rem;
+  border-radius: 10px;
+  border: 1px solid #e0e0e0;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.05);
+}
+
+/* Section title */
+.section-header {
+  margin-bottom: 1.5rem;
+  font-size: 1.6rem;
+  font-weight: 600;
+  color: #0d47a1;
+  text-align: center;
+  border-bottom: 1px solid #e0e0e0;
+  padding-bottom: 0.5rem;
+}
+
+/* Filter layout */
+.filter-section {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.filter-section select,
+.filter-section button {
+  padding: 0.65rem;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  min-width: 160px;
+  background-color: #fafafa;
+  font-size: 0.95rem;
+}
+
+.filter-section select:focus,
+.filter-section button:focus {
+  border-color: #0d47a1;
+  outline: none;
+  background-color: #fff;
+}
+
+.filter-section button {
+  background-color: #1565c0;
+  color: white;
+  font-weight: 500;
+  transition: background-color 0.3s ease;
+  cursor: pointer;
+}
+
+.filter-section button:hover {
+  background-color: #0d47a1;
+}
+
+/* Class card list */
+.class-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.class-card {
+  background: #f5f5f5;
+  padding: 1rem;
+  border-radius: 6px;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+.class-card h4 {
+  margin: 0;
+  font-size: 1.2rem;
+  color: #0d47a1;
+}
+
+/* Modal overlay */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.3);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 999;
+}
+
+/* Modal popup */
+.modal {
+  background: white;
+  padding: 2rem;
+  width: 500px;
+  max-width: 95%;
+  border-radius: 8px;
+  position: relative;
+}
+
+/* Close button inside modal */
+.subject-close-button {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  font-size: 1.6rem;
+  background: none;
+  border: none;
+  color: #444;
+  cursor: pointer;
+  z-index: 1000;
+}
+
+/* Modal content list */
+.modal-subject-list {
+  list-style: none;
+  padding: 0;
+  margin-top: 1rem;
+}
+
+.modal-subject-list li {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 0.8rem;
+}
+
+.modal-subject-list input,
+.modal-subject-list select {
+  padding: 0.4rem;
+  font-size: 0.95rem;
+}
+
+.modal-subject-list button {
+  background: crimson;
+  color: white;
+  border: none;
+  padding: 0.4rem 0.7rem;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+/* Tablet & Mobile Responsiveness */
+@media (max-width: 768px) {
+  .filter-section {
+    flex-direction: column;
+  }
+
+  .filter-section select,
+  .filter-section button {
+    width: 100%;
+  }
+}
+
+/* Mobile full-screen layout */
+@media (max-width: 600px) {
+  .view-subjects-wrapper {
+    position: fixed;
+    top: 30px;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    overflow-y: scroll;
+    padding: 1rem;
+    background-color: #ffffff;
+    z-index: 5;
+  }
+
+  .view-subjects-container {
+    padding: 1.5rem;
+    border: none;
+    box-shadow: none;
+    border-radius: 0;
+  }
+
+  .section-header {
+    font-size: 1.4rem;
+    text-align: left;
+  }
+
+  .filter-section {
+    gap: 0.8rem;
+  }
+
+  .filter-section select,
+  .filter-section button {
+    font-size: 0.95rem;
+    padding: 0.7rem;
+  }
+}

@@ -1,0 +1,116 @@
+.subject-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.subject-modal {
+  background-color: #ffffff;
+  border-radius: 10px;
+  width: 92%;
+  max-width: 520px;
+  padding: 2rem;
+  box-shadow: 0 8px 20px rgba(13, 71, 161, 0.1);
+  border: 1px solid #e0e0e0;
+  position: relative;
+}
+
+.subject-modal h3 {
+  text-align: center;
+  color: #0d47a1;
+  font-size: 1.5rem;
+  margin-bottom: 1.2rem;
+}
+
+.subject-modal ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.subject-modal li {
+  background-color: #f9f9f9;
+  padding: 1rem;
+  border-radius: 6px;
+  margin-bottom: 1rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.subject-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  color: #333;
+}
+
+.edit-form input,
+.edit-form select {
+  width: 100%;
+  padding: 0.75rem;
+  font-size: 1rem;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  background-color: #fafafa;
+}
+
+.edit-form input:focus,
+.edit-form select:focus {
+  outline: none;
+  border-color: #1565c0;
+  background-color: #fff;
+}
+
+.subject-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.6rem;
+  margin-top: 0.7rem;
+}
+
+.subject-modal-actions button {
+  padding: 0.55rem 1rem;
+  font-size: 0.95rem;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: 0.3s;
+}
+
+.subject-modal-actions button:hover {
+  opacity: 0.9;
+}
+
+.subject-modal-actions .save-btn {
+  background-color: #1565c0;
+  color: white;
+}
+
+.subject-modal-actions .cancel-btn {
+  background-color: #e0e0e0;
+  color: #333;
+}
+
+.subject-modal-actions button:nth-child(2) {
+  background-color: #e53935;
+  color: white;
+}
+
+/* ✅ Updated Close Button */
+.close-modal-btn {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  font-size: 1.5rem;
+  background: none;
+  border: none;
+  color: rgb(255, 0, 0);
+  font-weight: bold;
+  cursor: pointer;
+}

@@ -1,0 +1,26 @@
+.activity-log-container {
+    padding: 20px;
+    background-color: #f9f9f9;
+  }
+  
+  .activity-log-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+  }
+  
+  .activity-log-table th,
+  .activity-log-table td {
+    border: 1px solid #573c3c;
+    padding: 8px;
+  }
+  
+  .activity-log-table th {
+    background-color: #5a4c4c;
+    text-align: left;
+  }
+  
+  .error {
+    color: red;
+  }
+  

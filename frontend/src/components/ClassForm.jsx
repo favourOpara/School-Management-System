@@ -10,8 +10,14 @@ const ClassManagementForm = () => {
   const [activeForm, setActiveForm] = useState('class');
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
-  const [classData, setClassData] = useState({ name: '', description: '' });
-  const [sessionData, setSessionData] = useState({ classroom: '', academic_year: '', term: '' });
+  const [classInput, setClassInput] = useState('');
+  const [stagedClassNames, setStagedClassNames] = useState([]);
+  const [sessionData, setSessionData] = useState({
+    classrooms: [],
+    academic_year: '',
+    term: ''
+  });
+
   const [classes, setClasses] = useState([]);
 
   const fetchClasses = async () => {
@@ -38,12 +44,19 @@ const ClassManagementForm = () => {
     return { valid: true };
   };
 
-  const handleClassChange = (e) => {
-    setClassData(prev => ({ ...prev, [e.target.name]: e.target.value }));
+  const handleClassNameInput = (e) => setClassInput(e.target.value);
+
+  const handleAddStagedClass = (e) => {
+    e.preventDefault();
+    if (classInput.trim() && !stagedClassNames.includes(classInput.trim())) {
+      setStagedClassNames(prev => [...prev, classInput.trim()]);
+      setClassInput('');
+      setMessage('');
+    }
   };
 
-  const handleSessionChange = (e) => {
-    setSessionData(prev => ({ ...prev, [e.target.name]: e.target.value }));
+  const handleDeleteStagedClass = (name) => {
+    setStagedClassNames(prev => prev.filter(n => n !== name));
   };
 
   const handleSubmitClass = async (e) => {
@@ -53,26 +66,36 @@ const ClassManagementForm = () => {
     showLoader();
 
     try {
-      const res = await axios.post('http://127.0.0.1:8000/api/academics/classes/', classData, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-
-      if (res.status === 201) {
-        setMessage('Class name added successfully.');
-        setClassData({ name: '', description: '' });
-        await fetchClasses(); // Refresh dropdown list for sessions
-      }
+      const promises = stagedClassNames.map(name =>
+        axios.post('http://127.0.0.1:8000/api/academics/classes/', { name }, {
+          headers: { Authorization: `Bearer ${token}` }
+        })
+      );
+      await Promise.all(promises);
+      setMessage('Class names added successfully.');
+      setStagedClassNames([]);
+      await fetchClasses();
     } catch (err) {
       if (err.response?.data) {
         const detail = typeof err.response.data === 'string'
           ? err.response.data
           : JSON.stringify(err.response.data);
-        setError(`Failed to create class name: ${detail}`);
+        setError(`Failed to create class names: ${detail}`);
       } else {
-        setError('Failed to create class name. Please try again.');
+        setError('Failed to create class names. Please try again.');
       }
     } finally {
       hideLoader();
+    }
+  };
+
+  const handleSessionChange = (e) => {
+    const { name, value, options } = e.target;
+    if (name === 'classrooms') {
+      const selected = Array.from(options).filter(o => o.selected).map(o => o.value);
+      setSessionData(prev => ({ ...prev, classrooms: selected }));
+    } else {
+      setSessionData(prev => ({ ...prev, [name]: value }));
     }
   };
 
@@ -90,26 +113,30 @@ const ClassManagementForm = () => {
     showLoader();
 
     try {
-      const res = await axios.post('http://127.0.0.1:8000/api/academics/sessions/', {
-        classroom_id: sessionData.classroom,
+      const payloads = sessionData.classrooms.map(classId => ({
+        classroom_id: classId,
         academic_year: sessionData.academic_year,
-        term: sessionData.term,
-      }, {
-        headers: { Authorization: `Bearer ${token}` }
-      });      
+        term: sessionData.term
+      }));
 
-      if (res.status === 201) {
-        setMessage('Class session added successfully.');
-        setSessionData({ classroom: '', academic_year: '', term: '' });
+      const responses = await Promise.all(payloads.map(payload =>
+        axios.post('http://127.0.0.1:8000/api/academics/sessions/', payload, {
+          headers: { Authorization: `Bearer ${token}` }
+        })
+      ));
+
+      if (responses.every(res => res.status === 201)) {
+        setMessage('Class sessions added successfully.');
+        setSessionData({ classrooms: [], academic_year: '', term: '' });
       }
     } catch (err) {
       if (err.response?.data) {
         const detail = typeof err.response.data === 'string'
           ? err.response.data
           : JSON.stringify(err.response.data);
-        setError(`Failed to create class session: ${detail}`);
+        setError(`Failed to create class sessions: ${detail}`);
       } else {
-        setError('Failed to create class session. Please try again.');
+        setError('Failed to create class sessions. Please try again.');
       }
     } finally {
       hideLoader();
@@ -128,29 +155,36 @@ const ClassManagementForm = () => {
           <>
             <h3>Add Class Name</h3>
             <form onSubmit={handleSubmitClass} className="class-form">
-              <input
-                type="text"
-                name="name"
-                placeholder="Class Name (e.g. J.S.S.1)"
-                value={classData.name}
-                onChange={handleClassChange}
-                required
-              />
-              <textarea
-                name="description"
-                placeholder="Description"
-                value={classData.description}
-                onChange={handleClassChange}
-              />
-              <button type="submit">Add Class</button>
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <input
+                  type="text"
+                  name="classInput"
+                  placeholder="Enter class name"
+                  value={classInput}
+                  onChange={handleClassNameInput}
+                />
+                <button onClick={handleAddStagedClass}>+</button>
+              </div>
+
+              {stagedClassNames.length > 0 && (
+                <ul style={{ marginTop: '1rem' }}>
+                  {stagedClassNames.map((name, index) => (
+                    <li key={index} className="staged-class-item" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      {name}
+                      <span style={{ cursor: 'pointer', color: 'red' }} onClick={() => handleDeleteStagedClass(name)}>✖</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+
+              <button type="submit" disabled={stagedClassNames.length === 0}>Add Class(es)</button>
             </form>
           </>
         ) : (
           <>
             <h3>Add Class Session</h3>
             <form onSubmit={handleSubmitSession} className="class-form">
-              <select name="classroom" value={sessionData.classroom} onChange={handleSessionChange} required>
-                <option value="">Select Class</option>
+              <select name="classrooms" multiple value={sessionData.classrooms} onChange={handleSessionChange} required>
                 {classes.map(cls => (
                   <option key={cls.id} value={cls.id}>{cls.name}</option>
                 ))}
@@ -172,7 +206,7 @@ const ClassManagementForm = () => {
                 <option value="Third Term">Third Term</option>
               </select>
 
-              <button type="submit">Add Session</button>
+              <button type="submit">Add Session(s)</button>
             </form>
           </>
         )}

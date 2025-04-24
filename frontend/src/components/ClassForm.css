@@ -168,3 +168,8 @@
     padding: 0.6rem;
   }
 }
+/* Make staged class names darker */
+.staged-class-item {
+  color: #212121; /* A dark gray for readability */
+  font-weight: 500;
+}

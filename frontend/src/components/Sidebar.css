@@ -72,17 +72,6 @@ body {
   margin-bottom: 1.5rem;
 }
 
-.close-btn {
-  position: absolute;
-  top: 1rem;
-  right: 1rem;
-  background: none;
-  border: none;
-  font-size: 1.5rem;
-  color: #333;
-  display: none;
-}
-
 .sidebar-nav {
   flex-grow: 1;
   width: 100%;
@@ -149,7 +138,7 @@ body {
     width: 100%;
     transform: translateX(-100%);
     background-color: #ffffff;
-    color: #1a1a1a; /* darker text */
+    color: #1a1a1a;
     padding: 2rem 1.5rem;
     align-items: flex-start;
   }
@@ -167,13 +156,13 @@ body {
     font-size: 20px;
     font: Century Gothic;
     font-weight: 500;
-    color: #0e2d52; /* dark text */
+    color: #0e2d52;
   }
 
   .sidebar-nav li svg {
     width: 30px;
     height: 30px;
-    color: #76787e; /* make sure icons are also dark */
+    color: #76787e;
   }
 
   .sidebar-submenu li {
@@ -190,6 +179,14 @@ body {
 
   .close-btn {
     display: block;
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    color: #333;
+    z-index: 100;
   }
 
   .sidebar-greeting {
@@ -202,7 +199,6 @@ body {
     color: #ffffff;
   }
 }
-
 
 /* DESKTOP styles */
 @media (min-width: 769px) {
@@ -219,7 +215,7 @@ body {
     flex-direction: column;
     text-align: center;
     padding: 16px 0;
-    margin-bottom: 0; /* removed bottom margin to eliminate gaps */
+    margin-bottom: 0;
   }
 
   .sidebar-nav li span {
@@ -232,7 +228,7 @@ body {
   }
 
   .close-btn {
-    display: none;
+    display: none !important;
   }
 
   .logout-btn {
@@ -240,6 +236,7 @@ body {
     font-size: 14px;
   }
 }
+
 /* Dropdown Submenu Styling */
 .sidebar-submenu {
   list-style: none;

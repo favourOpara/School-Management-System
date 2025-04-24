@@ -10,6 +10,7 @@ from .serializers import (
     ParentSignupSerializer,
     UserListSerializer
 )
+from logs.models import ActivityLog  # Logging model
 
 # Custom permission to allow only admins
 class IsAdminRole(permissions.BasePermission):
@@ -23,6 +24,14 @@ class CreateUserView(generics.CreateAPIView):
     serializer_class = UserCreateSerializer
     permission_classes = [IsAuthenticated, IsAdminRole]
 
+    def perform_create(self, serializer):
+        user = serializer.save()
+        ActivityLog.objects.create(
+            user=self.request.user,
+            role=user.role,
+            action=f"{self.request.user.username} created {user.role} account: {user.username}"
+        )
+
 
 # Admin creating a teacher
 class TeacherSignupView(APIView):
@@ -32,10 +41,14 @@ class TeacherSignupView(APIView):
         serializer = TeacherSignupSerializer(data=request.data)
         if serializer.is_valid():
             user = serializer.save()
+            ActivityLog.objects.create(
+                user=request.user,
+                role='teacher',
+                action=f"{request.user.username} created teacher account: {user.username}"
+            )
             return Response({
                 "message": "Teacher registered successfully.",
-                "username": user.username,
-                "email": user.email
+                "username": user.username
             }, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -48,10 +61,14 @@ class ParentSignupView(APIView):
         serializer = ParentSignupSerializer(data=request.data)
         if serializer.is_valid():
             user = serializer.save()
+            ActivityLog.objects.create(
+                user=request.user,
+                role='parent',
+                action=f"{request.user.username} created parent account: {user.username}"
+            )
             return Response({
                 "message": "Parent registered successfully.",
-                "username": user.username,
-                "email": user.email
+                "username": user.username
             }, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 

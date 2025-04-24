@@ -1,21 +1,21 @@
 from rest_framework import serializers
 from .models import CustomUser
-from academics.models import ClassSession
+from academics.models import Class
 
+# 🔹 Used for Admin-created students and parents
 class UserCreateSerializer(serializers.ModelSerializer):
     confirm_password = serializers.CharField(write_only=True, required=True)
-    class_session = serializers.PrimaryKeyRelatedField(queryset=ClassSession.objects.all())
+    classroom = serializers.PrimaryKeyRelatedField(queryset=Class.objects.all())
 
     class Meta:
         model = CustomUser
         fields = [
-            'username', 'password', 'confirm_password',
-            'email', 'first_name', 'middle_name', 'last_name',
-            'role', 'gender', 'class_session', 'academic_year', 'date_of_birth'
+            'username', 'password', 'confirm_password', 'first_name', 'middle_name', 'last_name',
+            'role', 'gender', 'classroom', 'academic_year', 'date_of_birth'
         ]
         extra_kwargs = {
             'password': {'write_only': True},
-            'date_of_birth': {'required': True}
+            'date_of_birth': {'required': True},
         }
 
     def validate(self, data):
@@ -28,10 +28,11 @@ class UserCreateSerializer(serializers.ModelSerializer):
         return CustomUser.objects.create_user(**validated_data)
 
 
+# 🔹 Admin creates teacher (NO email)
 class TeacherSignupSerializer(serializers.ModelSerializer):
     class Meta:
         model = CustomUser
-        fields = ['username', 'password', 'email', 'first_name', 'last_name']
+        fields = ['username', 'password', 'first_name', 'last_name']
         extra_kwargs = {'password': {'write_only': True}}
 
     def create(self, validated_data):
@@ -39,10 +40,11 @@ class TeacherSignupSerializer(serializers.ModelSerializer):
         return CustomUser.objects.create_user(**validated_data)
 
 
+# 🔹 Admin creates parent (NO email)
 class ParentSignupSerializer(serializers.ModelSerializer):
     class Meta:
         model = CustomUser
-        fields = ['username', 'password', 'email', 'first_name', 'last_name']
+        fields = ['username', 'password', 'first_name', 'last_name']
         extra_kwargs = {'password': {'write_only': True}}
 
     def create(self, validated_data):
@@ -50,11 +52,11 @@ class ParentSignupSerializer(serializers.ModelSerializer):
         return CustomUser.objects.create_user(**validated_data)
 
 
-# ✅ For dropdowns, tables etc.
+# 🔹 For dropdowns, views, and listing users
 class UserListSerializer(serializers.ModelSerializer):
     class Meta:
         model = CustomUser
         fields = [
-            'id', 'username', 'email', 'first_name',
+            'id', 'username', 'first_name',
             'middle_name', 'last_name', 'role'
         ]

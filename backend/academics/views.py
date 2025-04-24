@@ -19,7 +19,7 @@ class ClassDetailView(generics.RetrieveUpdateDestroyAPIView):
     lookup_field = 'id'
 
 
-# 🔹 Admin-only: Create/List academic ClassSessions (e.g., J.S.S.1 - 2024/2025 - First Term)
+# 🔹 Admin-only: Create/List academic ClassSessions
 class ClassSessionListCreateView(generics.ListCreateAPIView):
     queryset = ClassSession.objects.all()
     serializer_class = ClassSessionSerializer
@@ -30,7 +30,6 @@ class ClassSessionListCreateView(generics.ListCreateAPIView):
         academic_year = request.data.get('academic_year')
         term = request.data.get('term')
 
-        # Prevent duplicate sessions for the same class, year, and term
         if ClassSession.objects.filter(
             classroom_id=classroom_id,
             academic_year=academic_year,
@@ -44,7 +43,7 @@ class ClassSessionListCreateView(generics.ListCreateAPIView):
         return super().create(request, *args, **kwargs)
 
 
-# 🔹 Admin-only: Retrieve, update, delete a specific ClassSession
+# 🔹 Admin-only: Retrieve/update/delete a specific ClassSession
 class ClassSessionDetailView(generics.RetrieveUpdateDestroyAPIView):
     queryset = ClassSession.objects.all()
     serializer_class = ClassSessionSerializer
@@ -52,15 +51,52 @@ class ClassSessionDetailView(generics.RetrieveUpdateDestroyAPIView):
     lookup_field = 'id'
 
 
-# 🔹 Admin-only: Create subject (must link to valid class session + teacher)
-class SubjectCreateView(generics.CreateAPIView):
+# 🔹 Admin-only: Create/list subjects (accepts list format for bulk)
+class SubjectListCreateView(generics.ListCreateAPIView):
     queryset = Subject.objects.all()
     serializer_class = SubjectSerializer
     permission_classes = [permissions.IsAdminUser]
 
+    def create(self, request, *args, **kwargs):
+        data = request.data
 
-# 🔹 Authenticated: View all subjects (optionally filterable later)
+        # ✅ Handle list of subjects
+        if isinstance(data, list):
+            created = []
+            errors = []
+
+            for item in data:
+                serializer = self.get_serializer(data=item)
+                if serializer.is_valid():
+                    subject = serializer.save()
+                    created.append(self.get_serializer(subject).data)
+                else:
+                    errors.append(serializer.errors)
+
+            if errors:
+                return Response(
+                    {"created": created, "errors": errors},
+                    status=status.HTTP_207_MULTI_STATUS
+                )
+            return Response(created, status=status.HTTP_201_CREATED)
+
+        # ✅ Handle single subject
+        serializer = self.get_serializer(data=data)
+        serializer.is_valid(raise_exception=True)
+        subject = serializer.save()
+        return Response(self.get_serializer(subject).data, status=status.HTTP_201_CREATED)
+
+
+# 🔹 Authenticated users can view all subjects
 class SubjectListView(generics.ListAPIView):
     queryset = Subject.objects.all()
     serializer_class = SubjectSerializer
     permission_classes = [permissions.IsAuthenticated]
+
+
+# 🔹 Admin-only: Retrieve, update, or delete a specific subject
+class SubjectDetailView(generics.RetrieveUpdateDestroyAPIView):
+    queryset = Subject.objects.all()
+    serializer_class = SubjectSerializer
+    permission_classes = [permissions.IsAdminUser]
+    lookup_field = 'id'

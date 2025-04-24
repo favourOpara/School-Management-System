@@ -3,14 +3,13 @@ from .models import Class, ClassSession, Subject
 from users.models import CustomUser
 import re
 
-# 🔹 Serializer for Permanent Class (e.g., J.S.S.1, S.S.S.3)
+
 class ClassSerializer(serializers.ModelSerializer):
     class Meta:
         model = Class
         fields = ['id', 'name', 'description']
 
 
-# 🔹 Serializer for Academic Class Session (flattened for frontend compatibility)
 class ClassSessionSerializer(serializers.ModelSerializer):
     classroom = ClassSerializer(read_only=True)
     classroom_id = serializers.PrimaryKeyRelatedField(
@@ -35,10 +34,12 @@ class ClassSessionSerializer(serializers.ModelSerializer):
         return value
 
 
-# 🔹 Serializer for Subject creation (linked to class session + teacher)
 class SubjectSerializer(serializers.ModelSerializer):
-    class_session = serializers.PrimaryKeyRelatedField(
-        queryset=ClassSession.objects.all()
+    class_session = ClassSessionSerializer(read_only=True)  # used in GET
+    class_session_id = serializers.PrimaryKeyRelatedField(  # used in POST/PUT
+        queryset=ClassSession.objects.all(),
+        source='class_session',
+        write_only=True
     )
     teacher = serializers.PrimaryKeyRelatedField(
         queryset=CustomUser.objects.filter(role='teacher')
@@ -46,7 +47,7 @@ class SubjectSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Subject
-        fields = ['id', 'name', 'class_session', 'teacher']
+        fields = ['id', 'name', 'class_session', 'class_session_id', 'teacher', 'department']
 
     def validate_teacher(self, teacher):
         if teacher.role != 'teacher':

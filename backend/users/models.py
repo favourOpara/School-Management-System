@@ -1,6 +1,29 @@
-from django.contrib.auth.models import AbstractUser
+from django.contrib.auth.models import AbstractUser, BaseUserManager
 from django.db import models
-from academics.models import ClassSession  # Updated reference
+from academics.models import Class
+
+class CustomUserManager(BaseUserManager):
+    def create_user(self, username, password=None, **extra_fields):
+        if not username:
+            raise ValueError("The Username field is required.")
+
+        user = self.model(username=username, **extra_fields)
+        user.set_password(password)
+        user.save(using=self._db)
+        return user
+
+    def create_superuser(self, username, password=None, **extra_fields):
+        extra_fields.setdefault("is_staff", True)
+        extra_fields.setdefault("is_superuser", True)
+        extra_fields.setdefault("role", "admin")
+
+        if not extra_fields.get("is_staff"):
+            raise ValueError("Superuser must have is_staff=True.")
+        if not extra_fields.get("is_superuser"):
+            raise ValueError("Superuser must have is_superuser=True.")
+
+        return self.create_user(username, password, **extra_fields)
+
 
 class CustomUser(AbstractUser):
     ROLE_CHOICES = [
@@ -16,12 +39,16 @@ class CustomUser(AbstractUser):
     ]
 
     role = models.CharField(max_length=10, choices=ROLE_CHOICES)
-    class_session = models.ForeignKey(ClassSession, on_delete=models.SET_NULL, null=True, blank=True)
-
+    classroom = models.ForeignKey(Class, on_delete=models.SET_NULL, null=True, blank=True)
     middle_name = models.CharField(max_length=30, blank=True)
     gender = models.CharField(max_length=10, choices=GENDER_CHOICES, null=True, blank=True)
-    academic_year = models.CharField(max_length=9, blank=True)  # Optional for now
+    academic_year = models.CharField(max_length=9, blank=True)
     date_of_birth = models.DateField(null=True, blank=True)
+
+    USERNAME_FIELD = 'username'
+    REQUIRED_FIELDS = ['first_name', 'last_name']
+
+    objects = CustomUserManager()
 
     def __str__(self):
         return f"{self.username} ({self.role})"

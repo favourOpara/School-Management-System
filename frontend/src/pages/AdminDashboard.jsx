@@ -5,6 +5,8 @@ import ViewClasses from '../components/ViewClasses';
 import CreateStudentForm from '../components/CreateStudentForm';
 import CreateSubjectForm from '../components/CreateSubjectForm';
 import CreateTeacherForm from '../components/CreateTeacherForm';
+import ViewSubjects from '../components/ViewSubjects'; // ✅ You forgot this
+import ActivityLog from '../components/ActivityLog'; // ✅ Already included
 
 const getGreeting = () => {
   const hour = new Date().getHours();
@@ -35,6 +37,10 @@ const AdminDashboard = () => {
         return <CreateSubjectForm />;
       case 'create-teacher':
         return <CreateTeacherForm />;
+      case 'view-subjects':
+        return <ViewSubjects />;
+      case 'activity-logs':
+        return <ActivityLog />;
       case 'profile':
         return <div><h2>Profile</h2><p>Your profile info here.</p></div>;
       case 'settings':
