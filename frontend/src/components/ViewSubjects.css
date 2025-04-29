@@ -39,20 +39,24 @@
 }
 
 .filter-section select,
-.filter-section button {
+.filter-section button,
+.filter-section .react-select__control {
   padding: 0.65rem;
   border: 1px solid #ccc;
   border-radius: 5px;
   min-width: 160px;
   background-color: #fafafa;
   font-size: 0.95rem;
+  color: #333333; /* Darker text */
 }
 
 .filter-section select:focus,
-.filter-section button:focus {
+.filter-section button:focus,
+.filter-section .react-select__control--is-focused {
   border-color: #0d47a1;
   outline: none;
-  background-color: #fff;
+  background-color: #ffffff;
+  box-shadow: 0 0 0 1px #0d47a1;
 }
 
 .filter-section button {
@@ -161,7 +165,8 @@
   }
 
   .filter-section select,
-  .filter-section button {
+  .filter-section button,
+  .filter-section .react-select__control {
     width: 100%;
   }
 }
@@ -197,8 +202,23 @@
   }
 
   .filter-section select,
-  .filter-section button {
+  .filter-section button,
+  .filter-section .react-select__control {
     font-size: 0.95rem;
     padding: 0.7rem;
   }
+}
+/* Darken dropdown option texts */
+.filter-section .react-select__option {
+  color: #222 !important; /* darker dropdown list text */
+}
+
+/* Darken text for selected value */
+.filter-section .react-select__single-value {
+  color: #222 !important;
+}
+
+/* Darken placeholder */
+.filter-section .react-select__placeholder {
+  color: #444 !important;
 }

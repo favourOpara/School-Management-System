@@ -1,4 +1,3 @@
-// src/components/CreateStudentForm.jsx
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import './CreateStudentForm.css';
@@ -14,13 +13,17 @@ const CreateStudentForm = ({ onSuccess }) => {
     gender: '',
     classroom: '',
     academic_year: '',
-    date_of_birth: ''
+    term: '',
+    date_of_birth: '',
+    department: ''
   });
 
   const [classrooms, setClassrooms] = useState([]);
   const [academicYears, setAcademicYears] = useState([]);
   const [message, setMessage] = useState('');
   const token = localStorage.getItem('accessToken');
+
+  const DEPARTMENTS = ['Science', 'Arts', 'Commercial'];
 
   useEffect(() => {
     const fetchData = async () => {
@@ -83,7 +86,9 @@ const CreateStudentForm = ({ onSuccess }) => {
         gender: '',
         classroom: '',
         academic_year: '',
-        date_of_birth: ''
+        term: '',
+        date_of_birth: '',
+        department: ''
       });
 
       if (onSuccess) onSuccess();
@@ -99,6 +104,9 @@ const CreateStudentForm = ({ onSuccess }) => {
       }
     }
   };
+
+  const selectedClassName = classrooms.find(cls => cls.id.toString() === formData.classroom)?.name;
+  const isSeniorClass = selectedClassName?.startsWith('S.S.S.');
 
   return (
     <div className="create-student-wrapper">
@@ -125,11 +133,27 @@ const CreateStudentForm = ({ onSuccess }) => {
             ))}
           </select>
 
+          {isSeniorClass && (
+            <select name="department" value={formData.department} onChange={handleChange} required>
+              <option value="">Select Department</option>
+              {DEPARTMENTS.map(dept => (
+                <option key={dept} value={dept}>{dept}</option>
+              ))}
+            </select>
+          )}
+
           <select name="academic_year" value={formData.academic_year} onChange={handleChange} required>
             <option value="">Select Academic Year</option>
             {academicYears.map(year => (
               <option key={year} value={year}>{year}</option>
             ))}
+          </select>
+
+          <select name="term" value={formData.term} onChange={handleChange} required>
+            <option value="">Select Term</option>
+            <option value="First Term">First Term</option>
+            <option value="Second Term">Second Term</option>
+            <option value="Third Term">Third Term</option>
           </select>
 
           <input type="date" name="date_of_birth" value={formData.date_of_birth} onChange={handleChange} required />

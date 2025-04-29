@@ -1,5 +1,5 @@
 /* Wrapper to control layout */
-.view-classes-wrapper {
+.view-users-wrapper {
   display: flex;
   justify-content: center;
   align-items: flex-start;
@@ -9,7 +9,7 @@
 }
 
 /* Main container */
-.view-classes-container {
+.view-users-container {
   max-width: 960px;
   width: 100%;
   background-color: #ffffff;
@@ -113,9 +113,9 @@
 
 /* Mobile full-screen layout */
 @media (max-width: 600px) {
-  .view-classes-wrapper {
+  .view-users-wrapper {
     position: fixed;
-    top: 0;
+    top: 30px;
     left: 0;
     width: 100vw;
     height: 100vh;
@@ -125,7 +125,7 @@
     z-index: 5;
   }
 
-  .view-classes-container {
+  .view-users-container {
     padding: 1.5rem;
     border: none;
     box-shadow: none;

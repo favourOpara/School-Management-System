@@ -5,8 +5,10 @@ import ViewClasses from '../components/ViewClasses';
 import CreateStudentForm from '../components/CreateStudentForm';
 import CreateSubjectForm from '../components/CreateSubjectForm';
 import CreateTeacherForm from '../components/CreateTeacherForm';
-import ViewSubjects from '../components/ViewSubjects'; // ✅ You forgot this
-import ActivityLog from '../components/ActivityLog'; // ✅ Already included
+import CreateParentForm from '../components/CreateParentForm';
+import ViewSubjects from '../components/ViewSubjects';
+import ActivityLog from '../components/ActivityLog';
+import ViewUsers from '../components/ViewUsers'; // ✅ Added this
 
 const getGreeting = () => {
   const hour = new Date().getHours();
@@ -33,12 +35,16 @@ const AdminDashboard = () => {
         return <ViewClasses />;
       case 'create-student':
         return <CreateStudentForm />;
+      case 'create-parent':
+        return <CreateParentForm />;
       case 'create-subject':
         return <CreateSubjectForm />;
       case 'create-teacher':
         return <CreateTeacherForm />;
       case 'view-subjects':
         return <ViewSubjects />;
+      case 'view-users':
+        return <ViewUsers />; // ✅ Replace placeholder with actual component
       case 'activity-logs':
         return <ActivityLog />;
       case 'profile':
@@ -49,15 +55,13 @@ const AdminDashboard = () => {
         return <div><h2>Analytics</h2><p>Analytics content.</p></div>;
       case 'reports':
         return <div><h2>Reports</h2><p>Reports content.</p></div>;
-      case 'view-users':
-        return <div><h2>View Users</h2><p>List of users.</p></div>;
       default:
         return <p>Select a section from the sidebar.</p>;
     }
   };
 
   return (
-    <div style={{ display: 'flex' }}>
+    <div style={{ display: 'flex',  }}>
       <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
       <div style={{ marginLeft: '100px', padding: '1rem', flex: 1 }}>
         {renderContent()}

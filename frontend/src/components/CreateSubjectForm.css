@@ -1,14 +1,12 @@
 /* Wrapper */
 .create-subject-wrapper {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    min-height: calc(100vh - 60px);
-    padding: 1rem;
-    background-color: #ffffff;
-  }
-  
-
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: calc(100vh - 60px);
+  padding: 1rem;
+  background-color: #ffffff;
+}
 
 /* Form Card */
 .create-subject-container {
@@ -18,6 +16,8 @@
   border: 1px solid #e0e0e0;
   border-radius: 10px;
   box-shadow: 0 6px 12px rgba(0, 0, 0, 0.05);
+  color: #1a1a1a;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
 /* Title */
@@ -34,6 +34,7 @@
   display: flex;
   flex-direction: column;
   gap: 1rem;
+  color: #1c1c1c;
 }
 
 .create-subject-form input,
@@ -43,6 +44,7 @@
   border-radius: 6px;
   border: 1px solid #ccc;
   background-color: #fafafa;
+  color: #111111;
   transition: border 0.3s ease;
 }
 
@@ -50,6 +52,25 @@
 .create-subject-form select:focus {
   border-color: #0d47a1;
   background-color: #fff;
+  color: #111;
+}
+
+/* React-Select override */
+.react-select__control {
+  background-color: #fafafa;
+  border-color: #ccc;
+  font-size: 1rem;
+  color: #111111;
+}
+.react-select__control--is-focused {
+  border-color: #0d47a1;
+}
+.react-select__single-value,
+.react-select__option {
+  color: #1c1c1c;
+}
+.react-select__menu {
+  z-index: 20;
 }
 
 /* Submit Button */
@@ -86,18 +107,44 @@
   text-align: center;
 }
 
+/* Staged Subject List */
+.created-subjects-list {
+  margin-top: 1rem;
+  list-style: none;
+  padding-left: 0;
+}
+
+.created-subjects-list li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: #1a1a1a;
+  background-color: #f5f5f5;
+  padding: 0.6rem 0.8rem;
+  margin-bottom: 0.4rem;
+  border-radius: 5px;
+}
+
+/* Delete Icon Style */
+.created-subjects-list li span {
+  color: #c62828;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+/* Responsive Styles */
 @media (max-width: 600px) {
   .create-subject-wrapper {
-    position: fixed; /* force full screen control */
+    position: fixed;
     top: 30px;
     left: 0;
     width: 100vw;
     height: 100vh;
-    background-color: #ffffff; /* match dark background if needed */
+    background-color: #ffffff;
     display: flex;
     justify-content: center;
-    align-items: left;
-    z-index: 5; /* ensure it sits above other layout elements */
+    align-items: flex-start;
+    z-index: 5;
   }
 
   .create-subject-container {
@@ -126,28 +173,4 @@
     font-size: 0.9rem;
     padding: 0.6rem;
   }
-}
-/* List of Staged Subjects */
-.created-subjects-list {
-  margin-top: 1rem;
-  list-style: none;
-  padding-left: 0;
-}
-
-.created-subjects-list li {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  color: #333333; /* Dark text */
-  background-color: #f5f5f5;
-  padding: 0.6rem 0.8rem;
-  margin-bottom: 0.4rem;
-  border-radius: 5px;
-}
-
-/* Delete Icon Style */
-.created-subjects-list li span {
-  color: #c62828;
-  font-weight: bold;
-  cursor: pointer;
 }

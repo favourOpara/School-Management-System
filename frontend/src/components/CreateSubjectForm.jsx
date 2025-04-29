@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
+import Select from 'react-select';
 import './CreateSubjectForm.css';
 
 const CreateSubjectForm = () => {
@@ -91,28 +92,26 @@ const CreateSubjectForm = () => {
     }));
   };
 
-  const handleAssignmentChange = (e) => {
-    const { name, value, options } = e.target;
+  const handleAssignmentSelectChange = (selectedOptions, name) => {
+    const values = selectedOptions ? selectedOptions.map(opt => opt.value) : [];
+    setAssignmentData(prev => {
+      const updated = { ...prev, [name]: values };
 
-    if (name === 'classes') {
-      const selected = Array.from(options).filter(o => o.selected).map(o => o.value);
-      setAssignmentData(prev => ({ ...prev, classes: selected }));
+      if (name === 'classes') {
+        const selectedNames = values.map(id => {
+          const cls = permanentClasses.find(c => c.id === id);
+          return cls?.name;
+        });
+        const isSenior = selectedNames.some(name => ['S.S.S.1', 'S.S.S.2', 'S.S.S.3'].includes(name));
+        setShowDepartment(isSenior);
+      }
 
-      const classNames = selected.map(id => {
-        const cls = permanentClasses.find(c => c.id.toString() === id);
-        return cls?.name;
-      });
+      return updated;
+    });
+  };
 
-      const isSenior = classNames.some(name =>
-        ['S.S.S.1', 'S.S.S.2', 'S.S.S.3'].includes(name)
-      );
-      setShowDepartment(isSenior);
-    } else if (name === 'subjects' || name === 'departments') {
-      const selected = Array.from(options).filter(o => o.selected).map(o => o.value);
-      setAssignmentData(prev => ({ ...prev, [name]: selected }));
-    } else {
-      setAssignmentData(prev => ({ ...prev, [name]: value }));
-    }
+  const handleSingleChange = (option, name) => {
+    setAssignmentData(prev => ({ ...prev, [name]: option ? option.value : '' }));
   };
 
   const handleAssignSubjects = async (e) => {
@@ -127,7 +126,7 @@ const CreateSubjectForm = () => {
     }
 
     const matchedSessions = classSessions.filter(sess =>
-      classes.includes(String(sess.classroom?.id)) &&
+      classes.includes(sess.classroom?.id) &&
       sess.academic_year === academic_year &&
       sess.term === term
     );
@@ -142,14 +141,23 @@ const CreateSubjectForm = () => {
     subjects.forEach((sub) => {
       matchedSessions.forEach(session => {
         if (showDepartment && departments.length > 0) {
-          departments.forEach(dept => {
+          if (departments.includes('General')) {
             payload.push({
               name: sub,
               teacher: teacher,
               class_session_id: session.id,
-              department: dept
+              department: 'General'
             });
-          });
+          } else {
+            departments.forEach(dept => {
+              payload.push({
+                name: sub,
+                teacher: teacher,
+                class_session_id: session.id,
+                department: dept
+              });
+            });
+          }
         } else {
           payload.push({
             name: sub,
@@ -180,6 +188,13 @@ const CreateSubjectForm = () => {
     }
   };
 
+  const allSubjectOptions = [
+    ...createdSubjects,
+    ...existingSubjects.map(sub => sub.name)
+  ]
+    .filter((value, index, self) => self.indexOf(value) === index)
+    .map(name => ({ value: name, label: name }));
+
   return (
     <div className="create-subject-wrapper">
       <div className="create-subject-container">
@@ -203,20 +218,13 @@ const CreateSubjectForm = () => {
                 />
                 <button type="submit" disabled={!!duplicateWarning}>+</button>
               </div>
-              {duplicateWarning && (
-                <p style={{ color: 'red', marginTop: '0.5rem' }}>{duplicateWarning}</p>
-              )}
+              {duplicateWarning && <p className="error-msg">{duplicateWarning}</p>}
               {createdSubjects.length > 0 && (
-                <ul className="created-subjects-list" style={{ marginTop: '1rem' }}>
+                <ul className="created-subjects-list">
                   {createdSubjects.map((sub, idx) => (
-                    <li key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: '#333' }}>
+                    <li key={idx}>
                       {sub}
-                      <span
-                        style={{ color: 'red', cursor: 'pointer', marginLeft: '10px' }}
-                        onClick={() => handleDeleteSubject(sub)}
-                      >
-                        &#x2716;
-                      </span>
+                      <span onClick={() => handleDeleteSubject(sub)}>&#x2716;</span>
                     </li>
                   ))}
                 </ul>
@@ -227,47 +235,72 @@ const CreateSubjectForm = () => {
           <>
             <h3>Add Subjects</h3>
             <form onSubmit={handleAssignSubjects} className="create-subject-form">
-              <select name="subjects" multiple value={assignmentData.subjects} onChange={handleAssignmentChange} required>
-                <option disabled value="">Select Subject(s)</option>
-                {createdSubjects.map((sub, index) => (
-                  <option key={index} value={sub}>{sub}</option>
-                ))}
-              </select>
+              <Select
+                isMulti
+                name="subjects"
+                value={assignmentData.subjects.map(val => ({ value: val, label: val }))}
+                onChange={(selected) => handleAssignmentSelectChange(selected, 'subjects')}
+                options={allSubjectOptions}
+                placeholder="Select Subject(s)"
+              />
 
-              <select name="classes" multiple value={assignmentData.classes} onChange={handleAssignmentChange} required>
-                <option disabled value="">Select Class(es)</option>
-                {permanentClasses.map(cls => (
-                  <option key={cls.id} value={cls.id}>{cls.name}</option>
-                ))}
-              </select>
+              <Select
+                isMulti
+                name="classes"
+                value={assignmentData.classes.map(val => ({
+                  value: val,
+                  label: permanentClasses.find(c => c.id === val)?.name || val
+                }))}
+                onChange={(selected) => handleAssignmentSelectChange(selected, 'classes')}
+                options={permanentClasses.map(cls => ({ value: cls.id, label: cls.name }))}
+                placeholder="Select Class(es)"
+              />
 
-              <select name="academic_year" value={assignmentData.academic_year} onChange={handleAssignmentChange} required>
-                <option value="">Select Academic Year</option>
-                {academicYears.map(year => (
-                  <option key={year} value={year}>{year}</option>
-                ))}
-              </select>
+              <Select
+                name="academic_year"
+                value={assignmentData.academic_year ? { value: assignmentData.academic_year, label: assignmentData.academic_year } : null}
+                onChange={(option) => handleSingleChange(option, 'academic_year')}
+                options={academicYears.map(y => ({ value: y, label: y }))}
+                placeholder="Select Academic Year"
+              />
 
-              <select name="term" value={assignmentData.term} onChange={handleAssignmentChange} required>
-                <option value="">Select Term</option>
-                <option value="First Term">First Term</option>
-                <option value="Second Term">Second Term</option>
-                <option value="Third Term">Third Term</option>
-              </select>
+              <Select
+                name="term"
+                value={assignmentData.term ? { value: assignmentData.term, label: assignmentData.term } : null}
+                onChange={(option) => handleSingleChange(option, 'term')}
+                options={[
+                  { value: 'First Term', label: 'First Term' },
+                  { value: 'Second Term', label: 'Second Term' },
+                  { value: 'Third Term', label: 'Third Term' }
+                ]}
+                placeholder="Select Term"
+              />
 
-              <select name="teacher" value={assignmentData.teacher} onChange={handleAssignmentChange} required>
-                <option value="">Select Teacher</option>
-                {teachers.map(t => (
-                  <option key={t.id} value={t.id}>{t.first_name} {t.last_name}</option>
-                ))}
-              </select>
+              <Select
+                name="teacher"
+                value={assignmentData.teacher ? {
+                  value: assignmentData.teacher,
+                  label: teachers.find(t => t.id === assignmentData.teacher)?.first_name + ' ' + teachers.find(t => t.id === assignmentData.teacher)?.last_name
+                } : null}
+                onChange={(option) => handleSingleChange(option, 'teacher')}
+                options={teachers.map(t => ({ value: t.id, label: `${t.first_name} ${t.last_name}` }))}
+                placeholder="Select Teacher"
+              />
 
               {showDepartment && (
-                <select name="departments" multiple value={assignmentData.departments} onChange={handleAssignmentChange} required>
-                  <option value="Science">Science</option>
-                  <option value="Arts">Arts</option>
-                  <option value="Commercial">Commercial</option>
-                </select>
+                <Select
+                  isMulti
+                  name="departments"
+                  value={assignmentData.departments.map(val => ({ value: val, label: val }))}
+                  onChange={(selected) => handleAssignmentSelectChange(selected, 'departments')}
+                  options={[
+                    { value: 'General', label: 'General' },
+                    { value: 'Science', label: 'Science' },
+                    { value: 'Arts', label: 'Arts' },
+                    { value: 'Commercial', label: 'Commercial' }
+                  ]}
+                  placeholder="Select Department(s)"
+                />
               )}
 
               <button type="submit">Add Subjects</button>

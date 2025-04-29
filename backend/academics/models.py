@@ -31,6 +31,7 @@ class ClassSession(models.Model):
 
 class Subject(models.Model):
     DEPARTMENT_CHOICES = [
+        ('General', 'General'),
         ('Science', 'Science'),
         ('Arts', 'Arts'),
         ('Commercial', 'Commercial'),
@@ -45,7 +46,13 @@ class Subject(models.Model):
         blank=True,
         limit_choices_to={'role': 'teacher'}
     )
-    department = models.CharField(max_length=20, choices=DEPARTMENT_CHOICES, blank=True, null=True)
+    department = models.CharField(
+        max_length=20,
+        choices=DEPARTMENT_CHOICES,
+        default='General',  # Optional: default to General for clarity
+        blank=True,
+        null=True
+    )
 
     def __str__(self):
-        return f"{self.name} - {self.class_session}"
+        return f"{self.name} - {self.class_session} - {self.department or 'No Dept'}"

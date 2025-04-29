@@ -1,5 +1,7 @@
+// src/components/ViewSubjects.jsx
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
+import Select from 'react-select';
 import './ViewSubjects.css';
 import SubjectModal from './SubjectModal';
 
@@ -112,19 +114,29 @@ const ViewSubjects = () => {
         <h2 className="section-header">View Subjects</h2>
 
         <div className="filter-section">
-          <select value={selectedYear} onChange={(e) => setSelectedYear(e.target.value)} required>
-            <option value="">Select Academic Year</option>
-            {academicYears.map((year, idx) => (
-              <option key={idx} value={year}>{year}</option>
-            ))}
-          </select>
+          <Select
+            className="filter-select"
+            classNamePrefix="react-select"
+            value={selectedYear ? { value: selectedYear, label: selectedYear } : null}
+            onChange={(option) => setSelectedYear(option ? option.value : '')}
+            options={academicYears.map(year => ({ value: year, label: year }))}
+            placeholder="Select Academic Year"
+            isClearable
+          />
 
-          <select value={selectedTerm} onChange={(e) => setSelectedTerm(e.target.value)} required>
-            <option value="">Select Term</option>
-            <option value="First Term">First Term</option>
-            <option value="Second Term">Second Term</option>
-            <option value="Third Term">Third Term</option>
-          </select>
+          <Select
+            className="filter-select"
+            classNamePrefix="react-select"
+            value={selectedTerm ? { value: selectedTerm, label: selectedTerm } : null}
+            onChange={(option) => setSelectedTerm(option ? option.value : '')}
+            options={[
+              { value: 'First Term', label: 'First Term' },
+              { value: 'Second Term', label: 'Second Term' },
+              { value: 'Third Term', label: 'Third Term' }
+            ]}
+            placeholder="Select Term"
+            isClearable
+          />
 
           <button onClick={handleFilter}>Filter</button>
         </div>

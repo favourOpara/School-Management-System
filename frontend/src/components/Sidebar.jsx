@@ -34,8 +34,7 @@ const Sidebar = ({ activeTab, setActiveTab }) => {
       </div>
 
       <div className={`sidebar ${isOpen ? 'open' : ''}`}>
-        {/* Only show close button in mobile */}
-        <button className="close-btn mobile-only" onClick={() => setIsOpen(false)}>
+        <button className="close-btn" onClick={() => setIsOpen(false)}>
           <X />
         </button>
 
@@ -89,6 +88,9 @@ const Sidebar = ({ activeTab, setActiveTab }) => {
                 </li>
                 <li onClick={() => handleTabClick('create-student')}>
                   <PlusCircle /><span>Create Student</span>
+                </li>
+                <li onClick={() => handleTabClick('create-parent')}>
+                  <PlusCircle /><span>Create Parent</span>
                 </li>
                 <li onClick={() => handleTabClick('view-users')}>
                   <Eye /><span>View Users</span>

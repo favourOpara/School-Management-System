@@ -16,25 +16,33 @@
   border-radius: 10px;
   width: 92%;
   max-width: 520px;
-  padding: 2rem;
+  height: 90vh;
+  padding: 2rem 1.5rem;
   box-shadow: 0 8px 20px rgba(13, 71, 161, 0.1);
   border: 1px solid #e0e0e0;
   position: relative;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 .subject-modal h3 {
   text-align: center;
   color: #0d47a1;
   font-size: 1.5rem;
-  margin-bottom: 1.2rem;
+  margin-bottom: 1rem;
 }
 
+/* Scrollable list inside the modal */
 .subject-modal ul {
   list-style: none;
   padding: 0;
   margin: 0;
+  overflow-y: auto;
+  flex-grow: 1;
 }
 
+/* Each subject row */
 .subject-modal li {
   background-color: #f9f9f9;
   padding: 1rem;
@@ -102,7 +110,7 @@
   color: white;
 }
 
-/* ✅ Updated Close Button */
+/* ✅ Fixed and clearly visible close button */
 .close-modal-btn {
   position: absolute;
   top: 10px;
@@ -113,4 +121,5 @@
   color: rgb(255, 0, 0);
   font-weight: bold;
   cursor: pointer;
+  z-index: 1010;
 }

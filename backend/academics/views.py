@@ -66,6 +66,17 @@ class SubjectListCreateView(generics.ListCreateAPIView):
             errors = []
 
             for item in data:
+                if item.get('department') == 'General':
+                    # Prevent creating multiple per department
+                    existing = Subject.objects.filter(
+                        name=item['name'],
+                        class_session_id=item['class_session_id'],
+                        department='General'
+                    )
+                    if existing.exists():
+                        errors.append({'detail': f"{item['name']} (General) already exists for this session."})
+                        continue
+
                 serializer = self.get_serializer(data=item)
                 if serializer.is_valid():
                     subject = serializer.save()
@@ -83,6 +94,20 @@ class SubjectListCreateView(generics.ListCreateAPIView):
         # ✅ Handle single subject
         serializer = self.get_serializer(data=data)
         serializer.is_valid(raise_exception=True)
+
+        # Prevent duplicate general subjects on single POST too
+        if data.get('department') == 'General':
+            existing = Subject.objects.filter(
+                name=data['name'],
+                class_session_id=data['class_session_id'],
+                department='General'
+            )
+            if existing.exists():
+                return Response(
+                    {"detail": f"{data['name']} (General) already exists for this session."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
         subject = serializer.save()
         return Response(self.get_serializer(subject).data, status=status.HTTP_201_CREATED)
 
