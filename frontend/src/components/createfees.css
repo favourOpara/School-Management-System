@@ -1,0 +1,409 @@
+/* Layout Wrapper for Admin Dashboard */
+.fee-tabs {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 1.5rem;
+  gap: 1rem;
+}
+
+.fee-tabs button {
+  padding: 0.6rem 1.2rem;
+  font-size: 1rem;
+  border: none;
+  border-radius: 6px;
+  background-color: #eee;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.fee-tabs button.active-tab {
+  background-color: #1565c0;
+  color: white;
+}
+
+.fee-tabs button:hover {
+  background-color: #ccc;
+}
+
+.fee-table {
+  width: 100%;
+  margin-top: 1rem;
+  border-collapse: collapse;
+  font-size: 0.95rem;
+}
+
+.fee-table th,
+.fee-table td {
+  border: 1px solid #ddd;
+  padding: 0.75rem;
+  text-align: left;
+}
+
+.fee-table th {
+  background-color: #f5f5f5;
+  font-weight: 600;
+}
+
+.edit-btn,
+.delete-btn {
+  padding: 0.4rem 0.8rem;
+  margin-right: 0.5rem;
+  border: none;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.edit-btn {
+  background-color: #1976d2;
+  color: white;
+}
+
+.delete-btn {
+  background-color: #d32f2f;
+  color: white;
+}
+
+.create-fee-wrapper {
+  display: flex;
+  justify-content: center;  /* Center horizontally */
+  align-items: flex-start;
+  padding: 2rem 1rem;
+  min-height: 100vh;
+  background-color: #ffffff;
+}
+
+  
+  /* Main Form Container */
+  .create-fee-container {
+    max-width: 900px;
+    padding: 2rem;
+    background-color: #ffffff;
+    border: 1px solid #e0e0e0;
+    border-radius: 10px;
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.05);
+    width: 100%;
+  }
+  
+  /* Header */
+  .create-fee-container h2 {
+    text-align: center;
+    margin-bottom: 1.5rem;
+    color: #0d47a1;
+    font-size: 1.6rem;
+    font-weight: 600;
+  }
+  
+  /* Form Layout - DESKTOP: Two-column row layout */
+  .fee-form {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+  
+  .fee-form input,
+  .fee-form select {
+    flex: 1 1 calc(50% - 1rem); /* two fields per row */
+    padding: 0.85rem;
+    font-size: 1rem;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+    background-color: #fafafa;
+    transition: border 0.3s ease;
+  }
+  
+  .fee-form input:focus,
+  .fee-form select:focus {
+    border-color: #0d47a1;
+    background-color: #fff;
+  }
+  
+  /* Full-width section for checkboxes */
+  .class-checkboxes {
+    flex: 1 1 100%;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+  }
+  
+  .checkbox-item {
+    background: #fff;
+    border: 1px solid #ddd;
+    padding: 0.5rem 0.7rem;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.95rem;
+  }
+  
+  /* Full-width submit button */
+  .submit-btn {
+    flex: 1 1 100%;
+    padding: 0.9rem;
+    font-size: 1rem;
+    background-color: #1565c0;
+    color: white;
+    font-weight: 500;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+  }
+  
+  .submit-btn:hover {
+    background-color: #0d47a1;
+  }
+  
+  /* Messages */
+  .fee-message {
+    color: #2e7d32;
+    background-color: #e8f5e9;
+    padding: 0.7rem;
+    border-radius: 5px;
+    text-align: center;
+  }
+  
+  /* Mobile View */
+  @media (max-width: 600px) {
+    .create-fee-wrapper {
+      position: fixed;
+      top: 30px;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background-color: #ffffff;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      z-index: 5;
+    }
+  
+    .create-fee-container {
+      width: 100%;
+      max-width: 100%;
+      padding: 1.5rem;
+      margin: 0;
+      box-shadow: none;
+      border: none;
+    }
+  
+    .create-fee-container h2 {
+      font-size: 1.4rem;
+      text-align: left;
+    }
+  
+    .fee-form {
+      flex-direction: column;
+    }
+  
+    .fee-form input,
+    .fee-form select,
+    .submit-btn {
+      width: 100%;
+      font-size: 0.95rem;
+      padding: 0.75rem;
+    }
+  
+    .fee-message {
+      font-size: 0.9rem;
+      padding: 0.6rem;
+    }
+  }
+  /* Wrapper for View Fees Section */
+.view-fees-wrapper {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 2rem;
+  min-height: 100vh;
+  background-color: #f4f6f8;
+  overflow-x: hidden;
+}
+
+/* Main container */
+.view-fees-container {
+  max-width: 960px;
+  width: 100%;
+  background-color: #ffffff;
+  padding: 2rem;
+  border-radius: 10px;
+  border: 1px solid #e0e0e0;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
+  overflow-x: auto;
+}
+
+/* Section title */
+.section-header {
+  margin-bottom: 1.5rem;
+  font-size: 1.6rem;
+  font-weight: 600;
+  color: #0d47a1;
+  text-align: center;
+  border-bottom: 1px solid #e0e0e0;
+  padding-bottom: 0.5rem;
+}
+
+/* Filter layout for the View Fees section */
+.view-fees-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+/* Input, Button Base for Filters */
+.view-fees-filters select,
+.view-fees-filters input,
+.view-fees-filters button {
+  padding: 0.65rem;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  min-width: 160px;
+  background-color: #f9f9f9;
+  font-size: 0.95rem;
+}
+
+.view-fees-filters select:focus,
+.view-fees-filters input:focus,
+.view-fees-filters button:focus {
+  border-color: #0d47a1;
+  outline: none;
+  background-color: #fff;
+}
+
+.view-fees-filters button {
+  background-color: #1565c0;
+  color: white;
+  font-weight: 500;
+  transition: background-color 0.3s ease;
+  cursor: pointer;
+}
+
+.view-fees-filters button:hover {
+  background-color: #0d47a1;
+}
+
+/* Table styling for View Fees */
+.view-fees-table {
+  margin-top: 1rem;
+  overflow-x: auto;
+  background-color: #fff;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.view-fees-table::-webkit-scrollbar {
+  display: none;
+}
+
+.view-fees-table table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 1100px;
+}
+
+.view-fees-table th {
+  background-color: #e3f2fd;
+  color: #0d47a1;
+  font-weight: 600;
+  white-space: nowrap;
+  text-align: left;
+  padding: 0.75rem;
+  border-bottom: 1px solid #e0e0e0;
+  z-index: 2;
+}
+
+.view-fees-table td {
+  padding: 0.75rem;
+  color: #333;
+  white-space: nowrap;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+/* Sticky columns */
+.view-fees-table th.sticky,
+.view-fees-table td.sticky {
+  position: sticky;
+  left: 0;
+  background-color: #ffffff;
+  z-index: 3;
+  box-shadow: 2px 0 5px rgba(0, 0, 0, 0.05);
+}
+
+.view-fees-table th.sticky-2,
+.view-fees-table td.sticky-2 {
+  position: sticky;
+  left: 150px;
+  background-color: #ffffff;
+  z-index: 2;
+  box-shadow: 2px 0 5px rgba(0, 0, 0, 0.04);
+}
+
+/* Row hover effect */
+.view-fees-table tbody tr:hover {
+  background-color: #f1f1f1;
+}
+
+/* No match message */
+.no-match-message {
+  margin-top: 1rem;
+  color: #c62828;
+  font-weight: 500;
+}
+
+/* react-select tweaks: dropdowns darker */
+.view-fees-filters .react-select__control {
+  background-color: white;
+  border: 1px solid #ccc;
+  font-size: 1rem;
+  color: #222;
+}
+
+.view-fees-filters .react-select__single-value {
+  color: #222 !important;
+}
+
+.view-fees-filters .react-select__option {
+  color: #222;
+  font-size: 0.95rem;
+}
+
+.view-fees-filters .react-select__placeholder {
+  color: #666;
+  font-size: 0.95rem;
+}
+
+.view-fees-filters .react-select__option--is-focused {
+  background-color: #f0f0f0;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .view-fees-filters {
+    flex-direction: column;
+  }
+
+  .view-fees-filters select,
+  .view-fees-filters input,
+  .view-fees-filters button {
+    width: 100%;
+  }
+
+  .view-fees-wrapper {
+    padding: 1rem;
+  }
+
+  .view-fees-container {
+    padding: 1.5rem;
+    overflow-x: auto;
+  }
+
+  .section-header {
+    font-size: 1.4rem;
+    text-align: left;
+  }
+}

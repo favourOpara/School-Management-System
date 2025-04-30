@@ -1,0 +1,107 @@
+.fee-student-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(0, 0, 0, 0.4);
+  z-index: 9999;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding-top: 50px;
+}
+
+.fee-student-modal {
+  background-color: #fff;
+  width: 95%;
+  max-width: 1000px;
+  padding: 2rem;
+  border-radius: 10px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+  position: relative;
+  overflow-x: auto;
+}
+
+.fee-student-modal h3 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #0d47a1;
+  margin-bottom: 1rem;
+  text-align: center;
+}
+
+.close-btn {
+  position: absolute;
+  top: 15px;
+  right: 20px;
+  background: transparent;
+  border: none;
+  font-size: 1.8rem;
+  cursor: pointer;
+  color: #444;
+}
+
+.status-filter {
+  margin-right: 1rem;
+}
+
+.filter-export-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.export-btn {
+  margin-top: 1rem;
+  padding: 0.75rem 1.5rem;
+  background-color: #2e7d32;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.export-btn:hover {
+  background-color: #1b5e20;
+}
+
+.student-fee-table-container {
+  margin-top: 1rem;
+}
+
+.student-fee-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.student-fee-table th,
+.student-fee-table td {
+  padding: 0.75rem;
+  text-align: left;
+  border: 1px solid #ddd;
+  white-space: nowrap;
+}
+
+.student-fee-table th {
+  background-color: #e3f2fd;
+  color: #0d47a1;
+  font-weight: 600;
+}
+
+.student-fee-table td {
+  color: #333;
+}
+
+@media (max-width: 768px) {
+  .fee-student-modal {
+    padding: 1rem;
+  }
+
+  .student-fee-table table {
+    min-width: 600px;
+  }
+}

@@ -8,7 +8,8 @@ import CreateTeacherForm from '../components/CreateTeacherForm';
 import CreateParentForm from '../components/CreateParentForm';
 import ViewSubjects from '../components/ViewSubjects';
 import ActivityLog from '../components/ActivityLog';
-import ViewUsers from '../components/ViewUsers'; // ✅ Added this
+import ViewUsers from '../components/ViewUsers';
+import CreateFeeStructure from '../components/CreateFeeStructure'; // ✅ Import the fee structure component
 
 const getGreeting = () => {
   const hour = new Date().getHours();
@@ -44,7 +45,7 @@ const AdminDashboard = () => {
       case 'view-subjects':
         return <ViewSubjects />;
       case 'view-users':
-        return <ViewUsers />; // ✅ Replace placeholder with actual component
+        return <ViewUsers />;
       case 'activity-logs':
         return <ActivityLog />;
       case 'profile':
@@ -55,13 +56,22 @@ const AdminDashboard = () => {
         return <div><h2>Analytics</h2><p>Analytics content.</p></div>;
       case 'reports':
         return <div><h2>Reports</h2><p>Reports content.</p></div>;
+
+      // ✅ New tabs under School Data
+      case 'attendance':
+        return <div><h2>Attendance</h2><p>Attendance tracking to be implemented.</p></div>;
+      case 'fees':
+        return <CreateFeeStructure />;
+      case 'results':
+        return <div><h2>Results</h2><p>Results management coming soon.</p></div>;
+
       default:
         return <p>Select a section from the sidebar.</p>;
     }
   };
 
   return (
-    <div style={{ display: 'flex',  }}>
+    <div style={{ display: 'flex' }}>
       <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
       <div style={{ marginLeft: '100px', padding: '1rem', flex: 1 }}>
         {renderContent()}

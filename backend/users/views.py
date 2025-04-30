@@ -15,12 +15,12 @@ from academics.models import Subject
 from logs.models import ActivityLog
 from datetime import date
 
-# ✅ Admin-only permission
+# Admin-only permission
 class IsAdminRole(permissions.BasePermission):
     def has_permission(self, request, view):
         return request.user.is_authenticated and request.user.role == 'admin'
 
-# ✅ Admin creates student or parent
+# Admin creates student or parent
 class CreateUserView(generics.CreateAPIView):
     queryset = CustomUser.objects.all()
     serializer_class = UserCreateSerializer
@@ -34,7 +34,7 @@ class CreateUserView(generics.CreateAPIView):
             action=f"{self.request.user.username} created {user.role} account: {user.username}"
         )
 
-# ✅ Admin creates teacher
+# Admin creates teacher
 class TeacherSignupView(APIView):
     permission_classes = [IsAuthenticated, IsAdminRole]
 
@@ -53,7 +53,7 @@ class TeacherSignupView(APIView):
             }, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-# ✅ Admin creates parent
+# Admin creates parent
 class ParentSignupView(APIView):
     permission_classes = [IsAuthenticated, IsAdminRole]
 
@@ -72,14 +72,14 @@ class ParentSignupView(APIView):
             }, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-# ✅ Logged-in user info
+# Logged-in user info
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def me(request):
     serializer = UserCreateSerializer(request.user)
     return Response(serializer.data)
 
-# ✅ List teachers
+# List teachers
 @api_view(['GET'])
 @permission_classes([IsAuthenticated, IsAdminRole])
 def list_teachers(request):
@@ -87,8 +87,8 @@ def list_teachers(request):
     serializer = UserListSerializer(teachers, many=True)
     return Response(serializer.data)
 
-# ✅ List parents
-# ✅ Corrected list_parents view
+# List parents
+# Corrected list_parents view
 @api_view(['GET'])
 @permission_classes([IsAuthenticated, IsAdminRole])
 def list_parents(request):
@@ -125,7 +125,7 @@ def list_parents(request):
 
     return Response(response_data)
 
-# ✅ List students with filters
+# List students with filters
 @api_view(['GET'])
 @permission_classes([IsAuthenticated, IsAdminRole])
 def list_students(request):
@@ -141,7 +141,7 @@ def list_students(request):
     serializer = StudentDetailSerializer(students, many=True)
     return Response(serializer.data)
 
-# ✅ List students and match subjects by department (updated)
+# List students and match subjects by department (updated)
 @api_view(['GET'])
 @permission_classes([IsAuthenticated, IsAdminRole])
 def students_with_subjects(request):
@@ -206,7 +206,7 @@ def students_with_subjects(request):
 
     return Response(response_data)
 
-# ✅ Edit / Update / Delete individual user
+# Edit / Update / Delete individual user
 class UserRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
     queryset = CustomUser.objects.all()
     serializer_class = UserCreateSerializer

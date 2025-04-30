@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState } from 'react'; 
 import {
   Menu, X,
   User, LayoutDashboard, Users, BookOpen,
-  LogOut, Settings, Shield, PlusCircle, Eye, Book, ClipboardList
+  LogOut, Settings, Shield, PlusCircle, Eye, Book, ClipboardList, CalendarCheck, DollarSign, BarChart3
 } from 'lucide-react';
 import './Sidebar.css';
 
@@ -124,6 +124,24 @@ const Sidebar = ({ activeTab, setActiveTab }) => {
                 </li>
                 <li onClick={() => handleTabClick('view-subjects')}>
                   <Eye /><span>View Subjects</span>
+                </li>
+              </ul>
+            )}
+
+            <li onClick={() => handleDropdownToggle('schooldata')}>
+              <BarChart3 />
+              <span>School Data</span>
+            </li>
+            {openDropdown === 'schooldata' && (
+              <ul className="sidebar-submenu">
+                <li onClick={() => handleTabClick('attendance')}>
+                  <CalendarCheck /><span>Attendance</span>
+                </li>
+                <li onClick={() => handleTabClick('fees')}>
+                  <DollarSign /><span>Fees</span>
+                </li>
+                <li onClick={() => handleTabClick('results')}>
+                  <BookOpen /><span>Results</span>
                 </li>
               </ul>
             )}

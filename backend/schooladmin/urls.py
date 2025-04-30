@@ -1,10 +1,18 @@
 from django.urls import path
 from .views import (
-    get_users_by_role,
-    get_students_by_class,
+    CreateFeeStructureView,
+    ListStudentFeeRecordsView,
+    ListFeeStructuresView,
+    UpdateFeeStructureView,
+    DeleteFeeStructureView,
+    FeeStudentsView,
 )
 
 urlpatterns = [
-    path('list-users/', get_users_by_role, name='list-users'),
-    path('class-students/', get_students_by_class, name='class-students'),
+    path('fees/create/', CreateFeeStructureView.as_view(), name='create-fee'),
+    path('fees/records/', ListStudentFeeRecordsView.as_view(), name='list-fee-records'),
+    path('fees/', ListFeeStructuresView.as_view(), name='list-fees'),
+    path('fees/<int:pk>/edit/', UpdateFeeStructureView.as_view(), name='edit-fee'),
+    path('fees/<int:pk>/delete/', DeleteFeeStructureView.as_view(), name='delete-fee'),
+    path('fees/<int:fee_id>/students/', FeeStudentsView.as_view(), name='fee-students'),
 ]

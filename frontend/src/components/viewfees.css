@@ -1,0 +1,258 @@
+/* Wrapper for View Fees Section */
+.view-fees-wrapper {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 2rem;
+  min-height: 100vh;
+  background-color: #f4f6f8;
+  overflow-x: hidden;
+}
+
+/* Main container */
+.view-fees-container {
+  max-width: 960px;
+  width: 100%;
+  background-color: #ffffff;
+  padding: 2rem;
+  border-radius: 10px;
+  border: 1px solid #e0e0e0;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
+  overflow-x: auto;
+}
+
+/* Section title */
+.section-header {
+  margin-bottom: 1.5rem;
+  font-size: 1.6rem;
+  font-weight: 600;
+  color: #0d47a1;
+  text-align: center;
+  border-bottom: 1px solid #e0e0e0;
+  padding-bottom: 0.5rem;
+}
+
+/* Filter layout for the View Fees section */
+.view-fees-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+/* Input, Button Base for Filters */
+.view-fees-filters select,
+.view-fees-filters input,
+.view-fees-filters button {
+  padding: 0.65rem;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  min-width: 160px;
+  background-color: #f9f9f9;
+  font-size: 0.95rem;
+}
+
+.view-fees-filters select:focus,
+.view-fees-filters input:focus,
+.view-fees-filters button:focus {
+  border-color: #0d47a1;
+  outline: none;
+  background-color: #fff;
+}
+
+.view-fees-filters button {
+  background-color: #1565c0;
+  color: white;
+  font-weight: 500;
+  transition: background-color 0.3s ease;
+  cursor: pointer;
+}
+
+.view-fees-filters button:hover {
+  background-color: #0d47a1;
+}
+
+/* Table styling for View Fees */
+.view-fees-table {
+  margin-top: 1rem;
+  overflow-x: auto;
+  background-color: #fff;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.view-fees-table::-webkit-scrollbar {
+  display: none;
+}
+
+.view-fees-table table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 1100px;
+}
+
+.view-fees-table th {
+  background-color: #e3f2fd;
+  color: #0d47a1;
+  font-weight: 600;
+  white-space: nowrap;
+  text-align: left;
+  padding: 0.75rem;
+  border-bottom: 1px solid #e0e0e0;
+  z-index: 2;
+}
+
+.view-fees-table td {
+  padding: 0.75rem;
+  color: #222; /* Darker text for better readability */
+  white-space: nowrap;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+/* Sticky columns */
+.view-fees-table th.sticky,
+.view-fees-table td.sticky {
+  position: sticky;
+  left: 0;
+  background-color: #ffffff;
+  z-index: 3;
+  box-shadow: 2px 0 5px rgba(0, 0, 0, 0.05);
+}
+
+.view-fees-table th.sticky-2,
+.view-fees-table td.sticky-2 {
+  position: sticky;
+  left: 150px;
+  background-color: #ffffff;
+  z-index: 2;
+  box-shadow: 2px 0 5px rgba(0, 0, 0, 0.04);
+}
+
+/* Row hover effect */
+.view-fees-table tbody tr:hover {
+  background-color: #f1f1f1;
+}
+
+/* No match message */
+.no-match-message {
+  margin-top: 1rem;
+  color: #c62828;
+  font-weight: 500;
+}
+
+/* react-select tweaks: dropdowns darker */
+.view-fees-filters .react-select__control {
+  background-color: white;
+  border: 1px solid #ccc;
+  font-size: 1rem;
+  color: #222;
+}
+
+.view-fees-filters .react-select__single-value {
+  color: #222 !important;
+}
+
+.view-fees-filters .react-select__option {
+  color: #222;
+  font-size: 0.95rem;
+}
+
+.view-fees-filters .react-select__placeholder {
+  color: #666;
+  font-size: 0.95rem;
+}
+
+.view-fees-filters .react-select__option--is-focused {
+  background-color: #f0f0f0;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .view-fees-filters {
+      flex-direction: column;
+  }
+
+  .view-fees-filters select,
+  .view-fees-filters input,
+  .view-fees-filters button {
+      width: 100%;
+  }
+
+  .view-fees-wrapper {
+      padding: 1rem;
+  }
+
+  .view-fees-container {
+      padding: 1.5rem;
+      overflow-x: auto;
+  }
+
+  .section-header {
+      font-size: 1.4rem;
+      text-align: left;
+  }
+}
+
+/* Class Details Table Styling */
+.class-details table {
+  width: 100%;
+  border-collapse: collapse;
+  background-color: #fff; /* White background for better visibility */
+  margin-top: 20px;
+}
+
+/* Class Details Table Header Styling */
+.class-details th {
+  background-color: #2157bb;  /* Dark background for header */
+  color: #fff;  /* White text for better contrast */
+  padding: 12px 15px;
+  text-align: left;
+  font-weight: bold;
+  border-bottom: 2px solid #ccc; /* Light border for separation */
+}
+
+/* Class Details Table Row Styling */
+.class-details td {
+  color: #3779b8;  /* Dark text for better readability */
+  padding: 10px 15px;
+  border-bottom: 1px solid #ddd;  /* Light gray border between rows */
+}
+
+/* Hover Effect on Rows */
+.class-details tr:hover {
+  background-color: #f1f1f1;  /* Light gray background on row hover */
+}
+
+/* Border Styling for the Class Details Table */
+.class-details {
+  border: 1px solid #ddd;  /* Light gray border around the table */
+  border-radius: 8px;  /* Rounded corners for better appearance */
+  overflow: hidden;
+}
+
+/* Add a message when no students are found */
+.class-details .no-students-message {
+  color: #3670c7;  /* Dark gray text for better readability */
+  font-size: 16px;
+  text-align: center;
+  padding: 20px;
+}
+
+@media screen and (max-width: 768px) {
+  .class-details {
+      margin-top: 0 rem;
+      border-radius: 4px;
+  }
+
+  .class-details th,
+  .class-details td {
+      padding: 8px 10px;
+      font-size: 13px;
+  }
+
+  .class-details table {
+      font-size: 13px;
+  }
+}
