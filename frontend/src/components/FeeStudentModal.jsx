@@ -1,68 +1,121 @@
-import React, { useEffect, useState } from 'react';
-import axios from 'axios';
+import React, { useState, useEffect } from 'react';
 import Select from 'react-select';
+import axios from 'axios';
 import * as XLSX from 'xlsx';
 import './feestudentmodal.css';
 
 const paymentStatusOptions = [
   { value: 'ALL', label: 'All' },
   { value: 'PAID', label: 'Paid' },
-  { value: 'UNPAID', label: 'Unpaid' }
+  { value: 'UNPAID', label: 'Unpaid' },
 ];
 
-const FeeStudentModal = ({ fee, onClose }) => {
+const FeeStudentModal = ({ data = {}, onClose }) => {
+  const {
+    className = 'Class',
+    students = [],
+  } = data;
+
   const token = localStorage.getItem('accessToken');
+
+  // Local state copy so we can edit in-place
   const [records, setRecords] = useState([]);
-  const [filteredRecords, setFilteredRecords] = useState([]);
   const [selectedStatus, setSelectedStatus] = useState(paymentStatusOptions[0]);
+  const [filteredRecords, setFilteredRecords] = useState([]);
+  const [editedPaid, setEditedPaid] = useState({});
+  const [saving, setSaving] = useState(false);
 
-  // Prevent errors if `fee` or `fee.name` is missing
-  const feeName = fee?.name || 'Unknown Fee';
-
+  // 1) Initialize when `students` arrives
   useEffect(() => {
-    const fetchRecords = async () => {
-      try {
-        const res = await axios.get(`http://127.0.0.1:8000/api/schooladmin/fee-students/${fee.id}/`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        setRecords(res.data);
-        setFilteredRecords(res.data);
-      } catch (err) {
-        console.error('Error fetching student fee records:', err);
-      }
-    };
+    setRecords(students);
+    const initPaid = {};
+    students.forEach(s => {
+      if (s.record_id != null) initPaid[s.record_id] = s.amount_paid;
+    });
+    setEditedPaid(initPaid);
+  }, [students]);
 
-    fetchRecords();
-  }, [fee.id, token]);
-
+  // 2) Recompute filteredRecords on status or data change
   useEffect(() => {
-    if (selectedStatus.value === 'ALL') {
-      setFilteredRecords(records);
-    } else {
-      const filtered = records.filter(rec => rec.payment_status === selectedStatus.value);
-      setFilteredRecords(filtered);
-    }
-  }, [selectedStatus, records]);
+    setFilteredRecords(
+      selectedStatus.value === 'ALL'
+        ? records
+        : records.filter(r => r.payment_status === selectedStatus.value)
+    );
+  }, [records, selectedStatus]);
 
-  const exportToExcel = () => {
-    const data = filteredRecords.map(rec => ({
-      Student: rec.student_name,
-      Fee: rec.fee_name,
-      AmountPaid: rec.amount_paid,
-      DatePaid: rec.date_paid || 'N/A',
-      PaymentStatus: rec.payment_status
+  // 3) Handle inline edits
+  const handlePaidChange = (recordId, value) => {
+    setEditedPaid(prev => ({
+      ...prev,
+      [recordId]: value === '' ? '' : parseFloat(value)
     }));
+  };
 
-    const worksheet = XLSX.utils.json_to_sheet(data);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'FeeRecords');
-    XLSX.writeFile(workbook, `${feeName.replace(/\s+/g, '_')}_Records.xlsx`);
+  // 4) Save only changed records, then update local state
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      // figure out which ones actually changed
+      const toUpdate = Object.entries(editedPaid).filter(([rid, amt]) => {
+        const original = records.find(r => r.record_id === +rid)?.amount_paid;
+        return amt !== original;
+      });
+
+      // batch PATCH
+      await Promise.all(toUpdate.map(([rid, amount_paid]) =>
+        axios.patch(
+          `http://127.0.0.1:8000/api/schooladmin/fee-records/${rid}/update/`,
+          { amount_paid },
+          { headers: { Authorization: `Bearer ${token}` } }
+        )
+      ));
+
+      // update UI immediately
+      setRecords(prev =>
+        prev.map(r => {
+          const rid = r.record_id;
+          if (editedPaid[rid] !== undefined) {
+            const newPaid = editedPaid[rid];
+            return {
+              ...r,
+              amount_paid: newPaid,
+              outstanding: r.fee_amount - newPaid,
+              payment_status: newPaid >= r.fee_amount ? 'PAID' : r.payment_status,
+            };
+          }
+          return r;
+        })
+      );
+
+      alert('Payment records updated successfully.');
+    } catch (err) {
+      console.error(err);
+      alert('Failed to update one or more records.');
+    }
+    setSaving(false);
+  };
+
+  // 5) Export current filter to Excel
+  const exportToExcel = () => {
+    const sheetData = filteredRecords.map(r => ({
+      Student: r.full_name,
+      Username: r.username,
+      Fee: r.fee_name,
+      AmountPaid: editedPaid[r.record_id],
+      Outstanding: r.outstanding,
+      PaymentStatus: r.payment_status,
+    }));
+    const ws = XLSX.utils.json_to_sheet(sheetData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Students');
+    XLSX.writeFile(wb, `${className.replace(/\s+/g, '_')}_Students.xlsx`);
   };
 
   return (
     <div className="fee-student-modal-overlay">
       <div className="fee-student-modal">
-        <h3>{feeName} — Student Records</h3>
+        <h3>{className} — Student Fee Records</h3>
 
         <div className="filter-export-row">
           <div className="status-filter">
@@ -74,7 +127,9 @@ const FeeStudentModal = ({ fee, onClose }) => {
               styles={{ control: base => ({ ...base, fontSize: '0.9rem' }) }}
             />
           </div>
-          <button className="export-btn" onClick={exportToExcel}>Export to Excel</button>
+          <button className="export-btn" onClick={exportToExcel}>
+            Export to Excel
+          </button>
         </div>
 
         <div className="student-fee-table-container">
@@ -82,23 +137,38 @@ const FeeStudentModal = ({ fee, onClose }) => {
             <thead>
               <tr>
                 <th>Student</th>
+                <th>Username</th>
                 <th>Fee</th>
-                <th>Amount Paid</th>
-                <th>Date Paid</th>
+                <th>Paid</th>
+                <th>Outstanding</th>
                 <th>Status</th>
               </tr>
             </thead>
             <tbody>
               {filteredRecords.length === 0 ? (
-                <tr><td colSpan="5" style={{ textAlign: 'center' }}>No records match selected filter.</td></tr>
+                <tr>
+                  <td colSpan="6" style={{ textAlign: 'center' }}>
+                    No records match selected filter.
+                  </td>
+                </tr>
               ) : (
-                filteredRecords.map(rec => (
-                  <tr key={rec.student_id}>
-                    <td>{rec.student_name}</td>
-                    <td>{rec.fee_name}</td>
-                    <td>₦{rec.amount_paid}</td>
-                    <td>{rec.date_paid || '—'}</td>
-                    <td>{rec.payment_status}</td>
+                filteredRecords.map(r => (
+                  <tr key={r.record_id}>
+                    <td>{r.full_name}</td>
+                    <td>{r.username}</td>
+                    <td>{r.fee_name}</td>
+                    <td>
+                      <input
+                        type="number"
+                        className="edit-paid-input"
+                        placeholder="₦0"
+                        min="0"
+                        value={editedPaid[r.record_id] ?? ''}
+                        onChange={e => handlePaidChange(r.record_id, e.target.value)}
+                      />
+                    </td>
+                    <td>₦{r.outstanding}</td>
+                    <td>{r.payment_status}</td>
                   </tr>
                 ))
               )}
@@ -106,7 +176,21 @@ const FeeStudentModal = ({ fee, onClose }) => {
           </table>
         </div>
 
-        <button className="close-modal-btn" onClick={onClose}>Close</button>
+        <div className="modal-footer-buttons">
+          <button
+            className="save-btn"
+            onClick={handleSave}
+            disabled={saving}
+          >
+            {saving ? 'Saving…' : 'Save'}
+          </button>
+          <button
+            className="fee_student_close-btn"
+            onClick={onClose}
+          >
+            Close
+          </button>
+        </div>
       </div>
     </div>
   );

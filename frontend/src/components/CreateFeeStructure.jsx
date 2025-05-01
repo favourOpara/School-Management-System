@@ -35,23 +35,36 @@ const customSelectStyles = {
 
 const CreateFeeStructure = () => {
   const [activeTab, setActiveTab] = useState('create');
+
+  // form state
   const [name, setName] = useState('');
   const [amount, setAmount] = useState('');
   const [academicYear, setAcademicYear] = useState(null);
   const [term, setTerm] = useState(termOptions[0]);
   const [selectedClasses, setSelectedClasses] = useState([]);
+
+  // lookups
   const [allClasses, setAllClasses] = useState([]);
   const [academicYears, setAcademicYears] = useState([]);
   const [fees, setFees] = useState([]);
+
+  // messages
   const [message, setMessage] = useState('');
+
+  // edit‐fee modal
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [feeToEdit, setFeeToEdit] = useState(null);
+
+  // expand a fee to show its classes
   const [expandedFee, setExpandedFee] = useState(null);
   const [classStudentsData, setClassStudentsData] = useState(null);
+
+  // click on one class to open FeeStudentModal
   const [selectedClassInfo, setSelectedClassInfo] = useState(null);
 
   const token = localStorage.getItem('accessToken');
 
+  // fetch initial data
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -67,10 +80,15 @@ const CreateFeeStructure = () => {
           }),
         ]);
 
-        setAllClasses(classRes.data);
-        const years = sessionRes.data.map((s) => s.academic_year);
-        setAcademicYears([...new Set(years)].map((y) => ({ value: y, label: y })));
-        setFees(feeRes.data);
+        setAllClasses(classRes.data || []);
+
+        // sessionRes.data might not be an array
+        const sessions = Array.isArray(sessionRes.data) ? sessionRes.data : [];
+        const years = sessions.map(s => s.academic_year);
+        const unique = [...new Set(years)];
+        setAcademicYears(unique.map(y => ({ value: y, label: y })));
+
+        setFees(feeRes.data || []);
       } catch (err) {
         console.error('Error fetching data:', err);
       }
@@ -79,14 +97,21 @@ const CreateFeeStructure = () => {
     fetchData();
   }, [token]);
 
-  const handleSubmit = async (e) => {
+  // Reset class‐student details whenever you collapse the fee list
+  useEffect(() => {
+    if (expandedFee === null) {
+      setClassStudentsData(null);
+      setSelectedClassInfo(null);
+    }
+  }, [expandedFee]);
+
+  // handle create form
+  const handleSubmit = async e => {
     e.preventDefault();
     setMessage('');
-
     if (!name || !amount || !academicYear || selectedClasses.length === 0) {
-      return setMessage('Please fill in all required fields and select at least one class.');
+      return setMessage('Please fill in all fields and select at least one class.');
     }
-
     try {
       await axios.post(
         'http://127.0.0.1:8000/api/schooladmin/fees/create/',
@@ -95,113 +120,118 @@ const CreateFeeStructure = () => {
           amount,
           academic_year: academicYear.value,
           term: term.value,
-          classes: selectedClasses.map((c) => c.value),
+          classes: selectedClasses.map(c => c.value),
         },
         { headers: { Authorization: `Bearer ${token}` } }
       );
-
-      setMessage('Fee structure created successfully!');
+      setMessage('Fee structure created successfully.');
+      // reset form
       setName('');
       setAmount('');
       setAcademicYear(null);
       setTerm(termOptions[0]);
       setSelectedClasses([]);
-
+      // refresh list
       const res = await axios.get('http://127.0.0.1:8000/api/schooladmin/fees/', {
         headers: { Authorization: `Bearer ${token}` },
       });
-      setFees(res.data);
+      setFees(res.data || []);
     } catch (err) {
-      console.error('Error creating fee:', err);
-      setMessage('Something went wrong. Please try again.');
+      console.error(err);
+      setMessage('Something went wrong.');
     }
   };
 
-  const handleDelete = async (feeId) => {
-    if (!window.confirm('Are you sure you want to delete this fee?')) return;
-
+  const handleDelete = async feeId => {
+    if (!window.confirm('Delete this fee?')) return;
     try {
       await axios.delete(`http://127.0.0.1:8000/api/schooladmin/fees/${feeId}/delete/`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-
-      setFees((prev) => prev.filter((f) => f.id !== feeId));
-      setMessage('Fee deleted successfully.');
+      setFees(f => f.filter(x => x.id !== feeId));
+      setMessage('Deleted.');
     } catch (err) {
-      console.error('Error deleting fee:', err);
-      setMessage('Failed to delete fee.');
+      console.error(err);
+      setMessage('Delete failed.');
     }
   };
 
-  const handleEditClick = (fee) => {
+  const handleEditClick = fee => {
     setFeeToEdit(fee);
     setEditModalVisible(true);
   };
-
-  const handleModalUpdate = (updatedFee) => {
-    setFees((prev) => prev.map((f) => (f.id === updatedFee.id ? updatedFee : f)));
+  const handleModalUpdate = updated => {
+    setFees(f => f.map(x => (x.id === updated.id ? updated : x)));
   };
 
-  const handleFeeNameClick = async (fee) => {
+  // expand/collapse fee → load its classes
+  const handleFeeNameClick = async fee => {
     if (expandedFee === fee.id) {
       setExpandedFee(null);
     } else {
       setExpandedFee(fee.id);
+      setSelectedClassInfo(null);
       try {
-        const res = await axios.get(`http://127.0.0.1:8000/api/schooladmin/fees/${fee.id}/students/`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        setClassStudentsData(res.data);
+        const res = await axios.get(
+          `http://127.0.0.1:8000/api/schooladmin/fees/${fee.id}/students/`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        // ensure array
+        setClassStudentsData(Array.isArray(res.data) ? res.data : []);
       } catch (err) {
-        console.error('Error fetching class-student data:', err);
+        console.error('Error loading students by class:', err);
+        setClassStudentsData([]);
       }
     }
   };
 
-  const handleClassClick = (classInfo) => {
-    setSelectedClassInfo(classInfo);
+  // click on one class row
+  const handleClassClick = info => {
+    setSelectedClassInfo(info);
   };
 
-  const filteredFees = fees.filter(
-    (fee) =>
-      (!academicYear || fee.academic_year === academicYear.value) &&
-      (!term || fee.term === term.value)
+  // filter the fee list by year+term
+  const filteredFees = fees.filter(fee =>
+    (!academicYear || fee.academic_year === academicYear.value) &&
+    (!term || fee.term === term.value)
   );
 
   return (
     <div className="create-fee-wrapper">
       <div className="create-fee-container">
         <div className="fee-tabs">
-          <button className={activeTab === 'create' ? 'active-tab' : ''} onClick={() => setActiveTab('create')}>
-            Create Fee
-          </button>
-          <button className={activeTab === 'view' ? 'active-tab' : ''} onClick={() => setActiveTab('view')}>
-            View Fees
-          </button>
+          <button className={activeTab==='create' ? 'active-tab':''} onClick={()=>setActiveTab('create')}>Create Fee</button>
+          <button className={activeTab==='view'   ? 'active-tab':''} onClick={()=>setActiveTab('view')}>View Fees</button>
         </div>
 
         {message && <p className="fee-message">{message}</p>}
 
-        {activeTab === 'create' && (
+        {activeTab==='create' && (
           <form onSubmit={handleSubmit} className="fee-form">
-            <input type="text" placeholder="e.g. First Term Tuition" value={name} onChange={(e) => setName(e.target.value)} />
-            <input type="number" placeholder="Enter amount" value={amount} onChange={(e) => setAmount(e.target.value)} />
+            <input type="text" placeholder="e.g. First Term Tuition" value={name} onChange={e=>setName(e.target.value)}/>
+            <input type="number" placeholder="Amount" value={amount} onChange={e=>setAmount(e.target.value)}/>
             <div className="full-width">
-              <label>Academic Year:</label>
-              <Select options={academicYears} value={academicYear} onChange={setAcademicYear} placeholder="Select academic year" isSearchable styles={customSelectStyles} />
+              <label>Academic Year</label>
+              <Select
+                options={academicYears}
+                value={academicYear}
+                onChange={setAcademicYear}
+                placeholder="Select year"
+                isSearchable
+                styles={customSelectStyles}
+              />
             </div>
             <div className="full-width">
-              <label>Term:</label>
-              <Select options={termOptions} value={term} onChange={setTerm} placeholder="Select term" styles={customSelectStyles} />
+              <label>Term</label>
+              <Select options={termOptions} value={term} onChange={setTerm} styles={customSelectStyles}/>
             </div>
             <div className="full-width">
-              <label>Select Classes:</label>
+              <label>Classes</label>
               <Select
                 isMulti
-                options={allClasses.map((cls) => ({ value: cls.id, label: cls.name }))}
+                options={allClasses.map(c=>({value:c.id,label:c.name}))}
                 value={selectedClasses}
                 onChange={setSelectedClasses}
-                placeholder="Select classes"
                 styles={customSelectStyles}
               />
             </div>
@@ -209,77 +239,91 @@ const CreateFeeStructure = () => {
           </form>
         )}
 
-        {activeTab === 'view' && (
+        {activeTab==='view' && (
           <div className="fee-list">
             <div className="fee-filter">
               <div className="filter-item">
-                <label>Academic Year:</label>
-                <Select options={academicYears} value={academicYear} onChange={setAcademicYear} placeholder="Filter by academic year" styles={customSelectStyles} />
+                <label>Year:</label>
+                <Select
+                  options={academicYears}
+                  value={academicYear}
+                  onChange={setAcademicYear}
+                  placeholder="Filter by year"
+                  styles={customSelectStyles}
+                />
               </div>
               <div className="filter-item">
                 <label>Term:</label>
-                <Select options={termOptions} value={term} onChange={setTerm} placeholder="Filter by term" styles={customSelectStyles} />
+                <Select
+                  options={termOptions}
+                  value={term}
+                  onChange={setTerm}
+                  placeholder="Filter by term"
+                  styles={customSelectStyles}
+                />
               </div>
             </div>
 
-            {filteredFees.length === 0 ? (
-              <p>No fees found for selected filters.</p>
-            ) : (
-              <div className="view-fees-table">
+            {filteredFees.length===0
+              ? <p>No fees for these filters.</p>
+              : <div className="view-fees-table">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Name</th><th>Amt</th><th>Year</th><th>Term</th><th>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredFees.map(fee=>(
+                        <tr key={fee.id}>
+                          <td
+                            style={{cursor:'pointer',color:'#1565c0',fontWeight:'bold'}}
+                            onClick={()=>handleFeeNameClick(fee)}
+                          >{fee.name}</td>
+                          <td>₦{fee.amount}</td>
+                          <td>{fee.academic_year}</td>
+                          <td>{fee.term}</td>
+                          <td>
+                            <button className="edit-btn"   onClick={()=>handleEditClick(fee)}>Edit</button>
+                            <button className="delete-btn" onClick={()=>handleDelete(fee.id)}>Delete</button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+            }
+
+            {/* class‐details only if array */}
+            {expandedFee != null && Array.isArray(classStudentsData) && (
+              <div className="class-details">
+                <h3>Classes under “{fees.find(f=>f.id===expandedFee)?.name}”</h3>
                 <table>
                   <thead>
                     <tr>
-                      <th>Name</th>
-                      <th>Amount</th>
-                      <th>Academic Year</th>
-                      <th>Term</th>
-                      <th>Actions</th>
+                      <th>Class</th><th>#Students</th><th>Paid</th><th>Outstanding</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredFees.map((fee) => (
-                      <tr key={fee.id}>
-                        <td style={{ cursor: 'pointer', color: '#1565c0', fontWeight: 'bold' }} onClick={() => handleFeeNameClick(fee)}>
-                          {fee.name}
-                        </td>
-                        <td>₦{fee.amount}</td>
-                        <td>{fee.academic_year}</td>
-                        <td>{fee.term}</td>
-                        <td>
-                          <button className="edit-btn" onClick={() => handleEditClick(fee)}>Edit</button>
-                          <button className="delete-btn" onClick={() => handleDelete(fee.id)}>Delete</button>
-                        </td>
+                    {classStudentsData.map(c=>(
+                      <tr
+                        key={c.classId}
+                        onClick={()=>handleClassClick({...c,feeId:expandedFee})}
+                        style={{cursor:'pointer'}}
+                      >
+                        <td>{c.className}</td>
+                        <td>{Array.isArray(c.students)?c.students.length:0}</td>
+                        <td>₦{c.paid}</td>
+                        <td>₦{c.outstanding}</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
             )}
-
-            {expandedFee && classStudentsData && (
-              <div className="class-details">
-                <h3>Classes under {fees.find(f => f.id === expandedFee)?.name}</h3>
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Class Name</th>
-                      <th>Students</th>
-                      <th>Paid</th>
-                      <th>Outstanding</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {classStudentsData.map((c) => (
-                      <tr key={c.classId} onClick={() => handleClassClick({ ...c, feeId: expandedFee })} style={{ cursor: 'pointer' }}>
-                        <td>{c.className}</td>
-                        <td>{c.students.length}</td>
-                        <td>{c.paid}</td>
-                        <td>{c.outstanding}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+            {/* if it’s non‐array (error?) */}
+            {expandedFee != null && !Array.isArray(classStudentsData) && (
+              <p className="no-match-message">Failed to load classes</p>
             )}
           </div>
         )}
@@ -287,18 +331,21 @@ const CreateFeeStructure = () => {
         {editModalVisible && feeToEdit && (
           <EditFeeModal
             fee={feeToEdit}
-            onClose={() => setEditModalVisible(false)}
+            onClose={()=>setEditModalVisible(false)}
             onUpdated={handleModalUpdate}
           />
         )}
 
         {selectedClassInfo && (
           <FeeStudentModal
-            fee={{
-              id: selectedClassInfo.feeId,
-              name: fees.find(f => f.id === selectedClassInfo.feeId)?.name || '',
+            data={{
+              className:    selectedClassInfo.className,
+              students:     selectedClassInfo.students,
+              paid:         selectedClassInfo.paid,
+              outstanding:  selectedClassInfo.outstanding,
+              feeId:        selectedClassInfo.feeId
             }}
-            onClose={() => setSelectedClassInfo(null)}
+            onClose={()=>setSelectedClassInfo(null)}
           />
         )}
       </div>

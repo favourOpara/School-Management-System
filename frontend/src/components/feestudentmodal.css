@@ -31,16 +31,25 @@
   text-align: center;
 }
 
-.close-btn {
-  position: absolute;
-  top: 15px;
-  right: 20px;
-  background: transparent;
+.fee_student_close-btn {
+  margin-top: 1rem;
+  bottom: 0px;
+  left: 20px;
+  background-color: #d32f2f;
+  color: #fff;
   border: none;
-  font-size: 1.8rem;
+  padding: 0.6rem 1.2rem;
+  border-radius: 5px;
+  font-size: 0.95rem;
+  font-weight: 500;
   cursor: pointer;
-  color: #444;
+  transition: background-color 0.3s ease;
 }
+
+.fee_student_close-btn:hover {
+  background-color: #b71c1c;
+}
+
 
 .status-filter {
   margin-right: 1rem;
@@ -94,6 +103,14 @@
 
 .student-fee-table td {
   color: #333;
+}
+
+.edit-paid-input {
+  width: 80px;
+  padding: 0.4rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 0.9rem;
 }
 
 @media (max-width: 768px) {
