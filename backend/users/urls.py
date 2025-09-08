@@ -1,6 +1,19 @@
 from django.urls import path
-from .views import CreateUserView, TeacherSignupView, ParentSignupView 
-from .views import me, list_teachers, list_students, list_teachers,  students_with_subjects, list_parents, UserRetrieveUpdateDestroyView
+from .views import (
+    CreateUserView, 
+    TeacherSignupView, 
+    ParentSignupView,
+    me, 
+    list_teachers, 
+    list_students, 
+    students_with_subjects, 
+    list_parents, 
+    UserRetrieveUpdateDestroyView, 
+    CustomTokenObtainPairView,
+    student_history,
+    individual_student_history
+)
+from rest_framework_simplejwt.views import TokenRefreshView
 
 urlpatterns = [
     path('create-user/', CreateUserView.as_view(), name='create-user'),
@@ -13,4 +26,8 @@ urlpatterns = [
     path('list-teachers/', list_teachers, name='list-teachers'),
     path('students-with-subjects/', students_with_subjects, name='students-with-subjects'),
     path('<int:pk>/', UserRetrieveUpdateDestroyView.as_view(), name='user-detail'),
+    path('login/', CustomTokenObtainPairView.as_view(), name='token_obtain_pair'),
+    path('login/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+    path('student-history/', student_history, name='student_history'),
+    path('student-history/<int:student_id>/', individual_student_history, name='individual_student_history'),
 ]

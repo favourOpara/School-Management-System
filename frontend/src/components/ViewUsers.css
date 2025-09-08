@@ -1,4 +1,4 @@
-/* Wrapper */
+/* ViewUsers Specific Wrapper */
 .view-users-wrapper {
   display: flex;
   justify-content: center;
@@ -9,7 +9,7 @@
   overflow-x: hidden;
 }
 
-/* Main container */
+/* ViewUsers Main container */
 .view-users-container {
   max-width: 960px;
   width: 100%;
@@ -21,8 +21,8 @@
   overflow-x: auto;
 }
 
-/* Section title */
-.section-header {
+/* ViewUsers Section title */
+.view-users-container .section-header {
   margin-bottom: 1.5rem;
   font-size: 1.6rem;
   font-weight: 600;
@@ -32,18 +32,18 @@
   padding-bottom: 0.5rem;
 }
 
-/* Filter layout */
-.filters {
+/* ViewUsers Filter layout */
+.view-users-container .filters {
   display: flex;
   flex-wrap: wrap;
   gap: 1rem;
   margin-bottom: 1.5rem;
 }
 
-/* Input, Button Base */
-.filters select,
-.filters input,
-.filters button {
+/* ViewUsers Input, Button Base */
+.view-users-container .filters select,
+.view-users-container .filters input,
+.view-users-container .filters button {
   padding: 0.65rem;
   border: 1px solid #ccc;
   border-radius: 5px;
@@ -52,15 +52,15 @@
   font-size: 0.95rem;
 }
 
-.filters select:focus,
-.filters input:focus,
-.filters button:focus {
+.view-users-container .filters select:focus,
+.view-users-container .filters input:focus,
+.view-users-container .filters button:focus {
   border-color: #0d47a1;
   outline: none;
   background-color: #fff;
 }
 
-.filters button {
+.view-users-container .filters button {
   background-color: #1565c0;
   color: white;
   font-weight: 500;
@@ -68,12 +68,12 @@
   cursor: pointer;
 }
 
-.filters button:hover {
+.view-users-container .filters button:hover {
   background-color: #0d47a1;
 }
 
-/* Table styling */
-.user-table {
+/* ViewUsers Table styling */
+.view-users-container .user-table {
   margin-top: 1rem;
   overflow-x: auto;
   background-color: #fff;
@@ -83,17 +83,17 @@
   -ms-overflow-style: none;
 }
 
-.user-table::-webkit-scrollbar {
+.view-users-container .user-table::-webkit-scrollbar {
   display: none;
 }
 
-.user-table table {
+.view-users-container .user-table table {
   width: 100%;
   border-collapse: collapse;
   min-width: 1100px;
 }
 
-.user-table th {
+.view-users-container .user-table th {
   background-color: #e3f2fd;
   color: #0d47a1;
   font-weight: 600;
@@ -104,16 +104,41 @@
   z-index: 2;
 }
 
-.user-table td {
+.view-users-container .user-table td {
   padding: 0.75rem;
   color: #333;
   white-space: nowrap;
   border-bottom: 1px solid #e0e0e0;
 }
 
-/* Sticky columns */
-.user-table th.sticky,
-.user-table td.sticky {
+/* ViewUsers Table Buttons */
+.view-users-container .user-table button {
+  background-color: #1565c0;
+  color: white;
+  border: none;
+  padding: 0.4rem 0.8rem;
+  margin-right: 0.5rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: background-color 0.3s ease;
+}
+
+.view-users-container .user-table button:hover {
+  background-color: #0d47a1;
+}
+
+.view-users-container .user-table button.delete-btn {
+  background-color: #d32f2f;
+}
+
+.view-users-container .user-table button.delete-btn:hover {
+  background-color: #c62828;
+}
+
+/* ViewUsers Sticky columns */
+.view-users-container .user-table th.sticky,
+.view-users-container .user-table td.sticky {
   position: sticky;
   left: 0;
   background-color: #ffffff;
@@ -121,8 +146,8 @@
   box-shadow: 2px 0 5px rgba(0, 0, 0, 0.05);
 }
 
-.user-table th.sticky-2,
-.user-table td.sticky-2 {
+.view-users-container .user-table th.sticky-2,
+.view-users-container .user-table td.sticky-2 {
   position: sticky;
   left: 150px;
   background-color: #ffffff;
@@ -130,53 +155,211 @@
   box-shadow: 2px 0 5px rgba(0, 0, 0, 0.04);
 }
 
-/* Row hover effect */
-.user-table tbody tr:hover {
+/* ViewUsers Row hover effect */
+.view-users-container .user-table tbody tr:hover {
   background-color: #f1f1f1;
 }
 
-/* No match message */
-.no-match-message {
+/* ViewUsers No match message */
+.view-users-container .no-match-message {
   margin-top: 1rem;
   color: #c62828;
   font-weight: 500;
 }
 
-/* react-select tweaks: dropdowns darker */
-.filters .react-select__control {
+/* ViewUsers react-select tweaks: dropdowns darker */
+.view-users-container .filters .react-select__control {
   background-color: white;
   border: 1px solid #ccc;
   font-size: 1rem;
   color: #222;
 }
 
-.filters .react-select__single-value {
+.view-users-container .filters .react-select__single-value {
   color: #222 !important;
 }
 
-.filters .react-select__option {
+.view-users-container .filters .react-select__option {
   color: #222;
   font-size: 0.95rem;
 }
 
-.filters .react-select__placeholder {
+.view-users-container .filters .react-select__placeholder {
   color: #666;
   font-size: 0.95rem;
 }
 
-.filters .react-select__option--is-focused {
+.view-users-container .filters .react-select__option--is-focused {
   background-color: #f0f0f0;
 }
 
-/* Responsive */
+/* ViewUsers Table Subfilters */
+.view-users-container .table-subfilters {
+  border-top: 1px solid #e0e0e0;
+  padding-top: 1rem;
+  margin-top: 1rem;
+}
+
+/* NEW: Modal styles for student history */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background: white;
+  padding: 2rem;
+  border-radius: 10px;
+  width: 90%;
+  max-width: 900px;
+  max-height: 85vh;
+  overflow-y: auto;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  border: 1px solid #e0e0e0;
+  color: #333;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  border-bottom: 2px solid #e3f2fd;
+  padding-bottom: 1rem;
+}
+
+.modal-header h3 {
+  color: #0d47a1;
+  font-size: 1.4rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.close-btn {
+  background: #d32f2f;
+  border: none;
+  color: white;
+  font-size: 18px;
+  font-weight: bold;
+  cursor: pointer;
+  padding: 0.5rem;
+  width: 35px;
+  height: 35px;
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  transition: background-color 0.3s ease;
+}
+
+.close-btn:hover {
+  background-color: #c62828;
+}
+
+.student-info {
+  background: #f8f9fa;
+  padding: 1.5rem;
+  border-radius: 8px;
+  margin-bottom: 1.5rem;
+  border-left: 4px solid #1565c0;
+}
+
+.student-info p {
+  margin: 0.5rem 0;
+  font-size: 0.95rem;
+  color: #333;
+}
+
+.student-info strong {
+  color: #0d47a1;
+  font-weight: 600;
+}
+
+.modal-body h4 {
+  color: #0d47a1;
+  font-size: 1.2rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+  border-bottom: 1px solid #e0e0e0;
+  padding-bottom: 0.5rem;
+}
+
+.history-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 1rem;
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.history-table th,
+.history-table td {
+  padding: 0.75rem 1rem;
+  text-align: left;
+  border-bottom: 1px solid #e0e0e0;
+  font-size: 0.9rem;
+}
+
+.history-table th {
+  background: #e3f2fd;
+  color: #0d47a1;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.history-table tbody tr:nth-child(even) {
+  background-color: #fafafa;
+}
+
+.current-session {
+  background-color: #e8f5e8 !important;
+  border-left: 3px solid #28a745;
+}
+
+.historical-session {
+  background-color: #f8f8f8 !important;
+  border-left: 3px solid #6c757d;
+}
+
+.status {
+  display: inline-block;
+  padding: 0.3rem 0.8rem;
+  border-radius: 15px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.status.active {
+  background: #28a745;
+  color: white;
+}
+
+.status.inactive {
+  background: #6c757d;
+  color: white;
+}
+
+/* ViewUsers Responsive */
 @media (max-width: 768px) {
-  .filters {
+  .view-users-container .filters {
     flex-direction: column;
   }
 
-  .filters select,
-  .filters input,
-  .filters button {
+  .view-users-container .filters select,
+  .view-users-container .filters input,
+  .view-users-container .filters button {
     width: 100%;
   }
 
@@ -189,8 +372,32 @@
     overflow-x: auto;
   }
 
-  .section-header {
+  .view-users-container .section-header {
     font-size: 1.4rem;
     text-align: left;
   }
-}    
+
+  /* Modal responsive */
+  .modal-content {
+    width: 95%;
+    max-height: 90vh;
+    padding: 1.5rem;
+  }
+
+  .modal-header h3 {
+    font-size: 1.2rem;
+  }
+
+  .student-info {
+    padding: 1rem;
+  }
+
+  .history-table {
+    font-size: 0.8rem;
+  }
+
+  .history-table th,
+  .history-table td {
+    padding: 0.5rem;
+  }
+}

@@ -380,6 +380,13 @@
 .view-fees-filters .react-select__option--is-focused {
   background-color: #f0f0f0;
 }
+/* Make the “Classes under …” heading dark and legible */
+.class-details h3 {
+  color: #91908f !important;
+  font-size: 1.4rem;
+  margin-bottom: 0.75rem;
+  text-align: left;
+}
 
 /* Responsive */
 @media (max-width: 768px) {

@@ -1,8 +1,10 @@
-import React, { useState } from 'react'; 
+// src/components/Sidebar.jsx
+import React, { useState } from 'react';
 import {
   Menu, X,
   User, LayoutDashboard, Users, BookOpen,
-  LogOut, Settings, Shield, PlusCircle, Eye, Book, ClipboardList, CalendarCheck, DollarSign, BarChart3
+  LogOut, Settings, Shield, PlusCircle, Eye, Book,
+  ClipboardList, CalendarCheck, DollarSign, BarChart3
 } from 'lucide-react';
 import './Sidebar.css';
 

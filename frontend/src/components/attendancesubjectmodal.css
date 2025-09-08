@@ -1,0 +1,87 @@
+.attendance-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: rgba(0, 0, 0, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+  }
+  
+  .attendance-modal {
+    background-color: #ffffff;
+    border-radius: 10px;
+    width: 92%;
+    max-width: 520px;
+    height: 90vh;
+    padding: 2rem 1.5rem;
+    box-shadow: 0 8px 20px rgba(13, 71, 161, 0.1);
+    border: 1px solid #e0e0e0;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  
+  .attendance-modal h3 {
+    text-align: center;
+    color: #0d47a1;
+    font-size: 1.5rem;
+    margin-bottom: 1rem;
+  }
+  
+  /* Scrollable subject list */
+  .attendance-modal ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    overflow-y: auto;
+    flex-grow: 1;
+  }
+  
+  /* Subject item */
+  .attendance-modal li {
+    background-color: #f9f9f9;
+    padding: 1rem;
+    border-radius: 6px;
+    margin-bottom: 1rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+  }
+  
+  .attendance-modal li:hover {
+    background-color: #e3f2fd;
+  }
+  
+  /* Subject name styling */
+  .attendance-subject-info {
+    color: #0d47a1;
+    font-weight: 600;
+    font-size: 1rem;
+  }
+  
+  /* Close button */
+  .close-attendance-modal-btn {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    font-size: 1.5rem;
+    background: none;
+    border: none;
+    color: red;
+    font-weight: bold;
+    cursor: pointer;
+    z-index: 1010;
+  }
+  
+  /* Bold and blue class names when shown elsewhere */
+  .class-name {
+    font-weight: 600;
+    color: #0d47a1;
+    cursor: pointer;
+  }
+  

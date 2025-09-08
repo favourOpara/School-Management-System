@@ -1,4 +1,6 @@
-import React, { useState } from 'react';
+// src/pages/AdminDashboard.jsx
+import React, { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
 import ClassForm from '../components/ClassForm';
 import ViewClasses from '../components/ViewClasses';
@@ -9,7 +11,10 @@ import CreateParentForm from '../components/CreateParentForm';
 import ViewSubjects from '../components/ViewSubjects';
 import ActivityLog from '../components/ActivityLog';
 import ViewUsers from '../components/ViewUsers';
-import CreateFeeStructure from '../components/CreateFeeStructure'; // ✅ Import the fee structure component
+import CreateFeeStructure from '../components/CreateFeeStructure';
+import Analytics from '../components/Analytics';
+import CreateAttendance from '../components/CreateAttendance';
+import './AdminDashboard.css';
 
 const getGreeting = () => {
   const hour = new Date().getHours();
@@ -19,15 +24,72 @@ const getGreeting = () => {
 };
 
 const AdminDashboard = () => {
+  const location = useLocation();
   const [activeTab, setActiveTab] = useState('dashboard');
+  const [userName, setUserName] = useState('');
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const tab = params.get('tab');
+    if (tab) {
+      setActiveTab(tab);
+    }
+
+    // Get user name from localStorage
+    const storedUserName = localStorage.getItem('userName') || 'Admin';
+    setUserName(storedUserName);
+  }, [location.search]);
 
   const renderContent = () => {
     switch (activeTab) {
       case 'dashboard':
         return (
           <div>
-            <h2>{getGreeting()}, Admin</h2>
-            <p>This is your admin dashboard.</p>
+            <h2 className="admin-dashboard-greeting">{getGreeting()}, {userName}</h2>
+            <p className="admin-dashboard-subtitle">Welcome to the admin dashboard. Manage your school's operations from here.</p>
+            <div className="admin-dashboard-grid">
+              <div className="admin-dashboard-card">
+                <h3 className="admin-dashboard-card-title">User Management</h3>
+                <p className="admin-dashboard-card-text">Create and manage students, teachers, and parents by clicking on 'manage users' in sidebar.</p>
+              </div>
+              <div className="admin-dashboard-card">
+                <h3 className="admin-dashboard-card-title">Academic Management</h3>
+                <p className="admin-dashboard-card-text">Manage classes, subjects, and academic sessions by using 'Manage classes' or 'Manage subjects' in the sidebar.</p>
+              </div>
+              <div className="admin-dashboard-card">
+                <h3 className="admin-dashboard-card-title">School Data</h3>
+                <p className="admin-dashboard-card-text">Handle attendance, fees, and academic results from the 'School data' option in the sidebar.</p>
+              </div>
+              <div className="admin-dashboard-card">
+                <h3 className="admin-dashboard-card-title">Reports & Analytics</h3>
+                <p className="admin-dashboard-card-text">View comprehensive reports and system analytics from 'Dashboard' option in the sidebar.</p>
+              </div>
+            </div>
+          </div>
+        );
+      case 'analytics':
+        return <Analytics />;
+      case 'reports':
+        return (
+          <div className="admin-dashboard-section">
+            <h2 className="admin-dashboard-section-title">Reports</h2>
+            <p className="admin-dashboard-section-text">Generate and view comprehensive reports for your school.</p>
+          </div>
+        );
+      case 'activity-logs':
+        return <ActivityLog />;
+      case 'profile':
+        return (
+          <div className="admin-dashboard-section">
+            <h2 className="admin-dashboard-section-title">Profile</h2>
+            <p className="admin-dashboard-section-text">Manage your admin profile information and account settings.</p>
+          </div>
+        );
+      case 'settings':
+        return (
+          <div className="admin-dashboard-section">
+            <h2 className="admin-dashboard-section-title">Settings</h2>
+            <p className="admin-dashboard-section-text">Configure system settings and preferences.</p>
           </div>
         );
       case 'create-class':
@@ -46,36 +108,32 @@ const AdminDashboard = () => {
         return <ViewSubjects />;
       case 'view-users':
         return <ViewUsers />;
-      case 'activity-logs':
-        return <ActivityLog />;
-      case 'profile':
-        return <div><h2>Profile</h2><p>Your profile info here.</p></div>;
-      case 'settings':
-        return <div><h2>Settings</h2><p>Settings options here.</p></div>;
-      case 'analytics':
-        return <div><h2>Analytics</h2><p>Analytics content.</p></div>;
-      case 'reports':
-        return <div><h2>Reports</h2><p>Reports content.</p></div>;
-
-      // ✅ New tabs under School Data
       case 'attendance':
-        return <div><h2>Attendance</h2><p>Attendance tracking to be implemented.</p></div>;
+        return <CreateAttendance />;
       case 'fees':
         return <CreateFeeStructure />;
       case 'results':
-        return <div><h2>Results</h2><p>Results management coming soon.</p></div>;
-
+        return (
+          <div className="admin-dashboard-section">
+            <h2 className="admin-dashboard-section-title">Results</h2>
+            <p className="admin-dashboard-section-text">Student results and grade management system coming soon.</p>
+          </div>
+        );
       default:
-        return <p>Select a section from the sidebar.</p>;
+        return (
+          <div className="admin-dashboard-section">
+            <p className="admin-dashboard-section-text">Select a section from the sidebar to get started.</p>
+          </div>
+        );
     }
   };
 
   return (
-    <div style={{ display: 'flex' }}>
+    <div className="admin-dashboard-container">
       <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
-      <div style={{ marginLeft: '100px', padding: '1rem', flex: 1 }}>
+      <main className="admin-dashboard-main">
         {renderContent()}
-      </div>
+      </main>
     </div>
   );
 };

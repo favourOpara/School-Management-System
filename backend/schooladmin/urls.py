@@ -7,6 +7,7 @@ from .views import (
     DeleteFeeStructureView,
     FeeStudentsView,
     update_fee_payment,
+    fee_dashboard_view,
 )
 
 urlpatterns = [
@@ -17,4 +18,5 @@ urlpatterns = [
     path('fees/<int:pk>/delete/', DeleteFeeStructureView.as_view(), name='delete-fee'),
     path('fees/<int:fee_id>/students/', FeeStudentsView.as_view(), name='fee-students'),
     path('fee-records/<int:record_id>/update/', update_fee_payment, name='update-fee-record'),
+    path('fees/dashboard/', fee_dashboard_view, name='fees-dashboard'),
 ]

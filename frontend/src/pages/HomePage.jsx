@@ -6,6 +6,7 @@ import './HomePage.css';
 const HomePage = () => {
   const [formData, setFormData] = useState({ username: '', password: '' });
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
   const handleChange = e => {
@@ -15,21 +16,52 @@ const HomePage = () => {
   const handleSubmit = async e => {
     e.preventDefault();
     setError('');
+    setLoading(true);
+    
     try {
-      const { data: tokens } = await axios.post(
-        'http://127.0.0.1:8000/api/token/',
+      // Use the new CustomTokenObtainPairView endpoint
+      const { data } = await axios.post(
+        'http://127.0.0.1:8000/api/users/login/',
         formData
       );
-      localStorage.setItem('accessToken', tokens.access);
-      localStorage.setItem('refreshToken', tokens.refresh);
-      const { data: user } = await axios.get(
-        'http://127.0.0.1:8000/api/users/me/',
-        { headers: { Authorization: `Bearer ${tokens.access}` } }
-      );
-      navigate(`/${user.role}/dashboard`);
-    } catch {
-      setError('Invalid username or password.');
+      
+      // Store tokens
+      localStorage.setItem('accessToken', data.access);
+      localStorage.setItem('refreshToken', data.refresh);
+      
+      // Store user info for easy access
+      localStorage.setItem('userRole', data.role);
+      localStorage.setItem('userId', data.user_id);
+      localStorage.setItem('userName', data.full_name);
+      
+      // Navigate based on user role
+      switch (data.role) {
+        case 'admin':
+          navigate('/admin/dashboard');
+          break;
+        case 'student':
+          navigate('/student/dashboard');
+          break;
+        case 'teacher':
+          navigate('/teacher/dashboard');
+          break;
+        case 'parent':
+          navigate('/parent/dashboard');
+          break;
+        default:
+          navigate('/dashboard'); // fallback
+      }
+      
+    } catch (error) {
+      console.error('Login error:', error);
+      if (error.response?.status === 401) {
+        setError('Invalid username or password.');
+      } else {
+        setError('Login failed. Please try again.');
+      }
       localStorage.clear();
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -48,6 +80,7 @@ const HomePage = () => {
             value={formData.username}
             onChange={handleChange}
             required
+            disabled={loading}
           />
           <input
             className="login-input"
@@ -57,9 +90,14 @@ const HomePage = () => {
             value={formData.password}
             onChange={handleChange}
             required
+            disabled={loading}
           />
-          <button className="login-button" type="submit">
-            LOG IN
+          <button 
+            className="login-button" 
+            type="submit" 
+            disabled={loading}
+          >
+            {loading ? 'LOGGING IN...' : 'LOG IN'}
           </button>
         </form>
         {error && <p className="login-error">{error}</p>}

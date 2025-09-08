@@ -13,6 +13,9 @@ const ViewClasses = () => {
   const [showDepartment, setShowDepartment] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
+  
+  // NEW: Multi-select state for classes
+  const [selectedClasses, setSelectedClasses] = useState([]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -59,9 +62,41 @@ const ViewClasses = () => {
     }
   };
 
+  // NEW: Handle class checkbox selection
+  const handleClassSelect = (className) => {
+    setSelectedClasses(prev => 
+      prev.includes(className) 
+        ? prev.filter(name => name !== className)
+        : [...prev, className]
+    );
+  };
+
   const handleFilterSession = () => {
     setMessage('');
     setError('');
+    
+    // For multi-select, we need term and academic_year to filter properly
+    if (activeView === 'session' && selectedClasses.length > 0) {
+      if (!filters.term || !filters.academic_year) {
+        setError('Please select both Term and Academic Year when using multi-select.');
+        return;
+      }
+      
+      const matches = sessions.filter(sess =>
+        selectedClasses.includes(sess.classroom?.name) &&
+        sess.term === filters.term &&
+        sess.academic_year === filters.academic_year
+      );
+
+      if (matches.length > 0) {
+        setMessage(`${matches.length} session${matches.length > 1 ? 's' : ''} found for selected classes.`);
+      } else {
+        setError('No matching sessions found for selected classes.');
+      }
+      return;
+    }
+
+    // Original single-select logic
     const matches = sessions.filter(sess =>
       sess.classroom?.name === filters.name &&
       sess.term === filters.term &&
@@ -76,26 +111,67 @@ const ViewClasses = () => {
     }
   };
 
+  // UPDATED: Handle multiple session deletion
   const handleSessionDelete = async () => {
     setMessage('');
     setError('');
-    const match = sessions.find(sess =>
-      sess.classroom?.name === filters.name &&
-      sess.term === filters.term &&
-      sess.academic_year === filters.academic_year
-    );
 
-    if (!match) return setError('No matching session to delete.');
-    if (!window.confirm(`Delete ${match.classroom.name} (${match.term}, ${match.academic_year})?`)) return;
+    let sessionsToDelete = [];
+
+    if (selectedClasses.length > 0) {
+      // Multi-select mode
+      if (!filters.term || !filters.academic_year) {
+        setError('Please select both Term and Academic Year.');
+        return;
+      }
+
+      sessionsToDelete = sessions.filter(sess =>
+        selectedClasses.includes(sess.classroom?.name) &&
+        sess.term === filters.term &&
+        sess.academic_year === filters.academic_year
+      );
+
+      if (sessionsToDelete.length === 0) {
+        setError('No matching sessions found for selected classes.');
+        return;
+      }
+
+      const confirmMessage = `Delete ${sessionsToDelete.length} class session${sessionsToDelete.length > 1 ? 's' : ''} from ${filters.academic_year} - ${filters.term}?\n\n` +
+        sessionsToDelete.map(sess => sess.classroom.name).join(', ');
+
+      if (!window.confirm(confirmMessage)) return;
+    } else {
+      // Single-select mode (original logic)
+      const match = sessions.find(sess =>
+        sess.classroom?.name === filters.name &&
+        sess.term === filters.term &&
+        sess.academic_year === filters.academic_year
+      );
+
+      if (!match) return setError('No matching session to delete.');
+      if (!window.confirm(`Delete ${match.classroom.name} (${match.term}, ${match.academic_year})?`)) return;
+      
+      sessionsToDelete = [match];
+    }
 
     try {
-      await axios.delete(`http://127.0.0.1:8000/api/academics/sessions/${match.id}/`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      setSessions(prev => prev.filter(sess => sess.id !== match.id));
-      setMessage('Class session deleted successfully.');
+      // Delete all selected sessions
+      const deletePromises = sessionsToDelete.map(sess =>
+        axios.delete(`http://127.0.0.1:8000/api/academics/sessions/${sess.id}/`, {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+      );
+
+      await Promise.all(deletePromises);
+      
+      // Update local state
+      const deletedIds = sessionsToDelete.map(sess => sess.id);
+      setSessions(prev => prev.filter(sess => !deletedIds.includes(sess.id)));
+      setSelectedClasses([]);
+      
+      setMessage(`${sessionsToDelete.length} class session${sessionsToDelete.length > 1 ? 's' : ''} deleted successfully.`);
     } catch (err) {
-      setError('Failed to delete class session. It may be linked to other records.');
+      setError('Failed to delete some sessions. They may be linked to other records.');
     }
   };
 
@@ -143,12 +219,25 @@ const ViewClasses = () => {
           <>
             <h3>Delete Class Session</h3>
             <form className="class-form" onSubmit={e => { e.preventDefault(); handleSessionDelete(); }}>
-              <select name="name" value={filters.name} onChange={handleChange} required>
-                <option value="">Select Class</option>
-                {classOptions.map(name => (
-                  <option key={name} value={name}>{name}</option>
-                ))}
-              </select>
+              {/* Multi-select checkboxes for classes */}
+              <div className="multi-select-classes">
+                <label>Select Classes:</label>
+                <div className="checkbox-container">
+                  {classOptions.map(name => (
+                    <label key={name} className="checkbox-item">
+                      <input
+                        type="checkbox"
+                        checked={selectedClasses.includes(name)}
+                        onChange={() => handleClassSelect(name)}
+                      />
+                      {name}
+                    </label>
+                  ))}
+                </div>
+                {selectedClasses.length > 0 && (
+                  <p className="selected-count">{selectedClasses.length} class{selectedClasses.length > 1 ? 'es' : ''} selected</p>
+                )}
+              </div>
 
               <select name="term" value={filters.term} onChange={handleChange} required>
                 <option value="">Select Term</option>
@@ -157,24 +246,15 @@ const ViewClasses = () => {
                 <option value="Third Term">Third Term</option>
               </select>
 
-              <select name="academic_year" value={filters.academic_year} onChange={handleChange}>
+              <select name="academic_year" value={filters.academic_year} onChange={handleChange} required>
                 <option value="">Select Academic Year</option>
-                {academicYears.map(year => (
+                {[...new Set(sessions.map(s => s.academic_year))].map(year => (
                   <option key={year} value={year}>{year}</option>
                 ))}
               </select>
 
-              {showDepartment && (
-                <select name="department" value={filters.department} onChange={handleChange}>
-                  <option value="">Select Department</option>
-                  <option value="Science">Science</option>
-                  <option value="Arts">Arts</option>
-                  <option value="Commercial">Commercial</option>
-                </select>
-              )}
-
               <button type="button" onClick={handleFilterSession}>Filter Session</button>
-              <button type="submit">Delete Class Session</button>
+              <button type="submit">Delete Class Session{selectedClasses.length > 1 ? 's' : ''}</button>
             </form>
           </>
         )}

@@ -79,6 +79,130 @@
   background-color: #b71c1c;
 }
 
+/* Toggle buttons styling */
+.toggle-buttons {
+  display: flex;
+  margin-bottom: 1.5rem;
+  border-radius: 6px;
+  overflow: hidden;
+  border: 1px solid #e0e0e0;
+}
+
+.toggle-buttons button {
+  flex: 1;
+  padding: 0.75rem 1rem;
+  background-color: #f5f5f5;
+  color: #666;
+  border: none;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-weight: 500;
+}
+
+.toggle-buttons button.active {
+  background-color: #1565c0;
+  color: white;
+}
+
+.toggle-buttons button:hover:not(.active) {
+  background-color: #e0e0e0;
+}
+
+/* Multi-select classes styling */
+.multi-select-classes {
+  margin-bottom: 1rem;
+}
+
+.multi-select-classes > label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+  color: #0d47a1;
+}
+
+.checkbox-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 0.5rem;
+  padding: 1rem;
+  background-color: #f8f9fa;
+  border: 1px solid #e0e0e0;
+  border-radius: 5px;
+  margin-bottom: 0.5rem;
+}
+
+.checkbox-item {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  padding: 0.3rem;
+  font-weight: normal !important;
+  color: #333 !important;
+  transition: background-color 0.2s ease;
+}
+
+.checkbox-item:hover {
+  background-color: #f0f0f0;
+  border-radius: 3px;
+}
+
+.checkbox-item input[type="checkbox"] {
+  margin-right: 0.5rem;
+  cursor: pointer;
+  transform: scale(1.1);
+}
+
+.selected-count {
+  font-size: 0.9rem;
+  color: #666;
+  font-style: italic;
+  margin: 0;
+}
+
+/* Form styling */
+.class-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.class-form select {
+  padding: 0.65rem;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  background-color: #fafafa;
+  font-size: 0.95rem;
+}
+
+.class-form select:focus {
+  border-color: #0d47a1;
+  outline: none;
+  background-color: #fff;
+}
+
+.class-form button {
+  background-color: #1565c0;
+  color: white;
+  padding: 0.75rem 1.2rem;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background-color 0.3s ease;
+}
+
+.class-form button:hover {
+  background-color: #0d47a1;
+}
+
+.class-form button[type="submit"] {
+  background-color: #c62828;
+}
+
+.class-form button[type="submit"]:hover {
+  background-color: #b71c1c;
+}
+
 /* Feedback messages */
 .form-message.success {
   color: #2e7d32;
@@ -108,6 +232,18 @@
   .filters input,
   .filters button {
     width: 100%;
+  }
+
+  .checkbox-container {
+    grid-template-columns: 1fr;
+  }
+
+  .toggle-buttons {
+    flex-direction: column;
+  }
+
+  .class-form {
+    gap: 0.8rem;
   }
 }
 
@@ -144,6 +280,12 @@
   .filters select,
   .filters input,
   .filters button {
+    font-size: 0.95rem;
+    padding: 0.7rem;
+  }
+
+  .class-form select,
+  .class-form button {
     font-size: 0.95rem;
     padding: 0.7rem;
   }

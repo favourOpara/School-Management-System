@@ -17,6 +17,12 @@ const ViewUsers = () => {
   const [subjectFilter, setSubjectFilter] = useState('');
   const [selectedUser, setSelectedUser] = useState(null);
   const [showEditModal, setShowEditModal] = useState(false);
+  
+  // NEW: State for student history view
+  const [viewMode, setViewMode] = useState('current'); // 'current' or 'history'
+  const [studentHistory, setStudentHistory] = useState([]);
+  const [selectedStudentHistory, setSelectedStudentHistory] = useState(null);
+  const [showHistoryModal, setShowHistoryModal] = useState(false);
 
   const token = localStorage.getItem('accessToken');
 
@@ -31,9 +37,31 @@ const ViewUsers = () => {
     .catch(err => console.error('Error loading academic years:', err));
   }, [token]);
 
+  // NEW: Function to fetch student history
+  const fetchStudentHistory = async () => {
+    try {
+      const res = await axios.get('http://127.0.0.1:8000/api/users/student-history/', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setStudentHistory(res.data);
+      setUsers([]); // Clear current users when viewing history
+      setFilteredUsers([]);
+    } catch (err) {
+      console.error('Error fetching student history:', err);
+      alert('Failed to load student history.');
+    }
+  };
+
   const handleFilter = async () => {
     try {
       if (userType === 'student') {
+        if (viewMode === 'history') {
+          // Fetch student history
+          await fetchStudentHistory();
+          return;
+        }
+
+        // Current students view (existing logic)
         let query = '';
         if (academicYear) query += `academic_year=${academicYear}`;
         if (term) query += `${query ? '&' : ''}term=${term}`;
@@ -88,6 +116,32 @@ const ViewUsers = () => {
     setFilteredUsers(result);
   };
 
+  // NEW: Filter student history
+  const applyHistoryFilters = () => {
+    const result = studentHistory.filter(student => {
+      const matchesSearch = searchTerm.trim()
+        ? student.student_info.first_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          student.student_info.username.toLowerCase().includes(searchTerm.toLowerCase())
+        : true;
+      return matchesSearch;
+    });
+    setFilteredUsers(result);
+  };
+
+  // NEW: View individual student's complete history
+  const viewStudentHistory = async (studentId) => {
+    try {
+      const res = await axios.get(`http://127.0.0.1:8000/api/users/student-history/${studentId}/`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setSelectedStudentHistory(res.data);
+      setShowHistoryModal(true);
+    } catch (err) {
+      console.error('Error fetching individual student history:', err);
+      alert('Failed to load student history.');
+    }
+  };
+
   const handleEdit = (user) => {
     setSelectedUser(user);
     setShowEditModal(true);
@@ -133,6 +187,8 @@ const ViewUsers = () => {
               setSubjectFilter('');
               setUsers([]);
               setFilteredUsers([]);
+              setStudentHistory([]);
+              setViewMode('current');
             }}
             options={[
               { value: 'student', label: 'Student' },
@@ -143,7 +199,30 @@ const ViewUsers = () => {
             isClearable
           />
 
+          {/* NEW: View Mode Toggle for Students */}
           {userType === 'student' && (
+            <Select
+              classNamePrefix="react-select"
+              value={{ value: viewMode, label: viewMode === 'current' ? 'Current Students' : 'Student History' }}
+              onChange={(option) => {
+                setViewMode(option.value);
+                setUsers([]);
+                setFilteredUsers([]);
+                setStudentHistory([]);
+                if (option.value === 'current') {
+                  setAcademicYear('');
+                  setTerm('');
+                }
+              }}
+              options={[
+                { value: 'current', label: 'Current Students' },
+                { value: 'history', label: 'Student History' }
+              ]}
+              placeholder="Select View Mode"
+            />
+          )}
+
+          {userType === 'student' && viewMode === 'current' && (
             <>
               <Select
                 classNamePrefix="react-select"
@@ -193,8 +272,66 @@ const ViewUsers = () => {
           <button onClick={handleFilter}>Filter</button>
         </div>
 
-        {/* Student Table */}
-        {userType === 'student' && users.length > 0 && (
+        {/* Student History Table */}
+        {userType === 'student' && viewMode === 'history' && studentHistory.length > 0 && (
+          <>
+            <div className="filters table-subfilters">
+              <button onClick={applyHistoryFilters}>Apply Filters</button>
+            </div>
+
+            {filteredUsers.length > 0 && (
+              <div className="user-table">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Full Name</th>
+                      <th>Username</th>
+                      <th>Gender</th>
+                      <th>Age</th>
+                      <th>Department</th>
+                      <th>Total Sessions</th>
+                      <th>Current Session</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredUsers.map(student => {
+                      const currentSession = student.academic_sessions.find(s => s.is_active);
+                      return (
+                        <tr key={student.student_info.id}>
+                          <td>{student.student_info.full_name}</td>
+                          <td>{student.student_info.username}</td>
+                          <td>{student.student_info.gender}</td>
+                          <td>{student.student_info.age || '—'}</td>
+                          <td>{student.student_info.department || '—'}</td>
+                          <td>{student.academic_sessions.length}</td>
+                          <td>
+                            {currentSession 
+                              ? `${currentSession.classroom} - ${currentSession.academic_year} - ${currentSession.term}`
+                              : 'No active session'
+                            }
+                          </td>
+                          <td>
+                            <button onClick={() => viewStudentHistory(student.student_info.id)}>
+                              View History
+                            </button>
+                            <button onClick={() => handleEdit(student.student_info)}>Edit</button>
+                            <button onClick={() => handleDelete(student.student_info.id)} className="delete-btn">
+                              Delete
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </>
+        )}
+
+        {/* Current Student Table (existing logic) */}
+        {userType === 'student' && viewMode === 'current' && users.length > 0 && (
           <>
             <div className="filters table-subfilters">
               <Select
@@ -274,7 +411,7 @@ const ViewUsers = () => {
           </>
         )}
 
-        {/* Parent Table */}
+        {/* Parent Table (unchanged) */}
         {userType === 'parent' && users.length > 0 && (
           <>
             <div className="filters table-subfilters">
@@ -321,7 +458,55 @@ const ViewUsers = () => {
           </>
         )}
 
-        {/* Edit Modal */}
+        {/* Individual Student History Modal */}
+        {showHistoryModal && selectedStudentHistory && (
+          <div className="modal-overlay" onClick={() => setShowHistoryModal(false)}>
+            <div className="modal-content" onClick={e => e.stopPropagation()}>
+              <div className="modal-header">
+                <h3>Academic History: {selectedStudentHistory.student_info.full_name}</h3>
+                <button onClick={() => setShowHistoryModal(false)} className="close-btn">×</button>
+              </div>
+              <div className="modal-body">
+                <div className="student-info">
+                  <p><strong>Username:</strong> {selectedStudentHistory.student_info.username}</p>
+                  <p><strong>Gender:</strong> {selectedStudentHistory.student_info.gender}</p>
+                  <p><strong>Age:</strong> {selectedStudentHistory.student_info.age || 'N/A'}</p>
+                  <p><strong>Department:</strong> {selectedStudentHistory.student_info.department || 'N/A'}</p>
+                </div>
+                
+                <h4>Academic Sessions:</h4>
+                <table className="history-table">
+                  <thead>
+                    <tr>
+                      <th>Class</th>
+                      <th>Academic Year</th>
+                      <th>Term</th>
+                      <th>Date Enrolled</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {selectedStudentHistory.academic_sessions.map((session, index) => (
+                      <tr key={index} className={session.is_active ? 'current-session' : 'historical-session'}>
+                        <td>{session.classroom}</td>
+                        <td>{session.academic_year}</td>
+                        <td>{session.term}</td>
+                        <td>{new Date(session.date_enrolled).toLocaleDateString()}</td>
+                        <td>
+                          <span className={`status ${session.is_active ? 'active' : 'inactive'}`}>
+                            {session.status}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Edit Modals (unchanged) */}
         {showEditModal && selectedUser && userType === 'student' && (
           <EditUserModal 
             user={selectedUser}

@@ -82,6 +82,7 @@
   margin-top: 0.7rem;
 }
 
+/* Base styling for ALL buttons in modal actions */
 .subject-modal-actions button {
   padding: 0.55rem 1rem;
   font-size: 0.95rem;
@@ -89,28 +90,55 @@
   border-radius: 5px;
   cursor: pointer;
   transition: 0.3s;
+  font-weight: 500;
 }
 
 .subject-modal-actions button:hover {
   opacity: 0.9;
+  transform: translateY(-1px);
 }
 
+/* Save button styling */
 .subject-modal-actions .save-btn {
   background-color: #1565c0;
   color: white;
 }
 
+.subject-modal-actions .save-btn:hover {
+  background-color: #0d47a1;
+}
+
+/* Cancel button styling */
 .subject-modal-actions .cancel-btn {
   background-color: #e0e0e0;
   color: #333;
 }
 
-.subject-modal-actions button:nth-child(2) {
-  background-color: #e53935;
-  color: white;
+.subject-modal-actions .cancel-btn:hover {
+  background-color: #d0d0d0;
 }
 
-/* ✅ Fixed and clearly visible close button */
+/* Edit button - first button in subject-info actions */
+.subject-info .subject-modal-actions button:first-child {
+  background-color: #1565c0 !important;
+  color: white !important;
+}
+
+.subject-info .subject-modal-actions button:first-child:hover {
+  background-color: #0d47a1 !important;
+}
+
+/* Delete button - second button in subject-info actions */
+.subject-info .subject-modal-actions button:nth-child(2) {
+  background-color: #e53935 !important;
+  color: white !important;
+}
+
+.subject-info .subject-modal-actions button:nth-child(2):hover {
+  background-color: #c62828 !important;
+}
+
+/* Fixed and clearly visible close button */
 .close-modal-btn {
   position: absolute;
   top: 10px;
@@ -122,4 +150,8 @@
   font-weight: bold;
   cursor: pointer;
   z-index: 1010;
+}
+
+.close-modal-btn:hover {
+  color: rgb(200, 0, 0);
 }

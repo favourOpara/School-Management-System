@@ -1,5 +1,3 @@
-# views.py
-
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -7,10 +5,7 @@ from rest_framework import generics, status
 from rest_framework.views import APIView
 
 from .models import FeeStructure, StudentFeeRecord
-from .serializers import (
-    FeeStructureSerializer,
-    StudentFeeRecordSerializer
-)
+from .serializers import FeeStructureSerializer, StudentFeeRecordSerializer
 from users.views import IsAdminRole
 from users.models import CustomUser
 
@@ -56,16 +51,12 @@ class FeeStudentsView(APIView):
     permission_classes = [IsAuthenticated, IsAdminRole]
 
     def get(self, request, fee_id):
-        # 1) Fetch the FeeStructure
         try:
             fee = FeeStructure.objects.get(id=fee_id)
         except FeeStructure.DoesNotExist:
-            return Response(
-                {"detail": "Fee structure not found."},
-                status=status.HTTP_404_NOT_FOUND
-            )
+            return Response({"detail": "Fee structure not found."},
+                            status=status.HTTP_404_NOT_FOUND)
 
-        # 2) For every student in those classes, ensure a record exists:
         students = CustomUser.objects.filter(
             role='student',
             classroom__in=fee.classes.all()
@@ -74,46 +65,51 @@ class FeeStudentsView(APIView):
         grouped = {}
         for student in students:
             cls = student.classroom
-            cid = cls.id if cls else 0
-            cname = cls.name if cls else "Unknown Class"
+            if not cls:
+                continue
 
-            # get or create the StudentFeeRecord
-            record, _ = StudentFeeRecord.objects.get_or_create(
+            cid = cls.id
+            cname = cls.name
+
+            # Fetch or create record
+            rec, _ = StudentFeeRecord.objects.get_or_create(
                 student=student,
                 fee_structure=fee,
-                defaults={'payment_status': 'UNPAID', 'amount_paid': 0}
+                defaults={"amount_paid": 0, "payment_status": "UNPAID"}
             )
 
-            # compute outstanding
-            paid_amt = record.amount_paid
-            outstanding_amt = fee.amount - paid_amt
+            paid_amt = rec.amount_paid
+            outstanding = fee.amount - paid_amt
 
-            # init class bucket
+            # update status if needed
+            if paid_amt >= fee.amount and rec.payment_status != 'PAID':
+                rec.payment_status = 'PAID'
+                rec.save(update_fields=['payment_status'])
+
             if cid not in grouped:
                 grouped[cid] = {
                     "classId": cid,
                     "className": cname,
                     "students": [],
-                    "paid": 0.0,
-                    "outstanding": 0.0,
+                    "paid": 0,
+                    "outstanding": 0,
                 }
 
-            # append this student
             grouped[cid]["students"].append({
-                "record_id":      record.id,
-                "student_id":     student.id,
-                "full_name":      f"{student.first_name} {student.last_name}",
-                "username":       student.username,
-                "academic_year":  student.academic_year,
-                "fee_name":       fee.name,
-                "fee_amount":     float(fee.amount),
-                "amount_paid":    float(paid_amt),
-                "outstanding":    float(outstanding_amt),
-                "payment_status": record.payment_status,
+                "record_id": rec.id,
+                "student_id": student.id,
+                "full_name": f"{student.first_name} {student.last_name}",
+                "username": student.username,
+                "academic_year": student.academic_year,
+                "fee_name": fee.name,
+                "fee_amount": fee.amount,
+                "amount_paid": paid_amt,
+                "outstanding": outstanding,
+                "payment_status": rec.payment_status,
             })
 
-            grouped[cid]["paid"]        += float(paid_amt)
-            grouped[cid]["outstanding"] += float(outstanding_amt)
+            grouped[cid]["paid"] += paid_amt
+            grouped[cid]["outstanding"] += outstanding
 
         return Response(list(grouped.values()))
 
@@ -121,35 +117,94 @@ class FeeStudentsView(APIView):
 @api_view(['PATCH'])
 @permission_classes([IsAuthenticated, IsAdminRole])
 def update_fee_payment(request, record_id):
-    # 1) fetch record
     try:
-        record = StudentFeeRecord.objects.get(id=record_id)
+        rec = StudentFeeRecord.objects.get(id=record_id)
     except StudentFeeRecord.DoesNotExist:
-        return Response(
-            {"detail": "Fee record not found."},
-            status=status.HTTP_404_NOT_FOUND
-        )
+        return Response({"detail": "Fee record not found."},
+                        status=status.HTTP_404_NOT_FOUND)
 
-    # 2) validate input
     amt = request.data.get("amount_paid")
     if amt is None:
-        return Response(
-            {"detail": "amount_paid is required."},
-            status=status.HTTP_400_BAD_REQUEST
-        )
+        return Response({"detail": "amount_paid is required."},
+                        status=status.HTTP_400_BAD_REQUEST)
+
     try:
         amt = float(amt)
-    except (TypeError, ValueError):
-        return Response(
-            {"detail": "amount_paid must be a valid number."},
-            status=status.HTTP_400_BAD_REQUEST
-        )
+    except ValueError:
+        return Response({"detail": "amount_paid must be a number."},
+                        status=status.HTTP_400_BAD_REQUEST)
 
-    # 3) update both amount_paid *and* payment_status
-    record.amount_paid = amt
-    record.payment_status = "PAID" if amt >= record.fee_structure.amount else "UNPAID"
-    record.save()
+    rec.amount_paid = amt
+    rec.payment_status = 'PAID' if amt >= rec.fee_structure.amount else 'UNPAID'
+    rec.save(update_fields=['amount_paid', 'payment_status'])
 
-    # 4) return the updated record
-    serialized = StudentFeeRecordSerializer(record)
-    return Response(serialized.data, status=status.HTTP_200_OK)
+    serializer = StudentFeeRecordSerializer(rec)
+    return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated, IsAdminRole])
+def fee_dashboard_view(request):
+    academic_year = request.GET.get('academic_year')
+    term = request.GET.get('term')
+
+    if not academic_year or not term:
+        return Response({"detail": "Missing academic_year or term."}, status=400)
+
+    fees = FeeStructure.objects.filter(academic_year=academic_year, term=term)
+    response_data = []
+
+    for fee in fees:
+        students = CustomUser.objects.filter(role='student', classroom__in=fee.classes.all())
+        grouped = {}
+
+        for student in students:
+            cls = student.classroom
+            if not cls:
+                continue
+
+            cid = cls.id
+            cname = cls.name
+
+            rec, _ = StudentFeeRecord.objects.get_or_create(
+                student=student,
+                fee_structure=fee,
+                defaults={"amount_paid": 0, "payment_status": "UNPAID"}
+            )
+
+            paid_amt = rec.amount_paid
+            outstanding = fee.amount - paid_amt
+
+            if paid_amt >= fee.amount and rec.payment_status != 'PAID':
+                rec.payment_status = 'PAID'
+                rec.save(update_fields=['payment_status'])
+
+            if cid not in grouped:
+                grouped[cid] = {
+                    "classId": cid,
+                    "className": cname,
+                    "fee_structure_id": fee.id,
+                    "students": [],
+                    "paid": 0,
+                    "outstanding": 0,
+                }
+
+            grouped[cid]["students"].append({
+                "record_id": rec.id,
+                "student_id": student.id,
+                "full_name": f"{student.first_name} {student.last_name}",
+                "username": student.username,
+                "academic_year": student.academic_year,
+                "fee_name": fee.name,
+                "fee_amount": fee.amount,
+                "amount_paid": paid_amt,
+                "outstanding": outstanding,
+                "payment_status": rec.payment_status,
+            })
+
+            grouped[cid]["paid"] += paid_amt
+            grouped[cid]["outstanding"] += outstanding
+
+        response_data.extend(grouped.values())
+
+    return Response(response_data)

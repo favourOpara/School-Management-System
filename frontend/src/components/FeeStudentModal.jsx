@@ -10,6 +10,28 @@ const paymentStatusOptions = [
   { value: 'UNPAID', label: 'Unpaid' },
 ];
 
+// Custom styles for react-select to fix text color
+const customSelectStyles = {
+  control: (base) => ({
+    ...base,
+    fontSize: '0.9rem',
+    color: '#333'
+  }),
+  singleValue: (base) => ({
+    ...base,
+    color: '#333'
+  }),
+  option: (base, state) => ({
+    ...base,
+    color: '#333',
+    backgroundColor: state.isFocused ? '#f0f0f0' : 'white'
+  }),
+  placeholder: (base) => ({
+    ...base,
+    color: '#666'
+  })
+};
+
 const FeeStudentModal = ({ data = {}, onClose }) => {
   const {
     className = 'Class',
@@ -115,81 +137,87 @@ const FeeStudentModal = ({ data = {}, onClose }) => {
   return (
     <div className="fee-student-modal-overlay">
       <div className="fee-student-modal">
-        <h3>{className} — Student Fee Records</h3>
-
-        <div className="filter-export-row">
-          <div className="status-filter">
-            <label>Filter by Payment Status:</label>
-            <Select
-              options={paymentStatusOptions}
-              value={selectedStatus}
-              onChange={setSelectedStatus}
-              styles={{ control: base => ({ ...base, fontSize: '0.9rem' }) }}
-            />
+        <div className="modal-header">
+          <h3>{className} — Student Fee Records</h3>
+          
+          <div className="filter-export-row">
+            <div className="status-filter">
+              <label>Filter by Payment Status:</label>
+              <Select
+                options={paymentStatusOptions}
+                value={selectedStatus}
+                onChange={setSelectedStatus}
+                styles={customSelectStyles}
+              />
+            </div>
+            <button className="export-btn" onClick={exportToExcel}>
+              Export to Excel
+            </button>
           </div>
-          <button className="export-btn" onClick={exportToExcel}>
-            Export to Excel
-          </button>
         </div>
 
-        <div className="student-fee-table-container">
-          <table className="student-fee-table">
-            <thead>
-              <tr>
-                <th>Student</th>
-                <th>Username</th>
-                <th>Fee</th>
-                <th>Paid</th>
-                <th>Outstanding</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredRecords.length === 0 ? (
+        <div className="modal-body">
+          <div className="student-fee-table-container">
+            <table className="student-fee-table">
+              <thead>
                 <tr>
-                  <td colSpan="6" style={{ textAlign: 'center' }}>
-                    No records match selected filter.
-                  </td>
+                  <th>Student</th>
+                  <th>Username</th>
+                  <th>Fee</th>
+                  <th>Paid</th>
+                  <th>Outstanding</th>
+                  <th>Status</th>
                 </tr>
-              ) : (
-                filteredRecords.map(r => (
-                  <tr key={r.record_id}>
-                    <td>{r.full_name}</td>
-                    <td>{r.username}</td>
-                    <td>{r.fee_name}</td>
-                    <td>
-                      <input
-                        type="number"
-                        className="edit-paid-input"
-                        placeholder="₦0"
-                        min="0"
-                        value={editedPaid[r.record_id] ?? ''}
-                        onChange={e => handlePaidChange(r.record_id, e.target.value)}
-                      />
+              </thead>
+              <tbody>
+                {filteredRecords.length === 0 ? (
+                  <tr>
+                    <td colSpan="6" style={{ textAlign: 'center' }}>
+                      No records match selected filter.
                     </td>
-                    <td>₦{r.outstanding}</td>
-                    <td>{r.payment_status}</td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+                ) : (
+                  filteredRecords.map(r => (
+                    <tr key={r.record_id}>
+                      <td>{r.full_name}</td>
+                      <td>{r.username}</td>
+                      <td>{r.fee_name}</td>
+                      <td>
+                        <input
+                          type="number"
+                          className="edit-paid-input"
+                          placeholder="₦0"
+                          min="0"
+                          value={editedPaid[r.record_id] ?? ''}
+                          onChange={e => handlePaidChange(r.record_id, e.target.value)}
+                        />
+                      </td>
+                      <td>₦{r.outstanding}</td>
+                      <td>{r.payment_status}</td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
 
-        <div className="modal-footer-buttons">
-          <button
-            className="save-btn"
-            onClick={handleSave}
-            disabled={saving}
-          >
-            {saving ? 'Saving…' : 'Save'}
-          </button>
-          <button
-            className="fee_student_close-btn"
-            onClick={onClose}
-          >
-            Close
-          </button>
+        <div className="modal-footer">
+          <div className="modal-footer-buttons">
+            <button
+              className="feestudent-save-btn"
+              onClick={handleSave}
+              disabled={saving}
+            >
+              {saving ? 'Saving…' : 'Save'}
+            </button>
+            <button
+              className="fee_student_close-btn"
+              onClick={onClose}
+            >
+              Close
+            </button>
+          </div>
         </div>
       </div>
     </div>

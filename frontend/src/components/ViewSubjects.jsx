@@ -84,7 +84,12 @@ const ViewSubjects = () => {
     }
   };
 
-  const handleSubjectDelete = async (subjectId) => {
+  const handleSubjectDelete = async (subjectId, subjectName) => {
+    // Add confirmation dialog before deleting
+    if (!window.confirm(`Are you sure you want to delete selected subject?`)) {
+      return; // User cancelled, don't delete
+    }
+
     try {
       await axios.delete(`http://127.0.0.1:8000/api/academics/subjects/${subjectId}/`, {
         headers: { Authorization: `Bearer ${token}` },
@@ -92,6 +97,7 @@ const ViewSubjects = () => {
       setModalSubjects(prev => prev.filter(sub => sub.id !== subjectId));
     } catch (err) {
       console.error('❌ Error deleting subject:', err);
+      alert('Failed to delete subject. Please try again.');
     }
   };
 
@@ -109,8 +115,8 @@ const ViewSubjects = () => {
   };
 
   return (
-    <div className="view-subjects-wrapper">
-      <div className="view-subjects-container">
+    <div className="view-subjects-page-wrapper">
+      <div className="view-subjects-page-container">
         <h2 className="section-header">View Subjects</h2>
 
         <div className="filter-section">
@@ -155,6 +161,8 @@ const ViewSubjects = () => {
             onClose={() => setShowModal(false)}
             onUpdate={handleSubjectEdit}
             onDelete={handleSubjectDelete}
+            modalClassName="view-subjects-modal"
+            overlayClassName="view-subjects-modal-overlay"
           />
         )}
       </div>

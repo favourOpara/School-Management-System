@@ -1,0 +1,237 @@
+/* ===============================
+   DASHBOARD CARDS — FEES + OTHERS
+   =============================== */
+
+/* Card container */
+.dashboard-card {
+  background: #fff;
+  border-radius: 8px;
+  padding: 1.5rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  max-width: 600px;
+  margin: 1rem;
+  border: 1px solid #e0e0e0;
+}
+
+/* Header inside each card */
+.card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+.card-header h2 {
+  margin: 0;
+  font-size: 1.3rem;
+  color: #333;
+}
+
+/* Select dropdowns (year and term) */
+.dashboard-controls {
+  display: flex;
+  gap: 0.5rem;
+}
+
+/* Mobile-only filter button */
+.dashboard-filter-btn {
+  display: none;
+  width: 100%;
+  margin-top: 0.8rem;
+  padding: 0.5rem 1rem;
+  background-color: #1565c0;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  cursor: pointer;
+  text-align: center;
+}
+
+/* Close button styling */
+.dashboard-close-btn {
+  display: none;
+  width: 100%;
+  margin-top: 0.8rem;
+  padding: 0.5rem 1rem;
+  background-color: #d32f2f;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  cursor: pointer;
+  text-align: center;
+}
+
+/* Class list inside the fees card */
+.class-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.class-list li {
+  display: flex;
+  align-items: center;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid #eee;
+  cursor: pointer;
+}
+
+.class-list li:last-child {
+  border-bottom: none;
+}
+
+.class-name {
+  flex: 1;
+  color: #222;
+  font-weight: 500;
+}
+
+/* Progress bar */
+.progress-bar {
+  flex: 2;
+  background: #f0f0f0;
+  border-radius: 4px;
+  height: 12px;
+  margin: 0 1rem;
+  overflow: hidden;
+  position: relative; /* Added for proper positioning */
+}
+
+.progress-bar .filled {
+  height: 100%;
+  transition: width 0.3s ease;
+  position: absolute; /* Ensures correct positioning */
+  left: 0;
+  top: 0;
+}
+
+.pct-label {
+  width: 40px;
+  text-align: right;
+  font-size: 0.9rem;
+  color: #555;
+}
+
+/* No data text */
+.no-data {
+  text-align: center;
+  color: #999;
+  padding: 1rem 0;
+}
+
+/* Modal footer buttons */
+.modal-footer-buttons {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 1.5rem;
+  justify-content: flex-start; /* Changed to left align */
+}
+
+.dashboard-save-btn {
+  background-color: #388e3c;
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.save-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.fee_student_close-btn {
+  background-color: #d32f2f;
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+/* For filter open state */
+.filters-active .dashboard-filter-btn {
+  display: none;
+}
+
+.filters-active .dashboard-close-btn {
+  display: block;
+}
+
+/* Mobile layout */
+@media (max-width: 768px) {
+  .dashboard-card {
+    display: block;
+    position: fixed;
+    top: 30px;
+    left: 8px;
+    width: 100%;
+    max-width: 360px;
+    padding: 1.5rem;
+    background-color: #ffffff;
+    z-index: 5;
+  }
+
+  .card-header {
+    display: block;
+    margin-bottom: 1rem;
+  }
+
+  .dashboard-controls {
+    display: flex;
+    flex-direction: column; /* Changed to column for better mobile layout */
+    gap: 0.5rem;
+    width: 100%;
+  }
+
+  /* Show filter button in mobile view */
+  .dashboard-filter-btn {
+    display: block;
+    margin-top: 0.8rem;
+  }
+
+  /* Show close button in mobile view when filters are active */
+  .filters-active .dashboard-close-btn {
+    display: block;
+    margin-top: 0.8rem;
+  }
+
+  .class-list li {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+    gap: 0.4rem;
+  }
+
+  /* Fixed progress bar for mobile */
+  .progress-bar {
+    width: 100%;
+    height: 12px;
+    background-color: #f0f0f0;
+    border-radius: 4px;
+    overflow: hidden;
+    margin: 0.25rem 0;
+    position: relative;
+    flex: none; /* Remove flex behavior in column layout */
+  }
+    
+  .progress-bar .filled {
+    display: block;
+    height: 100%;
+    min-width: 4px; /* ensures visibility even for 1-2% */
+    position: absolute;
+    left: 0;
+    top: 0;
+    /* backgroundColor is set inline in JSX via getBarColor() */
+  }
+
+  .pct-label {
+    width: 100%;
+    text-align: left;
+    margin-top: 0.3rem;
+  }
+}

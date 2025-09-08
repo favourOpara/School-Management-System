@@ -1,5 +1,5 @@
-/* Wrapper to control layout */
-.view-subjects-wrapper {
+/* ViewSubjects Specific Wrapper */
+.view-subjects-page-wrapper {
   display: flex;
   justify-content: center;
   align-items: flex-start;
@@ -8,8 +8,8 @@
   background-color: #ffffff;
 }
 
-/* Main container */
-.view-subjects-container {
+/* ViewSubjects Main container */
+.view-subjects-page-container {
   max-width: 960px;
   width: 100%;
   background-color: #ffffff;
@@ -19,8 +19,8 @@
   box-shadow: 0 6px 16px rgba(0, 0, 0, 0.05);
 }
 
-/* Section title */
-.section-header {
+/* ViewSubjects Section title */
+.view-subjects-page-container .section-header {
   margin-bottom: 1.5rem;
   font-size: 1.6rem;
   font-weight: 600;
@@ -30,36 +30,36 @@
   padding-bottom: 0.5rem;
 }
 
-/* Filter layout */
-.filter-section {
+/* ViewSubjects Filter layout */
+.view-subjects-page-container .filter-section {
   display: flex;
   flex-wrap: wrap;
   gap: 1rem;
   margin-bottom: 1.5rem;
 }
 
-.filter-section select,
-.filter-section button,
-.filter-section .react-select__control {
+.view-subjects-page-container .filter-section select,
+.view-subjects-page-container .filter-section button,
+.view-subjects-page-container .filter-section .react-select__control {
   padding: 0.65rem;
   border: 1px solid #ccc;
   border-radius: 5px;
   min-width: 160px;
   background-color: #fafafa;
   font-size: 0.95rem;
-  color: #333333; /* Darker text */
+  color: #333333;
 }
 
-.filter-section select:focus,
-.filter-section button:focus,
-.filter-section .react-select__control--is-focused {
+.view-subjects-page-container .filter-section select:focus,
+.view-subjects-page-container .filter-section button:focus,
+.view-subjects-page-container .filter-section .react-select__control--is-focused {
   border-color: #0d47a1;
   outline: none;
   background-color: #ffffff;
   box-shadow: 0 0 0 1px #0d47a1;
 }
 
-.filter-section button {
+.view-subjects-page-container .filter-section button {
   background-color: #1565c0;
   color: white;
   font-weight: 500;
@@ -67,18 +67,18 @@
   cursor: pointer;
 }
 
-.filter-section button:hover {
+.view-subjects-page-container .filter-section button:hover {
   background-color: #0d47a1;
 }
 
-/* Class card list */
-.class-list {
+/* ViewSubjects Class card list */
+.view-subjects-page-container .class-list {
   display: flex;
   flex-direction: column;
   gap: 1rem;
 }
 
-.class-card {
+.view-subjects-page-container .class-card {
   background: #f5f5f5;
   padding: 1rem;
   border-radius: 6px;
@@ -86,14 +86,14 @@
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
 }
 
-.class-card h4 {
+.view-subjects-page-container .class-card h4 {
   margin: 0;
   font-size: 1.2rem;
   color: #0d47a1;
 }
 
-/* Modal overlay */
-.modal-overlay {
+/* ViewSubjects Modal overlay */
+.view-subjects-modal-overlay {
   position: fixed;
   top: 0;
   left: 0;
@@ -106,8 +106,8 @@
   z-index: 999;
 }
 
-/* Modal popup */
-.modal {
+/* ViewSubjects Modal popup */
+.view-subjects-modal {
   background: white;
   padding: 2rem;
   width: 500px;
@@ -116,8 +116,8 @@
   position: relative;
 }
 
-/* Close button inside modal */
-.subject-close-button {
+/* ViewSubjects Close button inside modal */
+.view-subjects-modal .subject-close-button {
   position: absolute;
   top: 10px;
   right: 10px;
@@ -129,51 +129,102 @@
   z-index: 1000;
 }
 
-/* Modal content list */
-.modal-subject-list {
+/* ViewSubjects Modal content list */
+.view-subjects-modal .modal-subject-list {
   list-style: none;
   padding: 0;
   margin-top: 1rem;
 }
 
-.modal-subject-list li {
+.view-subjects-modal .modal-subject-list li {
   display: flex;
   align-items: center;
   gap: 0.6rem;
   margin-bottom: 0.8rem;
 }
 
-.modal-subject-list input,
-.modal-subject-list select {
+.view-subjects-modal .modal-subject-list input,
+.view-subjects-modal .modal-subject-list select {
   padding: 0.4rem;
   font-size: 0.95rem;
 }
 
-.modal-subject-list button {
-  background: crimson;
-  color: white;
+/* ViewSubjects Modal Buttons - ALL buttons styling */
+.view-subjects-modal button {
   border: none;
   padding: 0.4rem 0.7rem;
   border-radius: 4px;
   cursor: pointer;
+  font-size: 0.85rem;
+  transition: background-color 0.3s ease;
+  margin-right: 0.3rem;
 }
 
-/* Tablet & Mobile Responsiveness */
+/* ViewSubjects Delete buttons */
+.view-subjects-modal .modal-subject-list button,
+.view-subjects-modal button[onclick*="Delete"],
+.view-subjects-modal button[onclick*="delete"] {
+  background-color: #d32f2f !important;
+  color: white !important;
+}
+
+.view-subjects-modal .modal-subject-list button:hover,
+.view-subjects-modal button[onclick*="Delete"]:hover,
+.view-subjects-modal button[onclick*="delete"]:hover {
+  background-color: #c62828 !important;
+}
+
+/* ViewSubjects Edit/Update buttons */
+.view-subjects-modal button[onclick*="Edit"],
+.view-subjects-modal button[onclick*="edit"],
+.view-subjects-modal button[onclick*="Update"],
+.view-subjects-modal button[onclick*="update"],
+.view-subjects-modal .edit-btn,
+.view-subjects-modal .update-btn {
+  background-color: #1565c0 !important;
+  color: white !important;
+}
+
+.view-subjects-modal button[onclick*="Edit"]:hover,
+.view-subjects-modal button[onclick*="edit"]:hover,
+.view-subjects-modal button[onclick*="Update"]:hover,
+.view-subjects-modal button[onclick*="update"]:hover,
+.view-subjects-modal .edit-btn:hover,
+.view-subjects-modal .update-btn:hover {
+  background-color: #0d47a1 !important;
+}
+
+/* ViewSubjects Darken dropdown option texts */
+.view-subjects-page-container .filter-section .react-select__option {
+  color: #222 !important;
+}
+
+/* ViewSubjects Darken text for selected value */
+.view-subjects-page-container .filter-section .react-select__single-value {
+  color: #222 !important;
+}
+
+/* ViewSubjects Darken placeholder */
+.view-subjects-page-container .filter-section .react-select__placeholder {
+  color: #444 !important;
+}
+
+/* ViewSubjects Tablet & Mobile Responsiveness */
 @media (max-width: 768px) {
-  .filter-section {
+  .view-subjects-page-container .filter-section {
     flex-direction: column;
   }
 
-  .filter-section select,
-  .filter-section button,
-  .filter-section .react-select__control {
+  .view-subjects-page-container .filter-section select,
+  .view-subjects-page-container .filter-section button,
+  .view-subjects-page-container .filter-section .react-select__control {
     width: 100%;
   }
 }
 
-/* Mobile full-screen layout */
+/* ViewSubjects Mobile full-screen layout */
 @media (max-width: 600px) {
-  .view-subjects-wrapper {
+  .view-subjects-page-wrapper {
     position: fixed;
     top: 30px;
     left: 0;
@@ -185,40 +236,26 @@
     z-index: 5;
   }
 
-  .view-subjects-container {
+  .view-subjects-page-container {
     padding: 1.5rem;
     border: none;
     box-shadow: none;
     border-radius: 0;
   }
 
-  .section-header {
+  .view-subjects-page-container .section-header {
     font-size: 1.4rem;
     text-align: left;
   }
 
-  .filter-section {
+  .view-subjects-page-container .filter-section {
     gap: 0.8rem;
   }
 
-  .filter-section select,
-  .filter-section button,
-  .filter-section .react-select__control {
+  .view-subjects-page-container .filter-section select,
+  .view-subjects-page-container .filter-section button,
+  .view-subjects-page-container .filter-section .react-select__control {
     font-size: 0.95rem;
     padding: 0.7rem;
   }
-}
-/* Darken dropdown option texts */
-.filter-section .react-select__option {
-  color: #222 !important; /* darker dropdown list text */
-}
-
-/* Darken text for selected value */
-.filter-section .react-select__single-value {
-  color: #222 !important;
-}
-
-/* Darken placeholder */
-.filter-section .react-select__placeholder {
-  color: #444 !important;
 }
