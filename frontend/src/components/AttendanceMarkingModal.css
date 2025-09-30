@@ -1,0 +1,700 @@
+/* src/components/AttendanceMarkingModal.css - Updated Version */
+
+.marking-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+.marking-modal-container {
+  background: white;
+  border-radius: 10px;
+  width: 100%;
+  max-width: 1000px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+}
+
+.marking-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 25px;
+  border-bottom: 1px solid #e0e0e0;
+  background: #f8f9fa;
+  border-radius: 10px 10px 0 0;
+}
+
+.marking-modal-header h2 {
+  margin: 0;
+  color: #0d47a1;
+  font-size: 1.4rem;
+  font-weight: 600;
+}
+
+.marking-modal-close-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 5px;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+}
+
+.marking-modal-close-btn:hover {
+  background-color: #e0e0e0;
+}
+
+.marking-modal-message {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 25px;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.marking-modal-message.success {
+  background-color: #d4edda;
+  color: #155724;
+  border-bottom: 1px solid #c3e6cb;
+}
+
+.marking-modal-message.error {
+  background-color: #f8d7da;
+  color: #721c24;
+  border-bottom: 1px solid #f5c6cb;
+}
+
+.marking-modal-content {
+  padding: 25px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.marking-modal-calendar-section {
+  margin-bottom: 25px;
+}
+
+.marking-modal-calendar-section h3 {
+  margin: 0 0 10px 0;
+  color: #0d47a1;
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+
+.marking-modal-instruction {
+  margin: 0 0 15px 0;
+  color: #666;
+  font-size: 0.9rem;
+}
+
+/* Updated Calendar Styles with Higher Specificity */
+.marking-modal-calendar {
+  width: 100% !important;
+  border: 1px solid #e0e0e0 !important;
+  border-radius: 8px !important;
+  padding: 15px !important;
+  font-family: inherit !important;
+}
+
+.marking-modal-calendar .react-calendar__tile {
+  border-radius: 6px !important;
+  border: none !important;
+  padding: 8px 4px !important;
+  font-size: 0.85rem !important;
+  transition: all 0.2s !important;
+}
+
+.marking-modal-calendar .react-calendar__tile:hover:not(.react-calendar__tile--disabled) {
+  transform: scale(1.05) !important;
+}
+
+.marking-modal-calendar .react-calendar__tile--active {
+  background: #0d47a1 !important;
+  color: white !important;
+}
+
+/* Critical Calendar Tile Styling - Using Multiple Selectors for Maximum Specificity */
+.marking-modal-calendar .react-calendar__tile.marking-modal-school-tile,
+.marking-modal-calendar .marking-modal-school-tile {
+  background-color: #42a5f5 !important;
+  color: white !important;
+}
+
+.marking-modal-calendar .react-calendar__tile.marking-modal-holiday-tile,
+.marking-modal-calendar .marking-modal-holiday-tile {
+  background-color: #d32f2f !important;
+  color: white !important;
+}
+
+.marking-modal-calendar .react-calendar__tile.marking-modal-weekend-tile,
+.marking-modal-calendar .marking-modal-weekend-tile {
+  background-color: #9e9e9e !important;
+  color: white !important;
+  cursor: not-allowed !important;
+}
+
+.marking-modal-calendar .react-calendar__tile.marking-modal-school-tile:hover,
+.marking-modal-calendar .marking-modal-school-tile:hover {
+  background-color: #1e88e5 !important;
+}
+
+.marking-modal-calendar .react-calendar__tile.marking-modal-holiday-tile:hover,
+.marking-modal-calendar .marking-modal-holiday-tile:hover {
+  background-color: #c62828 !important;
+}
+
+.marking-modal-calendar .react-calendar__tile.marking-modal-weekend-tile:hover,
+.marking-modal-calendar .marking-modal-weekend-tile:hover {
+  background-color: #757575 !important;
+}
+
+.marking-modal-calendar .react-calendar__tile--disabled {
+  opacity: 0.6 !important;
+  cursor: not-allowed !important;
+}
+
+.marking-modal-legend {
+  display: flex;
+  gap: 20px;
+  margin-top: 15px;
+  flex-wrap: wrap;
+}
+
+.marking-modal-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+  color: #666;
+}
+
+.marking-modal-legend-color {
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  display: inline-block;
+}
+
+.marking-modal-legend-color.marking-modal-school-color {
+  background-color: #42a5f5;
+}
+
+.marking-modal-legend-color.marking-modal-holiday-color {
+  background-color: #d32f2f;
+}
+
+.marking-modal-legend-color.marking-modal-weekend-color {
+  background-color: #9e9e9e;
+}
+
+.marking-modal-selected-date {
+  margin-top: 15px;
+  padding: 12px;
+  background: #f8f9fa;
+  border-radius: 6px;
+  border-left: 4px solid #0d47a1;
+}
+
+.marking-modal-selected-date h4 {
+  margin: 0 0 5px 0;
+  color: #0d47a1;
+  font-size: 1rem;
+}
+
+.marking-modal-date-status {
+  margin: 0;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.marking-modal-date-status.school-day {
+  color: #1565c0;
+}
+
+.marking-modal-date-status.holiday {
+  color: #c62828;
+}
+
+.marking-modal-date-status.weekend {
+  color: #616161;
+}
+
+.marking-modal-students-section {
+  border-top: 1px solid #e0e0e0;
+  padding-top: 25px;
+}
+
+.marking-modal-students-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.marking-modal-students-header h3 {
+  margin: 0;
+  color: #0d47a1;
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+
+.marking-modal-changes-indicator {
+  background: #ffc107;
+  color: #856404;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.marking-modal-stats {
+  display: flex;
+  gap: 15px;
+  margin-bottom: 15px;
+  flex-wrap: wrap;
+}
+
+.marking-modal-stat-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  background: #f8f9fa;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.marking-modal-stat-item.marking-modal-present {
+  background: #d4edda;
+  color: #155724;
+}
+
+.marking-modal-stat-item.marking-modal-absent {
+  background: #f8d7da;
+  color: #721c24;
+}
+
+.marking-modal-bulk-actions {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.marking-modal-bulk-btn {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.marking-modal-bulk-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.marking-modal-bulk-btn.marking-modal-present-btn {
+  background: #28a745;
+  color: white;
+}
+
+.marking-modal-bulk-btn.marking-modal-present-btn:hover:not(:disabled) {
+  background: #218838;
+}
+
+.marking-modal-bulk-btn.marking-modal-absent-btn {
+  background: #dc3545;
+  color: white;
+}
+
+.marking-modal-bulk-btn.marking-modal-absent-btn:hover:not(:disabled) {
+  background: #c82333;
+}
+
+.marking-modal-students-list {
+  max-height: 300px;
+  overflow-y: auto;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  padding: 10px;
+}
+
+.marking-modal-student-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px;
+  border-bottom: 1px solid #f0f0f0;
+  transition: background-color 0.2s;
+}
+
+.marking-modal-student-item:last-child {
+  border-bottom: none;
+}
+
+.marking-modal-student-item:hover {
+  background-color: #f8f9fa;
+}
+
+.marking-modal-student-info h4 {
+  margin: 0 0 4px 0;
+  color: #333;
+  font-size: 0.95rem;
+}
+
+.marking-modal-student-info p {
+  margin: 0;
+  color: #666;
+  font-size: 0.8rem;
+}
+
+.marking-modal-attendance-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.marking-modal-attendance-btn {
+  padding: 6px 12px;
+  border: 2px solid;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 80px;
+  justify-content: center;
+}
+
+.marking-modal-attendance-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.marking-modal-attendance-btn.marking-modal-present {
+  border-color: #28a745;
+  color: #28a745;
+  background: white;
+}
+
+.marking-modal-attendance-btn.marking-modal-present.active {
+  background: #28a745;
+  color: white;
+}
+
+.marking-modal-attendance-btn.marking-modal-present:hover:not(:disabled) {
+  background: #28a745;
+  color: white;
+}
+
+.marking-modal-attendance-btn.marking-modal-absent {
+  border-color: #dc3545;
+  color: #dc3545;
+  background: white;
+}
+
+.marking-modal-attendance-btn.marking-modal-absent.active {
+  background: #dc3545;
+  color: white;
+}
+
+.marking-modal-attendance-btn.marking-modal-absent:hover:not(:disabled) {
+  background: #dc3545;
+  color: white;
+}
+
+.marking-modal-existing-record {
+  font-size: 0.7rem;
+  color: #6c757d;
+  font-style: italic;
+  margin-top: 4px;
+}
+
+.marking-modal-actions {
+  margin-top: 20px;
+  padding-top: 15px;
+  border-top: 1px solid #e0e0e0;
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+}
+
+.marking-modal-cancel-btn {
+  padding: 12px 24px;
+  background: #6c757d;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.marking-modal-cancel-btn:hover:not(:disabled) {
+  background: #5a6268;
+}
+
+.marking-modal-save-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 24px;
+  background: #0d47a1;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.marking-modal-save-btn:hover:not(:disabled) {
+  background: #1565c0;
+}
+
+.marking-modal-save-btn:disabled {
+  background: #6c757d;
+  cursor: not-allowed;
+}
+
+.marking-modal-invalid-date {
+  text-align: center;
+  padding: 40px 20px;
+  color: #666;
+}
+
+.marking-modal-invalid-date h3 {
+  margin: 15px 0 10px 0;
+  color: #721c24;
+  font-size: 1.1rem;
+}
+
+.marking-modal-invalid-date p {
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+.marking-modal-loading {
+  text-align: center;
+  padding: 20px;
+  color: #666;
+}
+
+/* Mobile Responsiveness */
+@media (max-width: 768px) {
+  .marking-modal-overlay {
+    padding: 10px;
+  }
+
+  .marking-modal-container {
+    max-height: 95vh;
+  }
+
+  .marking-modal-header {
+    padding: 15px 20px;
+  }
+
+  .marking-modal-header h2 {
+    font-size: 1.2rem;
+  }
+
+  .marking-modal-content {
+    padding: 20px;
+  }
+
+  .marking-modal-calendar {
+    padding: 10px !important;
+  }
+
+  .marking-modal-legend {
+    gap: 10px;
+  }
+
+  .marking-modal-legend-item {
+    font-size: 0.8rem;
+  }
+
+  .marking-modal-students-list {
+    max-height: 250px;
+  }
+
+  .marking-modal-student-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 10px;
+  }
+
+  .marking-modal-attendance-buttons {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .marking-modal-attendance-btn {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .marking-modal-bulk-actions {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .marking-modal-bulk-btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .marking-modal-stats {
+    justify-content: center;
+  }
+
+  .marking-modal-actions {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .marking-modal-cancel-btn,
+  .marking-modal-save-btn {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .marking-modal-header {
+    padding: 12px 15px;
+  }
+
+  .marking-modal-header h2 {
+    font-size: 1.1rem;
+  }
+
+  .marking-modal-content {
+    padding: 15px;
+  }
+
+  .marking-modal-calendar .react-calendar__tile {
+    padding: 6px 2px !important;
+    font-size: 0.75rem !important;
+  }
+
+  .marking-modal-legend-color {
+    width: 12px;
+    height: 12px;
+  }
+
+  .marking-modal-legend-item {
+    font-size: 0.75rem;
+  }
+
+  .marking-modal-student-item {
+    padding: 8px;
+  }
+
+  .marking-modal-student-info h4 {
+    font-size: 0.9rem;
+  }
+
+  .marking-modal-student-info p {
+    font-size: 0.75rem;
+  }
+
+  .marking-modal-attendance-btn {
+    padding: 5px 8px;
+    font-size: 0.75rem;
+  }
+}-actions {
+  margin-top: 20px;
+  padding-top: 15px;
+  border-top: 1px solid #e0e0e0;
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+}
+
+.marking-modal-cancel-btn {
+  padding: 12px 24px;
+  background: #6c757d;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.marking-modal-cancel-btn:hover:not(:disabled) {
+  background: #5a6268;
+}
+
+.marking-modal-save-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 24px;
+  background: #0d47a1;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.marking-modal-save-btn:hover:not(:disabled) {
+  background: #1565c0;
+}
+
+.marking-modal-save-btn:disabled {
+  background: #6c757d;
+  cursor: not-allowed;
+}
+
+.marking-modal-invalid-date {
+  text-align: center;
+  padding: 40px 20px;
+  color: #666;
+}
+
+.marking-modal-invalid-date h3 {
+  margin: 15px 0 10px 0;
+  color: #721c24;
+  font-size: 1.1rem;
+}
+
+.marking-modal-invalid-date p {
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+.marking-modal-loading {
+  text-align: center;
+  padding: 20px;
+  color: #666;
+}

@@ -14,6 +14,8 @@ import ViewUsers from '../components/ViewUsers';
 import CreateFeeStructure from '../components/CreateFeeStructure';
 import Analytics from '../components/Analytics';
 import CreateAttendance from '../components/CreateAttendance';
+import AttendanceMarking from '../components/AttendanceMarking'; // Import the AttendanceMarking component
+import Settings from '../components/Settings';
 import './AdminDashboard.css';
 
 const getGreeting = () => {
@@ -86,12 +88,7 @@ const AdminDashboard = () => {
           </div>
         );
       case 'settings':
-        return (
-          <div className="admin-dashboard-section">
-            <h2 className="admin-dashboard-section-title">Settings</h2>
-            <p className="admin-dashboard-section-text">Configure system settings and preferences.</p>
-          </div>
-        );
+        return <Settings />;
       case 'create-class':
         return <ClassForm />;
       case 'view-classes':
@@ -110,6 +107,8 @@ const AdminDashboard = () => {
         return <ViewUsers />;
       case 'attendance':
         return <CreateAttendance />;
+      case 'mark-attendance': // NEW CASE for attendance marking
+        return <AttendanceMarking />;
       case 'fees':
         return <CreateFeeStructure />;
       case 'results':

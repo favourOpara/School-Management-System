@@ -1,14 +1,14 @@
 import React from 'react';
 import DashboardFeesCard from './DashboardFeesCard';
-//import AttendanceCard from './AttendanceCard';
-//import ResultsCard from './ResultsCard';
-//import AssignmentsCard from './AssignmentsCard';
-//import TestsCard from './TestsCard';
-import './DashboardCards.css';
+import DashboardAttendanceCard from './DashboardAttendanceCard';
+import './Analytics.css';
 
 const Analytics = () => (
-  <div>
-    <DashboardFeesCard />
+  <div className="analytics-container">
+    <div className="dashboard-cards-wrapper">
+      <DashboardFeesCard />
+      <DashboardAttendanceCard />
+    </div>
   </div>
 );
 

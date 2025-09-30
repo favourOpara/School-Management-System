@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import {
   Menu, X, User, LayoutDashboard, LogOut, Settings, Shield,
   BookOpen, Users, Calendar, DollarSign, FileText, MessageCircle,
-  ClipboardCheck, GraduationCap, UserCheck
+  ClipboardCheck, GraduationCap, UserCheck, ClipboardList
 } from 'lucide-react';
 import './Sidebar.css';
 
@@ -49,7 +49,8 @@ const RoleBasedSidebar = ({ activeTab, setActiveTab, userRole }) => {
             icon: <LayoutDashboard />,
             label: 'Dashboard',
             submenu: [
-              { key: 'dashboard', icon: <LayoutDashboard />, label: 'Overview' }
+              { key: 'dashboard', icon: <LayoutDashboard />, label: 'Overview' },
+              { key: 'activity-logs', icon: <ClipboardList />, label: 'Activity Logs' }
             ]
           },
           {

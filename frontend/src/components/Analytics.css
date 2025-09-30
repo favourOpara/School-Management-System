@@ -1,0 +1,52 @@
+/* ===============================
+   ANALYTICS DASHBOARD LAYOUT
+   =============================== */
+
+/* Analytics container */
+.analytics-container {
+  padding: 1rem;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Cards wrapper for side-by-side layout */
+.dashboard-cards-wrapper {
+  display: flex;
+  gap: 1.5rem;
+  width: 100%;
+  justify-content: flex-start;
+  align-items: flex-start;
+  flex-wrap: nowrap;
+}
+
+/* Desktop layout - ensure side by side */
+@media (min-width: 769px) {
+  .dashboard-cards-wrapper {
+    flex-direction: row;
+    flex-wrap: nowrap;
+    align-items: flex-start;
+  }
+
+  .dashboard-cards-wrapper > * {
+    flex: 1;
+    max-width: 50%;
+  }
+}
+
+/* Mobile layout */
+@media (max-width: 768px) {
+  .analytics-container {
+    padding: 0.5rem;
+  }
+
+  .dashboard-cards-wrapper {
+    flex-direction: column;
+    gap: 1rem;
+    flex-wrap: nowrap;
+  }
+
+  .dashboard-cards-wrapper > * {
+    width: 100%;
+    flex: none;
+  }
+}

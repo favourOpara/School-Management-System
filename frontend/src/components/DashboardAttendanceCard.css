@@ -1,0 +1,246 @@
+/* ===============================
+   DASHBOARD ATTENDANCE CARD STYLES
+   =============================== */
+
+/* Attendance card container */
+.attendance-dashboard-card {
+  background: #fff;
+  border-radius: 8px;
+  padding: 1.5rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  width: 100%;
+  border: 1px solid #e0e0e0;
+  position: relative;
+  margin: 0;
+}
+
+/* Header inside attendance card */
+.attendance-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+.attendance-card-header h2 {
+  margin: 0;
+  font-size: 1.3rem;
+  color: #333;
+}
+
+/* Select dropdowns (year and term) for attendance */
+.attendance-dashboard-controls {
+  display: flex;
+  gap: 0.5rem;
+}
+
+/* Mobile-only filter button for attendance */
+.attendance-dashboard-filter-btn {
+  display: none;
+  width: 100%;
+  margin-top: 0.8rem;
+  padding: 0.5rem 1rem;
+  background-color: #1565c0;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  cursor: pointer;
+  text-align: center;
+}
+
+/* Close button styling for attendance */
+.attendance-dashboard-close-btn {
+  display: none;
+  width: 100%;
+  margin-top: 0.8rem;
+  padding: 0.5rem 1rem;
+  background-color: #d32f2f;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  cursor: pointer;
+  text-align: center;
+}
+
+/* Class list inside the attendance card */
+.attendance-class-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.attendance-class-list li {
+  display: flex;
+  align-items: center;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid #eee;
+  cursor: pointer;
+}
+
+.attendance-class-list li:last-child {
+  border-bottom: none;
+}
+
+/* Match fees card class name styling exactly - NO underline, same color, BOLD */
+.attendance-class-name {
+  flex: 1;
+  color: #313297;
+  font-weight: 600; /* Made bold */
+}
+
+/* Progress bar for attendance */
+.attendance-progress-bar {
+  flex: 2;
+  background: #f0f0f0;
+  border-radius: 4px;
+  height: 12px;
+  margin: 0 1rem;
+  overflow: hidden;
+  position: relative;
+}
+
+.attendance-progress-bar .attendance-filled {
+  height: 100%;
+  transition: width 0.3s ease;
+  position: absolute;
+  left: 0;
+  top: 0;
+}
+
+.attendance-pct-label {
+  width: 40px;
+  text-align: right;
+  font-size: 0.9rem;
+  color: #555;
+}
+
+/* No data text for attendance */
+.attendance-no-data {
+  text-align: center;
+  color: #999;
+  padding: 1rem 0;
+}
+
+/* Attendance summary section */
+.attendance-summary {
+  margin-top: 1rem;
+  padding: 0.75rem;
+  background: #f8f9fa;
+  border-radius: 6px;
+  border-left: 4px solid #1565c0;
+}
+
+.attendance-summary-text {
+  margin: 0;
+  font-size: 0.9rem;
+  color: #333;
+  font-weight: 500;
+}
+
+/* For filter open state */
+.attendance-filters-active .attendance-dashboard-filter-btn {
+  display: none;
+}
+
+.attendance-filters-active .attendance-dashboard-close-btn {
+  display: block;
+}
+
+/* Mobile layout for attendance card - Position BELOW fees card */
+@media (max-width: 768px) {
+  .attendance-dashboard-card {
+    display: block;
+    position: fixed;
+    top: 350px;
+    left: 50%; /* Center horizontally */
+    transform: translateX(-50%); /* Perfect centering */
+    width: 100%;
+    max-width: 360px;
+    padding: 1.5rem;
+    background-color: #ffffff;
+    z-index: 4;
+    max-height: calc(100vh - 370px); /* Limit height */
+    overflow-y: auto; /* Enable scrolling */
+    overflow-x: hidden;
+  }
+
+  /* Hide scrollbars but keep functionality */
+  .attendance-dashboard-card::-webkit-scrollbar {
+    display: none;
+  }
+  
+  .attendance-dashboard-card {
+    -ms-overflow-style: none; /* IE and Edge */
+    scrollbar-width: none; /* Firefox */
+  }
+
+  .attendance-card-header {
+    display: block;
+    margin-bottom: 1rem;
+  }
+
+  .attendance-dashboard-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    width: 100%;
+  }
+
+  /* Show filter button in mobile view */
+  .attendance-dashboard-filter-btn {
+    display: block;
+    margin-top: 0.8rem;
+  }
+
+  /* Hide close button by default, show only when filters are active */
+  .attendance-dashboard-close-btn {
+    display: none;
+  }
+
+  /* Show close button in mobile view when filters are active */
+  .attendance-filters-active .attendance-dashboard-close-btn {
+    display: block;
+    margin-top: 0.8rem;
+  }
+
+  .attendance-filters-active .attendance-dashboard-filter-btn {
+    display: none;
+  }
+
+  .attendance-class-list li {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+    gap: 0.4rem;
+  }
+
+  /* Fixed progress bar for mobile */
+  .attendance-progress-bar {
+    width: 100%;
+    height: 12px;
+    background-color: #f0f0f0;
+    border-radius: 4px;
+    overflow: hidden;
+    margin: 0.25rem 0;
+    position: relative;
+    flex: none;
+  }
+    
+  .attendance-progress-bar .attendance-filled {
+    display: block;
+    height: 100%;
+    min-width: 4px;
+    position: absolute;
+    left: 0;
+    top: 0;
+  }
+
+  .attendance-pct-label {
+    width: 100%;
+    text-align: left;
+    margin-top: 0.3rem;
+  }
+}

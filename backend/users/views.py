@@ -473,7 +473,7 @@ def individual_student_history(request, student_id):
     return Response(response_data)
 
 
-# Edit / Update / Delete individual user - Admin only - UPDATED to handle StudentSession
+# Edit / Update / Delete individual user - Admin only - FIXED to handle StudentSession properly
 class UserRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
     queryset = CustomUser.objects.all()
     serializer_class = UserCreateSerializer
@@ -501,17 +501,36 @@ class UserRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
                     term=instance.term
                 )
                 
-                # Mark previous sessions as inactive
-                StudentSession.objects.filter(
+                # Check if student already has this session active
+                existing_session = StudentSession.objects.filter(
                     student=instance,
-                    is_active=True
-                ).update(is_active=False)
+                    class_session=class_session
+                ).first()
                 
-                # Create or activate current session
-                StudentSession.objects.get_or_create(
-                    student=instance,
-                    class_session=class_session,
-                    defaults={'is_active': True}
-                )
+                if existing_session:
+                    # Just ensure it's active
+                    if not existing_session.is_active:
+                        # Mark other sessions inactive first
+                        StudentSession.objects.filter(
+                            student=instance,
+                            is_active=True
+                        ).exclude(id=existing_session.id).update(is_active=False)
+                        
+                        existing_session.is_active = True
+                        existing_session.save()
+                else:
+                    # Mark previous sessions as inactive
+                    StudentSession.objects.filter(
+                        student=instance,
+                        is_active=True
+                    ).update(is_active=False)
+                    
+                    # Create new session
+                    StudentSession.objects.create(
+                        student=instance,
+                        class_session=class_session,
+                        is_active=True
+                    )
             except ClassSession.DoesNotExist:
-                pass  # ClassSession doesn't exist yet
+                # Don't deactivate existing sessions if target ClassSession doesn't exist
+                pass

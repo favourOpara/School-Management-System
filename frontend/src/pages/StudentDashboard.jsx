@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import RoleBasedSidebar from '../components/RoleBasedSidebar';
+import ActivityLog from '../components/ActivityLog';
 import './StudentDashboard.css';
 
 const getGreeting = () => {
@@ -48,6 +49,10 @@ const StudentDashboard = () => {
                 <h3 className="student-dashboard-card-title">Attendance</h3>
                 <p className="student-dashboard-card-text">View your attendance records.</p>
               </div>
+              <div className="student-dashboard-card">
+                <h3 className="student-dashboard-card-title">Notifications</h3>
+                <p className="student-dashboard-card-text">Check your latest notifications and updates.</p>
+              </div>
             </div>
           </div>
         );
@@ -79,6 +84,8 @@ const StudentDashboard = () => {
             <p className="student-dashboard-section-text">Track your attendance records.</p>
           </div>
         );
+      case 'activity-logs':
+        return <ActivityLog />;
       case 'profile':
         return (
           <div className="student-dashboard-section">

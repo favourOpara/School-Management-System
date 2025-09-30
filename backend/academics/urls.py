@@ -7,7 +7,7 @@ from .views import (
     SubjectListCreateView, SubjectListView, SubjectDetailView,
     SessionInheritanceView, TeacherAssignedSubjectsView, TeacherSubjectStudentsView,
     SubjectContentCreateView, TeacherSubjectContentView, TeacherContentDetailView,
-    SubjectContentListView
+    SubjectContentListView, SessionStudentsView
 )
 
 urlpatterns = [
@@ -18,6 +18,9 @@ urlpatterns = [
     # Class sessions (e.g., "J.S.S.1 - 2024/2025 - First Term")
     path('sessions/', ClassSessionListCreateView.as_view(), name='class-session-list-create'),
     path('sessions/<int:id>/', ClassSessionDetailView.as_view(), name='class-session-detail'),
+    
+    # Session students - for attendance marking
+    path('session-students/<int:session_id>/', SessionStudentsView.as_view(), name='session-students'),
     
     # Session inheritance - copy students/subjects from previous sessions
     path('sessions/inherit/', SessionInheritanceView.as_view(), name='session-inheritance'),

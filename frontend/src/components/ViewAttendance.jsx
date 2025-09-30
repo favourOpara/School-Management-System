@@ -2,8 +2,10 @@
 import React, { useState, useEffect } from 'react';
 import Select from 'react-select';
 import axios from 'axios';
+import { Edit3 } from 'lucide-react';
 import AttendanceSubjectModal from './AttendanceSubjectModal';
 import AttendanceStudentTable from './AttendanceStudentTable';
+import EditAttendanceCalendar from './EditAttendanceCalendar';
 import './attendance.css';
 
 const selectStyles = {
@@ -28,9 +30,11 @@ const ViewAttendance = () => {
   const [holidayDays, setHolidayDays] = useState([]);
   const [classList, setClassList] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [calendarExists, setCalendarExists] = useState(false); // Add this state
 
   const [selectedClass, setSelectedClass] = useState(null);
   const [showSubjectModal, setShowSubjectModal] = useState(false);
+  const [showEditCalendar, setShowEditCalendar] = useState(false);
 
   const [schoolDays, setSchoolDays] = useState([]);
   const [students, setStudents] = useState([]);
@@ -77,9 +81,13 @@ const ViewAttendance = () => {
         setHolidayDays([]);
         setClassList([]);
         setSchoolDays([]);
+        setCalendarExists(false); // Calendar doesn't exist
         setLoading(false);
         return;
       }
+
+      // Calendar exists
+      setCalendarExists(true);
 
       const holidays = calendar.school_days
         .filter(day => day.holiday_label)
@@ -102,9 +110,19 @@ const ViewAttendance = () => {
       setClassList(classesRes.data);
     } catch (err) {
       console.error('Error loading attendance data:', err);
+      setCalendarExists(false);
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleEditCalendar = () => {
+    setShowEditCalendar(true);
+  };
+
+  const handleCalendarUpdate = () => {
+    // Refresh the data after calendar update
+    handleLoadData();
   };
 
   const handleClassClick = (cls) => {
@@ -169,9 +187,26 @@ const ViewAttendance = () => {
           <button className="load-data-btn" onClick={handleLoadData}>
             Load Data
           </button>
+          
+          {/* Show Edit Calendar Button if year/term selected and calendar exists */}
+          {selectedYear && selectedTerm && calendarExists && (
+            <button className="edit-calendar-btn" onClick={handleEditCalendar}>
+              <Edit3 size={16} />
+              Edit Calendar
+            </button>
+          )}
         </div>
 
         {loading && <p className="loading-text">Loading attendance data...</p>}
+
+        {/* Show message if no calendar exists */}
+        {selectedYear && selectedTerm && !loading && !calendarExists && (
+          <div className="no-calendar-message" style={{padding: '20px', background: '#f0f0f0', margin: '10px 0', borderRadius: '5px', color: '#333'}}>
+            <h4 style={{color: '#333', marginBottom: '10px'}}>No Attendance Calendar Found</h4>
+            <p style={{color: '#333', marginBottom: '5px'}}>No attendance calendar exists for <strong>{selectedYear.label} - {selectedTerm.label}</strong>.</p>
+            <p style={{color: '#333'}}>Please create a calendar first before viewing attendance data.</p>
+          </div>
+        )}
 
         {holidayDays.length > 0 && (
           <div className="holiday-summary">
@@ -225,6 +260,15 @@ const ViewAttendance = () => {
           term={selectedTerm?.value}
           onClose={() => setShowSubjectModal(false)}
           onSubjectSelect={handleSubjectSelect}
+        />
+      )}
+
+      {showEditCalendar && selectedYear && selectedTerm && (
+        <EditAttendanceCalendar
+          academicYear={selectedYear.value}
+          term={selectedTerm.value}
+          onClose={() => setShowEditCalendar(false)}
+          onUpdate={handleCalendarUpdate}
         />
       )}
     </div>

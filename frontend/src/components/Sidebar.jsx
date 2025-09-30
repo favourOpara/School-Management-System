@@ -147,6 +147,12 @@ const Sidebar = ({ activeTab, setActiveTab }) => {
                 </li>
               </ul>
             )}
+
+            {/* NEW MARK ATTENDANCE SECTION */}
+            <li onClick={() => handleTabClick('mark-attendance')}>
+              <CalendarCheck />
+              <span>Mark Attendance</span>
+            </li>
           </ul>
         </nav>
 

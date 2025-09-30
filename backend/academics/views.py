@@ -570,3 +570,30 @@ class SessionInheritanceView(APIView):
                 {"detail": f"Error copying data: {str(e)}"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+
+
+# NEW: Admin-only: Get students enrolled in a specific session
+class SessionStudentsView(APIView):
+    permission_classes = [permissions.IsAdminUser]
+    
+    def get(self, request, session_id):
+        try:
+            session = ClassSession.objects.get(id=session_id)
+            student_sessions = StudentSession.objects.filter(
+                class_session=session, is_active=True
+            ).select_related('student').order_by('student__first_name', 'student__last_name')
+            
+            students = [
+                {
+                    'id': ss.student.id,
+                    'first_name': ss.student.first_name,
+                    'last_name': ss.student.last_name,
+                    'username': ss.student.username,
+                    'department': getattr(ss.student, 'department', None)
+                }
+                for ss in student_sessions
+            ]
+            
+            return Response(students)
+        except ClassSession.DoesNotExist:
+            return Response({"detail": "Session not found"}, status=status.HTTP_404_NOT_FOUND)
