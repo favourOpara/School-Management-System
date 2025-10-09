@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from .models import CustomUser
-from academics.models import Class
+from academics.models import Class, Subject
 
 # 🔹 Used for Admin-created students, parents and editing users
 class UserCreateSerializer(serializers.ModelSerializer):
@@ -181,3 +181,35 @@ class StudentDetailSerializer(serializers.ModelSerializer):
         if request and request.user.role == 'admin':
             return obj.password
         return None
+
+
+# 🔹 NEW: Teacher detail listing for ViewUsers table
+class TeacherDetailSerializer(serializers.ModelSerializer):
+    full_name = serializers.SerializerMethodField()
+    assigned_subjects = serializers.SerializerMethodField()
+
+    class Meta:
+        model = CustomUser
+        fields = [
+            'id', 'username', 'first_name', 'last_name', 'full_name',
+            'gender', 'email', 'phone_number', 'assigned_subjects'
+        ]
+
+    def get_full_name(self, obj):
+        return f"{obj.first_name} {obj.last_name}"
+
+    def get_assigned_subjects(self, obj):
+        subjects = Subject.objects.filter(teacher=obj).select_related('class_session__classroom')
+        
+        subject_list = []
+        for subject in subjects:
+            subject_list.append({
+                'id': subject.id,
+                'name': subject.name,
+                'department': subject.department,
+                'classroom': subject.class_session.classroom.name if subject.class_session.classroom else None,
+                'academic_year': subject.class_session.academic_year,
+                'term': subject.class_session.term,
+            })
+        
+        return subject_list

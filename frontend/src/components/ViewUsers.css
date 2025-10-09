@@ -401,3 +401,58 @@
     padding: 0.5rem;
   }
 }
+/* Add this to your ViewUsers.css file */
+
+/* Subjects list styling */
+.subjects-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 200px;
+  overflow-y: auto;
+  padding: 4px 0;
+}
+
+.subject-item {
+  font-size: 0.9em;
+  padding: 6px 8px;
+  background-color: #f8f9fa;
+  border-left: 3px solid #007bff;
+  border-radius: 4px;
+  line-height: 1.4;
+}
+
+.subject-item strong {
+  color: #333;
+  font-weight: 600;
+}
+
+.subject-item span {
+  color: #666;
+  font-size: 0.95em;
+}
+
+/* Table cell containing subjects */
+.user-table td:has(.subjects-list) {
+  max-width: 300px;
+  padding: 12px;
+}
+
+/* Scrollbar styling for subjects list */
+.subjects-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.subjects-list::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 3px;
+}
+
+.subjects-list::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 3px;
+}
+
+.subjects-list::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}

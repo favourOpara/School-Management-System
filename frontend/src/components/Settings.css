@@ -510,3 +510,207 @@
     gap: 5px;
   }
 }
+/* Add these styles to your Settings.css file */
+
+/* Config and Scale Item Actions */
+.config-header,
+.scale-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.config-actions,
+.scale-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+/* Delete Button */
+.delete-btn {
+  background-color: transparent;
+  border: none;
+  color: #dc3545;
+  cursor: pointer;
+  padding: 0.5rem;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.delete-btn:hover {
+  background-color: #ffe6e6;
+  color: #c82333;
+}
+
+.delete-btn:active {
+  transform: scale(0.95);
+}
+
+/* Delete Modal Overlay */
+.delete-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1rem;
+}
+
+/* Delete Modal */
+.delete-modal {
+  background-color: white;
+  border-radius: 10px;
+  max-width: 500px;
+  width: 100%;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+  animation: modalSlideIn 0.3s ease;
+}
+
+@keyframes modalSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Delete Modal Header */
+.delete-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.5rem;
+  border-bottom: 2px solid #f0f0f0;
+}
+
+.delete-modal-header h3 {
+  margin: 0;
+  color: #dc3545;
+  font-size: 1.3rem;
+  font-weight: 600;
+}
+
+.close-modal-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #666;
+  padding: 0.5rem;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.close-modal-btn:hover {
+  background-color: #f0f0f0;
+  color: #333;
+}
+
+/* Delete Modal Content */
+.delete-modal-content {
+  padding: 1.5rem;
+}
+
+.delete-modal-content p {
+  margin: 0 0 1rem 0;
+  color: #333;
+  line-height: 1.5;
+}
+
+.delete-warning {
+  color: #dc3545;
+  font-weight: 500;
+  font-size: 0.9rem;
+}
+
+/* Delete Modal Actions */
+.delete-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+  padding: 1.5rem;
+  border-top: 2px solid #f0f0f0;
+}
+
+.cancel-btn {
+  padding: 0.75rem 1.5rem;
+  background-color: #6c757d;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.cancel-btn:hover:not(:disabled) {
+  background-color: #5a6268;
+}
+
+.cancel-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.confirm-delete-btn {
+  padding: 0.75rem 1.5rem;
+  background-color: #dc3545;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.confirm-delete-btn:hover:not(:disabled) {
+  background-color: #c82333;
+}
+
+.confirm-delete-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+  .delete-modal {
+    margin: 1rem;
+    max-width: calc(100% - 2rem);
+  }
+
+  .delete-modal-header,
+  .delete-modal-content,
+  .delete-modal-actions {
+    padding: 1rem;
+  }
+
+  .delete-modal-actions {
+    flex-direction: column;
+  }
+
+  .cancel-btn,
+  .confirm-delete-btn {
+    width: 100%;
+  }
+}

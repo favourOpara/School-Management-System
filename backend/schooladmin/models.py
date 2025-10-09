@@ -341,9 +341,10 @@ class AttendanceRecord(models.Model):
     )
     class_session = models.ForeignKey(
         'academics.ClassSession',
-        on_delete=models.CASCADE
+        on_delete=models.CASCADE,
+        db_index=True  # ADD THIS - Index for faster lookups by class_session
     )
-    date = models.DateField()
+    date = models.DateField(db_index=True)  # ADD THIS - Index for date queries
     is_present = models.BooleanField(default=False)
     
     # Additional attendance details
@@ -362,6 +363,11 @@ class AttendanceRecord(models.Model):
     class Meta:
         unique_together = ('student', 'class_session', 'date')
         ordering = ['-date']
+        # ADD THIS - Composite index for cascade deletion queries
+        indexes = [
+            models.Index(fields=['class_session', 'date']),
+            models.Index(fields=['student', 'class_session']),
+        ]
     
     def __str__(self):
         status = "Present" if self.is_present else "Absent"

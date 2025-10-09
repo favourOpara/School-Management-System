@@ -10,11 +10,10 @@ def create_content_notification(sender, instance, created, **kwargs):
     """
     Create notification when teacher uploads/updates content
     """
-    if created:
+    if created and instance.created_by:  # ADDED: Check if created_by exists
         print(f"Creating notification for new content: {instance.title}")
-        # New content created
         ActivityLog.log_content_activity(
-            user=instance.teacher,
+            user=instance.created_by,
             subject=instance.subject,
             content_type=instance.content_type,
             content_title=instance.title,
@@ -28,13 +27,17 @@ def create_content_notification(sender, instance, created, **kwargs):
 def create_content_deletion_notification(sender, instance, **kwargs):
     """
     Create notification when teacher deletes content
+    Only log if created_by exists (content might have been created by deleted user)
     """
-    print(f"Creating deletion notification for: {instance.title}")
-    ActivityLog.log_content_activity(
-        user=instance.teacher,
-        subject=instance.subject,
-        content_type=instance.content_type,
-        content_title=instance.title,
-        content_id=instance.id,
-        activity_type='content_deleted'
-    )
+    if instance.created_by:  # ADDED: Check if created_by exists
+        print(f"Creating deletion notification for: {instance.title}")
+        ActivityLog.log_content_activity(
+            user=instance.created_by,
+            subject=instance.subject,
+            content_type=instance.content_type,
+            content_title=instance.title,
+            content_id=instance.id,
+            activity_type='content_deleted'
+        )
+    else:
+        print(f"Skipping deletion notification for: {instance.title} (no creator found)")

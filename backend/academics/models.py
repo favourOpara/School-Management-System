@@ -4,15 +4,12 @@ import os
 
 def upload_to_subject_files(instance, filename):
     """Generate upload path for subject files"""
-    # Get file extension
     ext = filename.split('.')[-1]
-    # Create path: subject_files/subject_id/content_type/filename
     return f'subject_files/{instance.subject.id}/{instance.content_type}/{filename}'
 
 
 def upload_to_content_files(instance, filename):
     """Generate upload path for content files"""
-    # Create path: subject_files/subject_id/content_id/filename
     return f'subject_files/{instance.content.subject.id}/{instance.content.id}/{filename}'
 
 
@@ -100,11 +97,11 @@ class StudentSession(models.Model):
         return f"{self.student.username} - {self.class_session}"
 
 
-# UPDATED MODELS FOR MULTIPLE FILES SUPPORT
-
+# UPDATED: Content belongs to subject, not teacher
 class SubjectContent(models.Model):
     """
     Base model for all subject content (assignments, notes, announcements)
+    Content is tied to the subject - any teacher assigned to the subject can access it
     """
     CONTENT_TYPE_CHOICES = [
         ('assignment', 'Assignment'),
@@ -117,10 +114,12 @@ class SubjectContent(models.Model):
         on_delete=models.CASCADE,
         related_name='content'
     )
-    teacher = models.ForeignKey(
+    created_by = models.ForeignKey(
         'users.CustomUser',
-        on_delete=models.CASCADE,
-        limit_choices_to={'role': 'teacher'}
+        on_delete=models.SET_NULL,
+        null=True,
+        limit_choices_to={'role__in': ['teacher', 'admin']},
+        help_text="Teacher who originally created this content"
     )
     content_type = models.CharField(
         max_length=20,
@@ -167,12 +166,6 @@ class SubjectContent(models.Model):
         if self.content_type == 'assignment' and not self.due_date:
             raise ValidationError({
                 'due_date': 'Due date is required for assignments.'
-            })
-        
-        # Only teacher assigned to the subject can create content
-        if self.teacher != self.subject.teacher:
-            raise ValidationError({
-                'teacher': 'Only the assigned teacher can create content for this subject.'
             })
 
 

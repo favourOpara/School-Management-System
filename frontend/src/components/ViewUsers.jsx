@@ -3,6 +3,7 @@ import axios from 'axios';
 import Select from 'react-select';
 import EditUserModal from './EditUserModal';
 import EditParentModal from './EditParentModal';
+import EditTeacherModal from './EditTeacherModal';
 import './ViewUsers.css';
 
 const ViewUsers = () => {
@@ -18,8 +19,8 @@ const ViewUsers = () => {
   const [selectedUser, setSelectedUser] = useState(null);
   const [showEditModal, setShowEditModal] = useState(false);
   
-  // NEW: State for student history view
-  const [viewMode, setViewMode] = useState('current'); // 'current' or 'history'
+  // Student history state
+  const [viewMode, setViewMode] = useState('current');
   const [studentHistory, setStudentHistory] = useState([]);
   const [selectedStudentHistory, setSelectedStudentHistory] = useState(null);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
@@ -37,14 +38,13 @@ const ViewUsers = () => {
     .catch(err => console.error('Error loading academic years:', err));
   }, [token]);
 
-  // NEW: Function to fetch student history
   const fetchStudentHistory = async () => {
     try {
       const res = await axios.get('http://127.0.0.1:8000/api/users/student-history/', {
         headers: { Authorization: `Bearer ${token}` }
       });
       setStudentHistory(res.data);
-      setUsers([]); // Clear current users when viewing history
+      setUsers([]);
       setFilteredUsers([]);
     } catch (err) {
       console.error('Error fetching student history:', err);
@@ -56,17 +56,21 @@ const ViewUsers = () => {
     try {
       if (userType === 'student') {
         if (viewMode === 'history') {
-          // Fetch student history
           await fetchStudentHistory();
           return;
         }
 
-        // Current students view (existing logic)
         let query = '';
         if (academicYear) query += `academic_year=${academicYear}`;
         if (term) query += `${query ? '&' : ''}term=${term}`;
 
         const res = await axios.get(`http://127.0.0.1:8000/api/users/students-with-subjects/?${query}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        setUsers(res.data);
+      } else if (userType === 'teacher') {
+        // Fetch teachers
+        const res = await axios.get('http://127.0.0.1:8000/api/users/list-teachers/', {
           headers: { Authorization: `Bearer ${token}` }
         });
         setUsers(res.data);
@@ -116,7 +120,6 @@ const ViewUsers = () => {
     setFilteredUsers(result);
   };
 
-  // NEW: Filter student history
   const applyHistoryFilters = () => {
     const result = studentHistory.filter(student => {
       const matchesSearch = searchTerm.trim()
@@ -128,7 +131,6 @@ const ViewUsers = () => {
     setFilteredUsers(result);
   };
 
-  // NEW: View individual student's complete history
   const viewStudentHistory = async (studentId) => {
     try {
       const res = await axios.get(`http://127.0.0.1:8000/api/users/student-history/${studentId}/`, {
@@ -153,6 +155,7 @@ const ViewUsers = () => {
       await axios.delete(`http://127.0.0.1:8000/api/users/${userId}/`, {
         headers: { Authorization: `Bearer ${token}` }
       });
+      setUsers(prev => prev.filter(u => u.id !== userId));
       setFilteredUsers(prev => prev.filter(u => u.id !== userId));
       alert('User deleted successfully.');
     } catch (err) {
@@ -199,7 +202,7 @@ const ViewUsers = () => {
             isClearable
           />
 
-          {/* NEW: View Mode Toggle for Students */}
+          {/* View Mode Toggle for Students */}
           {userType === 'student' && (
             <Select
               classNamePrefix="react-select"
@@ -272,6 +275,60 @@ const ViewUsers = () => {
           <button onClick={handleFilter}>Filter</button>
         </div>
 
+        {/* Teacher Table */}
+        {userType === 'teacher' && users.length > 0 && (
+          <>
+            <div className="filters table-subfilters">
+              <button onClick={applyInTableFilters}>Apply Filters</button>
+            </div>
+
+            <div className="user-table">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Full Name</th>
+                    <th>Username</th>
+                    <th>Gender</th>
+                    <th>Email</th>
+                    <th>Phone Number</th>
+                    <th>Assigned Subjects</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(filteredUsers.length > 0 ? filteredUsers : users).map(teacher => (
+                    <tr key={teacher.id}>
+                      <td>{teacher.full_name}</td>
+                      <td>{teacher.username}</td>
+                      <td>{teacher.gender || '—'}</td>
+                      <td>{teacher.email || '—'}</td>
+                      <td>{teacher.phone_number || '—'}</td>
+                      <td>
+                        {teacher.assigned_subjects && teacher.assigned_subjects.length > 0 ? (
+                          <div className="subjects-list">
+                            {teacher.assigned_subjects.map((subject, index) => (
+                              <div key={index} className="subject-item">
+                                <strong>{subject.name}</strong> ({subject.classroom} - {subject.academic_year} {subject.term})
+                                {subject.department !== 'General' && <span> - {subject.department}</span>}
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          'No subjects assigned'
+                        )}
+                      </td>
+                      <td>
+                        <button onClick={() => handleEdit(teacher)}>Edit</button>
+                        <button onClick={() => handleDelete(teacher.id)} className="delete-btn">Delete</button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
+
         {/* Student History Table */}
         {userType === 'student' && viewMode === 'history' && studentHistory.length > 0 && (
           <>
@@ -330,7 +387,7 @@ const ViewUsers = () => {
           </>
         )}
 
-        {/* Current Student Table (existing logic) */}
+        {/* Current Student Table */}
         {userType === 'student' && viewMode === 'current' && users.length > 0 && (
           <>
             <div className="filters table-subfilters">
@@ -411,7 +468,7 @@ const ViewUsers = () => {
           </>
         )}
 
-        {/* Parent Table (unchanged) */}
+        {/* Parent Table */}
         {userType === 'parent' && users.length > 0 && (
           <>
             <div className="filters table-subfilters">
@@ -506,12 +563,30 @@ const ViewUsers = () => {
           </div>
         )}
 
-        {/* Edit Modals (unchanged) */}
+        {/* Edit Modals */}
         {showEditModal && selectedUser && userType === 'student' && (
           <EditUserModal 
             user={selectedUser}
             onClose={() => setShowEditModal(false)}
             onUpdated={(updatedUser) => {
+              setUsers(prev =>
+                prev.map(u => u.id === updatedUser.id ? { ...u, ...updatedUser } : u)
+              );
+              setFilteredUsers(prev =>
+                prev.map(u => u.id === updatedUser.id ? { ...u, ...updatedUser } : u)
+              );
+            }}
+          />
+        )}
+
+        {showEditModal && selectedUser && userType === 'teacher' && (
+          <EditTeacherModal 
+            user={selectedUser}
+            onClose={() => setShowEditModal(false)}
+            onUpdated={(updatedUser) => {
+              setUsers(prev =>
+                prev.map(u => u.id === updatedUser.id ? { ...u, ...updatedUser } : u)
+              );
               setFilteredUsers(prev =>
                 prev.map(u => u.id === updatedUser.id ? { ...u, ...updatedUser } : u)
               );
@@ -524,6 +599,9 @@ const ViewUsers = () => {
             user={selectedUser}
             onClose={() => setShowEditModal(false)}
             onUpdated={(updatedUser) => {
+              setUsers(prev =>
+                prev.map(u => u.id === updatedUser.id ? { ...u, ...updatedUser } : u)
+              );
               setFilteredUsers(prev =>
                 prev.map(u => u.id === updatedUser.id ? { ...u, ...updatedUser } : u)
               );

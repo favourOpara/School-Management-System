@@ -14,6 +14,7 @@ from .serializers import (
     ParentSignupSerializer,
     UserListSerializer,
     StudentDetailSerializer,
+    TeacherDetailSerializer,
 )
 from academics.models import Subject, StudentSession, ClassSession
 from logs.models import ActivityLog
@@ -191,12 +192,12 @@ def me(request):
     serializer = UserCreateSerializer(request.user)
     return Response(serializer.data)
 
-# List teachers - Admin only
+# List teachers - Admin only - UPDATED to show full details
 @api_view(['GET'])
 @permission_classes([IsAuthenticated, IsAdminRole])
 def list_teachers(request):
     teachers = CustomUser.objects.filter(role='teacher')
-    serializer = UserListSerializer(teachers, many=True)
+    serializer = TeacherDetailSerializer(teachers, many=True)
     return Response(serializer.data)
 
 # List parents - Admin only - UPDATED to handle StudentSession
@@ -319,8 +320,8 @@ def students_with_subjects(request):
             'gender': student.gender,
             'age': age,
             'classroom': classroom.name if classroom else None,
-            'academic_year': academic_year,  # Use the requested academic_year
-            'term': term,  # Use the requested term
+            'academic_year': academic_year,
+            'term': term,
             'date_of_birth': student.date_of_birth,
             'parent': {
                 'full_name': f"{parent.first_name} {parent.last_name}" if parent else None,

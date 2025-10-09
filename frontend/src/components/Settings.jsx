@@ -1,12 +1,13 @@
 // src/components/Settings.jsx
 import React, { useState, useEffect } from 'react';
-import { Save, AlertCircle, CheckCircle, Settings as SettingsIcon } from 'lucide-react';
+import { Save, AlertCircle, CheckCircle, Settings as SettingsIcon, Trash2, X } from 'lucide-react';
 import './Settings.css';
 
 const Settings = () => {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [messageType, setMessageType] = useState('');
+  const [deleteConfirm, setDeleteConfirm] = useState({ show: false, type: '', id: null, name: '' });
 
   // Grading Configuration State
   const [gradingConfigs, setGradingConfigs] = useState([]);
@@ -57,14 +58,13 @@ const Settings = () => {
         const sessionData = await sessionResponse.json();
         setSessions(sessionData || []);
         
-        // Extract unique academic years and terms
         const uniqueYears = [...new Set(sessionData.map(s => s.academic_year))];
         const uniqueTerms = [...new Set(sessionData.map(s => s.term))];
         setAcademicYears(uniqueYears);
         setTerms(uniqueTerms);
       }
 
-      // Fetch grading configurations - FIXED URL
+      // Fetch grading configurations
       const configResponse = await fetch('http://127.0.0.1:8000/api/schooladmin/grading/configurations/', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -73,7 +73,7 @@ const Settings = () => {
         setGradingConfigs(configData || []);
       }
 
-      // Fetch grading scales - FIXED URL
+      // Fetch grading scales
       const scaleResponse = await fetch('http://127.0.0.1:8000/api/schooladmin/grading/scales/', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -96,6 +96,80 @@ const Settings = () => {
       setMessage('');
       setMessageType('');
     }, 5000);
+  };
+
+  const showDeleteConfirmation = (type, id, name) => {
+    setDeleteConfirm({ show: true, type, id, name });
+  };
+
+  const cancelDelete = () => {
+    setDeleteConfirm({ show: false, type: '', id: null, name: '' });
+  };
+
+  const handleDeleteConfig = async () => {
+    const { id } = deleteConfirm;
+    
+    try {
+      setLoading(true);
+      const token = localStorage.getItem('accessToken');
+      
+      const response = await fetch(`http://127.0.0.1:8000/api/schooladmin/grading/configurations/${id}/`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (response.ok) {
+        showMessage('Grading configuration deleted successfully!', 'success');
+        fetchAllData();
+      } else {
+        const errorData = await response.json();
+        showMessage(errorData.detail || 'Error deleting configuration', 'error');
+      }
+    } catch (error) {
+      showMessage('Error deleting configuration', 'error');
+    } finally {
+      setLoading(false);
+      cancelDelete();
+    }
+  };
+
+  const handleDeleteScale = async () => {
+    const { id } = deleteConfirm;
+    
+    try {
+      setLoading(true);
+      const token = localStorage.getItem('accessToken');
+      
+      const response = await fetch(`http://127.0.0.1:8000/api/schooladmin/grading/scales/${id}/`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (response.ok) {
+        showMessage('Grading scale deleted successfully!', 'success');
+        fetchAllData();
+      } else {
+        const errorData = await response.json();
+        showMessage(errorData.detail || 'Error deleting grading scale', 'error');
+      }
+    } catch (error) {
+      showMessage('Error deleting grading scale', 'error');
+    } finally {
+      setLoading(false);
+      cancelDelete();
+    }
+  };
+
+  const confirmDelete = () => {
+    if (deleteConfirm.type === 'config') {
+      handleDeleteConfig();
+    } else if (deleteConfirm.type === 'scale') {
+      handleDeleteScale();
+    }
   };
 
   // Validate percentage totals
@@ -136,7 +210,6 @@ const Settings = () => {
       setLoading(true);
       const token = localStorage.getItem('accessToken');
       
-      // FIXED URL
       const response = await fetch('http://127.0.0.1:8000/api/schooladmin/grading/configurations/', {
         method: 'POST',
         headers: {
@@ -182,7 +255,6 @@ const Settings = () => {
       setLoading(true);
       const token = localStorage.getItem('accessToken');
       
-      // FIXED URL
       const response = await fetch('http://127.0.0.1:8000/api/schooladmin/grading/scales/', {
         method: 'POST',
         headers: {
@@ -389,7 +461,16 @@ const Settings = () => {
                     <div key={config.id} className="config-item">
                       <div className="config-header">
                         <h4>{config.academic_year} - {config.term}</h4>
-                        <span className="config-status">Active</span>
+                        <div className="config-actions">
+                          <span className="config-status">Active</span>
+                          <button 
+                            className="delete-btn"
+                            onClick={() => showDeleteConfirmation('config', config.id, `${config.academic_year} - ${config.term}`)}
+                            title="Delete configuration"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
                       </div>
                       <div className="config-details">
                         <span>Attendance: {config.attendance_percentage}%</span>
@@ -538,7 +619,16 @@ const Settings = () => {
                     <div key={scale.id} className="scale-item">
                       <div className="scale-header">
                         <h4>{scale.name}</h4>
-                        <span className="scale-status">Active</span>
+                        <div className="scale-actions">
+                          <span className="scale-status">Active</span>
+                          <button 
+                            className="delete-btn"
+                            onClick={() => showDeleteConfirmation('scale', scale.id, scale.name)}
+                            title="Delete grading scale"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
                       </div>
                       {scale.description && <p className="scale-description">{scale.description}</p>}
                       <div className="scale-session-info">
@@ -560,6 +650,33 @@ const Settings = () => {
           </>
         )}
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {deleteConfirm.show && (
+        <div className="delete-modal-overlay">
+          <div className="delete-modal">
+            <div className="delete-modal-header">
+              <h3>Confirm Deletion</h3>
+              <button className="close-modal-btn" onClick={cancelDelete}>
+                <X size={20} />
+              </button>
+            </div>
+            <div className="delete-modal-content">
+              <p>Are you sure you want to delete <strong>{deleteConfirm.name}</strong>?</p>
+              <p className="delete-warning">This action cannot be undone.</p>
+            </div>
+            <div className="delete-modal-actions">
+              <button className="cancel-btn" onClick={cancelDelete} disabled={loading}>
+                Cancel
+              </button>
+              <button className="confirm-delete-btn" onClick={confirmDelete} disabled={loading}>
+                <Trash2 size={16} />
+                {loading ? 'Deleting...' : 'Delete'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

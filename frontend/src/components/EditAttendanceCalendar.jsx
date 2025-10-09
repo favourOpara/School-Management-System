@@ -19,7 +19,14 @@ const EditAttendanceCalendar = ({ academicYear, term, onClose, onUpdate }) => {
 
   const token = localStorage.getItem('accessToken');
 
-  // Debug props on component mount
+  // Helper function to format date consistently (avoid timezone issues)
+  const formatDateString = (date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
   useEffect(() => {
     console.log('EditAttendanceCalendar props:', { academicYear, term });
   }, [academicYear, term]);
@@ -33,7 +40,6 @@ const EditAttendanceCalendar = ({ academicYear, term, onClose, onUpdate }) => {
       setLoading(true);
       console.log('Fetching calendar for:', academicYear, term);
       
-      // Use the attendance app endpoint
       const res = await axios.get('http://127.0.0.1:8000/api/attendance/calendar/', {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -47,12 +53,10 @@ const EditAttendanceCalendar = ({ academicYear, term, onClose, onUpdate }) => {
       console.log('Found existing calendar:', existingCalendar);
 
       if (existingCalendar) {
-        // Load existing school days
         const schoolDayDates = existingCalendar.school_days
           .filter(day => !day.holiday_label)
-          .map(day => new Date(day.date));
+          .map(day => new Date(day.date + 'T00:00:00'));
 
-        // Load existing holidays
         const holidayData = {};
         existingCalendar.school_days
           .filter(day => day.holiday_label)
@@ -64,11 +68,10 @@ const EditAttendanceCalendar = ({ academicYear, term, onClose, onUpdate }) => {
         setHolidays(holidayData);
         setCalendarKey(prevKey => prevKey + 1);
 
-        // Set date range based on existing data
         if (schoolDayDates.length > 0) {
           const sortedDates = schoolDayDates.sort((a, b) => a - b);
-          setFromDate(sortedDates[0].toISOString().split('T')[0]);
-          setToDate(sortedDates[sortedDates.length - 1].toISOString().split('T')[0]);
+          setFromDate(formatDateString(sortedDates[0]));
+          setToDate(formatDateString(sortedDates[sortedDates.length - 1]));
         }
       }
     } catch (err) {
@@ -87,8 +90,8 @@ const EditAttendanceCalendar = ({ academicYear, term, onClose, onUpdate }) => {
       return;
     }
 
-    const start = new Date(fromDate);
-    const end = new Date(toDate);
+    const start = new Date(fromDate + 'T00:00:00');
+    const end = new Date(toDate + 'T00:00:00');
     const range = [];
 
     let current = new Date(start);
@@ -101,11 +104,11 @@ const EditAttendanceCalendar = ({ academicYear, term, onClose, onUpdate }) => {
     }
 
     setSelectedDates(range);
-    setCalendarKey(prevKey => prevKey + 1); // Force calendar to re-render
+    setCalendarKey(prevKey => prevKey + 1);
   };
 
   const toggleDate = (date) => {
-    const dateStr = date.toISOString().split('T')[0];
+    const dateStr = formatDateString(date);
     const isSelected = selectedDates.some(d => d.toDateString() === date.toDateString());
     const isHoliday = holidays[dateStr] !== undefined;
 
@@ -125,16 +128,15 @@ const EditAttendanceCalendar = ({ academicYear, term, onClose, onUpdate }) => {
   };
 
   const tileClassName = ({ date }) => {
-    const dateStr = date.toISOString().split('T')[0];
+    const dateStr = formatDateString(date);
     if (holidays[dateStr] !== undefined) return 'holiday-day';
     if (selectedDates.some(d => d.toDateString() === date.toDateString())) return 'school-day';
     return null;
   };
 
   const handleSubmit = async () => {
-    const school_days = selectedDates.map(date => date.toISOString().split('T')[0]);
+    const school_days = selectedDates.map(date => formatDateString(date));
 
-    // Enhanced debugging
     console.log('Debug - academicYear:', academicYear);
     console.log('Debug - term:', term);
     console.log('Debug - selectedDates:', selectedDates);
@@ -166,7 +168,6 @@ const EditAttendanceCalendar = ({ academicYear, term, onClose, onUpdate }) => {
 
     setLoading(true);
     try {
-      // Use the attendance app endpoint for update
       const response = await axios.put(`http://127.0.0.1:8000/api/attendance/calendar/update/`, payload, {
         headers: { 
           Authorization: `Bearer ${token}`,
@@ -177,12 +178,10 @@ const EditAttendanceCalendar = ({ academicYear, term, onClose, onUpdate }) => {
       console.log('Update response:', response.data);
       setMessage("Attendance calendar updated successfully.");
       
-      // Notify parent component of the update
       if (onUpdate) {
         onUpdate();
       }
       
-      // Close modal after successful update
       setTimeout(() => {
         onClose();
       }, 1500);
@@ -243,12 +242,10 @@ const EditAttendanceCalendar = ({ academicYear, term, onClose, onUpdate }) => {
       
       setMessage("Attendance calendar deleted successfully.");
       
-      // Notify parent component of the update
       if (onUpdate) {
         onUpdate();
       }
       
-      // Close modal after successful deletion
       setTimeout(() => {
         onClose();
       }, 1500);
@@ -297,7 +294,6 @@ const EditAttendanceCalendar = ({ academicYear, term, onClose, onUpdate }) => {
     <>
       <div className="edit-calendar-overlay">
         <div className="edit-calendar-modal-container">
-          {/* Modal Header */}
           <div className="edit-calendar-modal-header">
             <h2>Edit Attendance Calendar</h2>
             <button className="edit-calendar-close-btn" onClick={onClose}>
@@ -305,7 +301,6 @@ const EditAttendanceCalendar = ({ academicYear, term, onClose, onUpdate }) => {
             </button>
           </div>
 
-          {/* Modal Content */}
           <div className="edit-calendar-modal-content">
             <div className="mobile-header-only">
               Academic Year: <strong>{academicYear}</strong><br />
@@ -444,7 +439,6 @@ const EditAttendanceCalendar = ({ academicYear, term, onClose, onUpdate }) => {
         </div>
       </div>
 
-      {/* Calendar Delete Confirmation Modal */}
       {showDeleteConfirm && (
         <div className="calendar-delete-overlay" style={{
           position: 'fixed',

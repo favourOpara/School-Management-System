@@ -2,6 +2,7 @@ from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.parsers import MultiPartParser, FormParser
+from rest_framework.exceptions import NotFound, PermissionDenied
 from django.db import transaction
 from django.shortcuts import get_object_or_404
 from .models import Class, ClassSession, Subject, StudentSession, SubjectContent, StudentContentView
@@ -18,6 +19,12 @@ from users.models import CustomUser
 class IsTeacherRole(permissions.BasePermission):
     def has_permission(self, request, view):
         return request.user.is_authenticated and request.user.role == 'teacher'
+
+
+# Custom permission for teachers or admins
+class IsTeacherOrAdmin(permissions.BasePermission):
+    def has_permission(self, request, view):
+        return request.user.is_authenticated and request.user.role in ['teacher', 'admin']
 
 
 # Admin-only: Create/List permanent classes (e.g., "J.S.S.1", "S.S.S.3")
@@ -83,7 +90,6 @@ class SubjectListCreateView(generics.ListCreateAPIView):
 
             for item in data:
                 if item.get('department') == 'General':
-                    # Prevent creating multiple per department
                     existing = Subject.objects.filter(
                         name=item['name'],
                         class_session_id=item['class_session_id'],
@@ -111,7 +117,6 @@ class SubjectListCreateView(generics.ListCreateAPIView):
         serializer = self.get_serializer(data=data)
         serializer.is_valid(raise_exception=True)
 
-        # Prevent duplicate general subjects on single POST too
         if data.get('department') == 'General':
             existing = Subject.objects.filter(
                 name=data['name'],
@@ -198,7 +203,6 @@ class TeacherSubjectStudentsView(APIView):
 
     def get(self, request, subject_id):
         try:
-            # Verify the subject belongs to this teacher
             subject = Subject.objects.select_related(
                 'class_session__classroom',
                 'teacher'
@@ -208,24 +212,20 @@ class TeacherSubjectStudentsView(APIView):
                 'error': 'Subject not found or not assigned to you'
             }, status=status.HTTP_404_NOT_FOUND)
 
-        # Get all active students in this subject's class session
         student_sessions = StudentSession.objects.filter(
             class_session=subject.class_session,
             is_active=True
         ).select_related('student').order_by('student__first_name', 'student__last_name')
 
-        # Filter students by department if it's a senior secondary class
         students = []
         for student_session in student_sessions:
             student = student_session.student
             
-            # If it's SS class and subject has specific department, filter by student department
             if (subject.class_session.classroom.name.startswith('S.S.S.') and 
                 subject.department != 'General' and 
                 student.department != subject.department):
-                continue  # Skip students not in this department
+                continue
             
-            # Calculate student's age
             age = None
             if student.date_of_birth:
                 from datetime import date
@@ -266,44 +266,51 @@ class TeacherSubjectStudentsView(APIView):
         })
 
 
-# NEW: Teacher-only: Create assignments, notes, and announcements
+# UPDATED: Teacher can create content for subjects they teach
 class SubjectContentCreateView(generics.CreateAPIView):
     serializer_class = SubjectContentCreateSerializer
-    permission_classes = [permissions.IsAuthenticated, IsTeacherRole]
+    permission_classes = [permissions.IsAuthenticated, IsTeacherOrAdmin]
     parser_classes = [MultiPartParser, FormParser]
 
     def perform_create(self, serializer):
-        # Verify the teacher owns the subject
         subject = serializer.validated_data['subject']
-        if subject.teacher != self.request.user:
-            raise PermissionError("You can only create content for subjects you teach.")
+        user = self.request.user
         
-        serializer.save(teacher=self.request.user)
+        # Teachers can only create for subjects they teach, admins can create for any subject
+        if user.role == 'teacher' and subject.teacher != user:
+            raise PermissionDenied("You can only create content for subjects assigned to you.")
+        
+        serializer.save(created_by=user)
 
     def create(self, request, *args, **kwargs):
         try:
             return super().create(request, *args, **kwargs)
-        except PermissionError as e:
+        except PermissionDenied as e:
             return Response(
                 {'error': str(e)},
                 status=status.HTTP_403_FORBIDDEN
             )
 
 
-# NEW: Teacher-only: List content for a specific subject they teach
+# UPDATED: Any teacher assigned to the subject can see all content
 class TeacherSubjectContentView(generics.ListAPIView):
     serializer_class = SubjectContentSerializer
-    permission_classes = [permissions.IsAuthenticated, IsTeacherRole]
+    permission_classes = [permissions.IsAuthenticated, IsTeacherOrAdmin]
 
     def get_queryset(self):
         subject_id = self.kwargs['subject_id']
+        user = self.request.user
         
-        # Verify the teacher owns the subject
+        # Verify the teacher is assigned to this subject (or is admin)
         try:
-            subject = Subject.objects.get(id=subject_id, teacher=self.request.user)
+            if user.role == 'admin':
+                subject = Subject.objects.get(id=subject_id)
+            else:
+                subject = Subject.objects.get(id=subject_id, teacher=user)
         except Subject.DoesNotExist:
             return SubjectContent.objects.none()
         
+        # Return ALL content for this subject (regardless of who created it)
         return SubjectContent.objects.filter(
             subject=subject,
             is_active=True
@@ -311,11 +318,15 @@ class TeacherSubjectContentView(generics.ListAPIView):
 
     def list(self, request, *args, **kwargs):
         subject_id = self.kwargs['subject_id']
+        user = request.user
         
         try:
-            subject = Subject.objects.select_related(
-                'class_session__classroom'
-            ).get(id=subject_id, teacher=request.user)
+            if user.role == 'admin':
+                subject = Subject.objects.select_related('class_session__classroom').get(id=subject_id)
+            else:
+                subject = Subject.objects.select_related('class_session__classroom').get(
+                    id=subject_id, teacher=user
+                )
         except Subject.DoesNotExist:
             return Response({
                 'error': 'Subject not found or not assigned to you'
@@ -324,7 +335,6 @@ class TeacherSubjectContentView(generics.ListAPIView):
         queryset = self.get_queryset()
         serializer = self.get_serializer(queryset, many=True)
         
-        # Group content by type
         content_by_type = {
             'assignments': [],
             'notes': [],
@@ -359,25 +369,48 @@ class TeacherSubjectContentView(generics.ListAPIView):
         })
 
 
-# NEW: Teacher-only: Update/Delete specific content
+# UPDATED: Any teacher assigned to the subject can edit/delete ALL content
 class TeacherContentDetailView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = SubjectContentSerializer
-    permission_classes = [permissions.IsAuthenticated, IsTeacherRole]
+    permission_classes = [permissions.IsAuthenticated, IsTeacherOrAdmin]
     parser_classes = [MultiPartParser, FormParser]
 
     def get_queryset(self):
-        return SubjectContent.objects.filter(teacher=self.request.user)
+        user = self.request.user
+        
+        if user.role == 'admin':
+            return SubjectContent.objects.all()
+        
+        # Teachers can access content from subjects they teach
+        teacher_subjects = Subject.objects.filter(teacher=user)
+        return SubjectContent.objects.filter(subject__in=teacher_subjects)
 
     def get_object(self):
         content_id = self.kwargs['content_id']
-        return get_object_or_404(
-            SubjectContent,
-            id=content_id,
-            teacher=self.request.user
-        )
+        user = self.request.user
+        
+        # Check if content exists
+        try:
+            content = SubjectContent.objects.select_related('subject__teacher').get(id=content_id)
+        except SubjectContent.DoesNotExist:
+            raise NotFound(f'Content with ID {content_id} does not exist')
+        
+        # Admins can access any content
+        if user.role == 'admin':
+            return content
+        
+        # Teachers can only access content from subjects they currently teach
+        if content.subject.teacher != user:
+            raise PermissionDenied(
+                f'You do not have permission to modify this content. '
+                f'This content belongs to {content.subject.name} which is currently assigned to '
+                f'{content.subject.teacher.username if content.subject.teacher else "no teacher"}.'
+            )
+        
+        return content
 
 
-# NEW: Get content for a specific subject (for students/admins to view later)
+# Get content for a specific subject (for students/admins to view)
 class SubjectContentListView(generics.ListAPIView):
     serializer_class = SubjectContentSerializer
     permission_classes = [permissions.IsAuthenticated]
@@ -404,7 +437,6 @@ class SubjectContentListView(generics.ListAPIView):
         queryset = self.get_queryset()
         serializer = self.get_serializer(queryset, many=True)
         
-        # Group content by type
         content_by_type = {
             'assignments': [],
             'notes': [],
@@ -440,15 +472,11 @@ class SubjectContentListView(generics.ListAPIView):
         })
 
 
-# Admin-only: Copy students and/or subjects from previous session - FIXED VERSION
+# Admin-only: Copy students and/or subjects from previous session
 class SessionInheritanceView(APIView):
     permission_classes = [permissions.IsAdminUser]
 
     def post(self, request):
-        """
-        Copy students and/or subjects from a previous session to new sessions
-        This preserves the same usernames and student records while creating new session links
-        """
         data = request.data
         source_academic_year = data.get('source_academic_year')
         source_term = data.get('source_term')
@@ -471,13 +499,11 @@ class SessionInheritanceView(APIView):
 
         try:
             with transaction.atomic():
-                # Get source sessions
                 source_sessions = ClassSession.objects.filter(
                     academic_year=source_academic_year,
                     term=source_term
                 )
 
-                # Get target sessions (must already exist)
                 target_sessions = ClassSession.objects.filter(
                     academic_year=target_academic_year,
                     term=target_term
@@ -498,9 +524,7 @@ class SessionInheritanceView(APIView):
                 copied_students = 0
                 copied_subjects = 0
 
-                # Copy students if requested - FIXED: Don't modify CustomUser records
                 if copy_students:
-                    # Get all active student sessions from source
                     source_student_sessions = StudentSession.objects.filter(
                         class_session__academic_year=source_academic_year,
                         class_session__term=source_term,
@@ -511,14 +535,11 @@ class SessionInheritanceView(APIView):
                         student = source_student_session.student
                         source_class_session = source_student_session.class_session
                         
-                        # Find corresponding target session for the same classroom
                         target_class_session = target_sessions.filter(
                             classroom=source_class_session.classroom
                         ).first()
                         
                         if target_class_session:
-                            # Create new StudentSession link for the target session
-                            # This preserves the original student record and username
                             new_student_session, created = StudentSession.objects.get_or_create(
                                 student=student,
                                 class_session=target_class_session,
@@ -527,15 +548,11 @@ class SessionInheritanceView(APIView):
                             
                             if created:
                                 copied_students += 1
-                                
-                                # Mark the previous session as inactive (for historical tracking)
                                 source_student_session.is_active = False
                                 source_student_session.save()
 
-                # Copy subjects if requested
                 if copy_subjects:
                     for source_session in source_sessions:
-                        # Find corresponding target session for the same classroom
                         target_session = target_sessions.filter(
                             classroom=source_session.classroom
                         ).first()
@@ -543,7 +560,6 @@ class SessionInheritanceView(APIView):
                         if target_session:
                             source_subjects = source_session.subjects.all()
                             for source_subject in source_subjects:
-                                # Check if subject already exists in target session
                                 if not target_session.subjects.filter(
                                     name=source_subject.name,
                                     department=source_subject.department
@@ -551,7 +567,7 @@ class SessionInheritanceView(APIView):
                                     Subject.objects.create(
                                         name=source_subject.name,
                                         class_session=target_session,
-                                        teacher=source_subject.teacher,  # Keep same teacher
+                                        teacher=source_subject.teacher,
                                         department=source_subject.department
                                     )
                                     copied_subjects += 1
@@ -572,7 +588,7 @@ class SessionInheritanceView(APIView):
             )
 
 
-# NEW: Admin-only: Get students enrolled in a specific session
+# Admin-only: Get students enrolled in a specific session
 class SessionStudentsView(APIView):
     permission_classes = [permissions.IsAdminUser]
     

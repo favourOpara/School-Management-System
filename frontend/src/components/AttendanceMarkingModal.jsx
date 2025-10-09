@@ -1,426 +1,548 @@
 // src/components/AttendanceMarkingModal.jsx
 import React, { useState, useEffect } from 'react';
 import Calendar from 'react-calendar';
-import { X, Save, CheckCircle, XCircle, Users, AlertCircle } from 'lucide-react';
-import axios from 'axios';
+import { X, Search, AlertCircle } from 'lucide-react';
 import 'react-calendar/dist/Calendar.css';
-import './AttendanceMarkingModal.css';
+import './attendance.css';
+import axios from 'axios';
 
-const AttendanceMarkingModal = ({ 
-  classInfo, 
-  academicYear, 
-  term, 
-  schoolDays, 
-  holidayDays, 
-  onClose 
-}) => {
+const AttendanceMarkingModal = ({ classInfo, academicYear, term, schoolDays, holidayDays, onClose }) => {
   const [selectedDate, setSelectedDate] = useState(null);
   const [students, setStudents] = useState([]);
-  const [attendanceRecords, setAttendanceRecords] = useState({});
-  const [existingRecords, setExistingRecords] = useState({});
-  const [hasChanges, setHasChanges] = useState(false);
+  const [filteredStudents, setFilteredStudents] = useState([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [attendanceData, setAttendanceData] = useState({});
+  const [existingAttendance, setExistingAttendance] = useState({});
+  const [classSession, setClassSession] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
-  const [messageType, setMessageType] = useState('');
-  const [sessionId, setSessionId] = useState(null);
+  const [warningMessage, setWarningMessage] = useState('');
 
   const token = localStorage.getItem('accessToken');
 
+  // Fetch class session and students
   useEffect(() => {
-    fetchSessionAndStudents();
-  }, []);
+    const fetchClassData = async () => {
+      try {
+        setLoading(true);
 
-  useEffect(() => {
-    if (selectedDate && sessionId) {
-      fetchAttendanceForDate();
-    }
-  }, [selectedDate, sessionId]);
-
-  const fetchSessionAndStudents = async () => {
-    try {
-      setLoading(true);
-      
-      const sessionResponse = await axios.get('http://127.0.0.1:8000/api/academics/sessions/', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-
-      const session = sessionResponse.data.find(s => 
-        s.classroom.id === classInfo.id && 
-        s.academic_year === academicYear && 
-        s.term === term
-      );
-
-      if (!session) {
-        showMessage('No session found for this class and academic period', 'error');
-        return;
-      }
-
-      setSessionId(session.id);
-
-      const studentsResponse = await axios.get(`http://127.0.0.1:8000/api/academics/session-students/${session.id}/`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      
-      if (studentsResponse.status === 200) {
-        setStudents(studentsResponse.data || []);
-      }
-    } catch (error) {
-      showMessage('Error fetching session and students', 'error');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchAttendanceForDate = async () => {
-    if (!selectedDate || !sessionId) return;
-
-    try {
-      const dateStr = selectedDate.toISOString().split('T')[0];
-      
-      const attendanceResponse = await axios.get(
-        `http://127.0.0.1:8000/api/schooladmin/attendance/?class_session=${sessionId}&date=${dateStr}`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      
-      if (attendanceResponse.status === 200) {
-        const attendanceData = attendanceResponse.data;
-        
-        const existing = {};
-        const current = {};
-        
-        attendanceData.forEach(record => {
-          existing[record.student] = record;
-          current[record.student] = record.is_present;
+        // Get the class session for this class, academic year, and term
+        const sessionsRes = await axios.get('http://127.0.0.1:8000/api/academics/sessions/', {
+          headers: { Authorization: `Bearer ${token}` },
         });
-        
-        setExistingRecords(existing);
-        setAttendanceRecords(current);
-        setHasChanges(false);
+
+        const session = sessionsRes.data.find(
+          s => s.classroom.id === classInfo.id && 
+               s.academic_year === academicYear && 
+               s.term === term
+        );
+
+        if (!session) {
+          setMessage('Class session not found for this academic year and term.');
+          return;
+        }
+
+        setClassSession(session);
+
+        // Fetch students in this class session
+        const studentsRes = await axios.get(
+          `http://127.0.0.1:8000/api/academics/session-students/${session.id}/`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+
+        setStudents(studentsRes.data);
+        setFilteredStudents(studentsRes.data);
+
+        // Fetch existing attendance records for this session
+        const attendanceRes = await axios.get(
+          `http://127.0.0.1:8000/api/schooladmin/attendance/?class_session=${session.id}`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+
+        // Organize existing attendance by date and student
+        const existingData = {};
+        attendanceRes.data.forEach(record => {
+          const dateKey = record.date;
+          if (!existingData[dateKey]) {
+            existingData[dateKey] = {};
+          }
+          existingData[dateKey][record.student] = record.is_present;
+        });
+
+        setExistingAttendance(existingData);
+
+      } catch (err) {
+        console.error('Error fetching class data:', err);
+        setMessage('Failed to load class data. Please try again.');
+      } finally {
+        setLoading(false);
       }
-    } catch (error) {
-      setExistingRecords({});
-      setAttendanceRecords({});
-      setHasChanges(false);
+    };
+
+    fetchClassData();
+  }, [classInfo.id, academicYear, term, token]);
+
+  // Filter students based on search term
+  useEffect(() => {
+    if (!searchTerm) {
+      setFilteredStudents(students);
+    } else {
+      const filtered = students.filter(student => {
+        const fullName = `${student.first_name} ${student.last_name}`.toLowerCase();
+        const username = student.username.toLowerCase();
+        const search = searchTerm.toLowerCase();
+        return fullName.includes(search) || username.includes(search);
+      });
+      setFilteredStudents(filtered);
     }
+  }, [searchTerm, students]);
+
+  // Helper function to format date consistently (avoid timezone issues)
+  const formatDateString = (date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
   };
 
-  const showMessage = (text, type) => {
-    setMessage(text);
-    setMessageType(type);
-    setTimeout(() => {
-      setMessage('');
-      setMessageType('');
-    }, 5000);
+  // Check if date is a school day, weekend, or holiday
+  const isSchoolDay = (date) => {
+    const dateStr = formatDateString(date);
+    return schoolDays.includes(dateStr);
   };
 
-  const isDateValid = (date) => {
-    const dateStr = date.toISOString().split('T')[0];
-    
-    const isHoliday = holidayDays.some(h => h.date === dateStr);
-    if (isHoliday) return false;
-    
-    const isSchoolDay = schoolDays.includes(dateStr);
-    return isSchoolDay;
+  const isHoliday = (date) => {
+    const dateStr = formatDateString(date);
+    const result = holidayDays.some(h => h.date === dateStr);
+    // Debug logging - remove after fixing
+    if (result) {
+      console.log(`Holiday match found: ${dateStr}`, holidayDays.find(h => h.date === dateStr));
+    }
+    return result;
   };
 
-  const getDateStatus = (date) => {
-    const dateStr = date.toISOString().split('T')[0];
-    
+  const getHolidayLabel = (date) => {
+    const dateStr = formatDateString(date);
     const holiday = holidayDays.find(h => h.date === dateStr);
-    if (holiday) return { type: 'holiday', label: holiday.label };
-    
-    const isSchoolDay = schoolDays.includes(dateStr);
-    if (isSchoolDay) return { type: 'school-day', label: 'School Day' };
-    
-    return { type: 'weekend', label: 'Weekend/Non-School Day' };
+    return holiday ? holiday.label : '';
   };
 
+  const isWeekend = (date) => {
+    return date.getDay() === 0 || date.getDay() === 6;
+  };
+
+  // Handle date click on calendar
   const handleDateClick = (date) => {
-    if (isDateValid(date)) {
-      setSelectedDate(date);
-    }
-  };
-
-  const handleAttendanceChange = (studentId, isPresent) => {
-    setAttendanceRecords(prev => ({
-      ...prev,
-      [studentId]: isPresent
-    }));
-    setHasChanges(true);
-  };
-
-  const markAllPresent = () => {
-    const allPresent = {};
-    students.forEach(student => {
-      allPresent[student.id] = true;
-    });
-    setAttendanceRecords(allPresent);
-    setHasChanges(true);
-  };
-
-  const markAllAbsent = () => {
-    const allAbsent = {};
-    students.forEach(student => {
-      allAbsent[student.id] = false;
-    });
-    setAttendanceRecords(allAbsent);
-    setHasChanges(true);
-  };
-
-  const saveAttendance = async () => {
-    if (!selectedDate || !sessionId || students.length === 0) {
-      showMessage('Please select a valid date and ensure students are loaded', 'error');
+    setWarningMessage('');
+    
+    if (isHoliday(date)) {
+      const holidayLabel = getHolidayLabel(date);
+      setWarningMessage(`${date.toLocaleDateString()} is a holiday: ${holidayLabel}`);
       return;
     }
 
+    if (!isSchoolDay(date)) {
+      setWarningMessage(`${date.toLocaleDateString()} is not a school day.`);
+      return;
+    }
+
+    // Valid school day - select it
+    setSelectedDate(date);
+    setWarningMessage('');
+
+    // Load existing attendance for this date if available
+    const dateStr = date.toISOString().split('T')[0];
+    if (existingAttendance[dateStr]) {
+      setAttendanceData(existingAttendance[dateStr]);
+    } else {
+      // Initialize with all students marked as absent (false)
+      const initialData = {};
+      students.forEach(student => {
+        initialData[student.id] = false;
+      });
+      setAttendanceData(initialData);
+    }
+  };
+
+  // Handle attendance toggle for a student
+  const toggleAttendance = (studentId) => {
+    setAttendanceData(prev => ({
+      ...prev,
+      [studentId]: !prev[studentId]
+    }));
+  };
+
+  // Mark all students as present
+  const markAllPresent = () => {
+    const allPresent = {};
+    filteredStudents.forEach(student => {
+      allPresent[student.id] = true;
+    });
+    setAttendanceData(prev => ({ ...prev, ...allPresent }));
+  };
+
+  // Mark all students as absent
+  const markAllAbsent = () => {
+    const allAbsent = {};
+    filteredStudents.forEach(student => {
+      allAbsent[student.id] = false;
+    });
+    setAttendanceData(prev => ({ ...prev, ...allAbsent }));
+  };
+
+  // Save attendance to backend
+  const handleSaveAttendance = async () => {
+    if (!selectedDate || !classSession) {
+      setMessage('Please select a date and ensure class session is loaded.');
+      return;
+    }
+
+    const dateStr = formatDateString(selectedDate);
+
+    // Prepare attendance records
+    const attendanceRecords = students.map(student => ({
+      student: student.id,
+      class_session: classSession.id,
+      date: dateStr,
+      is_present: attendanceData[student.id] || false,
+    }));
+
+    setSaving(true);
+    setMessage('');
+
     try {
-      setLoading(true);
-      
-      const dateStr = selectedDate.toISOString().split('T')[0];
-      const attendanceData = students.map(student => ({
-        student: student.id,
-        class_session: sessionId,
-        date: dateStr,
-        is_present: attendanceRecords[student.id] || false,
-        recorded_by: null
+      const response = await axios.post(
+        'http://127.0.0.1:8000/api/schooladmin/attendance/',
+        { attendance_records: attendanceRecords },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      setMessage(`Attendance saved successfully for ${dateStr}`);
+
+      // Update existing attendance cache
+      setExistingAttendance(prev => ({
+        ...prev,
+        [dateStr]: { ...attendanceData }
       }));
 
-      const response = await axios.post('http://127.0.0.1:8000/api/schooladmin/attendance/', {
-        attendance_records: attendanceData
-      }, {
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        }
-      });
+      // Clear selection after a delay
+      setTimeout(() => {
+        setSelectedDate(null);
+        setAttendanceData({});
+        setMessage('');
+      }, 2000);
 
-      if (response.status === 201) {
-        showMessage('Attendance saved successfully!', 'success');
-        setHasChanges(false);
-        fetchAttendanceForDate();
-      }
-    } catch (error) {
-      console.error('Save attendance error:', error);
-      showMessage('Error saving attendance', 'error');
+    } catch (err) {
+      console.error('Error saving attendance:', err);
+      setMessage('Failed to save attendance. Please try again.');
     } finally {
-      setLoading(false);
+      setSaving(false);
     }
   };
 
-  const tileClassName = ({ date, view }) => {
-    if (view !== 'month') return null;
+  // Calendar tile styling
+  const tileClassName = ({ date }) => {
+    const dateStr = formatDateString(date);
     
-    const dateStr = date.toISOString().split('T')[0];
-    
-    const isHoliday = holidayDays.some(h => h.date === dateStr);
-    if (isHoliday) {
-      return 'marking-modal-holiday-tile';
+    if (isHoliday(date)) return 'holiday-day';
+    if (isSchoolDay(date)) {
+      // Check if attendance has been marked for this day
+      if (existingAttendance[dateStr]) {
+        return 'marked-attendance-day';
+      }
+      return 'school-day';
     }
-    
-    const isSchoolDay = schoolDays.includes(dateStr);
-    if (isSchoolDay) {
-      return 'marking-modal-school-tile';
-    }
-    
-    return 'marking-modal-weekend-tile';
+    return null;
   };
-
-  const tileDisabled = ({ date, view }) => {
-    if (view !== 'month') return false;
-    return !isDateValid(date);
-  };
-
-  const getAttendanceStats = () => {
-    const total = students.length;
-    const present = Object.values(attendanceRecords).filter(Boolean).length;
-    const absent = total - present;
-    return { total, present, absent };
-  };
-
-  const stats = getAttendanceStats();
-  const selectedDateStatus = selectedDate ? getDateStatus(selectedDate) : null;
 
   return (
-    <div className="marking-modal-overlay">
-      <div className="marking-modal-container">
-        <div className="marking-modal-header">
-          <h2>Mark Attendance - {classInfo.name}</h2>
-          <button className="marking-modal-close-btn" onClick={onClose}>
+    <div className="attendance-marking-overlay">
+      <div className="attendance-marking-modal-container">
+        {/* Modal Header */}
+        <div className="attendance-marking-modal-header">
+          <div>
+            <h2>Mark Attendance - {classInfo.name}</h2>
+            <p style={{ fontSize: '0.9rem', color: '#666', marginTop: '5px' }}>
+              {academicYear} - {term}
+            </p>
+          </div>
+          <button className="attendance-marking-close-btn" onClick={onClose}>
             <X size={24} />
           </button>
         </div>
 
-        {message && (
-          <div className={`marking-modal-message ${messageType}`}>
-            {messageType === 'error' ? <AlertCircle size={16} /> : <CheckCircle size={16} />}
-            {message}
-          </div>
-        )}
-
-        <div className="marking-modal-content">
-          <div className="marking-modal-calendar-section">
-            <h3>Select Date</h3>
-            <p className="marking-modal-instruction">
-              Click on a school day to mark attendance. Holidays and weekends are disabled.
-            </p>
-            
-            <Calendar
-              onChange={handleDateClick}
-              value={selectedDate}
-              tileClassName={tileClassName}
-              tileDisabled={tileDisabled}
-              className="marking-modal-calendar"
-              calendarType="gregory"
-              showWeekNumbers={false}
-              locale="en-US"
-              formatShortWeekday={(locale, date) => {
-                const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-                return days[date.getDay()];
-              }}
-            />
-
-            <div className="marking-modal-legend">
-              <div className="marking-modal-legend-item">
-                <span className="marking-modal-legend-color marking-modal-school-color"></span>
-                School Days
-              </div>
-              <div className="marking-modal-legend-item">
-                <span className="marking-modal-legend-color marking-modal-holiday-color"></span>
-                Holidays
-              </div>
-              <div className="marking-modal-legend-item">
-                <span className="marking-modal-legend-color marking-modal-weekend-color"></span>
-                Weekends/Non-School
-              </div>
+        {/* Modal Content */}
+        <div className="attendance-marking-modal-content">
+          {loading ? (
+            <div style={{ padding: '40px', textAlign: 'center' }}>
+              <p>Loading class data...</p>
             </div>
-
-            {selectedDate && (
-              <div className="marking-modal-selected-date">
-                <h4>Selected: {selectedDate.toLocaleDateString('en-US', {
-                  weekday: 'long',
-                  year: 'numeric',
-                  month: 'long',
-                  day: 'numeric'
-                })}</h4>
-                <p className={`marking-modal-date-status ${selectedDateStatus?.type}`}>
-                  {selectedDateStatus?.label}
-                </p>
-              </div>
-            )}
-          </div>
-
-          {selectedDate && isDateValid(selectedDate) && students.length > 0 && (
-            <div className="marking-modal-students-section">
-              <div className="marking-modal-students-header">
-                <h3>Students ({students.length})</h3>
-                {hasChanges && <span className="marking-modal-changes-indicator">Unsaved changes</span>}
-              </div>
-
-              <div className="marking-modal-stats">
-                <div className="marking-modal-stat-item">
-                  <Users size={16} />
-                  <span>Total: {stats.total}</span>
-                </div>
-                <div className="marking-modal-stat-item marking-modal-present">
-                  <CheckCircle size={16} />
-                  <span>Present: {stats.present}</span>
-                </div>
-                <div className="marking-modal-stat-item marking-modal-absent">
-                  <XCircle size={16} />
-                  <span>Absent: {stats.absent}</span>
+          ) : (
+            <>
+              {/* Calendar Section */}
+              <div className="attendance-marking-calendar-section">
+                <h3>Select a School Day</h3>
+                <Calendar
+                  tileClassName={tileClassName}
+                  onClickDay={handleDateClick}
+                  value={selectedDate}
+                />
+                <div className="calendar-legend" style={{
+                  display: 'flex',
+                  gap: '15px',
+                  marginTop: '10px',
+                  fontSize: '0.85rem',
+                  flexWrap: 'wrap'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                    <div style={{ width: '15px', height: '15px', backgroundColor: '#e3f2fd', border: '1px solid #90caf9' }}></div>
+                    <span>School Day</span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                    <div style={{ width: '15px', height: '15px', backgroundColor: '#fff3cd', border: '1px solid #ffc107' }}></div>
+                    <span>Holiday</span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                    <div style={{ width: '15px', height: '15px', backgroundColor: '#c8e6c9', border: '1px solid #4caf50' }}></div>
+                    <span>Marked</span>
+                  </div>
                 </div>
               </div>
 
-              <div className="marking-modal-bulk-actions">
-                <button 
-                  className="marking-modal-bulk-btn marking-modal-present-btn"
-                  onClick={markAllPresent}
-                  disabled={loading}
-                >
-                  Mark All Present
-                </button>
-                <button 
-                  className="marking-modal-bulk-btn marking-modal-absent-btn"
-                  onClick={markAllAbsent}
-                  disabled={loading}
-                >
-                  Mark All Absent
-                </button>
-              </div>
+              {/* Warning Message */}
+              {warningMessage && (
+                <div className="warning-message" style={{
+                  padding: '12px',
+                  backgroundColor: '#fff3cd',
+                  border: '1px solid #ffc107',
+                  borderRadius: '6px',
+                  color: '#856404',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '10px',
+                  marginTop: '15px'
+                }}>
+                  <AlertCircle size={20} />
+                  <span>{warningMessage}</span>
+                </div>
+              )}
 
-              <div className="marking-modal-students-list">
-                {students.map(student => {
-                  const isPresent = attendanceRecords[student.id];
-                  const hasExisting = existingRecords[student.id];
-                  
-                  return (
-                    <div key={student.id} className="marking-modal-student-item">
-                      <div className="marking-modal-student-info">
-                        <h4>{student.first_name} {student.last_name}</h4>
-                        <p>{student.username}</p>
-                      </div>
-                      
-                      <div className="marking-modal-attendance-buttons">
-                        <button
-                          className={`marking-modal-attendance-btn marking-modal-present ${isPresent === true ? 'active' : ''}`}
-                          onClick={() => handleAttendanceChange(student.id, true)}
-                          disabled={loading}
+              {/* Student List Section */}
+              {selectedDate && (
+                <div className="attendance-student-section">
+                  <div className="selected-date-header">
+                    <h3>Marking Attendance for: {selectedDate.toLocaleDateString('en-US', { 
+                      weekday: 'long', 
+                      year: 'numeric', 
+                      month: 'long', 
+                      day: 'numeric' 
+                    })}</h3>
+                  </div>
+
+                  {/* Search Bar */}
+                  <div className="student-search-bar" style={{
+                    position: 'relative',
+                    marginBottom: '15px'
+                  }}>
+                    <Search 
+                      size={18} 
+                      style={{
+                        position: 'absolute',
+                        left: '12px',
+                        top: '50%',
+                        transform: 'translateY(-50%)',
+                        color: '#666'
+                      }}
+                    />
+                    <input
+                      type="text"
+                      placeholder="Search students by name or username..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      style={{
+                        width: '100%',
+                        padding: '10px 10px 10px 40px',
+                        fontSize: '0.95rem',
+                        border: '1px solid #ccc',
+                        borderRadius: '6px',
+                        outline: 'none'
+                      }}
+                    />
+                  </div>
+
+                  {/* Bulk Actions */}
+                  <div className="bulk-actions" style={{
+                    display: 'flex',
+                    gap: '10px',
+                    marginBottom: '15px'
+                  }}>
+                    <button
+                      onClick={markAllPresent}
+                      style={{
+                        padding: '8px 16px',
+                        backgroundColor: '#4caf50',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '4px',
+                        fontSize: '0.9rem',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      Mark All Present
+                    </button>
+                    <button
+                      onClick={markAllAbsent}
+                      style={{
+                        padding: '8px 16px',
+                        backgroundColor: '#f44336',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '4px',
+                        fontSize: '0.9rem',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      Mark All Absent
+                    </button>
+                  </div>
+
+                  {/* Students List */}
+                  <div className="students-list" style={{
+                    maxHeight: '400px',
+                    overflowY: 'auto',
+                    border: '1px solid #ddd',
+                    borderRadius: '6px',
+                    padding: '10px'
+                  }}>
+                    {filteredStudents.length === 0 ? (
+                      <p style={{ textAlign: 'center', color: '#666', padding: '20px' }}>
+                        No students found
+                      </p>
+                    ) : (
+                      filteredStudents.map(student => (
+                        <div
+                          key={student.id}
+                          className="student-attendance-item"
+                          style={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            padding: '12px',
+                            borderBottom: '1px solid #eee',
+                            cursor: 'pointer',
+                            backgroundColor: attendanceData[student.id] ? '#e8f5e9' : '#ffebee'
+                          }}
+                          onClick={() => toggleAttendance(student.id)}
                         >
-                          <CheckCircle size={16} />
-                          Present
-                        </button>
-                        <button
-                          className={`marking-modal-attendance-btn marking-modal-absent ${isPresent === false ? 'active' : ''}`}
-                          onClick={() => handleAttendanceChange(student.id, false)}
-                          disabled={loading}
-                        >
-                          <XCircle size={16} />
-                          Absent
-                        </button>
-                      </div>
-                      
-                      {hasExisting && (
-                        <div className="marking-modal-existing-record">
-                          Previously: {hasExisting.is_present ? 'Present' : 'Absent'}
+                          <div>
+                            <div style={{ fontWeight: '500', color: '#333' }}>
+                              {student.first_name} {student.last_name}
+                            </div>
+                            <div style={{ fontSize: '0.85rem', color: '#666' }}>
+                              {student.username}
+                            </div>
+                          </div>
+                          <div style={{
+                            padding: '6px 16px',
+                            borderRadius: '20px',
+                            fontSize: '0.85rem',
+                            fontWeight: '500',
+                            backgroundColor: attendanceData[student.id] ? '#4caf50' : '#f44336',
+                            color: 'white'
+                          }}>
+                            {attendanceData[student.id] ? 'Present' : 'Absent'}
+                          </div>
                         </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
+                      ))
+                    )}
+                  </div>
 
-              <div className="marking-modal-actions">
+                  {/* Summary */}
+                  <div className="attendance-summary" style={{
+                    marginTop: '15px',
+                    padding: '12px',
+                    backgroundColor: '#f5f5f5',
+                    borderRadius: '6px',
+                    display: 'flex',
+                    justifyContent: 'space-between'
+                  }}>
+                    <span>
+                      Present: <strong style={{ color: '#4caf50' }}>
+                        {Object.values(attendanceData).filter(v => v === true).length}
+                      </strong>
+                    </span>
+                    <span>
+                      Absent: <strong style={{ color: '#f44336' }}>
+                        {Object.values(attendanceData).filter(v => v === false).length}
+                      </strong>
+                    </span>
+                    <span>
+                      Total: <strong>{students.length}</strong>
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {/* Action Buttons */}
+              <div className="attendance-action-buttons" style={{
+                display: 'flex',
+                gap: '10px',
+                marginTop: '20px',
+                justifyContent: 'flex-end'
+              }}>
                 <button
-                  className="marking-modal-cancel-btn"
                   onClick={onClose}
-                  disabled={loading}
+                  disabled={saving}
+                  style={{
+                    padding: '12px 24px',
+                    backgroundColor: '#6c757d',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '6px',
+                    fontSize: '1rem',
+                    cursor: saving ? 'not-allowed' : 'pointer',
+                    opacity: saving ? 0.6 : 1
+                  }}
                 >
-                  Cancel
+                  Close
                 </button>
-                <button
-                  className="marking-modal-save-btn"
-                  onClick={saveAttendance}
-                  disabled={loading || !hasChanges}
-                >
-                  <Save size={16} />
-                  {loading ? 'Saving...' : 'Save Attendance'}
-                </button>
+                {selectedDate && (
+                  <button
+                    onClick={handleSaveAttendance}
+                    disabled={saving}
+                    style={{
+                      padding: '12px 24px',
+                      backgroundColor: '#007bff',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '6px',
+                      fontSize: '1rem',
+                      fontWeight: '500',
+                      cursor: saving ? 'not-allowed' : 'pointer',
+                      opacity: saving ? 0.6 : 1
+                    }}
+                  >
+                    {saving ? 'Saving...' : 'Save Attendance'}
+                  </button>
+                )}
               </div>
-            </div>
-          )}
 
-          {selectedDate && !isDateValid(selectedDate) && (
-            <div className="marking-modal-invalid-date">
-              <AlertCircle size={24} />
-              <h3>Cannot mark attendance for this date</h3>
-              <p>Please select a valid school day. Holidays and weekends are not available for attendance marking.</p>
-            </div>
-          )}
-
-          {loading && !selectedDate && (
-            <div className="marking-modal-loading">
-              <p>Loading session and students...</p>
-            </div>
+              {/* Success/Error Message */}
+              {message && (
+                <div style={{
+                  marginTop: '15px',
+                  padding: '12px',
+                  borderRadius: '6px',
+                  textAlign: 'center',
+                  backgroundColor: message.includes('Failed') ? '#f8d7da' : '#d4edda',
+                  color: message.includes('Failed') ? '#721c24' : '#155724',
+                  border: message.includes('Failed') ? '1px solid #f5c6cb' : '1px solid #c3e6cb'
+                }}>
+                  {message}
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>

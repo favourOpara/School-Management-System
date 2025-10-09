@@ -11,9 +11,17 @@ const CreateAttendanceCalendar = ({ selectedYear, selectedTerm }) => {
   const [selectedDates, setSelectedDates] = useState([]);
   const [holidays, setHolidays] = useState({});
   const [message, setMessage] = useState('');
-  const [calendarKey, setCalendarKey] = useState(0); // Add a key to force re-render
+  const [calendarKey, setCalendarKey] = useState(0);
 
   const token = localStorage.getItem('accessToken');
+
+  // Helper function to format date consistently (avoid timezone issues)
+  const formatDateString = (date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
 
   const handleAutoPopulate = () => {
     if (!fromDate || !toDate) {
@@ -21,8 +29,8 @@ const CreateAttendanceCalendar = ({ selectedYear, selectedTerm }) => {
       return;
     }
 
-    const start = new Date(fromDate);
-    const end = new Date(toDate);
+    const start = new Date(fromDate + 'T00:00:00');
+    const end = new Date(toDate + 'T00:00:00');
     const range = [];
 
     let current = new Date(start);
@@ -35,11 +43,11 @@ const CreateAttendanceCalendar = ({ selectedYear, selectedTerm }) => {
     }
 
     setSelectedDates(range);
-    setCalendarKey(prevKey => prevKey + 1); // Force calendar to re-render
+    setCalendarKey(prevKey => prevKey + 1);
   };
 
   const toggleDate = (date) => {
-    const dateStr = date.toISOString().split('T')[0];
+    const dateStr = formatDateString(date);
     const isSelected = selectedDates.some(d => d.toDateString() === date.toDateString());
     const isHoliday = holidays[dateStr] !== undefined;
 
@@ -59,14 +67,14 @@ const CreateAttendanceCalendar = ({ selectedYear, selectedTerm }) => {
   };
 
   const tileClassName = ({ date }) => {
-    const dateStr = date.toISOString().split('T')[0];
+    const dateStr = formatDateString(date);
     if (holidays[dateStr] !== undefined) return 'holiday-day';
     if (selectedDates.some(d => d.toDateString() === date.toDateString())) return 'school-day';
     return null;
   };
 
   const handleSubmit = async () => {
-    const school_days = selectedDates.map(date => date.toISOString().split('T')[0]);
+    const school_days = selectedDates.map(date => formatDateString(date));
 
     if (!selectedYear || !selectedTerm || school_days.length === 0) {
       alert("Missing academic year, term or school days.");
@@ -156,7 +164,7 @@ const CreateAttendanceCalendar = ({ selectedYear, selectedTerm }) => {
 
         <div className="calendar-display-column">
           <Calendar
-            key={calendarKey} // Add key to force re-render
+            key={calendarKey}
             tileClassName={tileClassName}
             onClickDay={toggleDate}
           />

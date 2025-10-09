@@ -24,13 +24,12 @@ class SessionCalendarCreateView(APIView):
     def post(self, request):
         academic_year = request.data.get("academic_year")
         term = request.data.get("term")
-        selected_dates = request.data.get("school_days", [])  # Expecting list of date strings
-        holidays = request.data.get("holidays", [])  # Expecting list of {date, label}
+        selected_dates = request.data.get("school_days", [])
+        holidays = request.data.get("holidays", [])
 
         if not academic_year or not term or not selected_dates:
             return Response({"detail": "Missing academic_year, term or school_days"}, status=400)
 
-        # Prevent duplicate calendar for same year + term
         if SessionCalendar.objects.filter(academic_year=academic_year, term=term).exists():
             return Response({"detail": "Calendar already exists for this academic year and term"}, status=400)
 
@@ -43,7 +42,6 @@ class SessionCalendarCreateView(APIView):
             except Exception as e:
                 print(f"Error creating school day for {date_str}: {str(e)}")
 
-        # Save holiday labels
         for h in holidays:
             try:
                 date_obj = datetime.strptime(h['date'], "%Y-%m-%d").date()
@@ -124,21 +122,18 @@ def list_attendance_calendars(request):
         for calendar in calendars:
             school_days = []
             
-            # Get regular school days
             for school_day in calendar.school_days.all():
                 school_days.append({
                     'date': school_day.date.strftime('%Y-%m-%d'),
                     'holiday_label': None
                 })
             
-            # Get holidays
             for holiday in calendar.holidays.all():
                 school_days.append({
                     'date': holiday.date.strftime('%Y-%m-%d'),
                     'holiday_label': {'label': holiday.label}
                 })
             
-            # Get associated class sessions
             class_sessions = list(calendar.class_sessions.values_list('id', flat=True))
             
             calendar_data.append({
@@ -185,21 +180,18 @@ def create_attendance_calendar(request):
     
     try:
         with transaction.atomic():
-            # Create the calendar
             calendar = AttendanceCalendar.objects.create(
                 academic_year=academic_year,
                 term=term,
                 created_by=request.user
             )
             
-            # Auto-link to matching class sessions
             matching_sessions = ClassSession.objects.filter(
                 academic_year=academic_year,
                 term=term
             )
             calendar.class_sessions.set(matching_sessions)
             
-            # Create school days
             for day_str in school_days:
                 try:
                     day_date = datetime.strptime(day_str, '%Y-%m-%d').date()
@@ -213,7 +205,6 @@ def create_attendance_calendar(request):
                         status=status.HTTP_400_BAD_REQUEST
                     )
             
-            # Create holidays
             for holiday in holidays:
                 try:
                     holiday_date = datetime.strptime(holiday['date'], '%Y-%m-%d').date()
@@ -276,16 +267,13 @@ def update_attendance_calendar(request):
     
     try:
         with transaction.atomic():
-            # Clear existing school days and holidays to avoid duplicates
             calendar.school_days.all().delete()
             calendar.holidays.all().delete()
             
-            # Create new school days with duplicate checking
             created_dates = set()
             for day_str in school_days:
                 try:
                     day_date = datetime.strptime(day_str, '%Y-%m-%d').date()
-                    # Only create if we haven't already created this date
                     if day_date not in created_dates:
                         AttendanceSchoolDay.objects.create(
                             calendar=calendar,
@@ -298,12 +286,10 @@ def update_attendance_calendar(request):
                         status=status.HTTP_400_BAD_REQUEST
                     )
             
-            # Create new holidays with duplicate checking
             created_holiday_dates = set()
             for holiday in holidays:
                 try:
                     holiday_date = datetime.strptime(holiday['date'], '%Y-%m-%d').date()
-                    # Only create if we haven't already created this date
                     if holiday_date not in created_holiday_dates:
                         AttendanceHolidayLabel.objects.create(
                             calendar=calendar,
@@ -317,7 +303,6 @@ def update_attendance_calendar(request):
                         status=status.HTTP_400_BAD_REQUEST
                     )
             
-            # Update class session links
             matching_sessions = ClassSession.objects.filter(
                 academic_year=academic_year,
                 term=term
@@ -349,7 +334,10 @@ def update_attendance_calendar(request):
 @api_view(['DELETE'])
 @permission_classes([IsAuthenticated, IsAdminRole])
 def delete_attendance_calendar(request):
-    """Delete an attendance calendar - used by EditAttendanceCalendar.jsx"""
+    """
+    Delete an attendance calendar and CASCADE delete all related attendance records
+    - used by EditAttendanceCalendar.jsx
+    """
     academic_year = request.data.get('academic_year')
     term = request.data.get('term')
     
@@ -372,6 +360,7 @@ def delete_attendance_calendar(request):
     
     try:
         with transaction.atomic():
+            # Collect statistics before deletion
             calendar_info = {
                 'academic_year': calendar.academic_year,
                 'term': calendar.term,
@@ -380,12 +369,69 @@ def delete_attendance_calendar(request):
                 'linked_class_sessions': calendar.class_sessions.count()
             }
             
-            # Delete the calendar (related school days and holidays will be deleted automatically)
+            # CASCADE DELETE: Remove all schooladmin AttendanceRecords for this academic session
+            # Import here to avoid circular imports
+            from schooladmin.models import AttendanceRecord as SchoolAdminAttendanceRecord
+            from schooladmin.models import StudentGrade, GradeSummary
+            
+            # Get all class sessions for this academic year and term
+            class_sessions = ClassSession.objects.filter(
+                academic_year=academic_year,
+                term=term
+            )
+            
+            # Count records before deletion for reporting
+            attendance_records_count = SchoolAdminAttendanceRecord.objects.filter(
+                class_session__in=class_sessions
+            ).count()
+            
+            # Delete all attendance records for these sessions
+            deleted_attendance = SchoolAdminAttendanceRecord.objects.filter(
+                class_session__in=class_sessions
+            ).delete()
+            
+            # CASCADE DELETE: Remove attendance-related grades
+            # Delete StudentGrade records where component_type is 'attendance'
+            from schooladmin.models import GradeComponent
+            attendance_components = GradeComponent.objects.filter(
+                grading_config__academic_year=academic_year,
+                grading_config__term=term,
+                component_type='attendance'
+            )
+            
+            deleted_grades = StudentGrade.objects.filter(
+                component__in=attendance_components
+            ).delete()
+            
+            # CASCADE DELETE: Reset attendance scores in GradeSummary
+            # Find all grade summaries for this session and reset attendance_score to 0
+            grade_summaries = GradeSummary.objects.filter(
+                grading_config__academic_year=academic_year,
+                grading_config__term=term
+            )
+            
+            updated_summaries_count = 0
+            for summary in grade_summaries:
+                summary.attendance_score = 0
+                summary.recalculate_total_score()
+                summary.save()
+                updated_summaries_count += 1
+            
+            # Now delete the calendar itself (this will cascade delete school_days and holidays)
             calendar.delete()
+            
+            calendar_info['deleted_attendance_records'] = attendance_records_count
+            calendar_info['deleted_attendance_grades'] = deleted_grades[0] if deleted_grades else 0
+            calendar_info['updated_grade_summaries'] = updated_summaries_count
             
             return Response({
                 'message': f'Attendance calendar for {academic_year} - {term} deleted successfully',
-                'deleted_calendar': calendar_info
+                'deleted_calendar': calendar_info,
+                'cascade_info': {
+                    'attendance_records_deleted': attendance_records_count,
+                    'attendance_grades_deleted': deleted_grades[0] if deleted_grades else 0,
+                    'grade_summaries_reset': updated_summaries_count
+                }
             }, status=status.HTTP_200_OK)
             
     except Exception as e:
