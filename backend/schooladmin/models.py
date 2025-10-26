@@ -2,6 +2,7 @@ from django.db import models
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from academics.models import Class, ClassSession
+from decimal import Decimal
 
 
 class FeeStructure(models.Model):
@@ -94,6 +95,9 @@ class GradingScale(models.Model):
     
     def get_letter_grade(self, score):
         """Get letter grade for a given score"""
+        # Convert score to float for comparison
+        score = float(score)
+        
         if score >= self.a_min_score:
             return 'A'
         elif score >= self.b_min_score:
@@ -342,9 +346,9 @@ class AttendanceRecord(models.Model):
     class_session = models.ForeignKey(
         'academics.ClassSession',
         on_delete=models.CASCADE,
-        db_index=True  # ADD THIS - Index for faster lookups by class_session
+        db_index=True
     )
-    date = models.DateField(db_index=True)  # ADD THIS - Index for date queries
+    date = models.DateField(db_index=True)
     is_present = models.BooleanField(default=False)
     
     # Additional attendance details
@@ -363,7 +367,6 @@ class AttendanceRecord(models.Model):
     class Meta:
         unique_together = ('student', 'class_session', 'date')
         ordering = ['-date']
-        # ADD THIS - Composite index for cascade deletion queries
         indexes = [
             models.Index(fields=['class_session', 'date']),
             models.Index(fields=['student', 'class_session']),
@@ -402,6 +405,12 @@ class GradeSummary(models.Model):
     total_score = models.DecimalField(max_digits=5, decimal_places=2, default=0)
     letter_grade = models.CharField(max_length=2, blank=True)
     
+    # NEW FIELD: Track if attendance is manually finalized
+    attendance_finalized = models.BooleanField(
+        default=False,
+        help_text="If True, attendance score won't be auto-updated from attendance records"
+    )
+    
     # Metadata
     last_calculated = models.DateTimeField(auto_now=True)
     is_final = models.BooleanField(default=False)
@@ -421,11 +430,23 @@ class GradeSummary(models.Model):
         """
         config = self.grading_config
         
+        # Convert all scores to Decimal to avoid type mismatch
+        attendance_score = Decimal(str(self.attendance_score))
+        assignment_score = Decimal(str(self.assignment_score))
+        test_score = Decimal(str(self.test_score))
+        exam_score = Decimal(str(self.exam_score))
+        
+        # Convert percentages to Decimal
+        attendance_pct = Decimal(str(config.attendance_percentage))
+        assignment_pct = Decimal(str(config.assignment_percentage))
+        test_pct = Decimal(str(config.test_percentage))
+        exam_pct = Decimal(str(config.exam_percentage))
+        
         # Calculate weighted scores
-        weighted_attendance = (self.attendance_score * config.attendance_percentage) / 100
-        weighted_assignments = (self.assignment_score * config.assignment_percentage) / 100
-        weighted_tests = (self.test_score * config.test_percentage) / 100
-        weighted_exams = (self.exam_score * config.exam_percentage) / 100
+        weighted_attendance = (attendance_score * attendance_pct) / Decimal('100')
+        weighted_assignments = (assignment_score * assignment_pct) / Decimal('100')
+        weighted_tests = (test_score * test_pct) / Decimal('100')
+        weighted_exams = (exam_score * exam_pct) / Decimal('100')
         
         self.total_score = weighted_attendance + weighted_assignments + weighted_tests + weighted_exams
         self.letter_grade = self.calculate_letter_grade()

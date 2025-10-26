@@ -1,0 +1,512 @@
+.my-grades-container {
+  padding: 24px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.grades-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.grades-header h2 {
+  margin: 0;
+  font-size: 1.75rem;
+  color: #333;
+}
+
+.grades-session-info {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.session-badge {
+  padding: 8px 16px;
+  background: #1976d2;
+  color: white;
+  border-radius: 20px;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+/* Filters Section */
+.filters-section {
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 24px;
+}
+
+.filters-section h3 {
+  margin: 0 0 16px 0;
+  font-size: 1.1rem;
+  color: #333;
+}
+
+.filters-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 16px;
+  align-items: end;
+}
+
+.filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.filter-group label {
+  font-weight: 500;
+  color: #666;
+  font-size: 0.9rem;
+}
+
+.filter-group select {
+  padding: 10px 12px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  background: white;
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+
+.filter-group select:focus {
+  outline: none;
+  border-color: #1976d2;
+}
+
+.filter-apply-btn {
+  padding: 10px 20px;
+  background: #1976d2;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.95rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: background 0.2s;
+  white-space: nowrap;
+}
+
+.filter-apply-btn:hover:not(:disabled) {
+  background: #1565c0;
+}
+
+.filter-apply-btn:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+}
+
+/* Info Card */
+.grades-info-card {
+  background: #e3f2fd;
+  border: 1px solid #90caf9;
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 24px;
+}
+
+.grades-info-card h3 {
+  margin: 0 0 16px 0;
+  color: #1565c0;
+  font-size: 1.1rem;
+}
+
+.info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.info-item {
+  display: flex;
+  gap: 12px;
+  align-items: start;
+}
+
+.info-item svg {
+  color: #1976d2;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.info-item strong {
+  display: block;
+  color: #333;
+  margin-bottom: 4px;
+}
+
+.info-item p {
+  margin: 0;
+  color: #666;
+  font-size: 0.9rem;
+}
+
+.info-note {
+  margin: 16px 0 0 0;
+  padding: 12px;
+  background: white;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  color: #666;
+}
+
+.info-note strong {
+  color: #1565c0;
+}
+
+/* Subjects Grid */
+.subjects-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+  gap: 24px;
+}
+
+.subject-card {
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 12px;
+  overflow: hidden;
+  transition: box-shadow 0.3s;
+}
+
+.subject-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.subject-card-header {
+  padding: 20px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+}
+
+.subject-info {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.subject-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.subject-title h3 {
+  margin: 0;
+  font-size: 1.2rem;
+}
+
+.subject-meta {
+  margin: 0;
+  opacity: 0.9;
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.dept-badge {
+  padding: 2px 8px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+  font-size: 0.8rem;
+}
+
+.subject-card-body {
+  padding: 20px;
+}
+
+/* Grade Section */
+.grade-section {
+  margin-bottom: 24px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.grade-section:last-of-type {
+  border-bottom: none;
+}
+
+.grade-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.grade-label {
+  font-weight: 600;
+  color: #333;
+  font-size: 1rem;
+}
+
+.assignment-count {
+  font-size: 0.85rem;
+  color: #666;
+  font-weight: normal;
+  margin-left: 8px;
+}
+
+.grade-value {
+  font-weight: 600;
+  color: #666;
+}
+
+/* Progress Bar */
+.progress-bar {
+  width: 100%;
+  height: 12px;
+  background: #f0f0f0;
+  border-radius: 6px;
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+
+.progress-fill {
+  height: 100%;
+  border-radius: 6px;
+  transition: width 0.3s ease;
+}
+
+.grade-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.percentage {
+  font-size: 0.9rem;
+  color: #666;
+}
+
+.letter-grade {
+  font-size: 1.2rem;
+  font-weight: 700;
+}
+
+/* Assignment Details */
+.expand-btn {
+  width: 100%;
+  padding: 10px;
+  margin-top: 12px;
+  background: #f5f5f5;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 0.9rem;
+  color: #666;
+  transition: background 0.2s;
+}
+
+.expand-btn:hover {
+  background: #e0e0e0;
+}
+
+.assignment-details {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #f0f0f0;
+}
+
+.assignment-item {
+  padding: 12px;
+  background: #f9f9f9;
+  border-radius: 8px;
+  margin-bottom: 12px;
+}
+
+.assignment-item:last-child {
+  margin-bottom: 0;
+}
+
+.assignment-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+  margin-bottom: 8px;
+}
+
+.assignment-header h4 {
+  margin: 0;
+  font-size: 1rem;
+  color: #333;
+  flex: 1;
+}
+
+.assignment-score {
+  font-weight: 600;
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+
+.assignment-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.85rem;
+  color: #666;
+  margin-bottom: 8px;
+}
+
+.graded-date {
+  color: #999;
+}
+
+.assignment-feedback {
+  margin-top: 12px;
+  padding: 12px;
+  background: white;
+  border-left: 3px solid #1976d2;
+  border-radius: 4px;
+}
+
+.assignment-feedback strong {
+  display: block;
+  margin-bottom: 6px;
+  color: #1976d2;
+  font-size: 0.9rem;
+}
+
+.assignment-feedback p {
+  margin: 0;
+  color: #666;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+/* Hidden Grades Notice */
+.hidden-grades-notice {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px;
+  background: #fff3cd;
+  border: 1px solid #ffeaa7;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  color: #856404;
+  margin-top: 12px;
+}
+
+.hidden-grades-notice svg {
+  flex-shrink: 0;
+}
+
+/* No Data */
+.no-data {
+  text-align: center;
+  color: #999;
+  font-style: italic;
+  padding: 20px 0;
+  margin: 0;
+}
+
+/* Loading & Error States */
+.loading-state,
+.error-state,
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  text-align: center;
+}
+
+.loading-icon {
+  color: #1976d2;
+  animation: spin 2s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.loading-state p,
+.empty-state p {
+  margin-top: 16px;
+  color: #666;
+  font-size: 1rem;
+}
+
+.error-message {
+  color: #d32f2f;
+  margin-bottom: 16px;
+}
+
+.retry-btn {
+  padding: 10px 20px;
+  background: #1976d2;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.95rem;
+  transition: background 0.2s;
+}
+
+.retry-btn:hover {
+  background: #1565c0;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .my-grades-container {
+    padding: 80px 16px 16px 16px; /* Added top padding for mobile */
+  }
+
+  .grades-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .subjects-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .info-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .filters-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .filter-apply-btn {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .my-grades-container {
+    padding: 90px 12px 12px 12px; /* Even more top padding for smaller mobile screens */
+  }
+
+  .grades-header h2 {
+    font-size: 1.5rem;
+  }
+
+  .session-badge {
+    font-size: 0.85rem;
+    padding: 6px 12px;
+  }
+}

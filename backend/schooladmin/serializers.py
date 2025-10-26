@@ -7,7 +7,10 @@ from users.models import CustomUser
 from academics.models import Class, Subject, ClassSession
 
 
-# Existing Fee Structure Serializers
+# ============================================================================
+# FEE STRUCTURE SERIALIZERS
+# ============================================================================
+
 class FeeStructureSerializer(serializers.ModelSerializer):
     classes = serializers.PrimaryKeyRelatedField(
         many=True, queryset=Class.objects.all()
@@ -85,7 +88,9 @@ class FeeStudentSerializer(serializers.Serializer):
     outstanding = serializers.DecimalField(max_digits=10, decimal_places=2)
 
 
+# ============================================================================
 # GRADING SYSTEM SERIALIZERS
+# ============================================================================
 
 class GradingScaleSerializer(serializers.ModelSerializer):
     created_by_name = serializers.SerializerMethodField()
@@ -93,7 +98,8 @@ class GradingScaleSerializer(serializers.ModelSerializer):
     class Meta:
         model = GradingScale
         fields = [
-            'id', 'name', 'a_min_score', 'b_min_score', 'c_min_score', 'd_min_score',
+            'id', 'name', 'description', 'academic_year', 'term',
+            'a_min_score', 'b_min_score', 'c_min_score', 'd_min_score',
             'created_by', 'created_by_name', 'created_at', 'updated_at', 'is_active'
         ]
         read_only_fields = ['created_by', 'created_at', 'updated_at']
@@ -266,7 +272,8 @@ class GradeSummarySerializer(serializers.ModelSerializer):
             'id', 'student', 'student_name', 'subject', 'subject_name',
             'grading_config', 'grading_scale_name', 'academic_session',
             'attendance_score', 'assignment_score', 'test_score', 'exam_score',
-            'total_score', 'letter_grade', 'last_calculated', 'is_final'
+            'total_score', 'letter_grade', 'attendance_finalized',  # NEW FIELD ADDED
+            'last_calculated', 'is_final'
         ]
         read_only_fields = ['letter_grade', 'last_calculated']
     
@@ -302,8 +309,12 @@ class ConfigurationTemplateSerializer(serializers.ModelSerializer):
         return super().create(validated_data)
 
 
-# Copy Configuration Serializer for API endpoints
+# ============================================================================
+# UTILITY SERIALIZERS FOR API ENDPOINTS
+# ============================================================================
+
 class CopyConfigurationSerializer(serializers.Serializer):
+    """Serializer for copying grading configurations between sessions"""
     source_config_id = serializers.IntegerField()
     target_academic_year = serializers.CharField(max_length=9)
     target_term = serializers.ChoiceField(choices=[
@@ -332,8 +343,8 @@ class CopyConfigurationSerializer(serializers.Serializer):
         return data
 
 
-# Apply Template Serializer
 class ApplyTemplateSerializer(serializers.Serializer):
+    """Serializer for applying configuration templates to sessions"""
     template_id = serializers.IntegerField()
     academic_year = serializers.CharField(max_length=9)
     term = serializers.ChoiceField(choices=[

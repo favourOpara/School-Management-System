@@ -1,6 +1,6 @@
-// src/components/AssignedClasses.jsx
 import React, { useState, useEffect } from 'react';
 import SubjectContentManager from './SubjectContentManager';
+import StudentSubmissionsModal from './StudentSubmissionsModal';
 import './AssignedClasses.css';
 
 const AssignedClasses = () => {
@@ -11,6 +11,10 @@ const AssignedClasses = () => {
   const [students, setStudents] = useState([]);
   const [studentsLoading, setStudentsLoading] = useState(false);
   const [showContentManager, setShowContentManager] = useState(false);
+  
+  // Student submissions modal state
+  const [showSubmissionsModal, setShowSubmissionsModal] = useState(false);
+  const [selectedStudent, setSelectedStudent] = useState(null);
 
   useEffect(() => {
     fetchAssignedSubjects();
@@ -87,6 +91,16 @@ const AssignedClasses = () => {
 
   const handleBackToStudents = () => {
     setShowContentManager(false);
+  };
+
+  const handleViewProfile = (student) => {
+    setSelectedStudent(student);
+    setShowSubmissionsModal(true);
+  };
+
+  const handleCloseSubmissionsModal = () => {
+    setShowSubmissionsModal(false);
+    setSelectedStudent(null);
   };
 
   if (loading) {
@@ -171,13 +185,26 @@ const AssignedClasses = () => {
                       </div>
                     </div>
                     <div className="student-actions">
-                      <button className="action-btn">View Profile</button>
+                      <button 
+                        className="action-btn"
+                        onClick={() => handleViewProfile(student)}
+                      >
+                        View Submissions
+                      </button>
                     </div>
                   </div>
                 ))}
               </div>
             )}
           </div>
+        )}
+
+        {/* Student Submissions Modal */}
+        {showSubmissionsModal && selectedStudent && (
+          <StudentSubmissionsModal
+            student={selectedStudent}
+            onClose={handleCloseSubmissionsModal}
+          />
         )}
       </div>
     );

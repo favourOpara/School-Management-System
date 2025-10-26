@@ -1,4 +1,5 @@
 from django.db import models
+from django.conf import settings
 import os
 
 
@@ -97,7 +98,6 @@ class StudentSession(models.Model):
         return f"{self.student.username} - {self.class_session}"
 
 
-# UPDATED: Content belongs to subject, not teacher
 class SubjectContent(models.Model):
     """
     Base model for all subject content (assignments, notes, announcements)
@@ -158,6 +158,14 @@ class SubjectContent(models.Model):
         """Get the number of files attached to this content"""
         return self.files.filter(is_active=True).count()
     
+    @property
+    def is_overdue(self):
+        """Check if assignment is overdue"""
+        if self.content_type == 'assignment' and self.due_date:
+            from django.utils import timezone
+            return timezone.now() > self.due_date
+        return False
+    
     def clean(self):
         """Validate model data"""
         from django.core.exceptions import ValidationError
@@ -208,6 +216,11 @@ class ContentFile(models.Model):
         return self.original_name
     
     @property
+    def file_extension(self):
+        """Get file extension"""
+        return os.path.splitext(self.original_name)[1].lower()
+    
+    @property
     def formatted_file_size(self):
         """Get file size in a readable format"""
         size = self.file_size
@@ -241,3 +254,141 @@ class StudentContentView(models.Model):
     
     def __str__(self):
         return f"{self.student.username} viewed {self.content.title}"
+
+
+class AssignmentSubmission(models.Model):
+    """
+    Student submissions for assignments
+    """
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('submitted', 'Submitted'),
+        ('graded', 'Graded'),
+        ('returned', 'Returned'),
+    ]
+    
+    student = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        limit_choices_to={'role': 'student'},
+        related_name='assignment_submissions'
+    )
+    assignment = models.ForeignKey(
+        'SubjectContent',
+        on_delete=models.CASCADE,
+        limit_choices_to={'content_type': 'assignment'},
+        related_name='submissions'
+    )
+    
+    # Submission details
+    submission_text = models.TextField(
+        blank=True,
+        help_text="Optional text submission"
+    )
+    submitted_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default='submitted'
+    )
+    
+    # Track submission attempts (max 2: initial + 1 update)
+    submission_count = models.PositiveIntegerField(
+        default=1,
+        help_text="Number of times student has submitted (max 2)"
+    )
+    
+    # Grading information (filled by teacher later)
+    score = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text="Score awarded by teacher"
+    )
+    feedback = models.TextField(
+        blank=True,
+        help_text="Teacher feedback"
+    )
+    graded_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        limit_choices_to={'role__in': ['teacher', 'admin']},
+        related_name='graded_submissions'
+    )
+    graded_at = models.DateTimeField(null=True, blank=True)
+    
+    # Admin approval for viewing grades
+    grade_released = models.BooleanField(
+        default=False,
+        help_text="Admin approval to release grade to student"
+    )
+    
+    class Meta:
+        unique_together = ('student', 'assignment')
+        ordering = ['-submitted_at']
+        indexes = [
+            models.Index(fields=['student', 'status']),
+            models.Index(fields=['assignment', 'status']),
+        ]
+    
+    def __str__(self):
+        return f"{self.student.username} - {self.assignment.title}"
+    
+    @property
+    def is_late(self):
+        """Check if submission was late"""
+        if self.assignment.due_date and self.submitted_at:
+            return self.submitted_at > self.assignment.due_date
+        return False
+    
+    @property
+    def can_view_grade(self):
+        """Check if student can view their grade"""
+        return self.status == 'graded' and self.grade_released
+    
+    @property
+    def can_resubmit(self):
+        """Check if student can resubmit (max 2 submissions)"""
+        return self.submission_count < 2 and self.status != 'graded'
+
+
+class SubmissionFile(models.Model):
+    """
+    Files attached to assignment submissions
+    """
+    submission = models.ForeignKey(
+        AssignmentSubmission,
+        on_delete=models.CASCADE,
+        related_name='files'
+    )
+    file = models.FileField(
+        upload_to='submissions/%Y/%m/%d/'
+    )
+    original_name = models.CharField(max_length=255)
+    file_size = models.BigIntegerField()
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        ordering = ['-uploaded_at']
+    
+    def __str__(self):
+        return f"{self.original_name} - {self.submission.student.username}"
+    
+    @property
+    def file_extension(self):
+        """Get file extension"""
+        return os.path.splitext(self.original_name)[1].lower()
+    
+    @property
+    def formatted_file_size(self):
+        """Format file size in human readable format"""
+        size = self.file_size
+        for unit in ['B', 'KB', 'MB', 'GB']:
+            if size < 1024.0:
+                return f"{size:.1f} {unit}"
+            size /= 1024.0
+        return f"{size:.1f} TB"

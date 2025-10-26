@@ -3,6 +3,8 @@ import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import RoleBasedSidebar from '../components/RoleBasedSidebar';
 import ActivityLog from '../components/ActivityLog';
+import StudentAssignments from '../components/StudentAssignments';
+import MyGrades from '../components/MyGrades'; // NEW IMPORT
 import './StudentDashboard.css';
 
 const getGreeting = () => {
@@ -64,19 +66,9 @@ const StudentDashboard = () => {
           </div>
         );
       case 'my-grades':
-        return (
-          <div className="student-dashboard-section">
-            <h2 className="student-dashboard-section-title">My Grades</h2>
-            <p className="student-dashboard-section-text">View your academic performance and grade reports.</p>
-          </div>
-        );
+        return <MyGrades />; // USE THE NEW COMPONENT
       case 'assignments':
-        return (
-          <div className="student-dashboard-section">
-            <h2 className="student-dashboard-section-title">Assignments</h2>
-            <p className="student-dashboard-section-text">View and submit your assignments.</p>
-          </div>
-        );
+        return <StudentAssignments />;
       case 'my-attendance':
         return (
           <div className="student-dashboard-section">

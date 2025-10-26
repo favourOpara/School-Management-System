@@ -1,5 +1,8 @@
 from rest_framework import serializers
-from .models import Class, ClassSession, Subject, SubjectContent, ContentFile, StudentContentView
+from .models import (
+    Class, ClassSession, Subject, SubjectContent, ContentFile, 
+    StudentContentView, AssignmentSubmission, SubmissionFile
+)
 from users.models import CustomUser
 import re
 from django.utils import timezone
@@ -78,8 +81,6 @@ class SubjectSerializer(serializers.ModelSerializer):
         return instance
 
 
-# UPDATED: Use created_by instead of teacher
-
 class ContentFileSerializer(serializers.ModelSerializer):
     file_url = serializers.SerializerMethodField()
     
@@ -87,9 +88,9 @@ class ContentFileSerializer(serializers.ModelSerializer):
         model = ContentFile
         fields = [
             'id', 'file', 'original_name', 'file_size', 'content_type_mime',
-            'uploaded_at', 'is_active', 'file_url', 'formatted_file_size'
+            'uploaded_at', 'is_active', 'file_url', 'formatted_file_size', 'file_extension'
         ]
-        read_only_fields = ['uploaded_at', 'formatted_file_size']
+        read_only_fields = ['uploaded_at', 'formatted_file_size', 'file_extension']
     
     def get_file_url(self, obj):
         if obj.file:
@@ -270,3 +271,187 @@ class AnnouncementSerializer(SubjectContentSerializer):
     class Meta(SubjectContentSerializer.Meta):
         model = SubjectContent
         exclude = ['due_date', 'max_score']
+
+
+# ASSIGNMENT SUBMISSION SERIALIZERS
+
+class SubmissionFileSerializer(serializers.ModelSerializer):
+    file_url = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = SubmissionFile
+        fields = [
+            'id', 'file', 'file_url', 'original_name', 
+            'file_size', 'formatted_file_size', 'file_extension',
+            'uploaded_at'
+        ]
+        read_only_fields = ['uploaded_at']
+    
+    def get_file_url(self, obj):
+        request = self.context.get('request')
+        if obj.file and hasattr(obj.file, 'url'):
+            return request.build_absolute_uri(obj.file.url) if request else obj.file.url
+        return None
+
+
+class AssignmentSubmissionSerializer(serializers.ModelSerializer):
+    files = SubmissionFileSerializer(many=True, read_only=True)
+    student_name = serializers.SerializerMethodField()
+    assignment_title = serializers.CharField(source='assignment.title', read_only=True)
+    assignment_description = serializers.CharField(source='assignment.description', read_only=True)
+    assignment_due_date = serializers.DateTimeField(source='assignment.due_date', read_only=True)
+    assignment_max_score = serializers.IntegerField(source='assignment.max_score', read_only=True)
+    subject_name = serializers.CharField(source='assignment.subject.name', read_only=True)
+    subject_id = serializers.IntegerField(source='assignment.subject.id', read_only=True)
+    is_late = serializers.ReadOnlyField()
+    can_view_grade = serializers.ReadOnlyField()
+    can_resubmit = serializers.ReadOnlyField()
+    graded_by_name = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = AssignmentSubmission
+        fields = [
+            'id', 'student', 'student_name', 'assignment', 
+            'assignment_title', 'assignment_description', 'assignment_due_date',
+            'assignment_max_score', 'subject_name', 'subject_id',
+            'submission_text', 'submitted_at', 'updated_at', 
+            'status', 'score', 'feedback', 'graded_by', 'graded_by_name',
+            'graded_at', 'grade_released', 'is_late', 'can_view_grade',
+            'submission_count', 'can_resubmit', 'files'
+        ]
+        read_only_fields = [
+            'submitted_at', 'updated_at', 'graded_by', 
+            'graded_at', 'grade_released', 'submission_count'
+        ]
+    
+    def get_student_name(self, obj):
+        return f"{obj.student.first_name} {obj.student.last_name}"
+    
+    def get_graded_by_name(self, obj):
+        if obj.graded_by:
+            return f"{obj.graded_by.first_name} {obj.graded_by.last_name}"
+        return None
+
+
+class StudentAssignmentListSerializer(serializers.ModelSerializer):
+    """
+    Serializer for listing assignments available to students
+    Shows assignment details and submission status
+    """
+    subject_name = serializers.CharField(source='subject.name', read_only=True)
+    subject_id = serializers.IntegerField(source='subject.id', read_only=True)
+    classroom_name = serializers.CharField(source='subject.class_session.classroom.name', read_only=True)
+    teacher_name = serializers.SerializerMethodField()
+    files_count = serializers.SerializerMethodField()
+    files = serializers.SerializerMethodField()
+    submission_status = serializers.SerializerMethodField()
+    is_overdue = serializers.ReadOnlyField()
+    my_submission = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = SubjectContent
+        fields = [
+            'id', 'title', 'description', 'due_date', 'max_score',
+            'subject_name', 'subject_id', 'classroom_name', 'teacher_name',
+            'created_at', 'files_count', 'files', 'submission_status', 
+            'is_overdue', 'my_submission'
+        ]
+    
+    def get_teacher_name(self, obj):
+        if obj.subject and obj.subject.teacher:
+            teacher = obj.subject.teacher
+            return f"{teacher.first_name} {teacher.last_name}"
+        return "Unknown"
+    
+    def get_files_count(self, obj):
+        return obj.files.count()
+    
+    def get_files(self, obj):
+        """Return assignment files with download URLs"""
+        files = obj.files.all()
+        request = self.context.get('request')
+        
+        return [
+            {
+                'id': file.id,
+                'original_name': file.original_name,
+                'file_url': request.build_absolute_uri(file.file.url) if request and file.file else None,
+                'formatted_file_size': file.formatted_file_size,
+                'file_extension': file.file_extension
+            }
+            for file in files
+        ]
+    
+    def get_submission_status(self, obj):
+        """Get submission status for current user"""
+        request = self.context.get('request')
+        if request and request.user:
+            submission = obj.submissions.filter(student=request.user).first()
+            if submission:
+                return submission.status
+        return 'not_submitted'
+    
+    def get_my_submission(self, obj):
+        """Get current user's submission if exists"""
+        request = self.context.get('request')
+        if request and request.user:
+            submission = obj.submissions.filter(student=request.user).first()
+            if submission:
+                return {
+                    'id': submission.id,
+                    'submitted_at': submission.submitted_at,
+                    'status': submission.status,
+                    'is_late': submission.is_late,
+                    'score': submission.score if submission.can_view_grade else None,
+                    'can_view_grade': submission.can_view_grade,
+                    'submission_text': submission.submission_text,
+                    'submission_count': submission.submission_count,
+                    'can_resubmit': submission.can_resubmit
+                }
+        return None
+
+
+class CreateSubmissionSerializer(serializers.Serializer):
+    """
+    Serializer for creating assignment submissions
+    """
+    assignment_id = serializers.IntegerField()
+    submission_text = serializers.CharField(required=False, allow_blank=True)
+    
+    def validate_assignment_id(self, value):
+        """Validate that assignment exists and is an assignment type"""
+        try:
+            assignment = SubjectContent.objects.get(id=value, content_type='assignment')
+        except SubjectContent.DoesNotExist:
+            raise serializers.ValidationError("Assignment not found")
+        
+        # Check if student is enrolled in the subject
+        request = self.context.get('request')
+        if request and request.user:
+            from .models import StudentSession
+            is_enrolled = StudentSession.objects.filter(
+                student=request.user,
+                class_session=assignment.subject.class_session,
+                is_active=True
+            ).exists()
+            
+            if not is_enrolled:
+                raise serializers.ValidationError("You are not enrolled in this subject")
+        
+        return value
+    
+    def validate(self, data):
+        """Check if student already submitted"""
+        request = self.context.get('request')
+        if request and request.user:
+            existing_submission = AssignmentSubmission.objects.filter(
+                student=request.user,
+                assignment_id=data['assignment_id']
+            ).first()
+            
+            if existing_submission:
+                raise serializers.ValidationError(
+                    "You have already submitted this assignment. You can update your existing submission."
+                )
+        
+        return data

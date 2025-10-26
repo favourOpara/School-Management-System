@@ -3,38 +3,52 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.exceptions import NotFound, PermissionDenied
+from rest_framework.decorators import api_view, permission_classes
 from django.db import transaction
+from django.db.models import Q, Prefetch
 from django.shortcuts import get_object_or_404
-from .models import Class, ClassSession, Subject, StudentSession, SubjectContent, StudentContentView
+from django.utils import timezone
+import os
+
+from .models import (
+    Class, ClassSession, Subject, StudentSession, SubjectContent, 
+    StudentContentView, AssignmentSubmission, SubmissionFile
+)
 from .serializers import (
     ClassSerializer, ClassSessionSerializer, SubjectSerializer,
     SubjectContentSerializer, SubjectContentCreateSerializer,
     AssignmentSerializer, NoteSerializer, AnnouncementSerializer,
-    StudentContentViewSerializer
+    StudentContentViewSerializer, AssignmentSubmissionSerializer,
+    StudentAssignmentListSerializer, CreateSubmissionSerializer,
+    SubmissionFileSerializer
 )
 from users.models import CustomUser
 
 
-# Custom permission for teachers
+# ========================
+# CUSTOM PERMISSIONS
+# ========================
+
 class IsTeacherRole(permissions.BasePermission):
     def has_permission(self, request, view):
         return request.user.is_authenticated and request.user.role == 'teacher'
 
 
-# Custom permission for teachers or admins
 class IsTeacherOrAdmin(permissions.BasePermission):
     def has_permission(self, request, view):
         return request.user.is_authenticated and request.user.role in ['teacher', 'admin']
 
 
-# Admin-only: Create/List permanent classes (e.g., "J.S.S.1", "S.S.S.3")
+# ========================
+# CLASS MANAGEMENT VIEWS (ADMIN ONLY)
+# ========================
+
 class ClassListCreateView(generics.ListCreateAPIView):
     queryset = Class.objects.all()
     serializer_class = ClassSerializer
     permission_classes = [permissions.IsAdminUser]
 
 
-# Admin-only: Retrieve, update, or delete a specific Class
 class ClassDetailView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Class.objects.all()
     serializer_class = ClassSerializer
@@ -42,7 +56,10 @@ class ClassDetailView(generics.RetrieveUpdateDestroyAPIView):
     lookup_field = 'id'
 
 
-# Admin-only: Create/List academic ClassSessions
+# ========================
+# CLASS SESSION MANAGEMENT VIEWS (ADMIN ONLY)
+# ========================
+
 class ClassSessionListCreateView(generics.ListCreateAPIView):
     queryset = ClassSession.objects.all()
     serializer_class = ClassSessionSerializer
@@ -66,7 +83,6 @@ class ClassSessionListCreateView(generics.ListCreateAPIView):
         return super().create(request, *args, **kwargs)
 
 
-# admin-only: Retrieve/update/delete a specific ClassSession
 class ClassSessionDetailView(generics.RetrieveUpdateDestroyAPIView):
     queryset = ClassSession.objects.all()
     serializer_class = ClassSessionSerializer
@@ -74,7 +90,10 @@ class ClassSessionDetailView(generics.RetrieveUpdateDestroyAPIView):
     lookup_field = 'id'
 
 
-# Admin-only: Create/list subjects (accepts list format for bulk)
+# ========================
+# SUBJECT MANAGEMENT VIEWS
+# ========================
+
 class SubjectListCreateView(generics.ListCreateAPIView):
     queryset = Subject.objects.all()
     serializer_class = SubjectSerializer
@@ -133,14 +152,12 @@ class SubjectListCreateView(generics.ListCreateAPIView):
         return Response(self.get_serializer(subject).data, status=status.HTTP_201_CREATED)
 
 
-# Authenticated users can view all subjects
 class SubjectListView(generics.ListAPIView):
     queryset = Subject.objects.all()
     serializer_class = SubjectSerializer
     permission_classes = [permissions.IsAuthenticated]
 
 
-# Admin-only: Retrieve, update, or delete a specific subject
 class SubjectDetailView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Subject.objects.all()
     serializer_class = SubjectSerializer
@@ -148,7 +165,10 @@ class SubjectDetailView(generics.RetrieveUpdateDestroyAPIView):
     lookup_field = 'id'
 
 
-# Teacher-only: View subjects assigned to the logged-in teacher
+# ========================
+# TEACHER SUBJECT VIEWS
+# ========================
+
 class TeacherAssignedSubjectsView(generics.ListAPIView):
     serializer_class = SubjectSerializer
     permission_classes = [permissions.IsAuthenticated, IsTeacherRole]
@@ -197,7 +217,6 @@ class TeacherAssignedSubjectsView(generics.ListAPIView):
         })
 
 
-# Teacher-only: Get students in a specific subject they teach
 class TeacherSubjectStudentsView(APIView):
     permission_classes = [permissions.IsAuthenticated, IsTeacherRole]
 
@@ -241,6 +260,7 @@ class TeacherSubjectStudentsView(APIView):
                 'middle_name': student.middle_name,
                 'full_name': f"{student.first_name} {student.last_name}",
                 'username': student.username,
+                'email': student.email,
                 'gender': student.gender,
                 'age': age,
                 'date_of_birth': student.date_of_birth,
@@ -266,7 +286,10 @@ class TeacherSubjectStudentsView(APIView):
         })
 
 
-# UPDATED: Teacher can create content for subjects they teach
+# ========================
+# SUBJECT CONTENT MANAGEMENT VIEWS
+# ========================
+
 class SubjectContentCreateView(generics.CreateAPIView):
     serializer_class = SubjectContentCreateSerializer
     permission_classes = [permissions.IsAuthenticated, IsTeacherOrAdmin]
@@ -292,7 +315,6 @@ class SubjectContentCreateView(generics.CreateAPIView):
             )
 
 
-# UPDATED: Any teacher assigned to the subject can see all content
 class TeacherSubjectContentView(generics.ListAPIView):
     serializer_class = SubjectContentSerializer
     permission_classes = [permissions.IsAuthenticated, IsTeacherOrAdmin]
@@ -369,7 +391,6 @@ class TeacherSubjectContentView(generics.ListAPIView):
         })
 
 
-# UPDATED: Any teacher assigned to the subject can edit/delete ALL content
 class TeacherContentDetailView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = SubjectContentSerializer
     permission_classes = [permissions.IsAuthenticated, IsTeacherOrAdmin]
@@ -410,7 +431,6 @@ class TeacherContentDetailView(generics.RetrieveUpdateDestroyAPIView):
         return content
 
 
-# Get content for a specific subject (for students/admins to view)
 class SubjectContentListView(generics.ListAPIView):
     serializer_class = SubjectContentSerializer
     permission_classes = [permissions.IsAuthenticated]
@@ -472,7 +492,582 @@ class SubjectContentListView(generics.ListAPIView):
         })
 
 
-# Admin-only: Copy students and/or subjects from previous session
+# ========================
+# STUDENT ASSIGNMENT VIEWS
+# ========================
+
+class StudentAssignmentListView(generics.ListAPIView):
+    """
+    List all assignments for the logged-in student
+    Shows assignments from all their enrolled subjects
+    """
+    serializer_class = StudentAssignmentListSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def get_queryset(self):
+        user = self.request.user
+        
+        if user.role != 'student':
+            return SubjectContent.objects.none()
+        
+        # Get all class sessions the student is enrolled in
+        student_sessions = StudentSession.objects.filter(
+            student=user,
+            is_active=True
+        ).values_list('class_session', flat=True)
+        
+        # Get all assignments from subjects in those class sessions
+        queryset = SubjectContent.objects.filter(
+            content_type='assignment',
+            subject__class_session__in=student_sessions
+        ).select_related(
+            'subject',
+            'subject__class_session',
+            'subject__class_session__classroom',
+            'subject__teacher'
+        ).prefetch_related(
+            'files',
+            Prefetch(
+                'submissions',
+                queryset=AssignmentSubmission.objects.filter(student=user),
+                to_attr='my_submissions'
+            )
+        ).order_by('-created_at')
+        
+        # Filter by status if provided
+        status_filter = self.request.query_params.get('status')
+        if status_filter == 'pending':
+            # Assignments not yet submitted
+            submitted_ids = AssignmentSubmission.objects.filter(
+                student=user
+            ).values_list('assignment_id', flat=True)
+            queryset = queryset.exclude(id__in=submitted_ids)
+        elif status_filter == 'submitted':
+            # Assignments already submitted
+            submitted_ids = AssignmentSubmission.objects.filter(
+                student=user
+            ).values_list('assignment_id', flat=True)
+            queryset = queryset.filter(id__in=submitted_ids)
+        elif status_filter == 'overdue':
+            # Overdue assignments not submitted
+            submitted_ids = AssignmentSubmission.objects.filter(
+                student=user
+            ).values_list('assignment_id', flat=True)
+            queryset = queryset.filter(
+                due_date__lt=timezone.now()
+            ).exclude(id__in=submitted_ids)
+        
+        # Filter by subject if provided
+        subject_id = self.request.query_params.get('subject')
+        if subject_id:
+            queryset = queryset.filter(subject_id=subject_id)
+        
+        return queryset
+
+
+class StudentAssignmentDetailView(generics.RetrieveAPIView):
+    """
+    Get detailed view of a specific assignment
+    """
+    serializer_class = StudentAssignmentListSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def get_queryset(self):
+        user = self.request.user
+        
+        if user.role != 'student':
+            return SubjectContent.objects.none()
+        
+        # Get all class sessions the student is enrolled in
+        student_sessions = StudentSession.objects.filter(
+            student=user,
+            is_active=True
+        ).values_list('class_session', flat=True)
+        
+        return SubjectContent.objects.filter(
+            content_type='assignment',
+            subject__class_session__in=student_sessions
+        ).select_related(
+            'subject',
+            'subject__class_session',
+            'subject__class_session__classroom',
+            'subject__teacher'
+        ).prefetch_related(
+            'files',
+            Prefetch(
+                'submissions',
+                queryset=AssignmentSubmission.objects.filter(student=user)
+            )
+        )
+
+
+class SubmitAssignmentView(APIView):
+    """
+    Submit or update an assignment submission
+    Handles file uploads
+    Limited to 2 submissions: initial + 1 update
+    """
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def post(self, request):
+        if request.user.role != 'student':
+            return Response(
+                {'detail': 'Only students can submit assignments'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        # Validate basic data
+        assignment_id = request.data.get('assignment_id')
+        submission_text = request.data.get('submission_text', '')
+        
+        if not assignment_id:
+            return Response(
+                {'detail': 'assignment_id is required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Check if assignment exists
+        try:
+            assignment = SubjectContent.objects.get(
+                id=assignment_id,
+                content_type='assignment'
+            )
+        except SubjectContent.DoesNotExist:
+            return Response(
+                {'detail': 'Assignment not found'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        # Check if student is enrolled
+        is_enrolled = StudentSession.objects.filter(
+            student=request.user,
+            class_session=assignment.subject.class_session,
+            is_active=True
+        ).exists()
+        
+        if not is_enrolled:
+            return Response(
+                {'detail': 'You are not enrolled in this subject'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        # Check if already submitted
+        existing_submission = AssignmentSubmission.objects.filter(
+            student=request.user,
+            assignment=assignment
+        ).first()
+        
+        if existing_submission:
+            # Check if student has exceeded submission limit
+            if existing_submission.submission_count >= 2:
+                return Response(
+                    {'detail': 'You have reached the maximum number of submissions (2) for this assignment.'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            # Check if already graded
+            if existing_submission.status == 'graded':
+                return Response(
+                    {'detail': 'Cannot update a graded submission'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            # Update existing submission
+            submission = existing_submission
+            submission.submission_text = submission_text
+            submission.updated_at = timezone.now()
+            submission.submission_count += 1  # Increment submission count
+            submission.save()
+            
+            # Delete old files if new ones are being uploaded
+            files = request.FILES.getlist('files')
+            if files:
+                submission.files.all().delete()
+        else:
+            # Create new submission
+            submission = AssignmentSubmission.objects.create(
+                student=request.user,
+                assignment=assignment,
+                submission_text=submission_text,
+                status='submitted',
+                submission_count=1  # First submission
+            )
+        
+        # Handle file uploads
+        files = request.FILES.getlist('files')
+        allowed_extensions = ['.pdf', '.docx', '.png', '.jpeg', '.jpg', '.ppt', '.pptx', '.zip', '.csv', '.xlsx']
+        max_file_size = 5 * 1024 * 1024  # 5MB in bytes
+        
+        for file in files:
+            # Get file extension
+            file_extension = os.path.splitext(file.name)[1].lower()
+            
+            # Validate file extension
+            if file_extension not in allowed_extensions:
+                submission.delete() if not existing_submission else None
+                return Response(
+                    {'detail': f'File type {file_extension} not allowed. Allowed types: {", ".join(allowed_extensions)}'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            # Validate file size (max 5MB)
+            if file.size > max_file_size:
+                submission.delete() if not existing_submission else None
+                file_size_mb = file.size / (1024 * 1024)
+                return Response(
+                    {'detail': f'File "{file.name}" is too large ({file_size_mb:.2f}MB). Maximum file size is 5MB.'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            # Create submission file
+            SubmissionFile.objects.create(
+                submission=submission,
+                file=file,
+                original_name=file.name,
+                file_size=file.size
+            )
+        
+        # Serialize and return response
+        serializer = AssignmentSubmissionSerializer(
+            submission,
+            context={'request': request}
+        )
+        
+        return Response(
+            {
+                'message': 'Assignment submitted successfully' if not existing_submission else f'Assignment updated successfully (Submission {submission.submission_count}/2)',
+                'submission': serializer.data,
+                'submissions_remaining': 2 - submission.submission_count
+            },
+            status=status.HTTP_201_CREATED if not existing_submission else status.HTTP_200_OK
+        )
+
+
+class StudentSubmissionDetailView(generics.RetrieveAPIView):
+    """
+    Get details of student's own submission
+    """
+    serializer_class = AssignmentSubmissionSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def get_queryset(self):
+        user = self.request.user
+        
+        if user.role == 'student':
+            return AssignmentSubmission.objects.filter(
+                student=user
+            ).select_related(
+                'assignment',
+                'assignment__subject',
+                'graded_by'
+            ).prefetch_related('files')
+        
+        return AssignmentSubmission.objects.none()
+
+
+class StudentSubmissionListView(generics.ListAPIView):
+    """
+    List all submissions by the logged-in student
+    """
+    serializer_class = AssignmentSubmissionSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def get_queryset(self):
+        user = self.request.user
+        
+        if user.role != 'student':
+            return AssignmentSubmission.objects.none()
+        
+        queryset = AssignmentSubmission.objects.filter(
+            student=user
+        ).select_related(
+            'assignment',
+            'assignment__subject',
+            'graded_by'
+        ).prefetch_related('files').order_by('-submitted_at')
+        
+        # Filter by status if provided
+        status_filter = self.request.query_params.get('status')
+        if status_filter:
+            queryset = queryset.filter(status=status_filter)
+        
+        # Filter by subject if provided
+        subject_id = self.request.query_params.get('subject')
+        if subject_id:
+            queryset = queryset.filter(assignment__subject_id=subject_id)
+        
+        return queryset
+
+
+@api_view(['DELETE'])
+@permission_classes([permissions.IsAuthenticated])
+def delete_submission(request, submission_id):
+    """
+    Allow students to delete their own submissions (before grading)
+    """
+    if request.user.role != 'student':
+        return Response(
+            {'detail': 'Only students can delete their submissions'},
+            status=status.HTTP_403_FORBIDDEN
+        )
+    
+    try:
+        submission = AssignmentSubmission.objects.get(
+            id=submission_id,
+            student=request.user
+        )
+    except AssignmentSubmission.DoesNotExist:
+        return Response(
+            {'detail': 'Submission not found'},
+            status=status.HTTP_404_NOT_FOUND
+        )
+    
+    # Don't allow deletion if already graded
+    if submission.status == 'graded':
+        return Response(
+            {'detail': 'Cannot delete a graded submission'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    
+    submission.delete()
+    
+    return Response(
+        {'message': 'Submission deleted successfully'},
+        status=status.HTTP_200_OK
+    )
+
+
+# ========================
+# TEACHER SUBMISSION VIEWS (NEW)
+# ========================
+
+@api_view(['GET'])
+@permission_classes([permissions.IsAuthenticated])
+def get_student_submissions(request, student_id):
+    """
+    Get all assignment submissions for a specific student
+    Teachers can only see submissions for subjects they teach
+    """
+    user = request.user
+    
+    # Verify user is a teacher or admin
+    if user.role not in ['teacher', 'admin']:
+        return Response(
+            {"detail": "Only teachers and admins can view student submissions"},
+            status=status.HTTP_403_FORBIDDEN
+        )
+    
+    try:
+        student = CustomUser.objects.get(id=student_id, role='student')
+    except CustomUser.DoesNotExist:
+        return Response(
+            {"detail": "Student not found"},
+            status=status.HTTP_404_NOT_FOUND
+        )
+    
+    # Get all submissions for this student
+    submissions = AssignmentSubmission.objects.filter(student=student).select_related(
+        'assignment', 
+        'assignment__subject',
+        'assignment__subject__class_session',
+        'graded_by'
+    ).prefetch_related('files')
+    
+    # Filter by teacher's subjects if not admin
+    if user.role == 'teacher':
+        teacher_subjects = Subject.objects.filter(teacher=user).values_list('id', flat=True)
+        submissions = submissions.filter(assignment__subject_id__in=teacher_subjects)
+    
+    # Serialize submissions
+    submissions_data = []
+    for submission in submissions:
+        assignment = submission.assignment
+        subject = assignment.subject
+        
+        submissions_data.append({
+            'id': submission.id,
+            'assignment': {
+                'id': assignment.id,
+                'title': assignment.title,
+                'description': assignment.description,
+                'due_date': assignment.due_date.isoformat() if assignment.due_date else None,
+                'max_score': assignment.max_score,
+            },
+            'subject': {
+                'id': subject.id,
+                'name': subject.name,
+                'class': subject.class_session.classroom.name,
+                'academic_year': subject.class_session.academic_year,
+                'term': subject.class_session.term,
+            },
+            'submission_text': submission.submission_text,
+            'submitted_at': submission.submitted_at.isoformat(),
+            'updated_at': submission.updated_at.isoformat(),
+            'status': submission.status,
+            'is_late': submission.is_late,
+            'submission_count': submission.submission_count,
+            'score': float(submission.score) if submission.score else None,
+            'feedback': submission.feedback,
+            'graded_by': submission.graded_by.get_full_name() if submission.graded_by else None,
+            'graded_at': submission.graded_at.isoformat() if submission.graded_at else None,
+            'grade_released': submission.grade_released,
+            'can_resubmit': submission.can_resubmit,
+            'files': [
+                {
+                    'id': file.id,
+                    'original_name': file.original_name,
+                    'file_url': file.file.url if file.file else None,
+                    'file_size': file.formatted_file_size,
+                    'file_extension': file.file_extension,
+                    'uploaded_at': file.uploaded_at.isoformat(),
+                }
+                for file in submission.files.all()
+            ]
+        })
+    
+    return Response({
+        'student': {
+            'id': student.id,
+            'username': student.username,
+            'full_name': student.get_full_name(),
+            'email': student.email,
+        },
+        'submissions': submissions_data,
+        'total_submissions': len(submissions_data),
+    })
+
+
+@api_view(['PATCH'])
+@permission_classes([permissions.IsAuthenticated])
+def grade_submission(request, submission_id):
+    """
+    Grade an assignment submission
+    Only the teacher assigned to the subject can grade
+    """
+    user = request.user
+    
+    # Verify user is a teacher or admin
+    if user.role not in ['teacher', 'admin']:
+        return Response(
+            {"detail": "Only teachers and admins can grade submissions"},
+            status=status.HTTP_403_FORBIDDEN
+        )
+    
+    try:
+        submission = AssignmentSubmission.objects.select_related(
+            'assignment',
+            'assignment__subject',
+            'student'
+        ).get(id=submission_id)
+    except AssignmentSubmission.DoesNotExist:
+        return Response(
+            {"detail": "Submission not found"},
+            status=status.HTTP_404_NOT_FOUND
+        )
+    
+    # Check if teacher is assigned to this subject
+    if user.role == 'teacher' and submission.assignment.subject.teacher != user:
+        return Response(
+            {"detail": "You can only grade submissions for subjects you teach"},
+            status=status.HTTP_403_FORBIDDEN
+        )
+    
+    # Get grading data
+    score = request.data.get('score')
+    feedback = request.data.get('feedback', '')
+    grade_released = request.data.get('grade_released', False)
+    
+    # Validate score
+    if score is not None:
+        try:
+            score = float(score)
+            max_score = submission.assignment.max_score
+            
+            if max_score and score > max_score:
+                return Response(
+                    {"detail": f"Score cannot exceed maximum score of {max_score}"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            if score < 0:
+                return Response(
+                    {"detail": "Score cannot be negative"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+        except ValueError:
+            return Response(
+                {"detail": "Invalid score format"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+    
+    # Update submission
+    submission.score = score
+    submission.feedback = feedback
+    submission.graded_by = user
+    submission.graded_at = timezone.now()
+    submission.status = 'graded'
+    submission.grade_released = grade_released
+    submission.save()
+    
+    return Response({
+        'message': 'Submission graded successfully',
+        'submission': {
+            'id': submission.id,
+            'student': submission.student.get_full_name(),
+            'assignment': submission.assignment.title,
+            'score': float(submission.score) if submission.score else None,
+            'max_score': submission.assignment.max_score,
+            'feedback': submission.feedback,
+            'graded_by': user.get_full_name(),
+            'graded_at': submission.graded_at.isoformat(),
+            'status': submission.status,
+            'grade_released': submission.grade_released,
+        }
+    })
+
+
+@api_view(['POST'])
+@permission_classes([permissions.IsAuthenticated])
+def release_grade(request, submission_id):
+    """
+    Release grade to student (admin approval)
+    """
+    user = request.user
+    
+    if user.role not in ['teacher', 'admin']:
+        return Response(
+            {"detail": "Only teachers and admins can release grades"},
+            status=status.HTTP_403_FORBIDDEN
+        )
+    
+    try:
+        submission = AssignmentSubmission.objects.get(id=submission_id)
+    except AssignmentSubmission.DoesNotExist:
+        return Response(
+            {"detail": "Submission not found"},
+            status=status.HTTP_404_NOT_FOUND
+        )
+    
+    if submission.status != 'graded':
+        return Response(
+            {"detail": "Submission must be graded before releasing"},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    
+    submission.grade_released = True
+    submission.save()
+    
+    return Response({
+        'message': 'Grade released to student',
+        'submission_id': submission.id,
+        'grade_released': submission.grade_released
+    })
+
+
+# ========================
+# SESSION INHERITANCE & UTILITIES
+# ========================
+
 class SessionInheritanceView(APIView):
     permission_classes = [permissions.IsAdminUser]
 
@@ -588,7 +1183,6 @@ class SessionInheritanceView(APIView):
             )
 
 
-# Admin-only: Get students enrolled in a specific session
 class SessionStudentsView(APIView):
     permission_classes = [permissions.IsAdminUser]
     

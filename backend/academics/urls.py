@@ -7,7 +7,15 @@ from .views import (
     SubjectListCreateView, SubjectListView, SubjectDetailView,
     SessionInheritanceView, TeacherAssignedSubjectsView, TeacherSubjectStudentsView,
     SubjectContentCreateView, TeacherSubjectContentView, TeacherContentDetailView,
-    SubjectContentListView, SessionStudentsView
+    SubjectContentListView, SessionStudentsView, StudentAssignmentListView,
+    StudentAssignmentDetailView,
+    SubmitAssignmentView,
+    StudentSubmissionDetailView,
+    StudentSubmissionListView,
+    delete_submission,
+    get_student_submissions,
+    grade_submission,
+    release_grade
 )
 
 urlpatterns = [
@@ -41,4 +49,17 @@ urlpatterns = [
     
     # Subject content viewing - for students/admins (future use)
     path('subjects/<int:subject_id>/content/', SubjectContentListView.as_view(), name='subject-content-list'),
+
+    # Student assignment submission
+    path('student/assignments/', StudentAssignmentListView.as_view(), name='student-assignments'),
+    path('student/assignments/<int:pk>/', StudentAssignmentDetailView.as_view(), name='student-assignment-detail'),
+    path('student/assignments/submit/', SubmitAssignmentView.as_view(), name='submit-assignment'),
+    path('student/submissions/', StudentSubmissionListView.as_view(), name='student-submissions'),
+    path('student/submissions/<int:pk>/', StudentSubmissionDetailView.as_view(), name='student-submission-detail'),
+    path('student/submissions/<int:submission_id>/delete/', delete_submission, name='delete-submission'),
+    
+    # Teacher submission viewing and grading (NEW)
+    path('student/<int:student_id>/submissions/', get_student_submissions, name='student-submissions-view'),
+    path('submission/<int:submission_id>/grade/', grade_submission, name='grade-submission'),
+    path('submission/<int:submission_id>/release/', release_grade, name='release-grade'),
 ]

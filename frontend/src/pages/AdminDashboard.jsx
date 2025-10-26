@@ -14,8 +14,9 @@ import ViewUsers from '../components/ViewUsers';
 import CreateFeeStructure from '../components/CreateFeeStructure';
 import Analytics from '../components/Analytics';
 import CreateAttendance from '../components/CreateAttendance';
-import AttendanceMarking from '../components/AttendanceMarking'; // Import the AttendanceMarking component
+import AttendanceMarking from '../components/AttendanceMarking';
 import Settings from '../components/Settings';
+import ViewResults from '../components/ViewResults'; // NEW IMPORT
 import './AdminDashboard.css';
 
 const getGreeting = () => {
@@ -107,17 +108,12 @@ const AdminDashboard = () => {
         return <ViewUsers />;
       case 'attendance':
         return <CreateAttendance />;
-      case 'mark-attendance': // NEW CASE for attendance marking
+      case 'mark-attendance':
         return <AttendanceMarking />;
       case 'fees':
         return <CreateFeeStructure />;
-      case 'results':
-        return (
-          <div className="admin-dashboard-section">
-            <h2 className="admin-dashboard-section-title">Results</h2>
-            <p className="admin-dashboard-section-text">Student results and grade management system coming soon.</p>
-          </div>
-        );
+      case 'results': // NEW CASE
+        return <ViewResults />;
       default:
         return (
           <div className="admin-dashboard-section">
