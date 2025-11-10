@@ -1,0 +1,755 @@
+.manual-grading-container {
+  padding: 2rem;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.manual-grading-header {
+  margin-bottom: 2rem;
+}
+
+.manual-grading-header h2 {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #1f2937;
+  margin-bottom: 0.5rem;
+}
+
+.manual-grading-header p {
+  color: #6b7280;
+  font-size: 0.95rem;
+}
+
+.manual-grading-loading {
+  text-align: center;
+  padding: 3rem;
+  color: #6b7280;
+  font-size: 1.1rem;
+}
+
+.message {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 1rem 1.25rem;
+  border-radius: 8px;
+  margin-bottom: 1.5rem;
+  font-size: 0.95rem;
+  white-space: pre-line;
+  word-break: break-word;
+}
+
+.message.success {
+  background-color: #d1fae5;
+  border: 1px solid #6ee7b7;
+  color: #065f46;
+}
+
+.message.error {
+  background-color: #fee2e2;
+  border: 1px solid #fecaca;
+  color: #b91c1c;
+}
+
+/* Subjects Grid */
+.subjects-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1.5rem;
+}
+
+.no-subjects {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 3rem;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1);
+}
+
+.subject-card {
+  background: white;
+  border-radius: 12px;
+  padding: 1.5rem;
+  cursor: pointer;
+  transition: all 0.3s;
+  border: 2px solid #e5e7eb;
+  box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1);
+}
+
+.subject-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+  border-color: #3b82f6;
+}
+
+.subject-card h3 {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #1f2937;
+  margin-bottom: 0.5rem;
+}
+
+.subject-class {
+  color: #6b7280;
+  font-size: 0.875rem;
+  margin-bottom: 0.25rem;
+}
+
+.subject-session {
+  color: #9ca3af;
+  font-size: 0.8125rem;
+  margin-bottom: 1rem;
+}
+
+.grade-status {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 0.375rem 0.75rem;
+  border-radius: 6px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+.status-badge.available {
+  background-color: #d1fae5;
+  color: #065f46;
+}
+
+.status-badge.locked {
+  background-color: #fee2e2;
+  color: #b91c1c;
+}
+
+/* Grading Section */
+.grading-section {
+  background: white;
+  border-radius: 12px;
+  padding: 2rem;
+  box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1);
+}
+
+.grading-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.back-btn {
+  padding: 0.625rem 1.25rem;
+  background: white;
+  border: 2px solid #e5e7eb;
+  color: #374151;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.back-btn:hover {
+  background-color: #f9fafb;
+  border-color: #d1d5db;
+}
+
+.grade-type-selector {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.grade-type-btn {
+  padding: 0.625rem 1.5rem;
+  background: white;
+  border: 2px solid #e5e7eb;
+  color: #6b7280;
+  border-radius: 8px;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.grade-type-btn:hover {
+  border-color: #d1d5db;
+}
+
+.grade-type-btn.active {
+  background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%);
+  color: white;
+  border-color: #3b82f6;
+}
+
+.subject-info-banner {
+  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+  padding: 1.5rem;
+  border-radius: 10px;
+  margin-bottom: 1.5rem;
+  border: 2px solid #93c5fd;
+}
+
+.subject-info-banner h3 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #1e40af;
+  margin-bottom: 0.25rem;
+}
+
+.subject-info-banner p {
+  color: #1e40af;
+  font-size: 0.9375rem;
+  margin-bottom: 0.5rem;
+}
+
+.max-score-info {
+  font-weight: 600;
+  margin-top: 0.75rem;
+}
+
+/* Cannot Grade Message */
+.cannot-grade-message,
+.grades-locked-message {
+  text-align: center;
+  padding: 3rem 2rem;
+  background: #fef3c7;
+  border: 2px solid #fcd34d;
+  border-radius: 12px;
+  color: #92400e;
+}
+
+.cannot-grade-message svg,
+.grades-locked-message svg {
+  margin-bottom: 1rem;
+  color: #d97706;
+}
+
+.cannot-grade-message h3,
+.grades-locked-message h3 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-bottom: 0.75rem;
+  color: #92400e;
+}
+
+.cannot-grade-message p,
+.grades-locked-message p {
+  font-size: 1rem;
+  color: #92400e;
+  margin-bottom: 1.5rem;
+}
+
+.grades-locked-message {
+  background: #fee2e2;
+  border-color: #fca5a5;
+  color: #7f1d1d;
+}
+
+.grades-locked-message svg {
+  color: #dc2626;
+}
+
+.grades-locked-message h3,
+.grades-locked-message p {
+  color: #7f1d1d;
+}
+
+/* Students Table */
+.students-table-container {
+  overflow-x: auto;
+  margin-bottom: 1.5rem;
+}
+
+.students-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+}
+
+.students-table thead {
+  background: #f9fafb;
+  border-bottom: 2px solid #e5e7eb;
+}
+
+.students-table th {
+  padding: 1rem;
+  text-align: left;
+  font-weight: 600;
+  color: #374151;
+  font-size: 0.875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.students-table tbody tr {
+  border-bottom: 1px solid #e5e7eb;
+  transition: background-color 0.2s;
+}
+
+.students-table tbody tr:hover {
+  background-color: #f9fafb;
+}
+
+.students-table td {
+  padding: 1rem;
+  color: #1f2937;
+  font-size: 0.9375rem;
+}
+
+.grade-input {
+  width: 120px;
+  padding: 0.5rem;
+  border: 2px solid #e5e7eb;
+  border-radius: 6px;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.grade-input:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgb(59 130 246 / 0.1);
+}
+
+.locked-score {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 600;
+  color: #6b7280;
+}
+
+.inline-lock-icon {
+  margin-left: 0.5rem;
+  color: #dc2626;
+}
+
+.save-grade-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.5rem 1rem;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.save-grade-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #059669 0%, #047857 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(16, 185, 129, 0.3);
+}
+
+.save-grade-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.locked-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.375rem 0.75rem;
+  background-color: #fee2e2;
+  color: #991b1b;
+  border-radius: 6px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* Save Section */
+.save-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  padding-top: 1.5rem;
+  border-top: 2px solid #e5e7eb;
+}
+
+.grading-info {
+  width: 100%;
+  text-align: center;
+  padding: 0.75rem 1rem;
+  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+  border-radius: 8px;
+  border: 2px solid #93c5fd;
+}
+
+.info-text {
+  margin: 0;
+  color: #1e40af;
+  font-size: 0.9375rem;
+  font-weight: 600;
+}
+
+.save-grades-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.875rem 2rem;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.save-grades-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #059669 0%, #047857 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 12px -2px rgb(16 185 129 / 0.3);
+}
+
+.save-grades-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.info-section {
+  padding: 1.5rem 1rem;
+  text-align: center;
+  border-top: 2px solid #e5e7eb;
+  margin-top: 1.5rem;
+}
+
+.warning-text {
+  color: #d97706;
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-align: center;
+  margin: 0;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .manual-grading-container {
+    padding: 5rem 1rem 1rem 1rem;
+    overflow-x: hidden;
+    max-width: 100vw;
+    box-sizing: border-box;
+  }
+
+  .manual-grading-header {
+    overflow: hidden;
+  }
+
+  .manual-grading-header h2 {
+    font-size: 1.5rem;
+    word-break: break-word;
+    overflow-wrap: break-word;
+  }
+
+  .manual-grading-header p {
+    font-size: 0.875rem;
+    word-break: break-word;
+  }
+
+  .message {
+    padding: 0.875rem 1rem;
+    font-size: 0.875rem;
+  }
+
+  /* Subjects Grid */
+  .subjects-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .subject-card {
+    padding: 1.25rem;
+  }
+
+  .subject-card h3 {
+    font-size: 1rem;
+    word-break: break-word;
+  }
+
+  .subject-class,
+  .subject-session {
+    font-size: 0.8125rem;
+  }
+
+  /* Grading Section */
+  .grading-section {
+    padding: 1.5rem 0;
+    overflow: visible;
+    margin: 0 auto;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .grading-controls {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 1rem;
+    padding: 0 1rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .back-btn {
+    width: 100%;
+    justify-content: center;
+    text-align: center;
+  }
+
+  .grade-type-selector {
+    width: 100%;
+    display: flex;
+    gap: 0.5rem;
+  }
+
+  .grade-type-btn {
+    flex: 1;
+    padding: 0.625rem 1rem;
+    font-size: 0.875rem;
+  }
+
+  /* Subject Info Banner */
+  .subject-info-banner {
+    padding: 1.25rem;
+    margin: 0 1rem 1.5rem 1rem;
+  }
+
+  .subject-info-banner h3 {
+    font-size: 1.125rem;
+    word-break: break-word;
+  }
+
+  .subject-info-banner p {
+    font-size: 0.875rem;
+    word-break: break-word;
+  }
+
+  /* Grading Info */
+  .grading-info {
+    padding: 0.625rem 0.875rem;
+    margin: 0 1rem 1.5rem 1rem;
+  }
+
+  .info-text {
+    font-size: 0.875rem;
+  }
+
+  /* Cannot Grade / Locked Messages */
+  .cannot-grade-message,
+  .grades-locked-message {
+    padding: 2rem 1rem;
+    margin: 0 1rem;
+  }
+
+  .cannot-grade-message h3,
+  .grades-locked-message h3 {
+    font-size: 1.25rem;
+  }
+
+  .cannot-grade-message p,
+  .grades-locked-message p {
+    font-size: 0.9375rem;
+  }
+
+  /* Students Table */
+  .students-table-container {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    width: 100%;
+    margin: 0;
+    padding: 0 1rem;
+    box-sizing: border-box;
+  }
+
+  .students-table {
+    width: 100%;
+    min-width: 600px;
+    font-size: 0.875rem;
+    margin: 0 auto;
+  }
+
+  .students-table th {
+    padding: 0.75rem 0.5rem;
+    font-size: 0.8125rem;
+    white-space: nowrap;
+  }
+
+  .students-table td {
+    padding: 0.75rem 0.5rem;
+    font-size: 0.875rem;
+  }
+
+  .grade-input {
+    width: 100px;
+    padding: 0.5rem 0.375rem;
+    font-size: 0.875rem;
+  }
+
+  .save-grade-btn {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.8125rem;
+  }
+
+  .locked-badge {
+    font-size: 0.75rem;
+    padding: 0.375rem 0.625rem;
+  }
+
+  .info-section {
+    padding: 1.25rem 1rem;
+  }
+
+  .warning-text {
+    font-size: 0.8125rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .manual-grading-container {
+    padding: 5rem 0.75rem 0.75rem 0.75rem;
+  }
+
+  .manual-grading-header h2 {
+    font-size: 1.25rem;
+  }
+
+  .manual-grading-header p {
+    font-size: 0.8125rem;
+  }
+
+  .message {
+    padding: 0.75rem 0.875rem;
+    font-size: 0.8125rem;
+  }
+
+  .subjects-grid {
+    gap: 0.875rem;
+  }
+
+  .subject-card {
+    padding: 1rem;
+  }
+
+  .subject-card h3 {
+    font-size: 0.9375rem;
+  }
+
+  .grading-section {
+    padding: 1.25rem 0;
+    margin: 0 auto;
+  }
+
+  .grading-controls {
+    padding: 0 0.75rem;
+  }
+
+  .back-btn {
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+  }
+
+  .grade-type-btn {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.8125rem;
+  }
+
+  .subject-info-banner {
+    padding: 1rem;
+    margin: 0 0.75rem 1.5rem 0.75rem;
+  }
+
+  .subject-info-banner h3 {
+    font-size: 1rem;
+  }
+
+  .subject-info-banner p {
+    font-size: 0.8125rem;
+  }
+
+  .grading-info {
+    padding: 0.5rem 0.75rem;
+    margin: 0 0.75rem 1.5rem 0.75rem;
+  }
+
+  .info-text {
+    font-size: 0.8125rem;
+  }
+
+  .cannot-grade-message,
+  .grades-locked-message {
+    padding: 1.5rem 0.875rem;
+    margin: 0 0.75rem;
+  }
+
+  .cannot-grade-message h3,
+  .grades-locked-message h3 {
+    font-size: 1.125rem;
+  }
+
+  .cannot-grade-message p,
+  .grades-locked-message p {
+    font-size: 0.875rem;
+  }
+
+  .students-table-container {
+    width: 100%;
+    margin: 0;
+    padding: 0 0.75rem;
+    box-sizing: border-box;
+  }
+
+  .students-table {
+    width: 100%;
+    min-width: 550px;
+    font-size: 0.8125rem;
+    margin: 0 auto;
+  }
+
+  .students-table th {
+    padding: 0.625rem 0.375rem;
+    font-size: 0.75rem;
+  }
+
+  .students-table td {
+    padding: 0.625rem 0.375rem;
+    font-size: 0.8125rem;
+  }
+
+  .grade-input {
+    width: 80px;
+    padding: 0.5rem 0.25rem;
+    font-size: 0.8125rem;
+  }
+
+  .save-grade-btn {
+    padding: 0.5rem 0.625rem;
+    font-size: 0.75rem;
+  }
+
+  .locked-badge {
+    font-size: 0.7rem;
+    padding: 0.3125rem 0.5rem;
+  }
+
+  .info-section {
+    padding: 1rem 0.75rem;
+  }
+
+  .warning-text {
+    font-size: 0.75rem;
+  }
+}

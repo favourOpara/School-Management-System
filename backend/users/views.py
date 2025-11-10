@@ -535,3 +535,220 @@ class UserRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
             except ClassSession.DoesNotExist:
                 # Don't deactivate existing sessions if target ClassSession doesn't exist
                 pass
+
+
+# ============================================================================
+# PARENT ATTENDANCE REPORT
+# ============================================================================
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def parent_attendance_report(request):
+    """
+    Get attendance report for parent's children.
+
+    Query Parameters:
+    - child_id: Student ID (optional) - defaults to first child if not provided
+    - academic_year: Academic year (optional) - defaults to current session
+    - term: Term (optional) - defaults to current session
+
+    Returns attendance statistics and detailed records.
+    """
+    from schooladmin.models import AttendanceRecord as GradingAttendanceRecord
+    from attendance.models import AttendanceCalendar, AttendanceSchoolDay, AttendanceHolidayLabel
+    from django.db.models import Count, Q
+    from datetime import datetime
+
+    parent = request.user
+
+    # Verify user is a parent
+    if parent.role != 'parent':
+        return Response(
+            {"detail": "Only parents can access this endpoint"},
+            status=status.HTTP_403_FORBIDDEN
+        )
+
+    # Get all children
+    children = parent.children.filter(role='student').order_by('first_name', 'last_name')
+
+    if not children.exists():
+        return Response(
+            {"detail": "No children found for this parent"},
+            status=status.HTTP_404_NOT_FOUND
+        )
+
+    # Get child_id from query params or default to first child
+    child_id = request.query_params.get('child_id')
+    if child_id:
+        try:
+            child = children.get(id=child_id)
+        except CustomUser.DoesNotExist:
+            return Response(
+                {"detail": "Child not found or not linked to this parent"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+    else:
+        child = children.first()
+
+    # Get academic_year and term from query params or use current session
+    academic_year = request.query_params.get('academic_year')
+    term = request.query_params.get('term')
+
+    # If not provided, get child's current session
+    if not academic_year or not term:
+        current_session = StudentSession.objects.filter(
+            student=child,
+            is_active=True
+        ).select_related('class_session').first()
+
+        if current_session:
+            academic_year = current_session.class_session.academic_year
+            term = current_session.class_session.term
+        else:
+            return Response(
+                {"detail": "No active session found for student"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+    # Get the student's class session for this academic year and term
+    student_session = StudentSession.objects.filter(
+        student=child,
+        class_session__academic_year=academic_year,
+        class_session__term=term
+    ).select_related('class_session').first()
+
+    if not student_session:
+        return Response(
+            {"detail": f"No class session found for {academic_year} - {term}"},
+            status=status.HTTP_404_NOT_FOUND
+        )
+
+    class_session = student_session.class_session
+
+    # Get total school days and holidays from the attendance calendar
+    # This is what admin sets when creating the attendance calendar
+    total_school_days = 0
+    total_holidays = 0
+    holidays_list = []
+
+    try:
+        attendance_calendar = AttendanceCalendar.objects.get(
+            academic_year=academic_year,
+            term=term
+        )
+
+        # Get school days from the NEW attendance calendar system
+        school_days = AttendanceSchoolDay.objects.filter(calendar=attendance_calendar)
+        total_school_days = school_days.count()
+
+        # Get holidays from the NEW attendance calendar system
+        holiday_days = AttendanceHolidayLabel.objects.filter(calendar=attendance_calendar)
+        total_holidays = holiday_days.count()
+
+        # Build holidays list
+        holidays_list = [{
+            'date': holiday.date.strftime('%Y-%m-%d'),
+            'label': holiday.label,
+            'type': holiday.get_holiday_type_display()
+        } for holiday in holiday_days.order_by('date')]
+
+        print(f"DEBUG: Attendance calendar found - Total school days: {total_school_days}, Holidays: {total_holidays}")
+        print(f"DEBUG: Holidays list: {holidays_list}")
+    except AttendanceCalendar.DoesNotExist:
+        # No attendance calendar exists, that's okay - we'll show 0
+        print(f"DEBUG: No attendance calendar found for {academic_year} - {term}")
+        pass
+
+    # Get attendance records from grading system (schooladmin.AttendanceRecord)
+    attendance_records = GradingAttendanceRecord.objects.filter(
+        student=child,
+        class_session=class_session
+    ).select_related('class_session').order_by('date')
+
+    # Debug: Print attendance records count
+    print(f"DEBUG: Total grading attendance records: {attendance_records.count()}")
+    print(f"DEBUG: Class session: {class_session}")
+    print(f"DEBUG: Student: {child.get_full_name()}")
+
+    # Calculate attendance statistics
+    # Get unique dates where student was present
+    present_records = attendance_records.filter(is_present=True)
+    attended_dates = present_records.values('date').distinct()
+    days_attended = attended_dates.count()
+
+    # Get unique dates where student was absent
+    absent_records = attendance_records.filter(is_present=False)
+    absent_dates = absent_records.values('date').distinct()
+    days_not_attended = absent_dates.count()
+
+    # Debug: Print unique dates
+    print(f"DEBUG: Days attended: {days_attended}")
+    print(f"DEBUG: Days absent: {days_not_attended}")
+
+    # Calculate attendance percentage based on calendar school days
+    attendance_percentage = (days_attended / total_school_days * 100) if total_school_days > 0 else 0
+
+    # Prepare detailed attendance records by date (only show days absent)
+    attendance_by_date = {}
+    for record in absent_records:
+        date_str = record.date.strftime('%Y-%m-%d')
+        if date_str not in attendance_by_date:
+            attendance_by_date[date_str] = {
+                'date': date_str,
+                'subjects': []
+            }
+        # Note: Grading attendance is per class session, not per subject
+        # We'll show the class session info instead
+        subject_info = {
+            'subject_name': f"Absent",
+            'marked_at': record.recorded_at.isoformat() if record.recorded_at else None
+        }
+        if attendance_by_date[date_str]['subjects']:
+            # If we already have an entry for this date, skip duplicate
+            continue
+        attendance_by_date[date_str]['subjects'].append(subject_info)
+
+    # Get all children for dropdown
+    children_list = [{
+        'id': c.id,
+        'full_name': c.get_full_name(),
+        'username': c.username,
+        'classroom': c.classroom.name if c.classroom else None
+    } for c in children]
+
+    # Get available sessions for this child
+    available_sessions = StudentSession.objects.filter(
+        student=child
+    ).select_related('class_session').values(
+        'class_session__academic_year',
+        'class_session__term'
+    ).distinct().order_by('-class_session__academic_year', 'class_session__term')
+
+    sessions_list = [{
+        'academic_year': session['class_session__academic_year'],
+        'term': session['class_session__term']
+    } for session in available_sessions]
+
+    return Response({
+        'child': {
+            'id': child.id,
+            'full_name': child.get_full_name(),
+            'username': child.username,
+            'classroom': child.classroom.name if child.classroom else None
+        },
+        'session': {
+            'academic_year': academic_year,
+            'term': term
+        },
+        'statistics': {
+            'days_attended': days_attended,
+            'days_not_attended': days_not_attended,
+            'total_school_days': total_school_days,
+            'total_holidays': total_holidays,
+            'attendance_percentage': round(attendance_percentage, 2)
+        },
+        'attendance_records': list(attendance_by_date.values()),
+        'holidays': holidays_list,
+        'children': children_list,
+        'available_sessions': sessions_list
+    })

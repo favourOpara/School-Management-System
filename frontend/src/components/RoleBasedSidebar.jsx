@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import {
   Menu, X, User, LayoutDashboard, LogOut, Settings, Shield,
   BookOpen, Users, Calendar, DollarSign, FileText, MessageCircle,
-  ClipboardCheck, GraduationCap, UserCheck, ClipboardList
+  ClipboardCheck, GraduationCap, UserCheck, ClipboardList, Edit2
 } from 'lucide-react';
 import './Sidebar.css';
 
@@ -60,7 +60,8 @@ const RoleBasedSidebar = ({ activeTab, setActiveTab, userRole }) => {
             submenu: [
               { key: 'my-classes', icon: <BookOpen />, label: 'My Classes' },
               { key: 'my-grades', icon: <FileText />, label: 'My Grades' },
-              { key: 'assignments', icon: <ClipboardCheck />, label: 'Assignments' }
+              { key: 'assignments', icon: <ClipboardCheck />, label: 'Assignments' },
+              { key: 'assessments', icon: <GraduationCap />, label: 'Tests & Exams' }
             ]
           },
           {
@@ -94,21 +95,21 @@ const RoleBasedSidebar = ({ activeTab, setActiveTab, userRole }) => {
             ]
           },
           {
-            key: 'grading',
+            key: 'set-questions',
             icon: <GraduationCap />,
-            label: 'Grading',
+            label: 'Set Questions',
             submenu: [
-              { key: 'grade-students', icon: <FileText />, label: 'Grade Students' },
-              { key: 'view-grades', icon: <ClipboardCheck />, label: 'View Grades' }
+              { key: 'set-test', icon: <FileText />, label: 'Test' },
+              { key: 'set-exam', icon: <ClipboardCheck />, label: 'Exam' },
+              { key: 'view-questions', icon: <ClipboardList />, label: 'View Questions' }
             ]
           },
           {
-            key: 'attendance',
-            icon: <Calendar />,
-            label: 'Attendance',
+            key: 'grading',
+            icon: <Edit2 />,
+            label: 'Grading',
             submenu: [
-              { key: 'take-attendance', icon: <UserCheck />, label: 'Take Attendance' },
-              { key: 'attendance-reports', icon: <FileText />, label: 'Attendance Reports' }
+              { key: 'manual-grading', icon: <Edit2 />, label: 'Manual Grading' }
             ]
           }
         ];

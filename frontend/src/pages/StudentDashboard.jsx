@@ -5,6 +5,7 @@ import RoleBasedSidebar from '../components/RoleBasedSidebar';
 import ActivityLog from '../components/ActivityLog';
 import StudentAssignments from '../components/StudentAssignments';
 import MyGrades from '../components/MyGrades'; // NEW IMPORT
+import AvailableAssessments from '../components/AvailableAssessments';
 import './StudentDashboard.css';
 
 const getGreeting = () => {
@@ -69,6 +70,8 @@ const StudentDashboard = () => {
         return <MyGrades />; // USE THE NEW COMPONENT
       case 'assignments':
         return <StudentAssignments />;
+      case 'assessments':
+        return <AvailableAssessments />;
       case 'my-attendance':
         return (
           <div className="student-dashboard-section">

@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(then venv/Scripts/python manage.py shell -c \"from schooladmin.models import GradeSummary; gs = GradeSummary.objects.get(student__username=''paulnwosu541'', subject__name=''Data science''); print(f''Attendance: {gs.attendance_score}''); print(f''Assignment: {gs.assignment_score}''); print(f''Test: {gs.test_score}''); print(f''Exam: {gs.exam_score}''); print(f''Total in DB: {gs.total_score}''); expected = float(gs.attendance_score) + float(gs.assignment_score) + float(gs.test_score) + float(gs.exam_score); print(f''Expected: {expected}''); print(f''FIXED: {abs(float(gs.total_score) - expected) < 0.01}'')\")"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

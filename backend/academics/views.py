@@ -11,16 +11,18 @@ from django.utils import timezone
 import os
 
 from .models import (
-    Class, ClassSession, Subject, StudentSession, SubjectContent, 
-    StudentContentView, AssignmentSubmission, SubmissionFile
+    Class, ClassSession, Subject, Topic, StudentSession, SubjectContent,
+    StudentContentView, AssignmentSubmission, SubmissionFile,
+    Assessment, Question, QuestionOption, MatchingPair
 )
 from .serializers import (
-    ClassSerializer, ClassSessionSerializer, SubjectSerializer,
+    ClassSerializer, ClassSessionSerializer, SubjectSerializer, TopicSerializer,
     SubjectContentSerializer, SubjectContentCreateSerializer,
     AssignmentSerializer, NoteSerializer, AnnouncementSerializer,
     StudentContentViewSerializer, AssignmentSubmissionSerializer,
     StudentAssignmentListSerializer, CreateSubmissionSerializer,
-    SubmissionFileSerializer
+    SubmissionFileSerializer, CreateAssessmentSerializer, AssessmentSerializer,
+    AssessmentSubmissionSerializer as AssessmentSubmissionSerializerClass
 )
 from users.models import CustomUser
 
@@ -1192,7 +1194,7 @@ class SessionStudentsView(APIView):
             student_sessions = StudentSession.objects.filter(
                 class_session=session, is_active=True
             ).select_related('student').order_by('student__first_name', 'student__last_name')
-            
+
             students = [
                 {
                     'id': ss.student.id,
@@ -1203,7 +1205,772 @@ class SessionStudentsView(APIView):
                 }
                 for ss in student_sessions
             ]
-            
+
             return Response(students)
         except ClassSession.DoesNotExist:
             return Response({"detail": "Session not found"}, status=status.HTTP_404_NOT_FOUND)
+
+
+# ========================
+# TOPIC MANAGEMENT VIEWS
+# ========================
+
+class TopicListCreateView(generics.ListCreateAPIView):
+    """
+    List all topics or create a new topic
+    GET/POST /api/academics/topics/
+    """
+    serializer_class = TopicSerializer
+    permission_classes = [IsTeacherOrAdmin]
+
+    def get_queryset(self):
+        """Filter topics by subject if provided"""
+        queryset = Topic.objects.filter(is_active=True)
+        subject_id = self.request.query_params.get('subject_id')
+        if subject_id:
+            queryset = queryset.filter(subject_id=subject_id)
+        return queryset.order_by('subject', 'order', 'name')
+
+
+class TopicDetailView(generics.RetrieveUpdateDestroyAPIView):
+    """
+    Retrieve, update or delete a topic
+    GET/PUT/DELETE /api/academics/topics/<id>/
+    """
+    queryset = Topic.objects.filter(is_active=True)
+    serializer_class = TopicSerializer
+    permission_classes = [IsTeacherOrAdmin]
+
+
+# ========================
+# ASSESSMENT VIEWS (TESTS & EXAMS)
+# ========================
+
+class CreateAssessmentView(APIView):
+    """
+    API view for teachers to create tests and exams
+    POST /api/academics/teacher/create-assessment/
+    """
+    permission_classes = [IsTeacherOrAdmin]
+
+    def post(self, request):
+        """Create a new assessment with questions"""
+        import json
+
+        # Check if request contains multipart data (with images)
+        if 'data' in request.data:
+            # FormData was sent - parse the JSON from 'data' field
+            try:
+                data = json.loads(request.data['data'])
+            except (ValueError, KeyError) as e:
+                return Response(
+                    {"detail": "Invalid data format."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+        else:
+            # Regular JSON request
+            data = request.data
+
+        serializer = CreateAssessmentSerializer(
+            data=data,
+            context={'request': request}
+        )
+
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        # Verify teacher is assigned to this subject
+        subject_id = serializer.validated_data['subject_id']
+        try:
+            subject = Subject.objects.get(id=subject_id)
+
+            # Check if teacher is assigned to this subject
+            if request.user.role == 'teacher':
+                if subject.teacher != request.user:
+                    return Response(
+                        {"detail": "You are not assigned to this subject."},
+                        status=status.HTTP_403_FORBIDDEN
+                    )
+
+            # Create the assessment
+            assessment = serializer.save()
+
+            # Handle image uploads if present (from FormData)
+            if 'data' in request.data:
+                # Process images for questions
+                for key, file in request.FILES.items():
+                    if key.startswith('image_'):
+                        # Extract question number from key (e.g., 'image_1' -> 1)
+                        try:
+                            question_num = int(key.split('_')[1])
+                            # Get the corresponding question (1-indexed)
+                            question = assessment.questions.all()[question_num - 1]
+                            question.image = file
+                            question.save()
+                        except (IndexError, ValueError, Question.DoesNotExist):
+                            # Skip invalid image keys
+                            pass
+
+            # Return the created assessment with full details
+            response_serializer = AssessmentSerializer(assessment, context={'request': request})
+            return Response(
+                response_serializer.data,
+                status=status.HTTP_201_CREATED
+            )
+
+        except Subject.DoesNotExist:
+            return Response(
+                {"detail": "Subject not found."},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+
+class TeacherAssessmentListView(APIView):
+    """
+    Get all assessments created by the logged-in teacher
+    GET /api/academics/teacher/assessments/
+    """
+    permission_classes = [IsTeacherRole]
+
+    def get(self, request):
+        """List all assessments created by this teacher"""
+        assessments = Assessment.objects.filter(
+            created_by=request.user,
+            is_active=True
+        ).select_related(
+            'subject',
+            'subject__class_session',
+            'subject__class_session__classroom'
+        ).prefetch_related('questions').order_by('-assessment_date')
+
+        serializer = AssessmentSerializer(assessments, many=True)
+        return Response(serializer.data)
+
+
+class AssessmentDetailView(APIView):
+    """
+    Get, update, or delete a specific assessment
+    GET/PUT/DELETE /api/academics/teacher/assessments/<id>/
+    """
+    permission_classes = [IsTeacherOrAdmin]
+
+    def get_object(self, pk, user):
+        """Get assessment and verify permissions"""
+        try:
+            assessment = Assessment.objects.select_related(
+                'subject',
+                'subject__class_session',
+                'subject__class_session__classroom',
+                'created_by'
+            ).prefetch_related('questions').get(pk=pk)
+
+            # Check if user has permission to access this assessment
+            if user.role == 'teacher' and assessment.created_by != user:
+                raise PermissionDenied("You do not have permission to access this assessment.")
+
+            return assessment
+        except Assessment.DoesNotExist:
+            raise NotFound("Assessment not found.")
+
+    def get(self, request, pk):
+        """Get assessment details"""
+        assessment = self.get_object(pk, request.user)
+        serializer = AssessmentSerializer(assessment)
+        return Response(serializer.data)
+
+    def delete(self, request, pk):
+        """Delete an assessment (soft delete)"""
+        assessment = self.get_object(pk, request.user)
+        assessment.is_active = False
+        assessment.save()
+        return Response(
+            {"detail": "Assessment deleted successfully."},
+            status=status.HTTP_204_NO_CONTENT
+        )
+
+
+class QuestionUpdateView(APIView):
+    """
+    Update a specific question
+    PATCH /api/academics/questions/<id>/
+    """
+    permission_classes = [IsTeacherOrAdmin]
+
+    def get_object(self, pk, user):
+        """Get question and verify permissions"""
+        try:
+            question = Question.objects.select_related(
+                'assessment',
+                'assessment__created_by'
+            ).prefetch_related('options', 'matching_pairs').get(pk=pk)
+
+            # Check if user has permission to edit this question
+            if user.role == 'teacher' and question.assessment.created_by != user:
+                raise PermissionDenied("You do not have permission to edit this question.")
+
+            return question
+        except Question.DoesNotExist:
+            raise NotFound("Question not found.")
+
+    def patch(self, request, pk):
+        """Update question details"""
+        import json
+
+        question = self.get_object(pk, request.user)
+
+        # Check if request contains FormData (with images)
+        if 'data' in request.data:
+            # FormData was sent - parse the JSON from 'data' field
+            try:
+                data = json.loads(request.data['data'])
+            except (ValueError, KeyError) as e:
+                return Response(
+                    {"detail": "Invalid data format."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+        else:
+            # Regular JSON request
+            data = request.data
+
+        # Get update data
+        question_text = data.get('question_text')
+        marks = data.get('marks')
+        correct_answer = data.get('correct_answer')
+        options = data.get('options')
+        matching_pairs = data.get('matching_pairs')
+
+        # Update basic fields
+        if question_text is not None:
+            question.question_text = question_text
+
+        if marks is not None:
+            try:
+                marks = float(marks)
+                if marks < 0:
+                    return Response(
+                        {"detail": "Marks cannot be negative"},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+                question.marks = marks
+            except ValueError:
+                return Response(
+                    {"detail": "Invalid marks format"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+        if correct_answer is not None:
+            question.correct_answer = correct_answer
+
+        # Handle image deletion
+        if 'data' in request.data and request.data.get('delete_image') == 'true':
+            if question.image:
+                question.image.delete()
+                question.image = None
+
+        # Handle new image upload
+        if 'image' in request.FILES:
+            # Delete old image if exists
+            if question.image:
+                question.image.delete()
+
+            new_image = request.FILES['image']
+
+            # Validate file size (100KB = 102400 bytes)
+            if new_image.size > 102400:
+                return Response(
+                    {"detail": "Image file size cannot exceed 100KB."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            question.image = new_image
+
+        question.save()
+
+        # Update options for multiple choice questions
+        if options is not None and question.question_type == 'multiple_choice':
+            # Get existing options
+            existing_options = list(question.options.all().order_by('option_label'))
+
+            # Update each option in place
+            for i, opt in enumerate(options):
+                if i < len(existing_options):
+                    # Update existing option
+                    existing_option = existing_options[i]
+                    existing_option.option_text = opt.get('text', opt.get('option_text', ''))
+                    existing_option.is_correct = opt.get('is_correct', False)
+                    existing_option.save()
+                else:
+                    # Create new option if we have more options than before
+                    QuestionOption.objects.create(
+                        question=question,
+                        option_text=opt.get('text', opt.get('option_text', '')),
+                        option_label=opt.get('option_label', chr(65 + i)),  # A, B, C, etc.
+                        is_correct=opt.get('is_correct', False),
+                        order=i
+                    )
+
+            # Delete extra options if we have fewer options now
+            if len(options) < len(existing_options):
+                for option in existing_options[len(options):]:
+                    option.delete()
+
+        # Update matching pairs for matching questions
+        if matching_pairs is not None and question.question_type == 'matching':
+            # Get existing pairs
+            existing_pairs = list(question.matching_pairs.all().order_by('pair_number'))
+
+            # Update each pair in place
+            for i, pair in enumerate(matching_pairs):
+                if i < len(existing_pairs):
+                    # Update existing pair
+                    existing_pair = existing_pairs[i]
+                    existing_pair.left_item = pair.get('left', pair.get('left_item', ''))
+                    existing_pair.right_item = pair.get('right', pair.get('right_item', ''))
+                    existing_pair.save()
+                else:
+                    # Create new pair if we have more pairs than before
+                    MatchingPair.objects.create(
+                        question=question,
+                        left_item=pair.get('left', pair.get('left_item', '')),
+                        right_item=pair.get('right', pair.get('right_item', '')),
+                        pair_number=i + 1
+                    )
+
+            # Delete extra pairs if we have fewer pairs now
+            if len(matching_pairs) < len(existing_pairs):
+                for pair in existing_pairs[len(matching_pairs):]:
+                    pair.delete()
+
+        # Refresh question to get updated related objects
+        question.refresh_from_db()
+
+        # Prepare response data
+        response_data = {
+            'id': question.id,
+            'question_text': question.question_text,
+            'question_type': question.question_type,
+            'marks': float(question.marks),
+            'correct_answer': question.correct_answer,
+            'image_url': question.image.url if question.image else None
+        }
+
+        # Add options if multiple choice
+        if question.question_type == 'multiple_choice':
+            response_data['options'] = [
+                {
+                    'id': opt.id,
+                    'text': opt.option_text,
+                    'is_correct': opt.is_correct
+                }
+                for opt in question.options.all()
+            ]
+
+        # Add matching pairs if matching
+        if question.question_type == 'matching':
+            response_data['matching_pairs'] = [
+                {
+                    'id': pair.id,
+                    'left': pair.left_item,
+                    'right': pair.right_item
+                }
+                for pair in question.matching_pairs.all()
+            ]
+
+        return Response(
+            {
+                'message': 'Question updated successfully',
+                'question': response_data
+            },
+            status=status.HTTP_200_OK
+        )
+
+
+# ========================
+# ADMIN ASSESSMENT REVIEW VIEWS
+# ========================
+
+class AdminAssessmentListView(APIView):
+    """
+    Get all assessments for admin review with filtering
+    GET /api/academics/admin/assessments/
+    Query params: academic_year, term, subject_id
+    """
+    permission_classes = [permissions.IsAdminUser]
+
+    def get(self, request):
+        """List all assessments with optional filters"""
+        assessments = Assessment.objects.filter(
+            is_active=True
+        ).select_related(
+            'subject',
+            'subject__class_session',
+            'subject__class_session__classroom',
+            'created_by'
+        ).prefetch_related('questions').order_by('-created_at')
+
+        # Apply filters
+        academic_year = request.query_params.get('academic_year')
+        term = request.query_params.get('term')
+        subject_id = request.query_params.get('subject_id')
+
+        if academic_year:
+            assessments = assessments.filter(
+                subject__class_session__academic_year=academic_year
+            )
+
+        if term:
+            assessments = assessments.filter(
+                subject__class_session__term=term
+            )
+
+        if subject_id:
+            assessments = assessments.filter(subject_id=subject_id)
+
+        serializer = AssessmentSerializer(assessments, many=True)
+        return Response({
+            'assessments': serializer.data,
+            'count': assessments.count()
+        })
+
+
+class AdminDeleteAssessmentView(APIView):
+    """
+    Delete an assessment (admin only)
+    DELETE /api/academics/admin/assessments/<id>/delete/
+    """
+    permission_classes = [permissions.IsAdminUser]
+
+    def delete(self, request, pk):
+        """Delete assessment permanently"""
+        try:
+            assessment = Assessment.objects.get(pk=pk)
+
+            # Store info for response message
+            assessment_title = assessment.title
+            assessment_type = assessment.get_assessment_type_display()
+
+            # Delete the assessment (cascade will delete related questions, options, etc.)
+            assessment.delete()
+
+            return Response({
+                'message': f'{assessment_type} "{assessment_title}" deleted successfully',
+                'assessment_id': pk
+            }, status=status.HTTP_200_OK)
+
+        except Assessment.DoesNotExist:
+            raise NotFound("Assessment not found.")
+
+
+class ToggleAssessmentReleaseView(APIView):
+    """
+    Toggle release status of a single assessment
+    POST /api/academics/admin/assessments/<id>/toggle-release/
+    """
+    permission_classes = [permissions.IsAdminUser]
+
+    def post(self, request, pk):
+        """Toggle release status"""
+        try:
+            assessment = Assessment.objects.get(pk=pk, is_active=True)
+            assessment.is_released = not assessment.is_released
+            assessment.save()
+
+            return Response({
+                'message': f"Assessment {'released' if assessment.is_released else 'locked'}",
+                'assessment_id': assessment.id,
+                'is_released': assessment.is_released
+            })
+        except Assessment.DoesNotExist:
+            raise NotFound("Assessment not found.")
+
+
+class UnlockAllAssessmentsView(APIView):
+    """
+    Unlock all assessments (with optional filters)
+    POST /api/academics/admin/assessments/unlock-all/
+    Body: academic_year (optional), term (optional), subject_id (optional), assessment_type (optional: 'test' or 'exam')
+    """
+    permission_classes = [permissions.IsAdminUser]
+
+    def post(self, request):
+        """Unlock all assessments matching filters"""
+        from django.db.models import Q
+
+        assessments = Assessment.objects.filter(
+            is_active=True,
+            is_released=False
+        )
+
+        # Apply filters if provided
+        academic_year = request.data.get('academic_year')
+        term = request.data.get('term')
+        subject_id = request.data.get('subject_id')
+        assessment_type = request.data.get('assessment_type')  # 'test' or 'exam'
+
+        if academic_year:
+            assessments = assessments.filter(
+                subject__class_session__academic_year=academic_year
+            )
+
+        if term:
+            assessments = assessments.filter(
+                subject__class_session__term=term
+            )
+
+        if subject_id:
+            assessments = assessments.filter(subject_id=subject_id)
+
+        # Filter by assessment type (test includes test_1, test_2, mid_term; exam is final_exam)
+        if assessment_type == 'test':
+            assessments = assessments.filter(
+                Q(assessment_type='test_1') |
+                Q(assessment_type='test_2') |
+                Q(assessment_type='mid_term')
+            )
+        elif assessment_type == 'exam':
+            assessments = assessments.filter(assessment_type='final_exam')
+
+        count = assessments.count()
+        assessments.update(is_released=True)
+
+        return Response({
+            'message': f'Successfully unlocked {count} assessment(s)',
+            'count': count
+        })
+
+
+# ========================
+# STUDENT ASSESSMENT VIEWS
+# ========================
+
+class StudentAvailableAssessmentsView(APIView):
+    """
+    Get all released assessments for the logged-in student
+    GET /api/academics/student/assessments/
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        """List all released assessments for student's enrolled subjects"""
+        from .models import StudentSession, AssessmentSubmission
+        from django.db.models import Exists, OuterRef
+
+        user = request.user
+
+        if user.role != 'student':
+            return Response(
+                {"detail": "Only students can access this endpoint"},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        # Get all class sessions the student is enrolled in
+        student_sessions = StudentSession.objects.filter(
+            student=user,
+            is_active=True
+        ).values_list('class_session', flat=True)
+
+        # Subquery to check if student has already submitted this assessment
+        submitted_assessments = AssessmentSubmission.objects.filter(
+            assessment=OuterRef('pk'),
+            student=user
+        )
+
+        # Get all released assessments from subjects in those class sessions
+        # Exclude assessments that the student has already submitted
+        assessments = Assessment.objects.filter(
+            is_active=True,
+            is_released=True,
+            subject__class_session__in=student_sessions
+        ).exclude(
+            Exists(submitted_assessments)
+        ).select_related(
+            'subject',
+            'subject__class_session',
+            'subject__class_session__classroom'
+        ).prefetch_related('questions').order_by('-created_at')
+
+        serializer = AssessmentSerializer(assessments, many=True)
+        return Response({
+            'assessments': serializer.data,
+            'count': assessments.count()
+        })
+
+
+class StudentSubmitAssessmentView(APIView):
+    """
+    Submit assessment answers
+    POST /api/academics/student/assessments/<pk>/submit/
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, pk):
+        """Submit student's answers for an assessment"""
+        from .models import (
+            StudentSession, AssessmentSubmission, StudentAnswer,
+            Question, QuestionOption, MatchingPair
+        )
+        from decimal import Decimal
+        import json
+
+        user = request.user
+
+        if user.role != 'student':
+            return Response(
+                {"detail": "Only students can submit assessments"},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        try:
+            # Get the assessment
+            assessment = Assessment.objects.prefetch_related(
+                'questions__options',
+                'questions__matching_pairs'
+            ).get(pk=pk, is_active=True, is_released=True)
+        except Assessment.DoesNotExist:
+            return Response(
+                {"detail": "Assessment not found or not available"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        # Check if student is enrolled in the subject
+        student_sessions = StudentSession.objects.filter(
+            student=user,
+            is_active=True,
+            class_session=assessment.subject.class_session
+        )
+
+        if not student_sessions.exists():
+            return Response(
+                {"detail": "You are not enrolled in this subject"},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        # Check if already submitted
+        existing_submission = AssessmentSubmission.objects.filter(
+            assessment=assessment,
+            student=user
+        ).first()
+
+        if existing_submission:
+            return Response(
+                {"detail": "You have already submitted this assessment"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Get answers and time taken from request
+        answers = request.data.get('answers', {})
+        time_taken = request.data.get('time_taken', 0)
+
+        # Create submission
+        submission = AssessmentSubmission.objects.create(
+            assessment=assessment,
+            student=user,
+            time_taken=time_taken,
+            max_score=assessment.total_marks,
+            score=Decimal('0.00')
+        )
+
+        total_score = Decimal('0.00')
+        questions = assessment.questions.filter(is_active=True)
+
+        # Process each question's answer
+        for question in questions:
+            question_id_str = str(question.id)
+            student_answer = StudentAnswer.objects.create(
+                submission=submission,
+                question=question
+            )
+
+            # Process based on question type
+            if question.question_type == 'multiple_choice':
+                if question_id_str in answers:
+                    selected_option_id = answers[question_id_str]
+                    try:
+                        selected_option = question.options.get(id=selected_option_id)
+                        student_answer.selected_option = selected_option
+                        student_answer.is_correct = selected_option.is_correct
+
+                        if selected_option.is_correct:
+                            student_answer.points_earned = question.marks
+                            total_score += question.marks
+
+                        student_answer.save()
+                    except QuestionOption.DoesNotExist:
+                        pass
+
+            elif question.question_type == 'true_false':
+                if question_id_str in answers:
+                    answer = str(answers[question_id_str]).strip()
+                    student_answer.text_answer = answer
+
+                    # Check if correct
+                    correct = question.correct_answer.strip()
+                    if answer.lower() == correct.lower():
+                        student_answer.is_correct = True
+                        student_answer.points_earned = question.marks
+                        total_score += question.marks
+                    else:
+                        student_answer.is_correct = False
+
+                    student_answer.save()
+
+            elif question.question_type in ['fill_blank', 'essay']:
+                # Store answer but don't auto-grade
+                if question_id_str in answers:
+                    student_answer.text_answer = str(answers[question_id_str])
+                    student_answer.is_correct = None  # Needs manual grading
+                    student_answer.save()
+
+            elif question.question_type == 'matching':
+                # Process matching answers
+                matching_answers = {}
+                pairs = question.matching_pairs.all().order_by('pair_number')
+
+                for idx, pair in enumerate(pairs):
+                    answer_key = f"{question_id_str}_{idx}"
+                    if answer_key in answers:
+                        student_letter = str(answers[answer_key]).strip().upper()
+                        matching_answers[f"pair_{idx}"] = student_letter
+
+                student_answer.matching_answers = matching_answers
+
+                # Auto-grade matching
+                correct_count = 0
+                for idx, pair in enumerate(pairs):
+                    expected_letter = chr(65 + idx)  # A, B, C...
+                    student_letter = matching_answers.get(f"pair_{idx}", "")
+                    if student_letter == expected_letter:
+                        correct_count += 1
+
+                # Calculate partial credit
+                if len(pairs) > 0:
+                    percentage_correct = correct_count / len(pairs)
+                    student_answer.points_earned = question.marks * Decimal(str(percentage_correct))
+                    total_score += student_answer.points_earned
+                    student_answer.is_correct = (correct_count == len(pairs))
+
+                student_answer.save()
+
+        # Update submission with total score
+        submission.score = total_score
+
+        # Check if needs manual grading
+        has_essay_or_fill = questions.filter(
+            question_type__in=['fill_blank', 'essay']
+        ).exists()
+        submission.is_graded = not has_essay_or_fill
+
+        submission.save()
+
+        # Serialize and return
+        serializer = AssessmentSubmissionSerializerClass(submission)
+
+        return Response({
+            'message': 'Assessment submitted successfully!',
+            'submission_id': submission.id,
+            'score': float(submission.score),
+            'max_score': float(submission.max_score),
+            'percentage': submission.percentage,
+            'needs_grading': not submission.is_graded,
+            'submission': serializer.data
+        }, status=status.HTTP_201_CREATED)

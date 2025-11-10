@@ -188,10 +188,14 @@ const MyGrades = () => {
                   <p>Released assignment scores from your teacher</p>
                 </div>
               </div>
+              <div className="info-item">
+                <CheckCircle size={20} />
+                <div>
+                  <strong>Test & Exam Scores</strong>
+                  <p>Results released by admin will appear below</p>
+                </div>
+              </div>
             </div>
-            <p className="info-note">
-              <strong>Note:</strong> Test and exam results will be released by the admin after grading is complete.
-            </p>
           </div>
 
           <div className="subjects-grid">
@@ -339,11 +343,194 @@ const MyGrades = () => {
                       )}
                     </div>
 
-                    {/* Hidden Grades Notice */}
-                    <div className="hidden-grades-notice">
-                      <Clock size={16} />
-                      <span>Test and exam results will be released by admin</span>
-                    </div>
+                    {/* Test Scores */}
+                    {subject.test_visible && (
+                      <div className="grade-section">
+                        <div className="grade-header">
+                          <span className="grade-label">
+                            Tests
+                            {subject.test_count > 0 && (
+                              <span className="assignment-count">
+                                ({subject.test_count} test{subject.test_count !== 1 ? 's' : ''})
+                              </span>
+                            )}
+                          </span>
+                          {subject.test_count > 0 && (
+                            <span className="grade-value">
+                              Average: {subject.test_average}%
+                            </span>
+                          )}
+                        </div>
+
+                        {subject.test_count > 0 ? (
+                          <>
+                            <div className="progress-bar">
+                              <div
+                                className="progress-fill"
+                                style={{
+                                  width: `${subject.test_average}%`,
+                                  backgroundColor: getGradeColor(subject.test_average)
+                                }}
+                              />
+                            </div>
+                            <div className="grade-footer">
+                              <span className="percentage">{subject.test_average}%</span>
+                              <span
+                                className="letter-grade"
+                                style={{ color: getGradeColor(subject.test_average) }}
+                              >
+                                {getGradeLetter(subject.test_average)}
+                              </span>
+                            </div>
+
+                            {/* Expandable Test Details */}
+                            <button
+                              className="expand-btn"
+                              onClick={() => toggleSubject('test_' + subject.subject_id)}
+                            >
+                              {expandedSubject === 'test_' + subject.subject_id ? (
+                                <>
+                                  <ChevronUp size={16} />
+                                  Hide Details
+                                </>
+                              ) : (
+                                <>
+                                  <ChevronDown size={16} />
+                                  View Details
+                                </>
+                              )}
+                            </button>
+
+                            {expandedSubject === 'test_' + subject.subject_id && (
+                              <div className="assignment-details">
+                                {subject.test_details.map((test, index) => (
+                                  <div key={index} className="assignment-item">
+                                    <div className="assignment-header">
+                                      <h4>{test.test_title}</h4>
+                                      <span
+                                        className="assignment-score"
+                                        style={{ color: getGradeColor(test.percentage) }}
+                                      >
+                                        {test.score}/{test.max_score}
+                                      </span>
+                                    </div>
+                                    <div className="assignment-meta">
+                                      <span className="test-type-badge">{test.test_type}</span>
+                                      <span className="percentage">
+                                        {test.percentage}%
+                                      </span>
+                                      {test.not_submitted && (
+                                        <span className="not-submitted-badge">Not submitted</span>
+                                      )}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </>
+                        ) : (
+                          <p className="no-data">No test scores yet</p>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Exam Scores */}
+                    {subject.exam_visible && (
+                      <div className="grade-section">
+                        <div className="grade-header">
+                          <span className="grade-label">
+                            Exams
+                            {subject.exam_count > 0 && (
+                              <span className="assignment-count">
+                                ({subject.exam_count} exam{subject.exam_count !== 1 ? 's' : ''})
+                              </span>
+                            )}
+                          </span>
+                          {subject.exam_count > 0 && (
+                            <span className="grade-value">
+                              Average: {subject.exam_average}%
+                            </span>
+                          )}
+                        </div>
+
+                        {subject.exam_count > 0 ? (
+                          <>
+                            <div className="progress-bar">
+                              <div
+                                className="progress-fill"
+                                style={{
+                                  width: `${subject.exam_average}%`,
+                                  backgroundColor: getGradeColor(subject.exam_average)
+                                }}
+                              />
+                            </div>
+                            <div className="grade-footer">
+                              <span className="percentage">{subject.exam_average}%</span>
+                              <span
+                                className="letter-grade"
+                                style={{ color: getGradeColor(subject.exam_average) }}
+                              >
+                                {getGradeLetter(subject.exam_average)}
+                              </span>
+                            </div>
+
+                            {/* Expandable Exam Details */}
+                            <button
+                              className="expand-btn"
+                              onClick={() => toggleSubject('exam_' + subject.subject_id)}
+                            >
+                              {expandedSubject === 'exam_' + subject.subject_id ? (
+                                <>
+                                  <ChevronUp size={16} />
+                                  Hide Details
+                                </>
+                              ) : (
+                                <>
+                                  <ChevronDown size={16} />
+                                  View Details
+                                </>
+                              )}
+                            </button>
+
+                            {expandedSubject === 'exam_' + subject.subject_id && (
+                              <div className="assignment-details">
+                                {subject.exam_details.map((exam, index) => (
+                                  <div key={index} className="assignment-item">
+                                    <div className="assignment-header">
+                                      <h4>{exam.exam_title}</h4>
+                                      <span
+                                        className="assignment-score"
+                                        style={{ color: getGradeColor(exam.percentage) }}
+                                      >
+                                        {exam.score}/{exam.max_score}
+                                      </span>
+                                    </div>
+                                    <div className="assignment-meta">
+                                      <span className="percentage">
+                                        {exam.percentage}%
+                                      </span>
+                                      {exam.not_submitted && (
+                                        <span className="not-submitted-badge">Not submitted</span>
+                                      )}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </>
+                        ) : (
+                          <p className="no-data">No exam scores yet</p>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Hidden Grades Notice - only show if no tests/exams released */}
+                    {!subject.test_visible && !subject.exam_visible && (
+                      <div className="hidden-grades-notice">
+                        <Clock size={16} />
+                        <span>Test and exam results will be released by admin</span>
+                      </div>
+                    )}
                   </div>
                 </div>
               );

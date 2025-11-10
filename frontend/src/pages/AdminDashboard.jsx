@@ -17,6 +17,8 @@ import CreateAttendance from '../components/CreateAttendance';
 import AttendanceMarking from '../components/AttendanceMarking';
 import Settings from '../components/Settings';
 import ViewResults from '../components/ViewResults'; // NEW IMPORT
+import ReviewQuestions from '../components/ReviewQuestions';
+import ReportSheet from '../components/ReportSheet';
 import './AdminDashboard.css';
 
 const getGreeting = () => {
@@ -73,12 +75,7 @@ const AdminDashboard = () => {
       case 'analytics':
         return <Analytics />;
       case 'reports':
-        return (
-          <div className="admin-dashboard-section">
-            <h2 className="admin-dashboard-section-title">Reports</h2>
-            <p className="admin-dashboard-section-text">Generate and view comprehensive reports for your school.</p>
-          </div>
-        );
+        return <ReportSheet />;
       case 'activity-logs':
         return <ActivityLog />;
       case 'profile':
@@ -114,6 +111,8 @@ const AdminDashboard = () => {
         return <CreateFeeStructure />;
       case 'results': // NEW CASE
         return <ViewResults />;
+      case 'review-questions':
+        return <ReviewQuestions />;
       default:
         return (
           <div className="admin-dashboard-section">

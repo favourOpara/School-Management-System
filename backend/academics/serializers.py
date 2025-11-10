@@ -1,7 +1,9 @@
 from rest_framework import serializers
 from .models import (
-    Class, ClassSession, Subject, SubjectContent, ContentFile, 
-    StudentContentView, AssignmentSubmission, SubmissionFile
+    Class, ClassSession, Subject, Topic, SubjectContent, ContentFile,
+    StudentContentView, AssignmentSubmission, SubmissionFile,
+    Assessment, Question, QuestionOption, MatchingPair,
+    AssessmentSubmission, StudentAnswer
 )
 from users.models import CustomUser
 import re
@@ -437,9 +439,9 @@ class CreateSubmissionSerializer(serializers.Serializer):
             
             if not is_enrolled:
                 raise serializers.ValidationError("You are not enrolled in this subject")
-        
+
         return value
-    
+
     def validate(self, data):
         """Check if student already submitted"""
         request = self.context.get('request')
@@ -448,10 +450,291 @@ class CreateSubmissionSerializer(serializers.Serializer):
                 student=request.user,
                 assignment_id=data['assignment_id']
             ).first()
-            
+
             if existing_submission:
                 raise serializers.ValidationError(
                     "You have already submitted this assignment. You can update your existing submission."
                 )
-        
+
         return data
+
+
+class TopicSerializer(serializers.ModelSerializer):
+    """
+    Serializer for Topic model
+    """
+    subject_name = serializers.CharField(source='subject.name', read_only=True)
+
+    class Meta:
+        model = Topic
+        fields = ['id', 'subject', 'subject_name', 'name', 'description', 'order', 'is_active', 'created_at']
+        read_only_fields = ['id', 'created_at']
+
+
+class QuestionOptionSerializer(serializers.ModelSerializer):
+    """
+    Serializer for QuestionOption model
+    """
+    class Meta:
+        model = QuestionOption
+        fields = ['id', 'option_text', 'option_label', 'is_correct', 'order']
+        read_only_fields = ['id']
+
+
+class MatchingPairSerializer(serializers.ModelSerializer):
+    """
+    Serializer for MatchingPair model
+    """
+    class Meta:
+        model = MatchingPair
+        fields = ['id', 'left_item', 'right_item', 'pair_number']
+        read_only_fields = ['id']
+
+
+class QuestionSerializer(serializers.ModelSerializer):
+    """
+    Serializer for Question model
+    """
+    image_url = serializers.SerializerMethodField()
+    options = QuestionOptionSerializer(many=True, read_only=True)
+    matching_pairs = MatchingPairSerializer(many=True, read_only=True)
+    question_type_display = serializers.CharField(source='get_question_type_display', read_only=True)
+
+    class Meta:
+        model = Question
+        fields = [
+            'id', 'question_type', 'question_type_display', 'question_text',
+            'marks', 'question_number', 'image', 'image_url', 'correct_answer',
+            'options', 'matching_pairs', 'is_active'
+        ]
+        read_only_fields = ['id']
+
+    def get_image_url(self, obj):
+        """Get full URL for question image"""
+        if obj.image:
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(obj.image.url)
+            return obj.image.url
+        return None
+
+
+class AssessmentSerializer(serializers.ModelSerializer):
+    """
+    Serializer for Assessment model (read operations)
+    """
+    questions = QuestionSerializer(many=True, read_only=True)
+    subject_name = serializers.CharField(source='subject.name', read_only=True)
+    class_name = serializers.CharField(source='subject.class_session.classroom.name', read_only=True)
+    class_session = serializers.CharField(source='subject.class_session', read_only=True)
+    topic_name = serializers.CharField(source='topic.name', read_only=True, allow_null=True)
+    created_by_name = serializers.CharField(source='created_by.get_full_name', read_only=True)
+    question_count = serializers.IntegerField(read_only=True)
+    assessment_type_display = serializers.CharField(source='get_assessment_type_display', read_only=True)
+
+    class Meta:
+        model = Assessment
+        fields = [
+            'id', 'subject', 'subject_name', 'class_name', 'class_session',
+            'topic', 'topic_name', 'title', 'assessment_type', 'assessment_type_display',
+            'duration_minutes', 'assessment_date', 'total_marks', 'created_by',
+            'created_by_name', 'created_at', 'updated_at', 'is_active', 'is_released',
+            'questions', 'question_count'
+        ]
+        read_only_fields = ['id', 'created_by', 'created_at', 'updated_at']
+
+
+class CreateAssessmentSerializer(serializers.Serializer):
+    """
+    Serializer for creating assessments with questions
+    """
+    subject_id = serializers.IntegerField()
+    topic_id = serializers.IntegerField(required=False, allow_null=True)
+    title = serializers.CharField(max_length=200)
+    assessment_type = serializers.ChoiceField(
+        choices=['test_1', 'test_2', 'mid_term', 'final_exam']
+    )
+    duration_minutes = serializers.IntegerField(min_value=1)
+    assessment_date = serializers.DateField(required=False, allow_null=True)
+    total_marks = serializers.DecimalField(max_digits=6, decimal_places=2)
+    questions = serializers.ListField(
+        child=serializers.DictField(),
+        min_length=1
+    )
+
+    def validate_subject_id(self, value):
+        """Validate that subject exists"""
+        if not Subject.objects.filter(id=value).exists():
+            raise serializers.ValidationError("Subject does not exist.")
+        return value
+
+    def validate_topic_id(self, value):
+        """Validate that topic exists if provided"""
+        if value and not Topic.objects.filter(id=value).exists():
+            raise serializers.ValidationError("Topic does not exist.")
+        return value
+
+    def validate_questions(self, value):
+        """Validate questions structure based on question type"""
+        for idx, question in enumerate(value, 1):
+            # Basic validation
+            if 'question_type' not in question:
+                raise serializers.ValidationError(
+                    f"Question {idx} must have 'question_type' field."
+                )
+            if 'question' not in question or 'marks' not in question:
+                raise serializers.ValidationError(
+                    f"Question {idx} must have 'question' and 'marks' fields."
+                )
+
+            q_type = question['question_type']
+
+            # Validate based on question type
+            if q_type == 'multiple_choice':
+                if 'options' not in question or len(question['options']) < 2:
+                    raise serializers.ValidationError(
+                        f"Question {idx}: Multiple choice must have at least 2 options."
+                    )
+                correct_count = sum(1 for opt in question['options'] if opt.get('is_correct', False))
+                if correct_count != 1:
+                    raise serializers.ValidationError(
+                        f"Question {idx}: Multiple choice must have exactly 1 correct answer."
+                    )
+
+            elif q_type == 'true_false':
+                if 'correct_answer' not in question:
+                    raise serializers.ValidationError(
+                        f"Question {idx}: True/False must have 'correct_answer' (True or False)."
+                    )
+
+            elif q_type == 'fill_blank':
+                if 'correct_answer' not in question or not question['correct_answer'].strip():
+                    raise serializers.ValidationError(
+                        f"Question {idx}: Fill in the blanks must have 'correct_answer'."
+                    )
+
+            elif q_type == 'matching':
+                if 'matching_pairs' not in question or len(question['matching_pairs']) < 2:
+                    raise serializers.ValidationError(
+                        f"Question {idx}: Matching must have at least 2 pairs."
+                    )
+
+        return value
+
+    def validate(self, data):
+        """Cross-field validation"""
+        # Validate that total marks matches sum of question marks
+        questions_total = sum(float(q['marks']) for q in data['questions'])
+        if abs(float(data['total_marks']) - questions_total) > 0.01:
+            raise serializers.ValidationError(
+                f"Total marks ({data['total_marks']}) does not match sum of question marks ({questions_total})."
+            )
+
+        return data
+
+    def create(self, validated_data):
+        """Create assessment with questions"""
+        from django.db import transaction
+
+        questions_data = validated_data.pop('questions')
+        subject = Subject.objects.get(id=validated_data.pop('subject_id'))
+        topic_id = validated_data.pop('topic_id', None)
+        topic = Topic.objects.get(id=topic_id) if topic_id else None
+
+        # Get the user from context
+        request = self.context.get('request')
+        created_by = request.user if request else None
+
+        with transaction.atomic():
+            # Create assessment
+            assessment = Assessment.objects.create(
+                subject=subject,
+                topic=topic,
+                created_by=created_by,
+                title=validated_data['title'],
+                assessment_type=validated_data['assessment_type'],
+                duration_minutes=validated_data['duration_minutes'],
+                assessment_date=validated_data.get('assessment_date'),
+                total_marks=validated_data['total_marks']
+            )
+
+            # Create questions with their options/pairs
+            for idx, question_data in enumerate(questions_data, start=1):
+                question = Question.objects.create(
+                    assessment=assessment,
+                    question_type=question_data['question_type'],
+                    question_text=question_data['question'],
+                    marks=question_data['marks'],
+                    question_number=idx,
+                    correct_answer=question_data.get('correct_answer', '')
+                )
+
+                # Create options for multiple choice
+                if question_data['question_type'] == 'multiple_choice':
+                    for opt_idx, option in enumerate(question_data.get('options', []), 1):
+                        QuestionOption.objects.create(
+                            question=question,
+                            option_text=option['text'],
+                            option_label=option.get('label', chr(64 + opt_idx)),  # A, B, C, D
+                            is_correct=option.get('is_correct', False),
+                            order=opt_idx
+                        )
+
+                # Create matching pairs
+                if question_data['question_type'] == 'matching':
+                    for pair_idx, pair in enumerate(question_data.get('matching_pairs', []), 1):
+                        MatchingPair.objects.create(
+                            question=question,
+                            left_item=pair['left'],
+                            right_item=pair['right'],
+                            pair_number=pair_idx
+                        )
+
+        return assessment
+
+
+class StudentAnswerSerializer(serializers.ModelSerializer):
+    """
+    Serializer for student answers
+    """
+    question_text = serializers.CharField(source='question.question_text', read_only=True)
+    question_number = serializers.IntegerField(source='question.question_number', read_only=True)
+    question_type = serializers.CharField(source='question.question_type', read_only=True)
+    correct_answer = serializers.SerializerMethodField()
+
+    class Meta:
+        model = StudentAnswer
+        fields = [
+            'id', 'question', 'question_text', 'question_number', 'question_type',
+            'selected_option', 'text_answer', 'matching_answers',
+            'is_correct', 'points_earned', 'correct_answer'
+        ]
+
+    def get_correct_answer(self, obj):
+        """Get the correct answer for display"""
+        question = obj.question
+        if question.question_type == 'multiple_choice':
+            correct_option = question.options.filter(is_correct=True).first()
+            return correct_option.option_text if correct_option else None
+        elif question.question_type == 'true_false':
+            return question.correct_answer
+        return None
+
+
+class AssessmentSubmissionSerializer(serializers.ModelSerializer):
+    """
+    Serializer for assessment submissions
+    """
+    student_name = serializers.CharField(source='student.get_full_name', read_only=True)
+    assessment_title = serializers.CharField(source='assessment.title', read_only=True)
+    percentage = serializers.FloatField(read_only=True)
+    answers = StudentAnswerSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = AssessmentSubmission
+        fields = [
+            'id', 'assessment', 'assessment_title', 'student', 'student_name',
+            'submitted_at', 'time_taken', 'score', 'max_score', 'percentage',
+            'is_graded', 'answers'
+        ]
+        read_only_fields = ['id', 'submitted_at', 'score', 'max_score']

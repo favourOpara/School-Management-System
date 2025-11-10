@@ -145,6 +145,9 @@ const Sidebar = ({ activeTab, setActiveTab }) => {
                 <li onClick={() => handleTabClick('results')}>
                   <BookOpen /><span>Results</span>
                 </li>
+                <li onClick={() => handleTabClick('review-questions')}>
+                  <ClipboardList /><span>Review Questions</span>
+                </li>
               </ul>
             )}
 

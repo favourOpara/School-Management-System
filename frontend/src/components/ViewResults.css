@@ -162,7 +162,7 @@
 
 /* Session Info */
 .session-info {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%);
   color: white;
   padding: 1.25rem 1.5rem;
   border-radius: 10px;
@@ -286,19 +286,150 @@
 /* Responsive Design */
 @media (max-width: 768px) {
   .view-results-container {
-    padding: 1rem;
+    padding: 5rem 1rem 1rem 1rem;
+    overflow-x: hidden;
+  }
+
+  .view-results-header {
+    flex-direction: row;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .view-results-header h2 {
+    font-size: 1.5rem;
+    word-break: break-word;
+  }
+
+  .view-results-header p {
+    font-size: 0.875rem;
+  }
+
+  .filters-section {
+    padding: 1.25rem;
+    overflow: hidden;
   }
 
   .filters-grid {
     grid-template-columns: 1fr;
   }
 
-  .subjects-grid {
-    grid-template-columns: 1fr;
+  .form-group label {
+    font-size: 0.875rem;
+  }
+
+  .form-group select {
+    font-size: 0.875rem;
+  }
+
+  .search-btn,
+  .sync-btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .session-info {
+    padding: 1rem;
+  }
+
+  .session-info h4 {
+    font-size: 1rem;
   }
 
   .session-details {
     flex-direction: column;
     gap: 0.5rem;
+    font-size: 0.875rem;
+  }
+
+  .subjects-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .subject-card {
+    padding: 1rem;
+  }
+
+  .subject-card-header h4 {
+    font-size: 1rem;
+    word-break: break-word;
+  }
+
+  .subject-card-body p {
+    font-size: 0.875rem;
+    word-break: break-word;
+  }
+}
+
+@media (max-width: 480px) {
+  .view-results-container {
+    padding: 5rem 0.75rem 0.75rem 0.75rem;
+  }
+
+  .view-results-header h2 {
+    font-size: 1.25rem;
+  }
+
+  .view-results-header p {
+    font-size: 0.8125rem;
+  }
+
+  .filters-section {
+    padding: 1rem;
+  }
+
+  .filters-header h3 {
+    font-size: 1.125rem;
+  }
+
+  .form-group label {
+    font-size: 0.8125rem;
+  }
+
+  .form-group select {
+    font-size: 0.8125rem;
+    padding: 0.5rem 0.75rem;
+  }
+
+  .search-btn,
+  .sync-btn {
+    font-size: 0.875rem;
+    padding: 0.625rem 1.25rem;
+  }
+
+  .session-info {
+    padding: 0.875rem;
+  }
+
+  .session-info h4 {
+    font-size: 0.9375rem;
+  }
+
+  .session-details {
+    font-size: 0.8125rem;
+  }
+
+  .subjects-header h3 {
+    font-size: 1.25rem;
+  }
+
+  .subjects-header p {
+    font-size: 0.8125rem;
+  }
+
+  .subject-card {
+    padding: 0.875rem;
+  }
+
+  .subject-card-header h4 {
+    font-size: 0.9375rem;
+  }
+
+  .subject-card-body p {
+    font-size: 0.8125rem;
+  }
+
+  .subject-card-footer {
+    font-size: 0.8125rem;
   }
 }

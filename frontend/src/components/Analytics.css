@@ -4,49 +4,91 @@
 
 /* Analytics container */
 .analytics-container {
-  padding: 1rem;
+  padding: 1.5rem;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+/* Dashboard cards grid */
+.dashboard-cards-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.5rem;
   width: 100%;
   box-sizing: border-box;
 }
 
-/* Cards wrapper for side-by-side layout */
-.dashboard-cards-wrapper {
+/* Individual grid items */
+.grid-item {
   display: flex;
-  gap: 1.5rem;
-  width: 100%;
-  justify-content: flex-start;
-  align-items: flex-start;
-  flex-wrap: nowrap;
+  flex-direction: column;
+  min-width: 0; /* Prevent overflow */
+  box-sizing: border-box;
 }
 
-/* Desktop layout - ensure side by side */
+/* Desktop layout - 2 column grid */
 @media (min-width: 769px) {
-  .dashboard-cards-wrapper {
-    flex-direction: row;
-    flex-wrap: nowrap;
-    align-items: flex-start;
+  .analytics-container {
+    padding: 1.5rem 2rem;
   }
 
-  .dashboard-cards-wrapper > * {
-    flex: 1;
-    max-width: 50%;
+  .dashboard-cards-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.75rem;
+  }
+
+  /* Make tests tile span both columns */
+  .grid-item:nth-child(3) {
+    grid-column: 1 / -1;
   }
 }
 
-/* Mobile layout */
+/* Large screens - tiles grow to fill space */
+@media (min-width: 1200px) {
+  .analytics-container {
+    padding: 2rem;
+    max-width: 1800px;
+    margin: 0 auto;
+  }
+
+  .dashboard-cards-grid {
+    gap: 2rem;
+  }
+}
+
+/* Extra large screens - prevent tiles from getting too wide */
+@media (min-width: 1600px) {
+  .analytics-container {
+    padding: 2.5rem;
+    max-width: 2000px;
+  }
+
+  .dashboard-cards-grid {
+    gap: 2.5rem;
+  }
+}
+
+/* Mobile layout - stack all cards vertically */
 @media (max-width: 768px) {
   .analytics-container {
     padding: 0.5rem;
+    margin-top: 3rem; /* Push content down to avoid header overlap */
   }
 
-  .dashboard-cards-wrapper {
-    flex-direction: column;
+  .dashboard-cards-grid {
+    grid-template-columns: 1fr;
     gap: 1rem;
-    flex-wrap: nowrap;
+  }
+}
+
+/* Small mobile devices */
+@media (max-width: 480px) {
+  .analytics-container {
+    padding: 0.25rem;
   }
 
-  .dashboard-cards-wrapper > * {
-    width: 100%;
-    flex: none;
+  .dashboard-cards-grid {
+    gap: 0.75rem;
   }
 }

@@ -203,7 +203,20 @@ class GradingConfiguration(models.Model):
     def copy_to_session(self, target_academic_year, target_term, admin_user):
         """
         Create a copy of this configuration for a new session
+        If a configuration already exists for the target session, it will be deactivated
         """
+        # Check if a configuration already exists for this academic year and term
+        existing_config = GradingConfiguration.objects.filter(
+            academic_year=target_academic_year,
+            term=target_term
+        ).first()
+
+        if existing_config:
+            # Deactivate the existing configuration
+            existing_config.is_active = False
+            existing_config.save()
+            print(f"Deactivated existing config during copy: {existing_config.id} for {target_academic_year} - {target_term}")
+
         new_config = GradingConfiguration.objects.create(
             academic_year=target_academic_year,
             term=target_term,
@@ -410,7 +423,17 @@ class GradeSummary(models.Model):
         default=False,
         help_text="If True, attendance score won't be auto-updated from attendance records"
     )
-    
+
+    # Track if test/exam scores have been manually entered by teacher (one-time only)
+    test_manual_entry = models.BooleanField(
+        default=False,
+        help_text="If True, test score was manually entered by teacher and cannot be edited again"
+    )
+    exam_manual_entry = models.BooleanField(
+        default=False,
+        help_text="If True, exam score was manually entered by teacher and cannot be edited again"
+    )
+
     # Metadata
     last_calculated = models.DateTimeField(auto_now=True)
     is_final = models.BooleanField(default=False)
@@ -427,30 +450,22 @@ class GradeSummary(models.Model):
         """
         Recalculate total score based on weighted components
         Called when any component grade changes
+
+        NOTE: The individual component scores (attendance_score, assignment_score, etc.)
+        are already weighted percentages out of 100%. For example, if assignments are
+        worth 10% and a student scores 95%, the assignment_score is already 9.5.
+        Therefore, we just sum them directly without re-applying weights.
         """
-        config = self.grading_config
-        
         # Convert all scores to Decimal to avoid type mismatch
         attendance_score = Decimal(str(self.attendance_score))
         assignment_score = Decimal(str(self.assignment_score))
         test_score = Decimal(str(self.test_score))
         exam_score = Decimal(str(self.exam_score))
-        
-        # Convert percentages to Decimal
-        attendance_pct = Decimal(str(config.attendance_percentage))
-        assignment_pct = Decimal(str(config.assignment_percentage))
-        test_pct = Decimal(str(config.test_percentage))
-        exam_pct = Decimal(str(config.exam_percentage))
-        
-        # Calculate weighted scores
-        weighted_attendance = (attendance_score * attendance_pct) / Decimal('100')
-        weighted_assignments = (assignment_score * assignment_pct) / Decimal('100')
-        weighted_tests = (test_score * test_pct) / Decimal('100')
-        weighted_exams = (exam_score * exam_pct) / Decimal('100')
-        
-        self.total_score = weighted_attendance + weighted_assignments + weighted_tests + weighted_exams
+
+        # Sum the already-weighted scores
+        self.total_score = attendance_score + assignment_score + test_score + exam_score
         self.letter_grade = self.calculate_letter_grade()
-        
+
         return self.total_score
     
     def save(self, *args, **kwargs):

@@ -235,7 +235,7 @@ const DashboardAttendanceCard = () => {
 
   return (
     <div className={`attendance-dashboard-wrapper ${isFiltered ? 'attendance-filters-active' : ''}`}>
-      <div className="attendance-dashboard-card">
+      <div className="dashboard-card attendance-dashboard-card">
         <div className="attendance-card-header">
           <div className="attendance-card-header-title">
             <h2>Attendance by Class</h2>

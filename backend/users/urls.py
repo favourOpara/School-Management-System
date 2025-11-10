@@ -1,17 +1,18 @@
 from django.urls import path
 from .views import (
-    CreateUserView, 
-    TeacherSignupView, 
+    CreateUserView,
+    TeacherSignupView,
     ParentSignupView,
-    me, 
-    list_teachers, 
-    list_students, 
-    students_with_subjects, 
-    list_parents, 
-    UserRetrieveUpdateDestroyView, 
+    me,
+    list_teachers,
+    list_students,
+    students_with_subjects,
+    list_parents,
+    UserRetrieveUpdateDestroyView,
     CustomTokenObtainPairView,
     student_history,
-    individual_student_history
+    individual_student_history,
+    parent_attendance_report
 )
 from rest_framework_simplejwt.views import TokenRefreshView
 
@@ -30,4 +31,5 @@ urlpatterns = [
     path('login/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('student-history/', student_history, name='student_history'),
     path('student-history/<int:student_id>/', individual_student_history, name='individual_student_history'),
+    path('parent/attendance-report/', parent_attendance_report, name='parent_attendance_report'),
 ]

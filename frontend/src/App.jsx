@@ -6,6 +6,7 @@ import StudentDashboard from './pages/StudentDashboard';
 import TeacherDashboard from './pages/TeacherDashboard';
 import ParentDashboard from './pages/ParentDashboard';
 import HomePage from './pages/HomePage';
+import TakeAssessment from './components/TakeAssessment';
 import { isTokenExpired } from './authUtils';
 import ProtectedRoute from './components/ProtectedRoute';
 
@@ -91,6 +92,15 @@ function App() {
           element={
             <ProtectedRoute requiredRole="student">
               <StudentDashboard />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/student-dashboard/take-assessment/:assessmentId"
+          element={
+            <ProtectedRoute requiredRole="student">
+              <TakeAssessment />
             </ProtectedRoute>
           }
         />

@@ -5,6 +5,7 @@ from .views import (
     ClassListCreateView, ClassDetailView,
     ClassSessionListCreateView, ClassSessionDetailView,
     SubjectListCreateView, SubjectListView, SubjectDetailView,
+    TopicListCreateView, TopicDetailView,
     SessionInheritanceView, TeacherAssignedSubjectsView, TeacherSubjectStudentsView,
     SubjectContentCreateView, TeacherSubjectContentView, TeacherContentDetailView,
     SubjectContentListView, SessionStudentsView, StudentAssignmentListView,
@@ -15,7 +16,17 @@ from .views import (
     delete_submission,
     get_student_submissions,
     grade_submission,
-    release_grade
+    release_grade,
+    CreateAssessmentView,
+    TeacherAssessmentListView,
+    AssessmentDetailView,
+    QuestionUpdateView,
+    AdminAssessmentListView,
+    AdminDeleteAssessmentView,
+    ToggleAssessmentReleaseView,
+    UnlockAllAssessmentsView,
+    StudentAvailableAssessmentsView,
+    StudentSubmitAssessmentView
 )
 
 urlpatterns = [
@@ -37,6 +48,10 @@ urlpatterns = [
     path('subjects/', SubjectListCreateView.as_view(), name='subject-list-create'),
     path('subjects/list/', SubjectListView.as_view(), name='subject-list'),
     path('subjects/<int:id>/', SubjectDetailView.as_view(), name='subject-detail'),
+
+    # Topics - for organizing questions within subjects
+    path('topics/', TopicListCreateView.as_view(), name='topic-list-create'),
+    path('topics/<int:pk>/', TopicDetailView.as_view(), name='topic-detail'),
     
     # Teacher-only endpoints
     path('teacher/assigned-subjects/', TeacherAssignedSubjectsView.as_view(), name='teacher-assigned-subjects'),
@@ -58,8 +73,26 @@ urlpatterns = [
     path('student/submissions/<int:pk>/', StudentSubmissionDetailView.as_view(), name='student-submission-detail'),
     path('student/submissions/<int:submission_id>/delete/', delete_submission, name='delete-submission'),
     
-    # Teacher submission viewing and grading (NEW)
+    # Teacher submission viewing and grading
     path('student/<int:student_id>/submissions/', get_student_submissions, name='student-submissions-view'),
     path('submission/<int:submission_id>/grade/', grade_submission, name='grade-submission'),
     path('submission/<int:submission_id>/release/', release_grade, name='release-grade'),
+
+    # Assessment endpoints (Tests & Exams)
+    path('teacher/create-assessment/', CreateAssessmentView.as_view(), name='create-assessment'),
+    path('teacher/assessments/', TeacherAssessmentListView.as_view(), name='teacher-assessments'),
+    path('teacher/assessments/<int:pk>/', AssessmentDetailView.as_view(), name='assessment-detail'),
+
+    # Question update endpoint
+    path('questions/<int:pk>/', QuestionUpdateView.as_view(), name='question-update'),
+
+    # Admin assessment review endpoints
+    path('admin/assessments/', AdminAssessmentListView.as_view(), name='admin-assessments'),
+    path('admin/assessments/<int:pk>/delete/', AdminDeleteAssessmentView.as_view(), name='admin-delete-assessment'),
+    path('admin/assessments/<int:pk>/toggle-release/', ToggleAssessmentReleaseView.as_view(), name='toggle-assessment-release'),
+    path('admin/assessments/unlock-all/', UnlockAllAssessmentsView.as_view(), name='unlock-all-assessments'),
+
+    # Student assessment endpoints
+    path('student/assessments/', StudentAvailableAssessmentsView.as_view(), name='student-assessments'),
+    path('student/assessments/<int:pk>/submit/', StudentSubmitAssessmentView.as_view(), name='student-assessment-submit'),
 ]

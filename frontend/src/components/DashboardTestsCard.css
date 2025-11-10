@@ -1,0 +1,307 @@
+/* ===============================
+   TESTS DASHBOARD CARD STYLES
+   =============================== */
+
+/* Wrapper that contains the card */
+.tests-dashboard-wrapper {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Tests-specific card styling (inherits from .dashboard-card) */
+.tests-dashboard-card {
+  /* Additional tests-specific styles if needed */
+}
+
+/* Card header */
+.tests-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 2px solid #e5e7eb;
+}
+
+.tests-card-header-title {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.tests-card-header-title h2 {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #1f2937;
+}
+
+/* Unlock all button */
+.tests-unlock-all-btn {
+  padding: 0.75rem 1.5rem;
+  background-color: #3b82f6;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  white-space: nowrap;
+}
+
+.tests-unlock-all-btn:hover:not(:disabled) {
+  background-color: #2563eb;
+}
+
+.tests-unlock-all-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Dashboard controls (filters) */
+.tests-dashboard-controls {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.tests-dashboard-controls > div {
+  min-width: 150px;
+}
+
+.tests-dashboard-filter-btn,
+.tests-dashboard-close-btn {
+  display: none;
+  padding: 0.5rem 1rem;
+  background-color: #3b82f6;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.tests-dashboard-filter-btn:hover {
+  background-color: #2563eb;
+}
+
+.tests-dashboard-close-btn {
+  background-color: #6b7280;
+}
+
+.tests-dashboard-close-btn:hover {
+  background-color: #4b5563;
+}
+
+/* Class list */
+.tests-class-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.tests-class-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem;
+  background-color: #f9fafb;
+  border-radius: 8px;
+  transition: all 0.2s;
+  cursor: pointer;
+}
+
+.tests-class-list li:hover {
+  background-color: #f3f4f6;
+  transform: translateX(4px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.tests-class-name {
+  font-weight: 600;
+  color: #1f2937;
+  font-size: 1rem;
+  min-width: 120px;
+}
+
+/* Progress bar */
+.tests-progress-bar {
+  flex: 1;
+  height: 24px;
+  background-color: #e5e7eb;
+  border-radius: 12px;
+  overflow: hidden;
+  margin: 0 1rem;
+  position: relative;
+}
+
+.tests-filled {
+  height: 100%;
+  transition: width 0.5s ease-in-out;
+  border-radius: 12px;
+}
+
+.tests-pct-label {
+  font-weight: 700;
+  color: #1f2937;
+  font-size: 1rem;
+  min-width: 50px;
+  text-align: right;
+}
+
+/* No data / error states */
+.tests-no-data,
+.tests-error-data {
+  padding: 2rem;
+  text-align: center;
+  color: #6b7280;
+  font-size: 1rem;
+  list-style: none;
+}
+
+.tests-error-data {
+  color: #d32f2f;
+}
+
+/* Summary section */
+.tests-summary {
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 2px solid #e5e7eb;
+  text-align: center;
+}
+
+.tests-summary-text {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+/* ===============================
+   MOBILE RESPONSIVE STYLES
+   =============================== */
+
+@media (max-width: 768px) {
+  .tests-dashboard-card {
+    padding: 1rem;
+  }
+
+  .tests-card-header {
+    flex-direction: column;
+    gap: 1rem;
+    align-items: stretch;
+  }
+
+  .tests-card-header-title {
+    align-items: center;
+  }
+
+  .tests-card-header-title h2 {
+    font-size: 1.25rem;
+    text-align: center;
+  }
+
+  .tests-unlock-all-btn {
+    width: 100%;
+    font-size: 0.85rem;
+    padding: 0.6rem 1rem;
+  }
+
+  /* Mobile controls layout */
+  .tests-dashboard-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  /* Hide select dropdowns by default on mobile */
+  .tests-dashboard-controls > div {
+    display: none;
+    width: 100%;
+    min-width: auto;
+  }
+
+  /* Show select dropdowns when filters are active */
+  .tests-filters-active .tests-dashboard-controls > div {
+    display: block;
+  }
+
+  /* Show filter button by default on mobile */
+  .tests-dashboard-filter-btn {
+    display: block;
+    width: 100%;
+  }
+
+  /* Hide close button by default on mobile */
+  .tests-dashboard-close-btn {
+    display: none;
+    width: 100%;
+  }
+
+  /* When filters are active: hide filter button, show close button */
+  .tests-filters-active .tests-dashboard-filter-btn {
+    display: none;
+  }
+
+  .tests-filters-active .tests-dashboard-close-btn {
+    display: block;
+  }
+
+  .tests-class-list li {
+    flex-direction: column;
+    gap: 0.75rem;
+    align-items: stretch;
+    padding: 0.875rem;
+  }
+
+  .tests-class-list li:hover {
+    transform: none;
+    box-shadow: none;
+  }
+
+  .tests-class-name {
+    text-align: center;
+    font-size: 0.95rem;
+  }
+
+  .tests-progress-bar {
+    margin: 0;
+    width: 100%;
+  }
+
+  .tests-pct-label {
+    text-align: center;
+    font-size: 0.95rem;
+  }
+
+  .tests-summary-text {
+    font-size: 0.9rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .tests-card-header-title h2 {
+    font-size: 1.1rem;
+  }
+
+  .tests-class-name {
+    font-size: 0.875rem;
+  }
+
+  .tests-pct-label {
+    font-size: 0.875rem;
+  }
+
+  .tests-summary-text {
+    font-size: 0.85rem;
+  }
+}

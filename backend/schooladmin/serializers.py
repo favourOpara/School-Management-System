@@ -147,9 +147,24 @@ class GradingConfigurationSerializer(serializers.ModelSerializer):
         return obj.attendance_percentage + obj.assignment_percentage + obj.test_percentage + obj.exam_percentage
     
     def create(self, validated_data):
+        academic_year = validated_data.get('academic_year')
+        term = validated_data.get('term')
+
+        # Check if a configuration already exists for this academic year and term
+        existing_config = GradingConfiguration.objects.filter(
+            academic_year=academic_year,
+            term=term
+        ).first()
+
+        if existing_config:
+            # Deactivate the existing configuration
+            existing_config.is_active = False
+            existing_config.save()
+            print(f"Deactivated existing config: {existing_config.id} for {academic_year} - {term}")
+
         validated_data['created_by'] = self.context['request'].user
         config = super().create(validated_data)
-        
+
         # Auto-create grade components
         components_data = [
             ('attendance', config.attendance_percentage),
@@ -157,7 +172,7 @@ class GradingConfigurationSerializer(serializers.ModelSerializer):
             ('test', config.test_percentage),
             ('exam', config.exam_percentage),
         ]
-        
+
         for component_type, percentage in components_data:
             GradeComponent.objects.create(
                 grading_config=config,
@@ -165,7 +180,7 @@ class GradingConfigurationSerializer(serializers.ModelSerializer):
                 percentage_weight=percentage,
                 max_score=100
             )
-        
+
         return config
     
     def update(self, instance, validated_data):

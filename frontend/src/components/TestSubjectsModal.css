@@ -1,0 +1,248 @@
+/* ===============================
+   TEST MODALS SHARED STYLES
+   =============================== */
+
+/* Modal overlay */
+.test-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1rem;
+}
+
+/* Modal content container */
+.test-modal-content {
+  background: white;
+  border-radius: 12px;
+  width: 100%;
+  max-width: 700px;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+}
+
+/* Modal header */
+.test-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 1.5rem;
+  border-bottom: 2px solid #e5e7eb;
+}
+
+.test-modal-header h2 {
+  margin: 0 0 0.5rem 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #1f2937;
+}
+
+.test-modal-subtitle {
+  margin: 0;
+  font-size: 0.9rem;
+  color: #6b7280;
+}
+
+.test-modal-close-btn {
+  background: none;
+  border: none;
+  font-size: 2rem;
+  color: #9ca3af;
+  cursor: pointer;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.test-modal-close-btn:hover {
+  background-color: #f3f4f6;
+  color: #1f2937;
+}
+
+/* Modal body */
+.test-modal-body {
+  padding: 1.5rem;
+  overflow-y: auto;
+  flex: 1;
+}
+
+/* Loading, error, no data states */
+.test-modal-loading,
+.test-modal-error,
+.test-modal-no-data {
+  text-align: center;
+  padding: 2rem;
+  font-size: 1rem;
+  color: #6b7280;
+}
+
+.test-modal-error {
+  color: #d32f2f;
+}
+
+/* ===============================
+   SUBJECTS LIST STYLES
+   =============================== */
+
+.test-subjects-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.test-subject-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.25rem;
+  background-color: #f9fafb;
+  border-radius: 8px;
+  border: 2px solid transparent;
+  transition: all 0.2s;
+  cursor: pointer;
+}
+
+.test-subject-item:hover {
+  background-color: #f3f4f6;
+  border-color: #3b82f6;
+  transform: translateX(4px);
+}
+
+.test-subject-item.no-tests {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.test-subject-item.no-tests:hover {
+  background-color: #f9fafb;
+  border-color: transparent;
+  transform: none;
+}
+
+.test-subject-info {
+  flex: 1;
+}
+
+.test-subject-name {
+  margin: 0 0 0.5rem 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.test-subject-teacher {
+  margin: 0 0 0.25rem 0;
+  font-size: 0.9rem;
+  color: #6b7280;
+}
+
+.test-subject-stats {
+  margin: 0;
+  font-size: 0.85rem;
+  color: #9ca3af;
+}
+
+.test-subject-no-tests {
+  margin: 0;
+  font-size: 0.85rem;
+  color: #d32f2f;
+  font-weight: 500;
+}
+
+.test-subject-completion {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  min-width: 200px;
+}
+
+.test-subject-progress-bar {
+  flex: 1;
+  height: 24px;
+  background-color: #e5e7eb;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.test-subject-progress-fill {
+  height: 100%;
+  transition: width 0.5s ease-in-out;
+  border-radius: 12px;
+}
+
+.test-subject-percentage {
+  font-weight: 700;
+  color: #1f2937;
+  font-size: 1rem;
+  min-width: 50px;
+  text-align: right;
+}
+
+/* ===============================
+   MOBILE RESPONSIVE STYLES
+   =============================== */
+
+@media (max-width: 768px) {
+  .test-modal-content {
+    max-width: 95%;
+    max-height: 90vh;
+  }
+
+  .test-modal-header {
+    padding: 1rem;
+  }
+
+  .test-modal-header h2 {
+    font-size: 1.25rem;
+  }
+
+  .test-modal-body {
+    padding: 1rem;
+  }
+
+  .test-subject-item {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 1rem;
+  }
+
+  .test-subject-item:hover {
+    transform: none;
+  }
+
+  .test-subject-completion {
+    width: 100%;
+    min-width: auto;
+  }
+
+  .test-subject-name {
+    font-size: 1rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .test-modal-header h2 {
+    font-size: 1.1rem;
+  }
+
+  .test-modal-subtitle {
+    font-size: 0.85rem;
+  }
+
+  .test-subject-item {
+    padding: 1rem;
+  }
+}

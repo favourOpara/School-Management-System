@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import RoleBasedSidebar from '../components/RoleBasedSidebar';
+import ParentAttendanceReport from '../components/ParentAttendanceReport';
 import './ParentDashboard.css';
 
 const getGreeting = () => {
@@ -73,12 +74,7 @@ const ParentDashboard = () => {
           </div>
         );
       case 'attendance-reports':
-        return (
-          <div className="parent-dashboard-section">
-            <h2 className="parent-dashboard-section-title">Attendance Reports</h2>
-            <p className="parent-dashboard-section-text">Monitor your children's school attendance records.</p>
-          </div>
-        );
+        return <ParentAttendanceReport />;
       case 'fee-payments':
         return (
           <div className="parent-dashboard-section">

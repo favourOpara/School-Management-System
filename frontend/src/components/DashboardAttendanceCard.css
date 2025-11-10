@@ -2,16 +2,17 @@
    DASHBOARD ATTENDANCE CARD STYLES
    =============================== */
 
-/* Attendance card container */
-.attendance-dashboard-card {
-  background: #fff;
-  border-radius: 8px;
-  padding: 1.5rem;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+/* Wrapper that contains the card */
+.attendance-dashboard-wrapper {
   width: 100%;
-  border: 1px solid #e0e0e0;
-  position: relative;
-  margin: 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Attendance-specific card styling (inherits from .dashboard-card) */
+.attendance-dashboard-card {
+  /* Additional attendance-specific styles if needed */
 }
 
 /* Header inside attendance card */
@@ -151,66 +152,62 @@
 /* Mobile layout for attendance card - Position BELOW fees card */
 @media (max-width: 768px) {
   .attendance-dashboard-card {
-    display: block;
-    position: fixed;
-    top: 350px;
-    left: 50%; /* Center horizontally */
-    transform: translateX(-50%); /* Perfect centering */
-    width: 100%;
-    max-width: 360px;
-    padding: 1.5rem;
-    background-color: #ffffff;
-    z-index: 4;
-    max-height: calc(100vh - 370px); /* Limit height */
-    overflow-y: auto; /* Enable scrolling */
-    overflow-x: hidden;
-  }
-
-  /* Hide scrollbars but keep functionality */
-  .attendance-dashboard-card::-webkit-scrollbar {
-    display: none;
-  }
-  
-  .attendance-dashboard-card {
-    -ms-overflow-style: none; /* IE and Edge */
-    scrollbar-width: none; /* Firefox */
+    padding: 1rem;
   }
 
   .attendance-card-header {
-    display: block;
-    margin-bottom: 1rem;
+    flex-direction: column;
+    gap: 1rem;
+    align-items: stretch;
   }
 
+  .attendance-card-header h2 {
+    text-align: center;
+    font-size: 1.25rem;
+  }
+
+  /* Mobile controls layout */
   .attendance-dashboard-controls {
     display: flex;
     flex-direction: column;
-    gap: 0.5rem;
+    gap: 0.75rem;
     width: 100%;
   }
 
-  /* Show filter button in mobile view */
+  /* Hide select dropdowns by default on mobile */
+  .attendance-dashboard-controls > div {
+    display: none;
+    width: 100%;
+    min-width: auto;
+  }
+
+  /* Show select dropdowns when filters are active */
+  .attendance-filters-active .attendance-dashboard-controls > div {
+    display: block;
+  }
+
+  /* Show filter button by default on mobile */
   .attendance-dashboard-filter-btn {
     display: block;
-    margin-top: 0.8rem;
+    width: 100%;
   }
 
-  /* Hide close button by default, show only when filters are active */
+  /* Hide close button by default on mobile */
   .attendance-dashboard-close-btn {
     display: none;
+    width: 100%;
   }
 
-  /* Show close button in mobile view when filters are active */
-  .attendance-filters-active .attendance-dashboard-close-btn {
-    display: block;
-    margin-top: 0.8rem;
-  }
-
+  /* When filters are active: hide filter button, show close button */
   .attendance-filters-active .attendance-dashboard-filter-btn {
     display: none;
   }
 
+  .attendance-filters-active .attendance-dashboard-close-btn {
+    display: block;
+  }
+
   .attendance-class-list li {
-    display: flex;
     flex-direction: column;
     align-items: stretch;
     width: 100%;

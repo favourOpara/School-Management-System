@@ -3,6 +3,10 @@ import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import RoleBasedSidebar from '../components/RoleBasedSidebar';
 import AssignedClasses from '../components/AssignedClasses';
+import SetTest from '../components/SetTest';
+import SetExam from '../components/SetExam';
+import ViewQuestions from '../components/ViewQuestions';
+import ManualGrading from '../components/ManualGrading';
 import './TeacherDashboard.css';
 
 const getGreeting = () => {
@@ -42,18 +46,26 @@ const TeacherDashboard = () => {
                 <p className="teacher-dashboard-card-text">Manage your assigned classes and students by navigating to the sidebar and selecting 'My Classes'.</p>
               </div>
               <div className="teacher-dashboard-card">
-                <h3 className="teacher-dashboard-card-title">Grade Students</h3>
-                <p className="teacher-dashboard-card-text">Record and manage student grades and assessments by navigating to sidebar and selecting 'Grading'.</p>
+                <h3 className="teacher-dashboard-card-title">Set Questions</h3>
+                <p className="teacher-dashboard-card-text">Create test and exam questions for your students by navigating to sidebar and selecting 'Set Questions'.</p>
               </div>
               <div className="teacher-dashboard-card">
-                <h3 className="teacher-dashboard-card-title">Attendance</h3>
-                <p className="teacher-dashboard-card-text">Take and review student attendance records by navigating to sidebar and selecting 'Attendance'.</p>
+                <h3 className="teacher-dashboard-card-title">Grading</h3>
+                <p className="teacher-dashboard-card-text">Manually grade students when no online assessments are set by navigating to sidebar and selecting 'Grading'.</p>
               </div>
             </div>
           </div>
         );
       case 'assigned-classes':
         return <AssignedClasses />;
+      case 'set-test':
+        return <SetTest />;
+      case 'set-exam':
+        return <SetExam />;
+      case 'view-questions':
+        return <ViewQuestions />;
+      case 'manual-grading':
+        return <ManualGrading />;
       case 'student-list':
         return (
           <div className="teacher-dashboard-section">
