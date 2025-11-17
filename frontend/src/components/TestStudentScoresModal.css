@@ -214,6 +214,21 @@
   margin-top: 0.25rem;
 }
 
+.manual-badge {
+  font-size: 0.65rem;
+  color: #6366f1;
+  font-weight: 600;
+  background-color: #e0e7ff;
+  padding: 0.15rem 0.4rem;
+  border-radius: 3px;
+  margin-top: 0.25rem;
+}
+
+.score-display.manual {
+  background-color: #f5f3ff;
+  border: 1px solid #c7d2fe;
+}
+
 /* Score editing */
 .score-edit-container {
   display: flex;

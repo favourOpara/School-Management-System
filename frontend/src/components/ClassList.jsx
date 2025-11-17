@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useLoading } from '../context/LoadingContext';
+import { useDialog } from '../contexts/DialogContext';
 
 const ClassList = ({ classes, onRefresh }) => {
+    const { showConfirm } = useDialog();
     const [editId, setEditId] = useState(null);
     const [editData, setEditData] = useState({ name: '', description: '' });
     const [message, setMessage] = useState('');
@@ -41,9 +43,15 @@ const ClassList = ({ classes, onRefresh }) => {
     };
   
     const deleteClass = async (id) => {
-      const confirm = window.confirm('Delete this class?');
-      if (!confirm) return;
-  
+      const confirmed = await showConfirm({
+        title: 'Delete Class',
+        message: 'Are you sure you want to delete this class? This action cannot be undone.',
+        confirmText: 'Delete',
+        cancelText: 'Cancel',
+        confirmButtonClass: 'confirm-btn-danger'
+      });
+      if (!confirmed) return;
+
       showLoader();
       try {
         await axios.delete(`http://127.0.0.1:8000/api/admin/classes/${id}/`, {

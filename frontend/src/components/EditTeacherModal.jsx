@@ -2,8 +2,10 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import './EditUserModal.css';
+import { useDialog } from '../contexts/DialogContext';
 
 const EditTeacherModal = ({ user, onClose, onUpdated }) => {
+  const { showAlert } = useDialog();
   const [formData, setFormData] = useState({
     first_name: user.first_name || '',
     last_name: user.last_name || '',
@@ -47,7 +49,10 @@ const EditTeacherModal = ({ user, onClose, onUpdated }) => {
       );
 
       onUpdated(response.data);
-      alert('Teacher updated successfully!');
+      showAlert({
+        type: 'success',
+        message: 'Teacher updated successfully!'
+      });
       onClose();
     } catch (err) {
       console.error('Error updating teacher:', err);

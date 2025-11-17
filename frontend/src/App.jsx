@@ -9,6 +9,7 @@ import HomePage from './pages/HomePage';
 import TakeAssessment from './components/TakeAssessment';
 import { isTokenExpired } from './authUtils';
 import ProtectedRoute from './components/ProtectedRoute';
+import { DialogProvider } from './contexts/DialogContext';
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -51,8 +52,9 @@ function App() {
   };
 
   return (
-    <Router>
-      <Routes>
+    <DialogProvider>
+      <Router>
+        <Routes>
         {/* Home Route */}
         <Route
           path="/"
@@ -127,8 +129,9 @@ function App() {
 
         {/* Catch all route - redirect to home */}
         <Route path="*" element={<Navigate to="/" />} />
-      </Routes>
-    </Router>
+        </Routes>
+      </Router>
+    </DialogProvider>
   );
 }
 

@@ -1,8 +1,10 @@
 // src/pages/ParentDashboard.jsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import RoleBasedSidebar from '../components/RoleBasedSidebar';
 import ParentAttendanceReport from '../components/ParentAttendanceReport';
+import ParentGradeReport from '../components/ParentGradeReport';
+import TopHeader from '../components/TopHeader';
 import './ParentDashboard.css';
 
 const getGreeting = () => {
@@ -16,6 +18,7 @@ const ParentDashboard = () => {
   const location = useLocation();
   const [activeTab, setActiveTab] = useState('dashboard');
   const [userName, setUserName] = useState('');
+  const sidebarRef = useRef(null);
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -34,7 +37,7 @@ const ParentDashboard = () => {
       case 'dashboard':
         return (
           <div>
-            <h2 className="parent-dashboard-greeting">{getGreeting()}, {userName}</h2>
+            <h2 className="parent-dashboard-greeting">{getGreeting()}, {userName} 😊</h2>
             <p className="parent-dashboard-subtitle">Welcome to your parent dashboard.</p>
             <div className="parent-dashboard-grid">
               <div className="parent-dashboard-card">
@@ -67,12 +70,7 @@ const ParentDashboard = () => {
           </div>
         );
       case 'grade-reports':
-        return (
-          <div className="parent-dashboard-section">
-            <h2 className="parent-dashboard-section-title">Grade Reports</h2>
-            <p className="parent-dashboard-section-text">View detailed grade reports for your children.</p>
-          </div>
-        );
+        return <ParentGradeReport />;
       case 'attendance-reports':
         return <ParentAttendanceReport />;
       case 'fee-payments':
@@ -128,11 +126,13 @@ const ParentDashboard = () => {
 
   return (
     <div className="parent-dashboard-container">
-      <RoleBasedSidebar 
-        userRole="parent" 
-        activeTab={activeTab} 
-        setActiveTab={setActiveTab} 
+      <RoleBasedSidebar
+        ref={sidebarRef}
+        userRole="parent"
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
       />
+      <TopHeader onMenuClick={() => sidebarRef.current?.openSidebar()} />
       <main className="parent-dashboard-main">
         {renderContent()}
       </main>

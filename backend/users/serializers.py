@@ -1,12 +1,17 @@
 from rest_framework import serializers
 from .models import CustomUser
 from academics.models import Class, Subject
+from PIL import Image
+from io import BytesIO
+from django.core.files.uploadedfile import InMemoryUploadedFile
+import sys
 
 # 🔹 Used for Admin-created students, parents and editing users
 class UserCreateSerializer(serializers.ModelSerializer):
     confirm_password = serializers.CharField(write_only=True, required=False)
     classroom = serializers.PrimaryKeyRelatedField(queryset=Class.objects.all(), required=False, allow_null=True)
     department = serializers.CharField(required=False, allow_blank=True)
+    profile_picture = serializers.ImageField(required=False, allow_null=True)
     children = serializers.PrimaryKeyRelatedField(
         queryset=CustomUser.objects.filter(role='student'),
         many=True,
@@ -18,7 +23,7 @@ class UserCreateSerializer(serializers.ModelSerializer):
         fields = [
             'username', 'password', 'confirm_password', 'first_name', 'middle_name', 'last_name',
             'role', 'gender', 'classroom', 'academic_year', 'term',
-            'date_of_birth', 'department',
+            'date_of_birth', 'department', 'profile_picture',
             'email', 'phone_number', 'children'
         ]
         extra_kwargs = {
@@ -27,6 +32,63 @@ class UserCreateSerializer(serializers.ModelSerializer):
             'phone_number': {'required': False},
             'date_of_birth': {'required': False},
         }
+
+    def validate_profile_picture(self, value):
+        """Validate and resize profile picture to fit report sheet requirements"""
+        if value:
+            # Check file size (max 100KB)
+            if value.size > 100 * 1024:  # 100KB in bytes
+                raise serializers.ValidationError("Image file size must not exceed 100KB.")
+
+            # Open image and resize to report sheet dimensions (120x150px)
+            try:
+                img = Image.open(value)
+
+                # Convert RGBA to RGB if necessary
+                if img.mode in ('RGBA', 'LA', 'P'):
+                    background = Image.new('RGB', img.size, (255, 255, 255))
+                    if img.mode == 'P':
+                        img = img.convert('RGBA')
+                    background.paste(img, mask=img.split()[-1] if img.mode == 'RGBA' else None)
+                    img = background
+
+                # Resize to fit 120x150 maintaining aspect ratio, then crop
+                target_width, target_height = 120, 150
+                img_ratio = img.width / img.height
+                target_ratio = target_width / target_height
+
+                if img_ratio > target_ratio:
+                    # Image is wider, scale by height
+                    new_height = target_height
+                    new_width = int(target_height * img_ratio)
+                else:
+                    # Image is taller, scale by width
+                    new_width = target_width
+                    new_height = int(target_width / img_ratio)
+
+                img = img.resize((new_width, new_height), Image.Resampling.LANCZOS)
+
+                # Crop to exact dimensions (center crop)
+                left = (new_width - target_width) // 2
+                top = (new_height - target_height) // 2
+                img = img.crop((left, top, left + target_width, top + target_height))
+
+                # Save optimized image
+                output = BytesIO()
+                img.save(output, format='JPEG', quality=85, optimize=True)
+                output.seek(0)
+
+                # Create new InMemoryUploadedFile
+                return InMemoryUploadedFile(
+                    output, 'ImageField',
+                    f"{value.name.split('.')[0]}.jpg",
+                    'image/jpeg',
+                    sys.getsizeof(output), None
+                )
+            except Exception as e:
+                raise serializers.ValidationError(f"Invalid image file: {str(e)}")
+
+        return value
 
     def validate(self, data):
         password = data.get('password')
@@ -137,13 +199,14 @@ class StudentDetailSerializer(serializers.ModelSerializer):
     parent = serializers.SerializerMethodField()
     age = serializers.SerializerMethodField()
     password = serializers.SerializerMethodField()
+    profile_picture = serializers.SerializerMethodField()
 
     class Meta:
         model = CustomUser
         fields = [
             'id', 'username', 'full_name', 'middle_name', 'gender',
             'academic_year', 'term', 'age', 'classroom', 'parent',
-            'password', 'department'
+            'password', 'department', 'profile_picture'
         ]
 
     def get_full_name(self, obj):
@@ -180,6 +243,13 @@ class StudentDetailSerializer(serializers.ModelSerializer):
         request = self.context.get('request')
         if request and request.user.role == 'admin':
             return obj.password
+        return None
+
+    def get_profile_picture(self, obj):
+        if obj.profile_picture:
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(obj.profile_picture.url)
         return None
 
 

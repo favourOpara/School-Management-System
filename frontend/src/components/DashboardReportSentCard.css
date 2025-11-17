@@ -1,0 +1,275 @@
+/* DashboardReportSentCard.css */
+
+.report-sent-card {
+  background: white;
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  border: 1px solid #e5e7eb;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.report-sent-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.report-sent-header h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.report-sent-header p {
+  margin: 0.25rem 0 0 0;
+  font-size: 0.85rem;
+  color: #6b7280;
+}
+
+.report-sent-filters {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.rs-filter-select {
+  flex: 1;
+  min-width: 0;
+}
+
+.report-sent-loading,
+.report-sent-error,
+.report-sent-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  text-align: center;
+  color: #6b7280;
+  flex: 1;
+}
+
+.report-sent-error {
+  color: #dc2626;
+}
+
+.rs-spinner {
+  animation: rs-spin 1s linear infinite;
+  margin-bottom: 0.75rem;
+}
+
+@keyframes rs-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.report-sent-summary {
+  display: flex;
+  justify-content: space-around;
+  padding: 1rem;
+  background-color: #f9fafb;
+  border-radius: 8px;
+  margin-bottom: 1.25rem;
+}
+
+.summary-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.stat-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #1f2937;
+}
+
+.stat-percentage {
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.stat-label {
+  font-size: 0.75rem;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.report-sent-classes {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.no-classes {
+  text-align: center;
+  padding: 2rem;
+  color: #9ca3af;
+}
+
+.rs-no-data {
+  text-align: center;
+  padding: 2rem;
+  color: #6b7280;
+}
+
+.rs-class-item {
+  background-color: #f0f9ff;
+  border: 1px solid #bae6fd;
+  border-radius: 8px;
+  padding: 0.875rem 1rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.rs-class-item:hover {
+  background-color: #e0f2fe;
+  border-color: #7dd3fc;
+  transform: translateX(4px);
+}
+
+.rs-class-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.rs-class-name {
+  font-weight: 600;
+  color: #0c4a6e;
+  font-size: 0.95rem;
+}
+
+.rs-class-stats {
+  font-size: 0.85rem;
+  color: #0369a1;
+  font-weight: 500;
+}
+
+.rs-progress-container {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.rs-progress-bar {
+  flex: 1;
+  height: 8px;
+  background-color: #e0e7ff;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.rs-progress-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+
+.rs-percentage {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #1f2937;
+  min-width: 45px;
+  text-align: right;
+}
+
+/* Wrapper */
+.report-sent-wrapper {
+  width: 100%;
+  height: 100%;
+}
+
+/* Filter/Close buttons - hidden by default on desktop */
+.rs-filter-btn,
+.rs-close-btn {
+  display: none;
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.rs-filter-btn {
+  background-color: #3b82f6;
+  color: white;
+}
+
+.rs-filter-btn:hover {
+  background-color: #2563eb;
+}
+
+.rs-close-btn {
+  background-color: #6b7280;
+  color: white;
+}
+
+.rs-close-btn:hover {
+  background-color: #4b5563;
+}
+
+@media (max-width: 768px) {
+  .report-sent-card {
+    padding: 1rem;
+  }
+
+  /* Mobile filters layout */
+  .report-sent-filters {
+    flex-wrap: wrap;
+  }
+
+  /* Keep select dropdowns always visible on mobile */
+  .rs-filter-select {
+    flex: 1 1 45%;
+  }
+
+  /* Show filter button by default on mobile */
+  .rs-filter-btn {
+    display: block;
+    width: 100%;
+    margin-top: 0.5rem;
+  }
+
+  /* Hide close button by default on mobile */
+  .rs-close-btn {
+    display: none;
+    width: 100%;
+    margin-top: 0.5rem;
+  }
+
+  /* When filters are active: hide filter button, show close button */
+  .rs-filters-active .rs-filter-btn {
+    display: none;
+  }
+
+  .rs-filters-active .rs-close-btn {
+    display: block;
+  }
+
+  .report-sent-summary {
+    padding: 0.75rem;
+  }
+
+  .stat-value,
+  .stat-percentage {
+    font-size: 1.25rem;
+  }
+
+  .rs-class-item {
+    padding: 0.75rem;
+  }
+}

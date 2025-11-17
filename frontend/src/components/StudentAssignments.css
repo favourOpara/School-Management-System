@@ -1,7 +1,7 @@
 /* StudentAssignments.css */
 
 .assignments-container {
-  padding: 2rem;
+  padding: 0 2rem 2rem 2rem;
   max-width: 1400px;
   margin: 0 auto;
 }
@@ -645,8 +645,7 @@
 /* Responsive */
 @media (max-width: 768px) {
   .assignments-container {
-    padding: 1rem;
-    padding-top: 80px; /* Keep space for mobile header */
+    padding: 0 1rem 1rem 1rem;
   }
 
   .assignments-header h1 {

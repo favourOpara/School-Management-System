@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import './attendancestudenttable.css';
+import { useDialog } from '../contexts/DialogContext';
 
 const AttendanceStudentTable = ({ subjectName, students, schoolDays, onUpdateAttendance }) => {
+  const { showAlert } = useDialog();
   const [selectedStudent, setSelectedStudent] = useState(null);
   const [calendarVisible, setCalendarVisible] = useState(false);
 
@@ -62,7 +64,12 @@ const AttendanceStudentTable = ({ subjectName, students, schoolDays, onUpdateAtt
                   <button
                     className="missed-days-btn"
                     onClick={() =>
-                      alert(`${missedDays.length} missed:\n${missedDays.join('\n')}`)
+                      showAlert({
+                        type: 'info',
+                        title: 'Missed Days',
+                        message: `${missedDays.length} missed days:\n${missedDays.join('\n')}`,
+                        autoClose: false
+                      })
                     }
                   >
                     {missedDays.length}

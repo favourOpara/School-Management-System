@@ -3,8 +3,10 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import Select from 'react-select';
 import './EditUserModal.css';
+import { useDialog } from '../contexts/DialogContext';
 
 const EditParentModal = ({ user, onClose, onUpdated }) => {
+  const { showAlert } = useDialog();
   const [allStudents, setAllStudents] = useState([]);
   const [formData, setFormData] = useState({
     first_name: '',
@@ -77,12 +79,18 @@ const EditParentModal = ({ user, onClose, onUpdated }) => {
         headers: { Authorization: `Bearer ${token}` }
       });
 
-      alert('Parent updated successfully.');
+      showAlert({
+        type: 'success',
+        message: 'Parent updated successfully.'
+      });
       onClose();
       if (onUpdated) onUpdated(res.data);
     } catch (err) {
       console.error('Error updating parent:', err);
-      alert('Failed to update parent.');
+      showAlert({
+        type: 'error',
+        message: 'Failed to update parent.'
+      });
     }
   };
 

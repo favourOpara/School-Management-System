@@ -650,7 +650,7 @@
 /* Responsive Design */
 @media (max-width: 768px) {
   .set-test-container {
-    padding: 5rem 1rem 1rem 1rem;
+    padding: 0 1rem 1rem 1rem;
   }
 
   .set-test-form {

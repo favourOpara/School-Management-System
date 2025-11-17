@@ -262,6 +262,47 @@
   color: #374151;
 }
 
+.content-type-alert {
+  background-color: #fef3c7;
+  color: #92400e;
+}
+
+.content-type-success {
+  background-color: #d1fae5;
+  color: #065f46;
+}
+
+.priority-badge {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 10px;
+  text-transform: uppercase;
+}
+
+.priority-high {
+  background-color: #fee2e2;
+  color: #dc2626;
+}
+
+.priority-medium {
+  background-color: #fef3c7;
+  color: #d97706;
+}
+
+.priority-low {
+  background-color: #dbeafe;
+  color: #2563eb;
+}
+
+.direct-notification {
+  border-left: 4px solid #f59e0b;
+}
+
+.direct-notification.unread {
+  border-left-color: #dc2626;
+}
+
 .new-badge {
   background-color: #dc2626;
   color: white;
@@ -571,14 +612,89 @@
   color: #2563eb;
 }
 
+/* Direct Notification Modal Styles */
+.direct-notification-message {
+  white-space: pre-line;
+  line-height: 1.6;
+  color: #374151;
+  margin-bottom: 16px;
+  font-size: 14px;
+}
+
+.incomplete-subjects-detail {
+  background-color: #fffbeb;
+  border: 1px solid #fde68a;
+  border-radius: 8px;
+  padding: 16px;
+}
+
+.incomplete-subjects-detail h4 {
+  margin: 0 0 12px 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #92400e;
+}
+
+.incomplete-subjects-detail ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.incomplete-subjects-detail li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid #fef3c7;
+}
+
+.incomplete-subjects-detail li:last-child {
+  border-bottom: none;
+}
+
+.incomplete-subjects-detail li strong {
+  font-size: 14px;
+  color: #1f2937;
+}
+
+.missing-scores {
+  font-size: 12px;
+  color: #d97706;
+  background-color: #fef3c7;
+  padding: 4px 8px;
+  border-radius: 6px;
+}
+
+.notification-modal-actions {
+  padding: 16px 0 0;
+  border-top: 1px solid #e5e7eb;
+  margin-top: 16px;
+}
+
+.mark-read-modal-btn {
+  padding: 10px 20px;
+  background-color: #3b82f6;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.mark-read-modal-btn:hover {
+  background-color: #2563eb;
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
   .notifications-main-wrapper {
     padding: 16px;
-    margin-top: 50px;
-    padding-top: 20px;
+    margin-top: 0;
+    padding-top: 0;
   }
-  
+
   .notifications-main-title {
     font-size: 24px;
     color: #1e3a8a !important;

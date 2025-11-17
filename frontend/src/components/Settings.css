@@ -1,6 +1,6 @@
 /* src/components/Settings.css */
 .settings-container {
-  padding: 20px;
+  padding: 0 20px 20px 20px;
   max-width: 1200px;
   margin: 0 auto;
   background-color: #f8f9fa;
@@ -425,10 +425,10 @@
 /* Responsive Design */
 @media (max-width: 768px) {
   .settings-container {
-    padding: 10px;
+    padding: 0 10px 10px 10px;
     margin: 0;
   }
-  
+
   .settings-header {
     padding: 15px;
     margin-bottom: 20px;

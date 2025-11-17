@@ -27,15 +27,34 @@
 /* Header inside each card */
 .card-header {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
   margin-bottom: 1rem;
 }
 
 .card-header h2 {
   margin: 0;
-  font-size: 1.3rem;
-  color: #333;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.card-header p {
+  margin: 0.25rem 0 0 0;
+  font-size: 0.85rem;
+  color: #6b7280;
+}
+
+/* Filters section */
+.card-filters {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.card-filter-select {
+  flex: 1;
+  min-width: 0;
 }
 
 /* Select dropdowns (year and term) */
@@ -179,14 +198,47 @@
   }
 
   .card-header {
-    flex-direction: column;
+    flex-direction: row;
     gap: 1rem;
-    align-items: stretch;
+    align-items: flex-start;
   }
 
   .card-header h2 {
-    text-align: center;
-    font-size: 1.25rem;
+    text-align: left;
+    font-size: 1.1rem;
+  }
+
+  /* Mobile filters layout */
+  .card-filters {
+    flex-wrap: wrap;
+  }
+
+  /* Keep select dropdowns always visible on mobile */
+  .card-filter-select {
+    flex: 1 1 45%;
+  }
+
+  /* Show filter button by default on mobile */
+  .dashboard-filter-btn {
+    display: block;
+    width: 100%;
+    margin-top: 0.5rem;
+  }
+
+  /* Hide close button by default on mobile */
+  .dashboard-close-btn {
+    display: none;
+    width: 100%;
+    margin-top: 0.5rem;
+  }
+
+  /* When filters are active: hide filter button, show close button */
+  .filters-active .dashboard-filter-btn {
+    display: none;
+  }
+
+  .filters-active .dashboard-close-btn {
+    display: block;
   }
 
   /* Mobile controls layout */
@@ -206,27 +258,6 @@
 
   /* Show select dropdowns when filters are active */
   .filters-active .dashboard-controls > div {
-    display: block;
-  }
-
-  /* Show filter button by default on mobile */
-  .dashboard-filter-btn {
-    display: block;
-    width: 100%;
-  }
-
-  /* Hide close button by default on mobile */
-  .dashboard-close-btn {
-    display: none;
-    width: 100%;
-  }
-
-  /* When filters are active: hide filter button, show close button */
-  .filters-active .dashboard-filter-btn {
-    display: none;
-  }
-
-  .filters-active .dashboard-close-btn {
     display: block;
   }
 

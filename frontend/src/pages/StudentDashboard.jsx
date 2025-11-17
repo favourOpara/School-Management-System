@@ -1,11 +1,16 @@
 // src/pages/StudentDashboard.jsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import RoleBasedSidebar from '../components/RoleBasedSidebar';
 import ActivityLog from '../components/ActivityLog';
 import StudentAssignments from '../components/StudentAssignments';
 import MyGrades from '../components/MyGrades'; // NEW IMPORT
 import AvailableAssessments from '../components/AvailableAssessments';
+import StudentAttendanceReport from '../components/StudentAttendanceReport';
+import StudentGradeReport from '../components/StudentGradeReport';
+import NotificationPopup from '../components/NotificationPopup';
+import TopHeader from '../components/TopHeader';
+import AttendanceLeaderboard from '../components/AttendanceLeaderboard';
 import './StudentDashboard.css';
 
 const getGreeting = () => {
@@ -19,6 +24,7 @@ const StudentDashboard = () => {
   const location = useLocation();
   const [activeTab, setActiveTab] = useState('dashboard');
   const [userName, setUserName] = useState('');
+  const sidebarRef = useRef(null);
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -36,26 +42,14 @@ const StudentDashboard = () => {
     switch (activeTab) {
       case 'dashboard':
         return (
-          <div>
-            <h2 className="student-dashboard-greeting">{getGreeting()}, {userName}</h2>
-            <p className="student-dashboard-subtitle">Welcome to your student dashboard.</p>
-            <div className="student-dashboard-grid">
-              <div className="student-dashboard-card">
-                <h3 className="student-dashboard-card-title">My Classes</h3>
-                <p className="student-dashboard-card-text">View your enrolled classes and schedules.</p>
-              </div>
-              <div className="student-dashboard-card">
-                <h3 className="student-dashboard-card-title">My Grades</h3>
-                <p className="student-dashboard-card-text">Check your academic performance and results.</p>
-              </div>
-              <div className="student-dashboard-card">
-                <h3 className="student-dashboard-card-title">Attendance</h3>
-                <p className="student-dashboard-card-text">View your attendance records.</p>
-              </div>
-              <div className="student-dashboard-card">
-                <h3 className="student-dashboard-card-title">Notifications</h3>
-                <p className="student-dashboard-card-text">Check your latest notifications and updates.</p>
-              </div>
+          <div className="student-home-dashboard">
+            <div className="dashboard-welcome">
+              <h2 className="student-dashboard-greeting">{getGreeting()}, {userName.split(' ')[0]} 👋</h2>
+              <p className="student-dashboard-subtitle">Here's what's happening in your class</p>
+            </div>
+
+            <div className="dashboard-records-grid">
+              <AttendanceLeaderboard />
             </div>
           </div>
         );
@@ -73,14 +67,11 @@ const StudentDashboard = () => {
       case 'assessments':
         return <AvailableAssessments />;
       case 'my-attendance':
-        return (
-          <div className="student-dashboard-section">
-            <h2 className="student-dashboard-section-title">My Attendance</h2>
-            <p className="student-dashboard-section-text">Track your attendance records.</p>
-          </div>
-        );
+        return <StudentAttendanceReport />;
       case 'activity-logs':
         return <ActivityLog />;
+      case 'report-sheet':
+        return <StudentGradeReport />;
       case 'profile':
         return (
           <div className="student-dashboard-section">
@@ -106,14 +97,17 @@ const StudentDashboard = () => {
 
   return (
     <div className="student-dashboard-container">
-      <RoleBasedSidebar 
-        userRole="student" 
-        activeTab={activeTab} 
-        setActiveTab={setActiveTab} 
+      <RoleBasedSidebar
+        ref={sidebarRef}
+        userRole="student"
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
       />
+      <TopHeader onMenuClick={() => sidebarRef.current?.openSidebar()} />
       <main className="student-dashboard-main">
         {renderContent()}
       </main>
+      <NotificationPopup />
     </div>
   );
 };

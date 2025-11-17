@@ -909,6 +909,12 @@ def update_student_grade(request, grade_summary_id):
     if component_type == 'attendance':
         grade_summary.attendance_finalized = True
 
+    # Mark test/exam as manually entered for proper sync tracking
+    if component_type == 'test':
+        grade_summary.test_manual_entry = True
+    elif component_type == 'exam':
+        grade_summary.exam_manual_entry = True
+
     # Recalculate total score
     grade_summary.recalculate_total_score()
     grade_summary.save()
@@ -973,6 +979,66 @@ def update_student_grade(request, grade_summary_id):
 
         except Exception as sync_error:
             print(f"WARNING: Failed to sync test score to submissions: {str(sync_error)}")
+            import traceback
+            traceback.print_exc()
+            # Don't fail the request, just log the error
+
+    # SYNC EXAM SCORES TO ASSESSMENT SUBMISSION
+    if component_type == 'exam':
+        try:
+            from academics.models import Assessment, AssessmentSubmission
+
+            # Get exam assessments for this subject
+            exam_assessments = Assessment.objects.filter(
+                subject=grade_summary.subject,
+                is_active=True,
+                assessment_type='final_exam'
+            )
+
+            if exam_assessments.exists():
+                # Calculate what the exam should be worth in assessment format
+                # score is /exam_percentage (GradeSummary format, e.g., /60)
+                # Need to convert to /assessment.total_marks
+
+                max_exam_marks = float(grading_config.exam_percentage)  # e.g., 60
+                assessment = exam_assessments.first()
+                assessment_total = float(assessment.total_marks)
+
+                # Convert from percentage to assessment scale
+                # score/max_exam_marks = stored_score/assessment_total
+                stored_score = (score / max_exam_marks) * assessment_total
+
+                print(f"=== SYNC EXAM SCORE TO SUBMISSIONS (update_student_grade) ===")
+                print(f"Student: {grade_summary.student.get_full_name()}")
+                print(f"Subject: {grade_summary.subject.name}")
+                print(f"GradeSummary exam_score: {score}")
+                print(f"Assessment total marks: {assessment_total}")
+                print(f"Stored score: {stored_score}")
+
+                # Update or create submission
+                submission, created = AssessmentSubmission.objects.get_or_create(
+                    student=grade_summary.student,
+                    assessment=assessment,
+                    defaults={
+                        'time_taken': 0,
+                        'max_score': assessment.total_marks,
+                        'score': stored_score,
+                        'is_graded': True
+                    }
+                )
+
+                if not created:
+                    submission.score = stored_score
+                    submission.is_graded = True
+                    submission.save()
+                    print(f"✓ Updated submission for {assessment.title}: {stored_score}")
+                else:
+                    print(f"✓ Created submission for {assessment.title}: {stored_score}")
+
+                print(f"=========================================================")
+
+        except Exception as sync_error:
+            print(f"WARNING: Failed to sync exam score to submissions: {str(sync_error)}")
             import traceback
             traceback.print_exc()
             # Don't fail the request, just log the error
@@ -1792,6 +1858,24 @@ def get_student_grades_view(request):
             if submitted_exams:
                 avg_exam_percentage = sum(e['percentage'] for e in submitted_exams) / len(submitted_exams)
 
+        # Check for manual test scores from GradeSummary (entered in Results section)
+        manual_test_score = 0
+        manual_test_visible = False
+        if grade_summary and grade_summary.test_score and float(grade_summary.test_score) > 0:
+            manual_test_score = float(grade_summary.test_score)
+            manual_test_visible = True
+
+        # Check for manual exam scores from GradeSummary (entered in Results section)
+        manual_exam_score = 0
+        manual_exam_visible = False
+        if grade_summary and grade_summary.exam_score and float(grade_summary.exam_score) > 0:
+            manual_exam_score = float(grade_summary.exam_score)
+            manual_exam_visible = True
+
+        # Combine manual and online test visibility
+        combined_test_visible = test_visible or manual_test_visible
+        combined_exam_visible = exam_visible or manual_exam_visible
+
         subjects_data.append({
             'subject_id': subject.id,
             'subject_name': subject.name,
@@ -1810,14 +1894,24 @@ def get_student_grades_view(request):
             'assignment_average': round(avg_assignment_percentage, 2),
             'assignment_details': assignment_grades,
 
-            # Test scores (only released)
-            'test_visible': test_visible,
+            # Manual test score from GradeSummary (Results section)
+            'manual_test_score': manual_test_score,
+            'manual_test_max': grading_config.test_percentage,
+            'manual_test_visible': manual_test_visible,
+
+            # Online test scores (only released)
+            'test_visible': combined_test_visible,
             'test_count': len(test_scores),
             'test_average': round(avg_test_percentage, 2),
             'test_details': test_scores,
 
-            # Exam scores (only released)
-            'exam_visible': exam_visible,
+            # Manual exam score from GradeSummary (Results section)
+            'manual_exam_score': manual_exam_score,
+            'manual_exam_max': grading_config.exam_percentage,
+            'manual_exam_visible': manual_exam_visible,
+
+            # Online exam scores (only released)
+            'exam_visible': combined_exam_visible,
             'exam_count': len(exam_scores),
             'exam_average': round(avg_exam_percentage, 2),
             'exam_details': exam_scores,
@@ -2227,20 +2321,41 @@ def get_test_completion_stats(request):
                     })
                     continue
 
-                # Count how many subjects have test assessments
+                # Count how many subjects have test assessments (online or manual)
                 subjects_with_tests = 0
+                subjects_with_online_tests = []
+
+                # Get the grading config for this term
+                grading_config = GradingConfiguration.objects.filter(
+                    academic_year=academic_year,
+                    term=term,
+                    is_active=True
+                ).first()
+
                 for subject in subjects:
-                    if Assessment.objects.filter(
+                    has_online_test = Assessment.objects.filter(
                         subject=subject,
                         is_active=True,
                         is_released=True,
                         assessment_type__in=['test_1', 'test_2', 'mid_term']
-                    ).exists():
+                    ).exists()
+
+                    if has_online_test:
                         subjects_with_tests += 1
+                        subjects_with_online_tests.append(subject.id)
+                    elif grading_config:
+                        # Check if any student has manual test score for this subject
+                        has_manual_test = GradeSummary.objects.filter(
+                            subject=subject,
+                            grading_config=grading_config,
+                            test_score__gt=0
+                        ).exists()
+                        if has_manual_test:
+                            subjects_with_tests += 1
 
-                print(f"  Subjects with tests: {subjects_with_tests}")
+                print(f"  Subjects with tests (online + manual): {subjects_with_tests}")
 
-                # If no tests are set up, mark all as 0% completion
+                # If no tests are set up (neither online nor manual), mark all as 0% completion
                 if subjects_with_tests == 0:
                     class_stats.append({
                         'class_id': class_session.classroom.id,
@@ -2250,52 +2365,78 @@ def get_test_completion_stats(request):
                         'students_completed': 0,
                         'completion_percentage': 0,
                         'total_subjects': total_subjects,
+                        'total_possible_submissions': 0,
                     })
                     continue
 
-                # Count students who have completed tests for ALL their subjects that have tests
-                students_completed = 0
+                # Count total test submissions vs total possible submissions
+                # Include ALL subjects (even those without tests yet) in the calculation
+                total_possible_submissions = total_students * total_subjects
+                total_actual_submissions = 0
 
-                for student_session in student_sessions:
-                    student = student_session.student
+                for subject in subjects:
+                    # Check if there are any test assessments for this subject (online)
+                    test_assessments = Assessment.objects.filter(
+                        subject=subject,
+                        is_active=True,
+                        is_released=True,
+                        assessment_type__in=['test_1', 'test_2', 'mid_term']
+                    )
 
-                    # Check if this student has completed tests for all subjects that have tests
-                    completed_all_tests = True
-
-                    for subject in subjects:
-                        # Check if there are any test assessments for this subject
-                        test_assessments = Assessment.objects.filter(
+                    # Check if there are manually entered tests for this subject
+                    has_manual_test_for_subject = False
+                    if grading_config:
+                        has_manual_test_for_subject = GradeSummary.objects.filter(
                             subject=subject,
-                            is_active=True,
-                            is_released=True,
-                            assessment_type__in=['test_1', 'test_2', 'mid_term']
-                        )
+                            grading_config=grading_config,
+                            test_score__gt=0
+                        ).exists()
 
-                        if test_assessments.exists():
-                            # Check if student has submitted at least one test for this subject
+                    # Count completions for this subject (will be 0 if no tests exist)
+                    subject_submissions = 0
+
+                    if test_assessments.exists() or has_manual_test_for_subject:
+                        # This subject has tests, count how many students completed it
+                        for student_session in student_sessions:
+                            student = student_session.student
+
+                            # Check if student has submitted test for this subject (online)
                             has_submission = AssessmentSubmission.objects.filter(
                                 student=student,
                                 assessment__in=test_assessments
-                            ).exists()
+                            ).exists() if test_assessments.exists() else False
 
-                            if not has_submission:
-                                completed_all_tests = False
-                                break
+                            # Check if test was manually entered in GradeSummary
+                            has_manual_entry = False
+                            if grading_config and not has_submission:
+                                try:
+                                    grade_summary = GradeSummary.objects.get(
+                                        student=student,
+                                        subject=subject,
+                                        grading_config=grading_config
+                                    )
+                                    has_manual_entry = float(grade_summary.test_score or 0) > 0
+                                except GradeSummary.DoesNotExist:
+                                    pass
 
-                    if completed_all_tests:
-                        students_completed += 1
+                            # Count if student completed via either submission or manual entry
+                            if has_submission or has_manual_entry:
+                                subject_submissions += 1
 
-                completion_percentage = round((students_completed / total_students) * 100) if total_students > 0 else 0
-                print(f"  Completed: {students_completed}/{total_students} ({completion_percentage}%)")
+                    total_actual_submissions += subject_submissions
+
+                completion_percentage = round((total_actual_submissions / total_possible_submissions) * 100) if total_possible_submissions > 0 else 0
+                print(f"  Completed: {total_actual_submissions}/{total_possible_submissions} submissions ({completion_percentage}%)")
 
                 class_stats.append({
                     'class_id': class_session.classroom.id,
                     'class_name': class_session.classroom.name,
                     'session_id': class_session.id,
                     'total_students': total_students,
-                    'students_completed': students_completed,
+                    'students_completed': total_actual_submissions,
                     'completion_percentage': completion_percentage,
                     'total_subjects': total_subjects,
+                    'total_possible_submissions': total_possible_submissions,
                 })
 
             except Exception as class_error:
@@ -2339,7 +2480,7 @@ def get_class_subjects_for_tests(request, class_session_id):
     - total_students in the class
     - students_completed (students who submitted tests for this subject)
     - completion_percentage
-    - has_tests (whether this subject has any test assessments)
+    - has_tests (whether this subject has any test assessments - online or manual)
     """
     try:
         class_session = ClassSession.objects.select_related('classroom').get(id=class_session_id)
@@ -2353,10 +2494,17 @@ def get_class_subjects_for_tests(request, class_session_id):
             is_active=True
         ).count()
 
+        # Get grading config for checking manual entries
+        grading_config = GradingConfiguration.objects.filter(
+            academic_year=class_session.academic_year,
+            term=class_session.term,
+            is_active=True
+        ).first()
+
         subject_stats = []
 
         for subject in subjects:
-            # Check if subject has test assessments
+            # Check if subject has test assessments (online)
             test_assessments = Assessment.objects.filter(
                 subject=subject,
                 is_active=True,
@@ -2364,16 +2512,28 @@ def get_class_subjects_for_tests(request, class_session_id):
                 assessment_type__in=['test_1', 'test_2', 'mid_term']
             )
 
-            has_tests = test_assessments.exists()
+            has_online_tests = test_assessments.exists()
+            has_manual_tests = False
             students_completed = 0
 
-            if has_tests:
-                # Count students who submitted at least one test for this subject
+            if has_online_tests:
+                # Count students who submitted at least one test for this subject (online)
                 students_with_submissions = AssessmentSubmission.objects.filter(
                     assessment__in=test_assessments
                 ).values_list('student', flat=True).distinct()
                 students_completed = len(students_with_submissions)
+            elif grading_config:
+                # Check for manual test scores in GradeSummary
+                manual_test_scores = GradeSummary.objects.filter(
+                    subject=subject,
+                    grading_config=grading_config,
+                    test_score__gt=0
+                )
+                has_manual_tests = manual_test_scores.exists()
+                if has_manual_tests:
+                    students_completed = manual_test_scores.count()
 
+            has_tests = has_online_tests or has_manual_tests
             completion_percentage = round((students_completed / total_students) * 100) if total_students > 0 else 0
 
             subject_stats.append({
@@ -2384,7 +2544,9 @@ def get_class_subjects_for_tests(request, class_session_id):
                 'students_completed': students_completed,
                 'completion_percentage': completion_percentage,
                 'has_tests': has_tests,
-                'test_count': test_assessments.count()
+                'has_online_tests': has_online_tests,
+                'has_manual_tests': has_manual_tests,
+                'test_count': test_assessments.count() if has_online_tests else (1 if has_manual_tests else 0)
             })
 
         return Response({
@@ -2453,47 +2615,97 @@ def get_subject_test_scores(request, subject_id):
         ).select_related('student').order_by('student__last_name', 'student__first_name')
 
         students_data = []
+        has_online_tests = test_assessments.exists()
+        has_manual_tests = False
+
+        # Check if there are manual test scores in GradeSummary
+        if not has_online_tests:
+            try:
+                grading_config_obj = GradingConfiguration.objects.get(
+                    academic_year=subject.class_session.academic_year,
+                    term=subject.class_session.term,
+                    is_active=True
+                )
+                has_manual_tests = GradeSummary.objects.filter(
+                    subject=subject,
+                    grading_config=grading_config_obj,
+                    test_score__gt=0
+                ).exists()
+            except GradingConfiguration.DoesNotExist:
+                pass
 
         for student_session in student_sessions:
             student = student_session.student
             test_scores = []
 
-            for assessment in test_assessments:
-                # Calculate scaling factor: if assessment.total_marks=3 and max_test_marks=30, scale_factor=10
-                scale_factor = max_test_marks / float(assessment.total_marks) if float(assessment.total_marks) > 0 else 1
+            if has_online_tests:
+                # Handle online assessments
+                for assessment in test_assessments:
+                    # Calculate scaling factor: if assessment.total_marks=3 and max_test_marks=30, scale_factor=10
+                    scale_factor = max_test_marks / float(assessment.total_marks) if float(assessment.total_marks) > 0 else 1
 
-                # Get submission for this student and assessment
+                    # Get submission for this student and assessment
+                    try:
+                        submission = AssessmentSubmission.objects.get(
+                            student=student,
+                            assessment=assessment
+                        )
+                        # Scale the score: if submission.score=3 and scale_factor=10, display as 30
+                        scaled_score = float(submission.score) * scale_factor if submission.score else 0
+
+                        test_scores.append({
+                            'assessment_id': assessment.id,
+                            'assessment_type': assessment.assessment_type,
+                            'assessment_type_display': assessment.get_assessment_type_display(),
+                            'title': assessment.title,
+                            'score': round(scaled_score, 2),  # Display scaled score
+                            'total_marks': max_test_marks,  # Display max marks from grading config
+                            'is_submitted': True,
+                            'is_released': assessment.is_released,
+                            'submission_id': submission.id,
+                            'is_manual': False
+                        })
+                    except AssessmentSubmission.DoesNotExist:
+                        test_scores.append({
+                            'assessment_id': assessment.id,
+                            'assessment_type': assessment.assessment_type,
+                            'assessment_type_display': assessment.get_assessment_type_display(),
+                            'title': assessment.title,
+                            'score': 0,
+                            'total_marks': max_test_marks,  # Display max marks from grading config
+                            'is_submitted': False,
+                            'is_released': assessment.is_released,
+                            'submission_id': None,
+                            'is_manual': False
+                        })
+            elif has_manual_tests:
+                # Handle manual test scores from GradeSummary
                 try:
-                    submission = AssessmentSubmission.objects.get(
-                        student=student,
-                        assessment=assessment
+                    grading_config_obj = GradingConfiguration.objects.get(
+                        academic_year=subject.class_session.academic_year,
+                        term=subject.class_session.term,
+                        is_active=True
                     )
-                    # Scale the score: if submission.score=3 and scale_factor=10, display as 30
-                    scaled_score = float(submission.score) * scale_factor if submission.score else 0
+                    grade_summary = GradeSummary.objects.filter(
+                        student=student,
+                        subject=subject,
+                        grading_config=grading_config_obj
+                    ).first()
 
                     test_scores.append({
-                        'assessment_id': assessment.id,
-                        'assessment_type': assessment.assessment_type,
-                        'assessment_type_display': assessment.get_assessment_type_display(),
-                        'title': assessment.title,
-                        'score': round(scaled_score, 2),  # Display scaled score
-                        'total_marks': max_test_marks,  # Display max marks from grading config
-                        'is_submitted': True,
-                        'is_released': assessment.is_released,
-                        'submission_id': submission.id
+                        'assessment_id': None,
+                        'assessment_type': 'manual',
+                        'assessment_type_display': 'Manual Test Score',
+                        'title': 'Test Score (Manual Entry)',
+                        'score': float(grade_summary.test_score) if grade_summary and grade_summary.test_score else 0,
+                        'total_marks': max_test_marks,
+                        'is_submitted': grade_summary and float(grade_summary.test_score or 0) > 0,
+                        'is_released': True,  # Manual scores are always released
+                        'submission_id': grade_summary.id if grade_summary else None,
+                        'is_manual': True
                     })
-                except AssessmentSubmission.DoesNotExist:
-                    test_scores.append({
-                        'assessment_id': assessment.id,
-                        'assessment_type': assessment.assessment_type,
-                        'assessment_type_display': assessment.get_assessment_type_display(),
-                        'title': assessment.title,
-                        'score': 0,
-                        'total_marks': max_test_marks,  # Display max marks from grading config
-                        'is_submitted': False,
-                        'is_released': assessment.is_released,
-                        'submission_id': None
-                    })
+                except GradingConfiguration.DoesNotExist:
+                    pass
 
             students_data.append({
                 'student_id': student.id,
@@ -2501,6 +2713,30 @@ def get_subject_test_scores(request, subject_id):
                 'username': student.username,
                 'test_scores': test_scores
             })
+
+        # Build assessments list for response
+        if has_online_tests:
+            assessments_list = [{
+                'id': a.id,
+                'type': a.assessment_type,
+                'type_display': a.get_assessment_type_display(),
+                'title': a.title,
+                'total_marks': max_test_marks,
+                'is_released': a.is_released,
+                'is_manual': False
+            } for a in test_assessments]
+        elif has_manual_tests:
+            assessments_list = [{
+                'id': None,
+                'type': 'manual',
+                'type_display': 'Manual Test Score',
+                'title': 'Test Score (Manual Entry)',
+                'total_marks': max_test_marks,
+                'is_released': True,
+                'is_manual': True
+            }]
+        else:
+            assessments_list = []
 
         return Response({
             'subject_id': subject.id,
@@ -2510,15 +2746,10 @@ def get_subject_test_scores(request, subject_id):
             'term': subject.class_session.term,
             'teacher_name': subject.teacher.get_full_name() if subject.teacher else 'No teacher assigned',
             'students': students_data,
-            'assessments': [{
-                'id': a.id,
-                'type': a.assessment_type,
-                'type_display': a.get_assessment_type_display(),
-                'title': a.title,
-                'total_marks': max_test_marks,  # Display max marks from grading config
-                'is_released': a.is_released
-            } for a in test_assessments],
-            'max_test_marks': max_test_marks  # Send to frontend for validation
+            'assessments': assessments_list,
+            'max_test_marks': max_test_marks,
+            'has_manual_tests': has_manual_tests,
+            'has_online_tests': has_online_tests
         })
 
     except Subject.DoesNotExist:
@@ -2540,28 +2771,34 @@ def get_subject_test_scores(request, subject_id):
 @permission_classes([IsAuthenticated, IsAdminRole])
 def update_test_score(request):
     """
-    Update a student's test score for a specific assessment.
+    Update a student's test score for a specific assessment OR manual test score.
     Creates a submission if one doesn't exist (for manual grading).
     SCALES score from /30 (frontend) to /3 (database storage).
     SYNCS with GradeSummary.test_score.
 
     Body:
     - student_id: ID of the student (required if no submission_id)
-    - assessment_id: ID of the assessment (required if no submission_id)
+    - assessment_id: ID of the assessment (required if no submission_id, can be null for manual)
     - submission_id: ID of the AssessmentSubmission (optional - will be used if exists)
     - score: New score value in SCALED format (/30) (required)
+    - is_manual: Boolean to indicate if this is a manual test score (optional)
+    - subject_id: ID of the subject (required for manual scores when no assessment_id)
     """
     try:
         submission_id = request.data.get('submission_id')
         student_id = request.data.get('student_id')
         assessment_id = request.data.get('assessment_id')
         scaled_score = request.data.get('score')  # This comes as /30
+        is_manual = request.data.get('is_manual', False)
+        subject_id = request.data.get('subject_id')
 
         print(f"=== UPDATE TEST SCORE (SCALED) ===")
         print(f"Submission ID: {submission_id}")
         print(f"Student ID: {student_id}")
         print(f"Assessment ID: {assessment_id}")
         print(f"Scaled Score (from frontend): {scaled_score}")
+        print(f"Is Manual: {is_manual}")
+        print(f"Subject ID: {subject_id}")
 
         if scaled_score is None:
             return Response(
@@ -2569,6 +2806,85 @@ def update_test_score(request):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
+        # Handle MANUAL test score updates (no assessment, direct GradeSummary update)
+        if is_manual or (not assessment_id and subject_id):
+            print(f"=== MANUAL TEST SCORE UPDATE ===")
+            from django.contrib.auth import get_user_model
+            from decimal import Decimal
+            User = get_user_model()
+
+            if not student_id or not subject_id:
+                return Response(
+                    {"detail": "student_id and subject_id are required for manual test scores"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            try:
+                student = User.objects.get(id=student_id)
+                subject = Subject.objects.select_related('class_session').get(id=subject_id)
+            except (User.DoesNotExist, Subject.DoesNotExist):
+                return Response(
+                    {"detail": "Student or Subject not found"},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+
+            # Get grading configuration
+            try:
+                grading_config = GradingConfiguration.objects.get(
+                    academic_year=subject.class_session.academic_year,
+                    term=subject.class_session.term,
+                    is_active=True
+                )
+                max_test_marks = float(grading_config.test_percentage)
+            except GradingConfiguration.DoesNotExist:
+                max_test_marks = 30.0
+                grading_config = None
+                print(f"WARNING: No grading config found, using default max_test_marks=30")
+
+            # Validate score
+            if float(scaled_score) > max_test_marks:
+                return Response(
+                    {"detail": f"Score cannot exceed {max_test_marks}"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            if not grading_config:
+                return Response(
+                    {"detail": "Grading configuration not found for this term"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            # Update or create GradeSummary directly
+            grade_summary, created = GradeSummary.objects.get_or_create(
+                student=student,
+                subject=subject,
+                grading_config=grading_config,
+                defaults={'test_score': Decimal(str(round(float(scaled_score), 2)))}
+            )
+
+            if not created:
+                grade_summary.test_score = Decimal(str(round(float(scaled_score), 2)))
+                grade_summary.test_manual_entry = True  # Mark as manually entered
+                grade_summary.recalculate_total_score()
+                grade_summary.save()
+                print(f"✓ GradeSummary updated: test_score={grade_summary.test_score}")
+            else:
+                grade_summary.test_manual_entry = True
+                grade_summary.recalculate_total_score()
+                grade_summary.save()
+                print(f"✓ GradeSummary created: test_score={grade_summary.test_score}")
+
+            print(f"======================")
+
+            return Response({
+                'message': 'Manual test score updated successfully',
+                'submission_id': grade_summary.id,  # Return GradeSummary ID for manual scores
+                'new_score': float(scaled_score),
+                'student_name': student.get_full_name(),
+                'is_manual': True
+            })
+
+        # Handle ONLINE test score updates (AssessmentSubmission)
         # If submission_id exists, update it
         if submission_id:
             try:
@@ -2608,7 +2924,7 @@ def update_test_score(request):
                 print(f"Created new submission for manual grading")
         else:
             return Response(
-                {"detail": "Either submission_id OR (student_id AND assessment_id) are required"},
+                {"detail": "Either submission_id OR (student_id AND assessment_id) OR (student_id AND subject_id for manual) are required"},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
@@ -2959,6 +3275,35 @@ def get_report_sheet(request, student_id):
 
         class_session = student_session.class_session
 
+        # Security check: If the requester is NOT an admin/teacher, verify eligibility
+        if request.user.role not in ['admin', 'teacher']:
+            # Check if report has been released
+            if not student_session.report_sent:
+                return Response(
+                    {"detail": "Report sheet has not been released yet"},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+
+            # Check if fees are paid
+            fee_records = StudentFeeRecord.objects.filter(
+                student=student,
+                fee_structure__academic_year=academic_year
+            )
+
+            if fee_records.exists():
+                for fee_record in fee_records:
+                    if fee_record.payment_status != 'PAID':
+                        return Response(
+                            {"detail": "Report sheet access denied. Please complete your fee payment."},
+                            status=status.HTTP_403_FORBIDDEN
+                        )
+            else:
+                # No fee records - means fees not set up, deny access
+                return Response(
+                    {"detail": "Report sheet access denied. Fee records not found."},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+
         # Get grading configuration
         try:
             grading_config = GradingConfiguration.objects.get(
@@ -3075,10 +3420,10 @@ def get_report_sheet(request, student_id):
         student_averages.sort(key=lambda x: x['average'], reverse=True)
         position = next((i + 1 for i, s in enumerate(student_averages) if s['student_id'] == student_id), None)
 
-        # Student photo URL
+        # Student photo URL - build absolute URL
         photo_url = None
         if hasattr(student, 'profile_picture') and student.profile_picture:
-            photo_url = student.profile_picture.url
+            photo_url = request.build_absolute_uri(student.profile_picture.url)
 
         return Response({
             'student': {
@@ -3120,5 +3465,3885 @@ def get_report_sheet(request, student_id):
         traceback.print_exc()
         return Response(
             {"detail": f"Error generating report sheet: {str(e)}"},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+# ============================================================================
+# EXAM COMPLETION ANALYTICS
+# ============================================================================
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated, IsAdminRole])
+def get_exam_completion_stats(request):
+    """
+    Calculate exam completion statistics for all classes in a given academic year and term.
+
+    Returns the percentage of students who have completed exams for all their subjects in each class.
+    100% means all students in the class have completed exams for all their subjects.
+    """
+    academic_year = request.GET.get('academic_year')
+    term = request.GET.get('term')
+
+    if not academic_year or not term:
+        return Response(
+            {"detail": "academic_year and term parameters are required"},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    try:
+        print(f"Fetching exam stats for {academic_year} - {term}")
+
+        # Get all class sessions for the selected academic year and term
+        class_sessions = ClassSession.objects.filter(
+            academic_year=academic_year,
+            term=term
+        ).select_related('classroom')
+
+        print(f"Found {class_sessions.count()} class sessions")
+
+        if not class_sessions.exists():
+            return Response({
+                'stats': [],
+                'academic_year': academic_year,
+                'term': term,
+                'message': f'No class sessions found for {academic_year} - {term}'
+            })
+
+        class_stats = []
+
+        for class_session in class_sessions:
+            try:
+                print(f"Processing class: {class_session.classroom.name}")
+
+                # Get all active students in this class
+                student_sessions = StudentSession.objects.filter(
+                    class_session=class_session,
+                    is_active=True
+                ).select_related('student')
+
+                total_students = student_sessions.count()
+                print(f"  Total students: {total_students}")
+
+                if total_students == 0:
+                    class_stats.append({
+                        'class_id': class_session.classroom.id,
+                        'class_name': class_session.classroom.name,
+                        'session_id': class_session.id,
+                        'total_students': 0,
+                        'students_completed': 0,
+                        'completion_percentage': 0,
+                        'total_subjects': 0,
+                    })
+                    continue
+
+                # Get all subjects for this class
+                subjects = Subject.objects.filter(
+                    class_session=class_session
+                )
+
+                total_subjects = subjects.count()
+                print(f"  Total subjects: {total_subjects}")
+
+                if total_subjects == 0:
+                    class_stats.append({
+                        'class_id': class_session.classroom.id,
+                        'class_name': class_session.classroom.name,
+                        'session_id': class_session.id,
+                        'total_students': total_students,
+                        'students_completed': 0,
+                        'completion_percentage': 0,
+                        'total_subjects': 0,
+                    })
+                    continue
+
+                # Count how many subjects have exam assessments or manually entered exams
+                subjects_with_exams = 0
+                for subject in subjects:
+                    # Check if there are exam assessments for this subject
+                    has_exam_assessment = Assessment.objects.filter(
+                        subject=subject,
+                        is_active=True,
+                        is_released=True,
+                        assessment_type='exam'
+                    ).exists()
+
+                    # Check if there are any manually entered exam scores for this subject
+                    has_manual_exam = GradeSummary.objects.filter(
+                        subject=subject,
+                        exam_manual_entry=True
+                    ).exists()
+
+                    if has_exam_assessment or has_manual_exam:
+                        subjects_with_exams += 1
+
+                print(f"  Subjects with exams: {subjects_with_exams}")
+
+                # If no exams are set up, mark all as 0% completion
+                if subjects_with_exams == 0:
+                    class_stats.append({
+                        'class_id': class_session.classroom.id,
+                        'class_name': class_session.classroom.name,
+                        'session_id': class_session.id,
+                        'total_students': total_students,
+                        'students_completed': 0,
+                        'completion_percentage': 0,
+                        'total_subjects': total_subjects,
+                    })
+                    continue
+
+                # Count total exam submissions vs total possible submissions
+                # Include ALL subjects (even those without exams yet) in the calculation
+                total_possible_submissions = total_students * total_subjects
+                total_actual_submissions = 0
+
+                for subject in subjects:
+                    # Check if there are any exam assessments for this subject
+                    exam_assessments = Assessment.objects.filter(
+                        subject=subject,
+                        is_active=True,
+                        is_released=True,
+                        assessment_type='exam'
+                    )
+
+                    # Check if there are manually entered exams for this subject
+                    has_manual_exam_for_subject = GradeSummary.objects.filter(
+                        subject=subject,
+                        exam_manual_entry=True
+                    ).exists()
+
+                    # Count completions for this subject (will be 0 if no exams exist)
+                    subject_submissions = 0
+
+                    if exam_assessments.exists() or has_manual_exam_for_subject:
+                        # This subject has exams, count how many students completed it
+                        for student_session in student_sessions:
+                            student = student_session.student
+
+                            # Check if student has submitted exam for this subject
+                            has_submission = AssessmentSubmission.objects.filter(
+                                student=student,
+                                assessment__in=exam_assessments
+                            ).exists() if exam_assessments.exists() else False
+
+                            # Check if exam was manually entered in GradeSummary
+                            has_manual_entry = False
+                            try:
+                                grade_summary = GradeSummary.objects.get(
+                                    student=student,
+                                    subject=subject
+                                )
+                                has_manual_entry = grade_summary.exam_manual_entry and float(grade_summary.exam_score) > 0
+                            except GradeSummary.DoesNotExist:
+                                pass
+
+                            # Count if student completed via either submission or manual entry
+                            if has_submission or has_manual_entry:
+                                subject_submissions += 1
+
+                    total_actual_submissions += subject_submissions
+
+                completion_percentage = round((total_actual_submissions / total_possible_submissions) * 100) if total_possible_submissions > 0 else 0
+                print(f"  Completed: {total_actual_submissions}/{total_possible_submissions} submissions ({completion_percentage}%)")
+
+                class_stats.append({
+                    'class_id': class_session.classroom.id,
+                    'class_name': class_session.classroom.name,
+                    'session_id': class_session.id,
+                    'total_students': total_students,
+                    'students_completed': total_actual_submissions,
+                    'completion_percentage': completion_percentage,
+                    'total_subjects': total_subjects,
+                    'total_possible_submissions': total_possible_submissions,
+                })
+
+            except Exception as class_error:
+                print(f"  Error processing class {class_session.classroom.name}: {str(class_error)}")
+                import traceback
+                traceback.print_exc()
+                # Continue with next class
+                continue
+
+        # Sort by completion percentage (lowest first to highlight classes needing attention)
+        class_stats.sort(key=lambda x: x['completion_percentage'])
+
+        print(f"Returning {len(class_stats)} class stats")
+
+        return Response({
+            'stats': class_stats,
+            'academic_year': academic_year,
+            'term': term,
+            'message': 'success'
+        })
+
+    except Exception as e:
+        print(f"Error in get_exam_completion_stats: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return Response(
+            {"detail": f"Error calculating exam statistics: {str(e)}"},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_class_subjects_for_exams(request, class_session_id):
+    """
+    Get all subjects for a class session with exam completion statistics.
+    Used when clicking on a class in the Exams Completed tile.
+
+    Returns subjects with:
+    - subject_id, subject_name
+    - total_students in the class
+    - students_completed (students who submitted exams for this subject)
+    - completion_percentage
+    - has_exams (whether this subject has any exam assessments)
+    """
+    try:
+        class_session = ClassSession.objects.select_related('classroom').get(id=class_session_id)
+
+        # Get all subjects for this class
+        subjects = Subject.objects.filter(
+            class_session=class_session
+        ).select_related('teacher')
+
+        # Get all active students in this class
+        student_sessions = StudentSession.objects.filter(
+            class_session=class_session,
+            is_active=True
+        ).select_related('student')
+
+        total_students = student_sessions.count()
+
+        subject_stats = []
+
+        for subject in subjects:
+            # Check if there are any exam assessments for this subject
+            exam_assessments = Assessment.objects.filter(
+                subject=subject,
+                is_active=True,
+                is_released=True,
+                assessment_type='exam'
+            )
+
+            # Check if there are manually entered exams for this subject
+            has_manual_exams = GradeSummary.objects.filter(
+                subject=subject,
+                exam_manual_entry=True
+            ).exists()
+
+            has_exams = exam_assessments.exists() or has_manual_exams
+
+            if not has_exams:
+                subject_stats.append({
+                    'subject_id': subject.id,
+                    'subject_name': subject.name,
+                    'total_students': total_students,
+                    'students_completed': 0,
+                    'completion_percentage': 0,
+                    'has_exams': False,
+                    'teacher_name': subject.teacher.get_full_name() if subject.teacher else 'N/A'
+                })
+                continue
+
+            # Count how many students have submitted exams for this subject
+            students_completed = 0
+
+            for student_session in student_sessions:
+                student = student_session.student
+
+                # Check if this student has submitted exam for this subject
+                has_submission = AssessmentSubmission.objects.filter(
+                    student=student,
+                    assessment__in=exam_assessments
+                ).exists() if exam_assessments.exists() else False
+
+                # Check if exam was manually entered
+                has_manual_entry = False
+                try:
+                    grade_summary = GradeSummary.objects.get(
+                        student=student,
+                        subject=subject
+                    )
+                    has_manual_entry = grade_summary.exam_manual_entry and float(grade_summary.exam_score) > 0
+                except GradeSummary.DoesNotExist:
+                    pass
+
+                if has_submission or has_manual_entry:
+                    students_completed += 1
+
+            completion_percentage = round((students_completed / total_students) * 100) if total_students > 0 else 0
+
+            subject_stats.append({
+                'subject_id': subject.id,
+                'subject_name': subject.name,
+                'total_students': total_students,
+                'students_completed': students_completed,
+                'completion_percentage': completion_percentage,
+                'has_exams': True,
+                'teacher_name': subject.teacher.get_full_name() if subject.teacher else 'N/A'
+            })
+
+        # Sort by completion percentage (lowest first)
+        subject_stats.sort(key=lambda x: x['completion_percentage'])
+
+        return Response({
+            'class_name': class_session.classroom.name,
+            'class_session_id': class_session.id,
+            'subjects': subject_stats
+        })
+
+    except ClassSession.DoesNotExist:
+        return Response(
+            {"detail": "Class session not found"},
+            status=status.HTTP_404_NOT_FOUND
+        )
+    except Exception as e:
+        print(f"Error in get_class_subjects_for_exams: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return Response(
+            {"detail": f"Error retrieving subject data: {str(e)}"},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_subject_exam_scores(request, subject_id):
+    """
+    Get all students for a subject with their exam scores.
+    Used when clicking on a subject in the Exams Completed view.
+
+    Returns all students in the class with their exam submission data.
+    Handles both Assessment-based exams and manually entered exams from GradeSummary.
+    """
+    try:
+        subject = Subject.objects.select_related('class_session__classroom', 'teacher').get(id=subject_id)
+
+        # Get grading configuration for this session to get exam max marks
+        try:
+            grading_config = GradingConfiguration.objects.get(
+                academic_year=subject.class_session.academic_year,
+                term=subject.class_session.term,
+                is_active=True
+            )
+            max_exam_marks = float(grading_config.exam_percentage)
+        except GradingConfiguration.DoesNotExist:
+            max_exam_marks = 60.0  # Default exam marks
+
+        # Get all active students in this class
+        student_sessions = StudentSession.objects.filter(
+            class_session=subject.class_session,
+            is_active=True
+        ).select_related('student').order_by('student__last_name', 'student__first_name')
+
+        # Get all exam assessments for this subject
+        exam_assessments = Assessment.objects.filter(
+            subject=subject,
+            is_active=True,
+            assessment_type='exam'
+        ).order_by('created_at')
+
+        # Check if there are manually entered exams (when no Assessment records exist)
+        has_manual_exams = GradeSummary.objects.filter(
+            subject=subject,
+            exam_manual_entry=True
+        ).exists()
+
+        student_data = []
+        assessments_list = []
+
+        if exam_assessments.exists():
+            # Use Assessment-based exams
+            assessments_list = [
+                {
+                    'id': a.id,
+                    'title': a.title,
+                    'type_display': 'Exam',
+                    'total_marks': a.total_marks,
+                    'is_released': a.is_released
+                } for a in exam_assessments
+            ]
+
+            for student_session in student_sessions:
+                student = student_session.student
+                exam_scores = []
+
+                for assessment in exam_assessments:
+                    # Check if student has submitted this exam
+                    submission = AssessmentSubmission.objects.filter(
+                        student=student,
+                        assessment=assessment
+                    ).first()
+
+                    exam_scores.append({
+                        'assessment_id': assessment.id,
+                        'title': assessment.title,
+                        'total_marks': assessment.total_marks,
+                        'is_released': assessment.is_released,
+                        'score': float(submission.score) if submission and submission.score is not None else 0,
+                        'is_submitted': submission is not None,
+                        'submission_id': submission.id if submission else None
+                    })
+
+                student_data.append({
+                    'student_id': student.id,
+                    'student_name': student.get_full_name(),
+                    'username': student.username,
+                    'exam_scores': exam_scores
+                })
+
+        elif has_manual_exams:
+            # Use manually entered exams from GradeSummary
+            # Create a virtual "Exam" assessment
+            assessments_list = [
+                {
+                    'id': 0,  # Virtual ID
+                    'title': 'Exam',
+                    'type_display': 'Exam',
+                    'total_marks': max_exam_marks,
+                    'is_released': True  # Manually entered scores are considered released
+                }
+            ]
+
+            for student_session in student_sessions:
+                student = student_session.student
+
+                # Get exam score from GradeSummary
+                try:
+                    grade_summary = GradeSummary.objects.get(
+                        student=student,
+                        subject=subject
+                    )
+                    exam_score = float(grade_summary.exam_score) if grade_summary.exam_score else 0
+                    is_submitted = grade_summary.exam_manual_entry
+                except GradeSummary.DoesNotExist:
+                    exam_score = 0
+                    is_submitted = False
+
+                exam_scores = [{
+                    'assessment_id': 0,  # Virtual ID
+                    'title': 'Exam',
+                    'total_marks': max_exam_marks,
+                    'is_released': True,
+                    'score': exam_score,
+                    'is_submitted': is_submitted,
+                    'submission_id': None
+                }]
+
+                student_data.append({
+                    'student_id': student.id,
+                    'student_name': student.get_full_name(),
+                    'username': student.username,
+                    'exam_scores': exam_scores
+                })
+
+        return Response({
+            'subject_name': subject.name,
+            'subject_id': subject.id,
+            'class_name': subject.class_session.classroom.name,
+            'academic_year': subject.class_session.academic_year,
+            'term': subject.class_session.term,
+            'teacher_name': subject.teacher.get_full_name() if subject.teacher else 'N/A',
+            'assessments': assessments_list,
+            'students': student_data
+        })
+
+    except Subject.DoesNotExist:
+        return Response(
+            {"detail": "Subject not found"},
+            status=status.HTTP_404_NOT_FOUND
+        )
+    except Exception as e:
+        print(f"Error in get_subject_exam_scores: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return Response(
+            {"detail": f"Error retrieving exam scores: {str(e)}"},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated, IsAdminRole])
+def update_exam_score(request):
+    """
+    Update a student's exam score for a specific assessment OR manual exam score.
+    Creates a submission if one doesn't exist (for manual grading).
+    SYNCS with GradeSummary.exam_score.
+
+    Body:
+    - student_id: ID of the student (required if no submission_id)
+    - assessment_id: ID of the assessment (required if no submission_id, can be 0 for manual)
+    - submission_id: ID of the AssessmentSubmission (optional - will be used if exists)
+    - score: New score value (required)
+    - is_manual: Boolean to indicate if this is a manual exam score (optional)
+    - subject_id: ID of the subject (required for manual scores when assessment_id is 0)
+    """
+    try:
+        submission_id = request.data.get('submission_id')
+        student_id = request.data.get('student_id')
+        assessment_id = request.data.get('assessment_id')
+        score_value = request.data.get('score')
+        is_manual = request.data.get('is_manual', False)
+        subject_id = request.data.get('subject_id')
+
+        print(f"=== UPDATE EXAM SCORE ===")
+        print(f"Submission ID: {submission_id}")
+        print(f"Student ID: {student_id}")
+        print(f"Assessment ID: {assessment_id}")
+        print(f"Score: {score_value}")
+        print(f"Is Manual: {is_manual}")
+        print(f"Subject ID: {subject_id}")
+
+        if score_value is None:
+            return Response(
+                {"detail": "score is required"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Handle MANUAL exam score updates (assessment_id=0 or is_manual=true)
+        if is_manual or assessment_id == 0 or (not assessment_id and subject_id):
+            print(f"=== MANUAL EXAM SCORE UPDATE ===")
+            from django.contrib.auth import get_user_model
+            from decimal import Decimal
+            User = get_user_model()
+
+            if not student_id or not subject_id:
+                return Response(
+                    {"detail": "student_id and subject_id are required for manual exam scores"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            try:
+                student = User.objects.get(id=student_id)
+                subject = Subject.objects.select_related('class_session').get(id=subject_id)
+            except (User.DoesNotExist, Subject.DoesNotExist):
+                return Response(
+                    {"detail": "Student or Subject not found"},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+
+            # Get grading configuration
+            try:
+                grading_config = GradingConfiguration.objects.get(
+                    academic_year=subject.class_session.academic_year,
+                    term=subject.class_session.term,
+                    is_active=True
+                )
+                max_exam_marks = float(grading_config.exam_percentage)
+            except GradingConfiguration.DoesNotExist:
+                max_exam_marks = 60.0
+                grading_config = None
+                print(f"WARNING: No grading config found, using default max_exam_marks=60")
+
+            # Validate score
+            if float(score_value) > max_exam_marks:
+                return Response(
+                    {"detail": f"Score cannot exceed {max_exam_marks}"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            if not grading_config:
+                return Response(
+                    {"detail": "Grading configuration not found for this term"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            # Update or create GradeSummary directly
+            grade_summary, created = GradeSummary.objects.get_or_create(
+                student=student,
+                subject=subject,
+                grading_config=grading_config,
+                defaults={'exam_score': Decimal(str(round(float(score_value), 2)))}
+            )
+
+            if not created:
+                grade_summary.exam_score = Decimal(str(round(float(score_value), 2)))
+
+            grade_summary.exam_manual_entry = True  # Mark as manually entered
+            grade_summary.recalculate_total_score()
+            grade_summary.save()
+            print(f"✓ GradeSummary updated: exam_score={grade_summary.exam_score}, exam_manual_entry=True")
+
+            print(f"======================")
+
+            return Response({
+                'message': 'Manual exam score updated successfully',
+                'submission_id': None,
+                'new_score': float(score_value),
+                'student_name': student.get_full_name(),
+                'is_manual': True
+            })
+
+        # Handle ONLINE exam score updates (AssessmentSubmission)
+        if submission_id:
+            try:
+                submission = AssessmentSubmission.objects.select_related('assessment__subject__class_session', 'student').get(id=submission_id)
+            except AssessmentSubmission.DoesNotExist:
+                return Response(
+                    {"detail": "Submission not found"},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+        elif student_id and assessment_id:
+            from django.contrib.auth import get_user_model
+            User = get_user_model()
+
+            try:
+                student = User.objects.get(id=student_id)
+                assessment = Assessment.objects.select_related('subject__class_session').get(id=assessment_id)
+            except (User.DoesNotExist, Assessment.DoesNotExist):
+                return Response(
+                    {"detail": "Student or Assessment not found"},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+
+            # Get or create submission for manual grading
+            submission, created = AssessmentSubmission.objects.get_or_create(
+                student=student,
+                assessment=assessment,
+                defaults={
+                    'time_taken': 0,
+                    'max_score': assessment.total_marks,
+                    'score': 0,
+                    'is_graded': True
+                }
+            )
+
+            if created:
+                print(f"Created new submission for manual exam grading")
+        else:
+            return Response(
+                {"detail": "Either submission_id OR (student_id AND assessment_id) OR (student_id AND subject_id for manual) are required"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Get grading configuration
+        try:
+            grading_config = GradingConfiguration.objects.get(
+                academic_year=submission.assessment.subject.class_session.academic_year,
+                term=submission.assessment.subject.class_session.term,
+                is_active=True
+            )
+            max_exam_marks = float(grading_config.exam_percentage)
+        except GradingConfiguration.DoesNotExist:
+            max_exam_marks = 60.0
+            print(f"WARNING: No grading config found, using default max_exam_marks=60")
+
+        # Validate score
+        if float(score_value) > submission.assessment.total_marks:
+            return Response(
+                {"detail": f"Score cannot exceed {submission.assessment.total_marks}"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        print(f"Student: {submission.student.get_full_name()}")
+        print(f"Assessment: {submission.assessment.title}")
+        print(f"Old score: {submission.score}")
+        print(f"New score: {score_value}")
+
+        # Update submission
+        submission.score = float(score_value)
+        submission.is_graded = True
+        submission.save()
+
+        print(f"✓ Submission updated")
+
+        # SYNC TO GRADE SUMMARY
+        try:
+            from decimal import Decimal
+
+            subject = submission.assessment.subject
+            student = submission.student
+
+            # For exam, we just use the score directly (not averaged like tests)
+            # Convert to percentage of exam_percentage
+            exam_percentage = (float(score_value) / float(submission.assessment.total_marks)) * max_exam_marks
+
+            print(f"Exam percentage calculation: ({score_value} / {submission.assessment.total_marks}) * {max_exam_marks} = {exam_percentage}")
+
+            # Update or create GradeSummary
+            grade_summary, created = GradeSummary.objects.get_or_create(
+                student=student,
+                subject=subject,
+                grading_config=grading_config,
+                defaults={'exam_score': Decimal(str(round(exam_percentage, 2)))}
+            )
+
+            if not created:
+                grade_summary.exam_score = Decimal(str(round(exam_percentage, 2)))
+                grade_summary.recalculate_total_score()
+                grade_summary.save()
+                print(f"✓ GradeSummary updated: exam_score={grade_summary.exam_score}")
+            else:
+                print(f"✓ GradeSummary created: exam_score={grade_summary.exam_score}")
+
+        except Exception as sync_error:
+            print(f"WARNING: Failed to sync with GradeSummary: {str(sync_error)}")
+            import traceback
+            traceback.print_exc()
+
+        print(f"======================")
+
+        return Response({
+            'message': 'Exam score updated successfully and synced with grade summary',
+            'submission_id': submission.id,
+            'new_score': float(score_value),
+            'student_name': submission.student.get_full_name()
+        })
+
+    except Exception as e:
+        print(f"Error updating exam score: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return Response(
+            {"detail": f"Error updating exam score: {str(e)}"},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_report_access_stats(request):
+    """
+    Get report sheet access statistics based on fee payment and grade completion.
+    
+    Returns statistics for 4 categories:
+    1. Complete: Fees paid + Grades complete
+    2. Fees paid, Grades incomplete
+    3. Fees unpaid, Grades complete
+    4. Fees unpaid, Grades incomplete
+    """
+    from academics.models import StudentSession
+    from schooladmin.models import StudentFeeRecord, GradeSummary, GradingConfiguration
+    
+    # Get current or selected academic year and term
+    academic_year = request.query_params.get('academic_year')
+    term = request.query_params.get('term')
+    
+    # Get grading configuration to determine which session to check
+    if academic_year and term:
+        try:
+            grading_config = GradingConfiguration.objects.get(
+                academic_year=academic_year,
+                term=term,
+                is_active=True
+            )
+        except GradingConfiguration.DoesNotExist:
+            return Response(
+                {"detail": "No grading configuration found for selected session"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+    else:
+        # Get current active grading configuration
+        grading_config = GradingConfiguration.objects.filter(is_active=True).first()
+        if not grading_config:
+            return Response(
+                {"detail": "No active grading configuration found"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        academic_year = grading_config.academic_year
+        term = grading_config.term
+    
+    # Get all active student sessions for this academic year and term
+    student_sessions = StudentSession.objects.filter(
+        class_session__academic_year=academic_year,
+        class_session__term=term,
+        is_active=True
+    ).select_related('student', 'class_session__classroom')
+    
+    # Initialize counters
+    complete_fees_complete_grades = 0
+    complete_fees_incomplete_grades = 0
+    incomplete_fees_complete_grades = 0
+    incomplete_fees_incomplete_grades = 0
+    
+    total_students = student_sessions.count()
+    
+    for student_session in student_sessions:
+        student = student_session.student
+
+        # Check fee payment status
+        # Get all fee records for this student in the current academic year
+        fee_records = StudentFeeRecord.objects.filter(
+            student=student,
+            fee_structure__academic_year=academic_year
+        )
+
+        fees_complete = False
+        if fee_records.exists():
+            # Check if all fees are paid
+            # Fees are complete if ALL fee records have payment_status == 'PAID'
+            all_paid = True
+            for fee_record in fee_records:
+                if fee_record.payment_status != 'PAID':
+                    all_paid = False
+                    break
+            fees_complete = all_paid
+        else:
+            # If no fee records exist, consider fees as INCOMPLETE
+            # (fees haven't been set up/assigned for this student yet)
+            fees_complete = False
+
+        # Check grade completion status
+        # Get all subjects for this student's class
+        from academics.models import Subject
+        from django.db.models import Q
+
+        subjects = Subject.objects.filter(
+            class_session=student_session.class_session
+        )
+
+        # Filter by department if student has one
+        if student.department:
+            subjects = subjects.filter(
+                Q(department=student.department) | Q(department='General')
+            )
+
+        grades_complete = False
+        if subjects.exists():
+            # Check if ALL subjects have COMPLETE grades
+            # Complete means: Test 1 (attendance + assignment), Test 2 (test), Exam, and Total are all filled
+            all_graded = True
+            for subject in subjects:
+                try:
+                    grade_summary = GradeSummary.objects.get(
+                        student=student,
+                        subject=subject,
+                        grading_config=grading_config
+                    )
+
+                    # Get all score components
+                    attendance_score = float(grade_summary.attendance_score) if grade_summary.attendance_score else 0
+                    assignment_score = float(grade_summary.assignment_score) if grade_summary.assignment_score else 0
+                    test_score = float(grade_summary.test_score) if grade_summary.test_score else 0
+                    exam_score = float(grade_summary.exam_score) if grade_summary.exam_score else 0
+                    total_score = float(grade_summary.total_score) if grade_summary.total_score else 0
+
+                    # Test 1 = attendance + assignment (must be > 0)
+                    test1_complete = (attendance_score + assignment_score) > 0
+
+                    # Test 2 = test score (must be > 0)
+                    test2_complete = test_score > 0
+
+                    # Exam (must be > 0)
+                    exam_complete = exam_score > 0
+
+                    # Total (must be > 0)
+                    total_complete = total_score > 0
+
+                    # Grades are complete only if ALL components are filled
+                    if not (test1_complete and test2_complete and exam_complete and total_complete):
+                        all_graded = False
+                        break
+
+                except GradeSummary.DoesNotExist:
+                    # No grade summary = grades incomplete
+                    all_graded = False
+                    break
+
+            grades_complete = all_graded
+        else:
+            # If no subjects, consider grades as incomplete (students must have subjects)
+            grades_complete = False
+        
+        # Categorize the student
+        # Section 1: Only count students who haven't received their report yet
+        if fees_complete and grades_complete:
+            # Only count if report hasn't been sent yet
+            if not student_session.report_sent:
+                complete_fees_complete_grades += 1
+        elif fees_complete and not grades_complete:
+            complete_fees_incomplete_grades += 1
+        elif not fees_complete and grades_complete:
+            incomplete_fees_complete_grades += 1
+        else:  # not fees_complete and not grades_complete
+            incomplete_fees_incomplete_grades += 1
+    
+    # Calculate percentages
+    complete_percentage = round((complete_fees_complete_grades / total_students) * 100, 1) if total_students > 0 else 0
+    fees_paid_grades_incomplete_percentage = round((complete_fees_incomplete_grades / total_students) * 100, 1) if total_students > 0 else 0
+    fees_unpaid_grades_complete_percentage = round((incomplete_fees_complete_grades / total_students) * 100, 1) if total_students > 0 else 0
+    fees_unpaid_grades_incomplete_percentage = round((incomplete_fees_incomplete_grades / total_students) * 100, 1) if total_students > 0 else 0
+    
+    return Response({
+        'academic_year': academic_year,
+        'term': term,
+        'total_students': total_students,
+        'statistics': {
+            'complete': {
+                'count': complete_fees_complete_grades,
+                'percentage': complete_percentage,
+                'label': 'Complete (Fees Paid & Grades Complete)'
+            },
+            'fees_paid_grades_incomplete': {
+                'count': complete_fees_incomplete_grades,
+                'percentage': fees_paid_grades_incomplete_percentage,
+                'label': 'Fees Paid, Grades Incomplete'
+            },
+            'fees_unpaid_grades_complete': {
+                'count': incomplete_fees_complete_grades,
+                'percentage': fees_unpaid_grades_complete_percentage,
+                'label': 'Fees Unpaid, Grades Complete'
+            },
+            'fees_unpaid_grades_incomplete': {
+                'count': incomplete_fees_incomplete_grades,
+                'percentage': fees_unpaid_grades_incomplete_percentage,
+                'label': 'Fees Unpaid, Grades Incomplete'
+            }
+        }
+    })
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def send_report_sheets(request):
+    """
+    Send report sheets to students and parents who have complete fees and grades.
+    Only sends to students who haven't received their reports yet.
+    Creates notifications for both student and parent.
+
+    This is a one-time send - once sent, reports won't be sent again to the same students.
+    """
+    from academics.models import StudentSession
+    from schooladmin.models import StudentFeeRecord, GradeSummary, GradingConfiguration
+    from logs.models import Notification
+    from django.db.models import Q
+    from django.utils import timezone
+
+    # Verify user is admin
+    if request.user.role != 'admin':
+        return Response(
+            {"detail": "Only admins can send report sheets"},
+            status=status.HTTP_403_FORBIDDEN
+        )
+
+    # Get current or selected academic year and term
+    academic_year = request.data.get('academic_year')
+    term = request.data.get('term')
+
+    # Get grading configuration
+    if academic_year and term:
+        try:
+            grading_config = GradingConfiguration.objects.get(
+                academic_year=academic_year,
+                term=term,
+                is_active=True
+            )
+        except GradingConfiguration.DoesNotExist:
+            return Response(
+                {"detail": "No grading configuration found for selected session"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+    else:
+        # Get current active grading configuration
+        grading_config = GradingConfiguration.objects.filter(is_active=True).first()
+        if not grading_config:
+            return Response(
+                {"detail": "No active grading configuration found"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        academic_year = grading_config.academic_year
+        term = grading_config.term
+
+    # Get all active student sessions for this academic year and term
+    # Filter to only get students who haven't received their reports yet
+    student_sessions = StudentSession.objects.filter(
+        class_session__academic_year=academic_year,
+        class_session__term=term,
+        is_active=True,
+        report_sent=False  # Only get students who haven't received reports
+    ).select_related('student', 'class_session__classroom')
+
+    from academics.models import Subject
+
+    # Track eligible students (complete fees + grades, not yet sent)
+    eligible_sessions = []
+
+    for student_session in student_sessions:
+        student = student_session.student
+
+        # Check fee payment status
+        fee_records = StudentFeeRecord.objects.filter(
+            student=student,
+            fee_structure__academic_year=academic_year
+        )
+
+        fees_complete = False
+        if fee_records.exists():
+            all_paid = all(fee_record.payment_status == 'PAID' for fee_record in fee_records)
+            fees_complete = all_paid
+
+        if not fees_complete:
+            continue  # Skip if fees not complete
+
+        # Check grade completion status
+        subjects = Subject.objects.filter(
+            class_session=student_session.class_session
+        )
+
+        # Filter by department if student has one
+        if student.department:
+            subjects = subjects.filter(
+                Q(department=student.department) | Q(department='General')
+            )
+
+        grades_complete = True
+        for subject in subjects:
+            try:
+                grade_summary = GradeSummary.objects.get(
+                    student=student,
+                    subject=subject,
+                    grading_config=grading_config
+                )
+
+                # Get all score components
+                attendance_score = float(grade_summary.attendance_score) if grade_summary.attendance_score else 0
+                assignment_score = float(grade_summary.assignment_score) if grade_summary.assignment_score else 0
+                test_score = float(grade_summary.test_score) if grade_summary.test_score else 0
+                exam_score = float(grade_summary.exam_score) if grade_summary.exam_score else 0
+                total_score = float(grade_summary.total_score) if grade_summary.total_score else 0
+
+                # Check all components are filled
+                test1_complete = (attendance_score + assignment_score) > 0
+                test2_complete = test_score > 0
+                exam_complete = exam_score > 0
+                total_complete = total_score > 0
+
+                if not (test1_complete and test2_complete and exam_complete and total_complete):
+                    grades_complete = False
+                    break
+
+            except GradeSummary.DoesNotExist:
+                grades_complete = False
+                break
+
+        # Only include if both fees and grades are complete
+        if fees_complete and grades_complete:
+            eligible_sessions.append(student_session)
+
+    if not eligible_sessions:
+        return Response(
+            {"detail": "No eligible students found. All complete students have already received their reports."},
+            status=status.HTTP_404_NOT_FOUND
+        )
+
+    # Mark all eligible sessions as sent and create notifications
+    sent_count = 0
+    student_notifications_created = 0
+    parent_notifications_created = 0
+
+    for student_session in eligible_sessions:
+        # Mark report as sent
+        student_session.report_sent = True
+        student_session.report_sent_date = timezone.now()
+        student_session.report_sent_by = request.user
+        student_session.save()
+
+        # Create notification for student
+        Notification.objects.create(
+            recipient=student_session.student,
+            title="Report Sheet Available",
+            message=f"Your report sheet for {term}, {academic_year} is now available. Visit the Report Sheet section to view and download it.",
+            notification_type="report_release",
+            priority="high"
+        )
+        student_notifications_created += 1
+
+        # Create notification for parent(s)
+        parents = student_session.student.parents.all()
+        for parent in parents:
+            Notification.objects.create(
+                recipient=parent,
+                title="Report Sheet Available",
+                message=f"{student_session.student.get_full_name()}'s report sheet for {term}, {academic_year} is now available. Visit the Grade Report section to view and download it.",
+                notification_type="report_release",
+                priority="high"
+            )
+            parent_notifications_created += 1
+
+        sent_count += 1
+
+    return Response({
+        "message": f"Report sheets sent successfully to {sent_count} student(s)",
+        "details": {
+            "students_sent": sent_count,
+            "student_notifications": student_notifications_created,
+            "parent_notifications": parent_notifications_created,
+            "academic_year": academic_year,
+            "term": term
+        }
+    }, status=status.HTTP_200_OK)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_eligible_classes_for_reports(request):
+    """
+    Get classes that have students with complete fees and grades who haven't received reports yet.
+    """
+    from academics.models import StudentSession, Subject
+    from schooladmin.models import StudentFeeRecord, GradeSummary, GradingConfiguration
+    from django.db.models import Q
+
+    # Get current grading configuration
+    grading_config = GradingConfiguration.objects.filter(is_active=True).first()
+    if not grading_config:
+        return Response(
+            {"detail": "No active grading configuration found"},
+            status=status.HTTP_404_NOT_FOUND
+        )
+
+    academic_year = grading_config.academic_year
+    term = grading_config.term
+
+    # Get all student sessions for this term that haven't received reports
+    student_sessions = StudentSession.objects.filter(
+        class_session__academic_year=academic_year,
+        class_session__term=term,
+        is_active=True,
+        report_sent=False
+    ).select_related('student', 'class_session__classroom')
+
+    # Group by class and count eligible students
+    class_data = {}
+
+    for student_session in student_sessions:
+        student = student_session.student
+        class_session = student_session.class_session
+
+        # Check fee completion
+        fee_records = StudentFeeRecord.objects.filter(
+            student=student,
+            fee_structure__academic_year=academic_year
+        )
+
+        fees_complete = False
+        if fee_records.exists():
+            fees_complete = all(fr.payment_status == 'PAID' for fr in fee_records)
+
+        if not fees_complete:
+            continue
+
+        # Check grade completion
+        subjects = Subject.objects.filter(class_session=class_session)
+        if student.department:
+            subjects = subjects.filter(
+                Q(department=student.department) | Q(department='General')
+            )
+
+        grades_complete = True
+        for subject in subjects:
+            try:
+                grade_summary = GradeSummary.objects.get(
+                    student=student,
+                    subject=subject,
+                    grading_config=grading_config
+                )
+                attendance_score = float(grade_summary.attendance_score) if grade_summary.attendance_score else 0
+                assignment_score = float(grade_summary.assignment_score) if grade_summary.assignment_score else 0
+                test_score = float(grade_summary.test_score) if grade_summary.test_score else 0
+                exam_score = float(grade_summary.exam_score) if grade_summary.exam_score else 0
+                total_score = float(grade_summary.total_score) if grade_summary.total_score else 0
+
+                if not ((attendance_score + assignment_score) > 0 and test_score > 0 and exam_score > 0 and total_score > 0):
+                    grades_complete = False
+                    break
+            except GradeSummary.DoesNotExist:
+                grades_complete = False
+                break
+
+        if grades_complete:
+            class_id = class_session.id
+            if class_id not in class_data:
+                class_data[class_id] = {
+                    'id': class_id,
+                    'name': class_session.classroom.name,
+                    'academic_year': academic_year,
+                    'term': term,
+                    'eligible_count': 0
+                }
+            class_data[class_id]['eligible_count'] += 1
+
+    # Sort by class name
+    classes_list = sorted(class_data.values(), key=lambda x: x['name'])
+
+    return Response({
+        'classes': classes_list,
+        'academic_year': academic_year,
+        'term': term
+    })
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_eligible_students_in_class(request, class_session_id):
+    """
+    Get students in a specific class who have complete fees and grades but haven't received reports yet.
+    """
+    from academics.models import StudentSession, Subject, ClassSession
+    from schooladmin.models import StudentFeeRecord, GradeSummary, GradingConfiguration
+    from django.db.models import Q
+
+    # Get the class session
+    try:
+        class_session = ClassSession.objects.get(id=class_session_id)
+    except ClassSession.DoesNotExist:
+        return Response(
+            {"detail": "Class session not found"},
+            status=status.HTTP_404_NOT_FOUND
+        )
+
+    # Get grading configuration
+    grading_config = GradingConfiguration.objects.filter(
+        academic_year=class_session.academic_year,
+        term=class_session.term,
+        is_active=True
+    ).first()
+
+    if not grading_config:
+        return Response(
+            {"detail": "No grading configuration found for this session"},
+            status=status.HTTP_404_NOT_FOUND
+        )
+
+    # Get all student sessions for this class that haven't received reports
+    student_sessions = StudentSession.objects.filter(
+        class_session=class_session,
+        is_active=True,
+        report_sent=False
+    ).select_related('student')
+
+    eligible_students = []
+
+    for student_session in student_sessions:
+        student = student_session.student
+
+        # Check fee completion
+        fee_records = StudentFeeRecord.objects.filter(
+            student=student,
+            fee_structure__academic_year=class_session.academic_year
+        )
+
+        fees_complete = False
+        if fee_records.exists():
+            fees_complete = all(fr.payment_status == 'PAID' for fr in fee_records)
+
+        if not fees_complete:
+            continue
+
+        # Check grade completion
+        subjects = Subject.objects.filter(class_session=class_session)
+        if student.department:
+            subjects = subjects.filter(
+                Q(department=student.department) | Q(department='General')
+            )
+
+        grades_complete = True
+        for subject in subjects:
+            try:
+                grade_summary = GradeSummary.objects.get(
+                    student=student,
+                    subject=subject,
+                    grading_config=grading_config
+                )
+                attendance_score = float(grade_summary.attendance_score) if grade_summary.attendance_score else 0
+                assignment_score = float(grade_summary.assignment_score) if grade_summary.assignment_score else 0
+                test_score = float(grade_summary.test_score) if grade_summary.test_score else 0
+                exam_score = float(grade_summary.exam_score) if grade_summary.exam_score else 0
+                total_score = float(grade_summary.total_score) if grade_summary.total_score else 0
+
+                if not ((attendance_score + assignment_score) > 0 and test_score > 0 and exam_score > 0 and total_score > 0):
+                    grades_complete = False
+                    break
+            except GradeSummary.DoesNotExist:
+                grades_complete = False
+                break
+
+        if grades_complete:
+            eligible_students.append({
+                'id': student.id,
+                'student_session_id': student_session.id,
+                'username': student.username,
+                'full_name': student.get_full_name(),
+                'department': student.department or 'General'
+            })
+
+    # Sort by name
+    eligible_students.sort(key=lambda x: x['full_name'])
+
+    return Response({
+        'class_name': class_session.classroom.name,
+        'academic_year': class_session.academic_year,
+        'term': class_session.term,
+        'students': eligible_students
+    })
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_incomplete_grades_classes(request):
+    """
+    Get classes that have students with fees paid but incomplete grades.
+    """
+    from academics.models import StudentSession, Subject
+    from schooladmin.models import StudentFeeRecord, GradeSummary, GradingConfiguration
+    from django.db.models import Q
+
+    # Get current grading configuration
+    grading_config = GradingConfiguration.objects.filter(is_active=True).first()
+    if not grading_config:
+        return Response(
+            {"detail": "No active grading configuration found"},
+            status=status.HTTP_404_NOT_FOUND
+        )
+
+    academic_year = grading_config.academic_year
+    term = grading_config.term
+
+    # Get all student sessions for this term
+    student_sessions = StudentSession.objects.filter(
+        class_session__academic_year=academic_year,
+        class_session__term=term,
+        is_active=True
+    ).select_related('student', 'class_session__classroom')
+
+    # Group by class and count students with incomplete grades
+    class_data = {}
+
+    for student_session in student_sessions:
+        student = student_session.student
+        class_session = student_session.class_session
+
+        # Check fee completion
+        fee_records = StudentFeeRecord.objects.filter(
+            student=student,
+            fee_structure__academic_year=academic_year
+        )
+
+        fees_complete = False
+        if fee_records.exists():
+            fees_complete = all(fr.payment_status == 'PAID' for fr in fee_records)
+
+        if not fees_complete:
+            continue  # Only include students with fees paid
+
+        # Check grade completion
+        subjects = Subject.objects.filter(class_session=class_session)
+        if student.department:
+            subjects = subjects.filter(
+                Q(department=student.department) | Q(department='General')
+            )
+
+        grades_complete = True
+        for subject in subjects:
+            try:
+                grade_summary = GradeSummary.objects.get(
+                    student=student,
+                    subject=subject,
+                    grading_config=grading_config
+                )
+                attendance_score = float(grade_summary.attendance_score) if grade_summary.attendance_score else 0
+                assignment_score = float(grade_summary.assignment_score) if grade_summary.assignment_score else 0
+                test_score = float(grade_summary.test_score) if grade_summary.test_score else 0
+                exam_score = float(grade_summary.exam_score) if grade_summary.exam_score else 0
+                total_score = float(grade_summary.total_score) if grade_summary.total_score else 0
+
+                if not ((attendance_score + assignment_score) > 0 and test_score > 0 and exam_score > 0 and total_score > 0):
+                    grades_complete = False
+                    break
+            except GradeSummary.DoesNotExist:
+                grades_complete = False
+                break
+
+        # Only count students with fees paid but incomplete grades
+        if not grades_complete:
+            class_id = class_session.id
+            if class_id not in class_data:
+                class_data[class_id] = {
+                    'id': class_id,
+                    'name': class_session.classroom.name,
+                    'academic_year': academic_year,
+                    'term': term,
+                    'affected_count': 0
+                }
+            class_data[class_id]['affected_count'] += 1
+
+    # Sort by class name
+    classes_list = sorted(class_data.values(), key=lambda x: x['name'])
+
+    return Response({
+        'classes': classes_list,
+        'academic_year': academic_year,
+        'term': term
+    })
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_incomplete_grades_students(request, class_session_id):
+    """
+    Get students in a specific class who have fees paid but incomplete grades.
+    Returns the list of incomplete subjects for each student.
+    """
+    from academics.models import StudentSession, Subject, ClassSession
+    from schooladmin.models import StudentFeeRecord, GradeSummary, GradingConfiguration
+    from django.db.models import Q
+
+    # Get the class session
+    try:
+        class_session = ClassSession.objects.get(id=class_session_id)
+    except ClassSession.DoesNotExist:
+        return Response(
+            {"detail": "Class session not found"},
+            status=status.HTTP_404_NOT_FOUND
+        )
+
+    # Get grading configuration
+    grading_config = GradingConfiguration.objects.filter(
+        academic_year=class_session.academic_year,
+        term=class_session.term,
+        is_active=True
+    ).first()
+
+    if not grading_config:
+        return Response(
+            {"detail": "No grading configuration found for this session"},
+            status=status.HTTP_404_NOT_FOUND
+        )
+
+    # Get all student sessions for this class
+    student_sessions = StudentSession.objects.filter(
+        class_session=class_session,
+        is_active=True
+    ).select_related('student')
+
+    affected_students = []
+
+    for student_session in student_sessions:
+        student = student_session.student
+
+        # Check fee completion
+        fee_records = StudentFeeRecord.objects.filter(
+            student=student,
+            fee_structure__academic_year=class_session.academic_year
+        )
+
+        fees_complete = False
+        if fee_records.exists():
+            fees_complete = all(fr.payment_status == 'PAID' for fr in fee_records)
+
+        if not fees_complete:
+            continue  # Only include students with fees paid
+
+        # Check grade completion and collect incomplete subjects
+        subjects = Subject.objects.filter(class_session=class_session)
+        if student.department:
+            subjects = subjects.filter(
+                Q(department=student.department) | Q(department='General')
+            )
+
+        incomplete_subjects = []
+        for subject in subjects:
+            try:
+                grade_summary = GradeSummary.objects.get(
+                    student=student,
+                    subject=subject,
+                    grading_config=grading_config
+                )
+                attendance_score = float(grade_summary.attendance_score) if grade_summary.attendance_score else 0
+                assignment_score = float(grade_summary.assignment_score) if grade_summary.assignment_score else 0
+                test_score = float(grade_summary.test_score) if grade_summary.test_score else 0
+                exam_score = float(grade_summary.exam_score) if grade_summary.exam_score else 0
+                total_score = float(grade_summary.total_score) if grade_summary.total_score else 0
+
+                # Determine which components are missing
+                missing_components = []
+                if not ((attendance_score + assignment_score) > 0):
+                    missing_components.append('Test 1')
+                if not (test_score > 0):
+                    missing_components.append('Test 2')
+                if not (exam_score > 0):
+                    missing_components.append('Exam')
+                if not (total_score > 0):
+                    missing_components.append('Total')
+
+                if missing_components:
+                    incomplete_subjects.append({
+                        'name': subject.name,
+                        'missing': missing_components
+                    })
+            except GradeSummary.DoesNotExist:
+                incomplete_subjects.append({
+                    'name': subject.name,
+                    'missing': ['All scores']
+                })
+
+        # Only include students with incomplete grades
+        if incomplete_subjects:
+            affected_students.append({
+                'id': student.id,
+                'student_session_id': student_session.id,
+                'username': student.username,
+                'full_name': student.get_full_name(),
+                'department': student.department or 'General',
+                'incomplete_subjects': incomplete_subjects
+            })
+
+    # Sort by name
+    affected_students.sort(key=lambda x: x['full_name'])
+
+    return Response({
+        'class_name': class_session.classroom.name,
+        'academic_year': class_session.academic_year,
+        'term': class_session.term,
+        'students': affected_students
+    })
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def search_incomplete_grades_students(request):
+    """
+    Search for students with fees paid but incomplete grades across all classes.
+    """
+    from academics.models import StudentSession, Subject
+    from schooladmin.models import StudentFeeRecord, GradeSummary, GradingConfiguration
+    from django.db.models import Q
+
+    query = request.query_params.get('q', '').strip()
+    if not query:
+        return Response({'students': []})
+
+    # Get current grading configuration
+    grading_config = GradingConfiguration.objects.filter(is_active=True).first()
+    if not grading_config:
+        return Response(
+            {"detail": "No active grading configuration found"},
+            status=status.HTTP_404_NOT_FOUND
+        )
+
+    academic_year = grading_config.academic_year
+    term = grading_config.term
+
+    # Search for students matching the query
+    student_sessions = StudentSession.objects.filter(
+        class_session__academic_year=academic_year,
+        class_session__term=term,
+        is_active=True
+    ).filter(
+        Q(student__username__icontains=query) |
+        Q(student__first_name__icontains=query) |
+        Q(student__last_name__icontains=query)
+    ).select_related('student', 'class_session__classroom')[:20]
+
+    matching_students = []
+
+    for student_session in student_sessions:
+        student = student_session.student
+        class_session = student_session.class_session
+
+        # Check fee completion
+        fee_records = StudentFeeRecord.objects.filter(
+            student=student,
+            fee_structure__academic_year=academic_year
+        )
+
+        fees_complete = False
+        if fee_records.exists():
+            fees_complete = all(fr.payment_status == 'PAID' for fr in fee_records)
+
+        if not fees_complete:
+            continue  # Only include students with fees paid
+
+        # Check grade completion and collect incomplete subjects
+        subjects = Subject.objects.filter(class_session=class_session)
+        if student.department:
+            subjects = subjects.filter(
+                Q(department=student.department) | Q(department='General')
+            )
+
+        incomplete_subjects = []
+        for subject in subjects:
+            try:
+                grade_summary = GradeSummary.objects.get(
+                    student=student,
+                    subject=subject,
+                    grading_config=grading_config
+                )
+                attendance_score = float(grade_summary.attendance_score) if grade_summary.attendance_score else 0
+                assignment_score = float(grade_summary.assignment_score) if grade_summary.assignment_score else 0
+                test_score = float(grade_summary.test_score) if grade_summary.test_score else 0
+                exam_score = float(grade_summary.exam_score) if grade_summary.exam_score else 0
+                total_score = float(grade_summary.total_score) if grade_summary.total_score else 0
+
+                # Determine which components are missing
+                missing_components = []
+                if not ((attendance_score + assignment_score) > 0):
+                    missing_components.append('Test 1')
+                if not (test_score > 0):
+                    missing_components.append('Test 2')
+                if not (exam_score > 0):
+                    missing_components.append('Exam')
+                if not (total_score > 0):
+                    missing_components.append('Total')
+
+                if missing_components:
+                    incomplete_subjects.append({
+                        'name': subject.name,
+                        'missing': missing_components
+                    })
+            except GradeSummary.DoesNotExist:
+                incomplete_subjects.append({
+                    'name': subject.name,
+                    'missing': ['All scores']
+                })
+
+        # Only include students with incomplete grades
+        if incomplete_subjects:
+            matching_students.append({
+                'id': student.id,
+                'student_session_id': student_session.id,
+                'username': student.username,
+                'full_name': student.get_full_name(),
+                'department': student.department or 'General',
+                'class_name': class_session.classroom.name,
+                'incomplete_subjects': incomplete_subjects
+            })
+
+    return Response({
+        'students': matching_students,
+        'academic_year': academic_year,
+        'term': term
+    })
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def send_incomplete_grade_notification(request):
+    """
+    Send notification to a single student about their incomplete grades.
+    """
+    from academics.models import StudentSession, Subject
+    from schooladmin.models import StudentFeeRecord, GradeSummary, GradingConfiguration
+    from logs.models import Notification
+    from django.db.models import Q
+
+    # Verify user is admin
+    if request.user.role != 'admin':
+        return Response(
+            {"detail": "Only admins can send notifications"},
+            status=status.HTTP_403_FORBIDDEN
+        )
+
+    student_id = request.data.get('student_id')
+    if not student_id:
+        return Response(
+            {"detail": "student_id is required"},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    try:
+        student = CustomUser.objects.get(id=student_id, role='student')
+    except CustomUser.DoesNotExist:
+        return Response(
+            {"detail": "Student not found"},
+            status=status.HTTP_404_NOT_FOUND
+        )
+
+    # Get current grading configuration
+    grading_config = GradingConfiguration.objects.filter(is_active=True).first()
+    if not grading_config:
+        return Response(
+            {"detail": "No active grading configuration found"},
+            status=status.HTTP_404_NOT_FOUND
+        )
+
+    # Get student's current session
+    student_session = StudentSession.objects.filter(
+        student=student,
+        class_session__academic_year=grading_config.academic_year,
+        class_session__term=grading_config.term,
+        is_active=True
+    ).select_related('class_session').first()
+
+    if not student_session:
+        return Response(
+            {"detail": "Student session not found"},
+            status=status.HTTP_404_NOT_FOUND
+        )
+
+    # Get incomplete subjects
+    subjects = Subject.objects.filter(class_session=student_session.class_session)
+    if student.department:
+        subjects = subjects.filter(
+            Q(department=student.department) | Q(department='General')
+        )
+
+    incomplete_subjects = []
+    for subject in subjects:
+        try:
+            grade_summary = GradeSummary.objects.get(
+                student=student,
+                subject=subject,
+                grading_config=grading_config
+            )
+            attendance_score = float(grade_summary.attendance_score) if grade_summary.attendance_score else 0
+            assignment_score = float(grade_summary.assignment_score) if grade_summary.assignment_score else 0
+            test_score = float(grade_summary.test_score) if grade_summary.test_score else 0
+            exam_score = float(grade_summary.exam_score) if grade_summary.exam_score else 0
+            total_score = float(grade_summary.total_score) if grade_summary.total_score else 0
+
+            missing_components = []
+            if not ((attendance_score + assignment_score) > 0):
+                missing_components.append('Test 1')
+            if not (test_score > 0):
+                missing_components.append('Test 2')
+            if not (exam_score > 0):
+                missing_components.append('Exam')
+
+            if missing_components:
+                incomplete_subjects.append({
+                    'name': subject.name,
+                    'missing': missing_components
+                })
+        except GradeSummary.DoesNotExist:
+            incomplete_subjects.append({
+                'name': subject.name,
+                'missing': ['All assessments']
+            })
+
+    if not incomplete_subjects:
+        return Response(
+            {"detail": "Student has no incomplete grades"},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    # Build notification message
+    subject_list = []
+    for subj in incomplete_subjects:
+        missing_str = ', '.join(subj['missing'])
+        subject_list.append(f"- {subj['name']}: {missing_str}")
+
+    message = f"You have incomplete grades for the following subjects that need to be completed:\n\n"
+    message += '\n'.join(subject_list)
+    message += f"\n\nPlease ensure you complete these assessments as soon as possible for {grading_config.term}, {grading_config.academic_year}."
+
+    # Create notification
+    Notification.objects.create(
+        recipient=student,
+        title="Incomplete Grades Reminder",
+        message=message,
+        notification_type="incomplete_grades",
+        priority="high",
+        extra_data={
+            'incomplete_subjects': incomplete_subjects,
+            'academic_year': grading_config.academic_year,
+            'term': grading_config.term
+        }
+    )
+
+    return Response({
+        "message": f"Notification sent successfully to {student.get_full_name()}",
+        "student_name": student.get_full_name(),
+        "incomplete_count": len(incomplete_subjects)
+    }, status=status.HTTP_200_OK)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def send_bulk_incomplete_grade_notifications(request):
+    """
+    Send notifications to all students with fees paid but incomplete grades.
+    """
+    from academics.models import StudentSession, Subject
+    from schooladmin.models import StudentFeeRecord, GradeSummary, GradingConfiguration
+    from logs.models import Notification
+    from django.db.models import Q
+
+    # Verify user is admin
+    if request.user.role != 'admin':
+        return Response(
+            {"detail": "Only admins can send notifications"},
+            status=status.HTTP_403_FORBIDDEN
+        )
+
+    # Get current grading configuration
+    grading_config = GradingConfiguration.objects.filter(is_active=True).first()
+    if not grading_config:
+        return Response(
+            {"detail": "No active grading configuration found"},
+            status=status.HTTP_404_NOT_FOUND
+        )
+
+    academic_year = grading_config.academic_year
+    term = grading_config.term
+
+    # Get all student sessions for this term
+    student_sessions = StudentSession.objects.filter(
+        class_session__academic_year=academic_year,
+        class_session__term=term,
+        is_active=True
+    ).select_related('student', 'class_session__classroom')
+
+    notifications_sent = 0
+
+    for student_session in student_sessions:
+        student = student_session.student
+        class_session = student_session.class_session
+
+        # Check fee completion
+        fee_records = StudentFeeRecord.objects.filter(
+            student=student,
+            fee_structure__academic_year=academic_year
+        )
+
+        fees_complete = False
+        if fee_records.exists():
+            fees_complete = all(fr.payment_status == 'PAID' for fr in fee_records)
+
+        if not fees_complete:
+            continue  # Only notify students with fees paid
+
+        # Check grade completion and collect incomplete subjects
+        subjects = Subject.objects.filter(class_session=class_session)
+        if student.department:
+            subjects = subjects.filter(
+                Q(department=student.department) | Q(department='General')
+            )
+
+        incomplete_subjects = []
+        for subject in subjects:
+            try:
+                grade_summary = GradeSummary.objects.get(
+                    student=student,
+                    subject=subject,
+                    grading_config=grading_config
+                )
+                attendance_score = float(grade_summary.attendance_score) if grade_summary.attendance_score else 0
+                assignment_score = float(grade_summary.assignment_score) if grade_summary.assignment_score else 0
+                test_score = float(grade_summary.test_score) if grade_summary.test_score else 0
+                exam_score = float(grade_summary.exam_score) if grade_summary.exam_score else 0
+
+                missing_components = []
+                if not ((attendance_score + assignment_score) > 0):
+                    missing_components.append('Test 1')
+                if not (test_score > 0):
+                    missing_components.append('Test 2')
+                if not (exam_score > 0):
+                    missing_components.append('Exam')
+
+                if missing_components:
+                    incomplete_subjects.append({
+                        'name': subject.name,
+                        'missing': missing_components
+                    })
+            except GradeSummary.DoesNotExist:
+                incomplete_subjects.append({
+                    'name': subject.name,
+                    'missing': ['All assessments']
+                })
+
+        # Only notify students with incomplete grades
+        if incomplete_subjects:
+            # Build notification message
+            subject_list = []
+            for subj in incomplete_subjects:
+                missing_str = ', '.join(subj['missing'])
+                subject_list.append(f"- {subj['name']}: {missing_str}")
+
+            message = f"You have incomplete grades for the following subjects that need to be completed:\n\n"
+            message += '\n'.join(subject_list)
+            message += f"\n\nPlease ensure you complete these assessments as soon as possible for {term}, {academic_year}."
+
+            # Create notification
+            Notification.objects.create(
+                recipient=student,
+                title="Incomplete Grades Reminder",
+                message=message,
+                notification_type="incomplete_grades",
+                priority="high",
+                extra_data={
+                    'incomplete_subjects': incomplete_subjects,
+                    'academic_year': academic_year,
+                    'term': term
+                }
+            )
+            notifications_sent += 1
+
+    if notifications_sent == 0:
+        return Response(
+            {"message": "No students found with fees paid and incomplete grades"},
+            status=status.HTTP_200_OK
+        )
+
+    return Response({
+        "message": f"Notifications sent successfully to {notifications_sent} student(s)",
+        "notifications_sent": notifications_sent,
+        "academic_year": academic_year,
+        "term": term
+    }, status=status.HTTP_200_OK)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_unpaid_fees_classes(request):
+    """
+    Get list of classes with students who have unpaid fees but complete grades.
+    """
+    from academics.models import StudentSession, Subject
+    from schooladmin.models import StudentFeeRecord, GradeSummary, GradingConfiguration
+    from django.db.models import Q, Sum
+
+    # Verify user is admin
+    if request.user.role != 'admin':
+        return Response(
+            {"detail": "Only admins can view this data"},
+            status=status.HTTP_403_FORBIDDEN
+        )
+
+    # Get current grading configuration
+    grading_config = GradingConfiguration.objects.filter(is_active=True).first()
+    if not grading_config:
+        return Response(
+            {"detail": "No active grading configuration found"},
+            status=status.HTTP_404_NOT_FOUND
+        )
+
+    academic_year = grading_config.academic_year
+    term = grading_config.term
+
+    # Get all class sessions for this term
+    from academics.models import ClassSession
+    class_sessions = ClassSession.objects.filter(
+        academic_year=academic_year,
+        term=term
+    ).select_related('classroom')
+
+    classes_data = []
+
+    for class_session in class_sessions:
+        # Get students in this class
+        student_sessions = StudentSession.objects.filter(
+            class_session=class_session,
+            is_active=True
+        ).select_related('student')
+
+        affected_students = 0
+
+        for student_session in student_sessions:
+            student = student_session.student
+
+            # Check fee completion - must have unpaid fees
+            fee_records = StudentFeeRecord.objects.filter(
+                student=student,
+                fee_structure__academic_year=academic_year
+            )
+
+            fees_incomplete = False
+            if fee_records.exists():
+                fees_incomplete = any(fr.payment_status != 'PAID' for fr in fee_records)
+            else:
+                fees_incomplete = True  # No fee records means unpaid
+
+            if not fees_incomplete:
+                continue  # Skip students with complete fees
+
+            # Check grade completion - must have complete grades
+            subjects = Subject.objects.filter(class_session=class_session)
+            if student.department:
+                subjects = subjects.filter(
+                    Q(department=student.department) | Q(department='General')
+                )
+
+            grades_complete = True
+            for subject in subjects:
+                try:
+                    grade_summary = GradeSummary.objects.get(
+                        student=student,
+                        subject=subject,
+                        grading_config=grading_config
+                    )
+                    attendance_score = float(grade_summary.attendance_score) if grade_summary.attendance_score else 0
+                    assignment_score = float(grade_summary.assignment_score) if grade_summary.assignment_score else 0
+                    test_score = float(grade_summary.test_score) if grade_summary.test_score else 0
+                    exam_score = float(grade_summary.exam_score) if grade_summary.exam_score else 0
+
+                    # Check if all components are filled
+                    if not ((attendance_score + assignment_score) > 0 and test_score > 0 and exam_score > 0):
+                        grades_complete = False
+                        break
+                except GradeSummary.DoesNotExist:
+                    grades_complete = False
+                    break
+
+            if grades_complete:
+                affected_students += 1
+
+        if affected_students > 0:
+            classes_data.append({
+                'class_session_id': class_session.id,
+                'class_name': class_session.classroom.name,
+                'affected_count': affected_students
+            })
+
+    return Response({
+        'classes': classes_data,
+        'total_affected': sum(c['affected_count'] for c in classes_data),
+        'academic_year': academic_year,
+        'term': term
+    }, status=status.HTTP_200_OK)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_unpaid_fees_students(request, class_session_id):
+    """
+    Get students in a class who have unpaid fees but complete grades with their balance.
+    """
+    from academics.models import StudentSession, Subject, ClassSession
+    from schooladmin.models import StudentFeeRecord, GradeSummary, GradingConfiguration
+    from django.db.models import Q, Sum
+
+    # Verify user is admin
+    if request.user.role != 'admin':
+        return Response(
+            {"detail": "Only admins can view this data"},
+            status=status.HTTP_403_FORBIDDEN
+        )
+
+    # Get current grading configuration
+    grading_config = GradingConfiguration.objects.filter(is_active=True).first()
+    if not grading_config:
+        return Response(
+            {"detail": "No active grading configuration found"},
+            status=status.HTTP_404_NOT_FOUND
+        )
+
+    try:
+        class_session = ClassSession.objects.get(id=class_session_id)
+    except ClassSession.DoesNotExist:
+        return Response(
+            {"detail": "Class session not found"},
+            status=status.HTTP_404_NOT_FOUND
+        )
+
+    academic_year = grading_config.academic_year
+    term = grading_config.term
+
+    # Get students in this class
+    student_sessions = StudentSession.objects.filter(
+        class_session=class_session,
+        is_active=True
+    ).select_related('student')
+
+    students_data = []
+
+    for student_session in student_sessions:
+        student = student_session.student
+
+        # Check fee completion and calculate balance
+        fee_records = StudentFeeRecord.objects.filter(
+            student=student,
+            fee_structure__academic_year=academic_year
+        )
+
+        fees_incomplete = False
+        total_balance = 0
+
+        if fee_records.exists():
+            for fr in fee_records:
+                if fr.payment_status != 'PAID':
+                    fees_incomplete = True
+                    total_balance += float(fr.fee_structure.amount - fr.amount_paid)
+        else:
+            fees_incomplete = True  # No fee records means unpaid
+
+        if not fees_incomplete:
+            continue  # Skip students with complete fees
+
+        # Check grade completion
+        subjects = Subject.objects.filter(class_session=class_session)
+        if student.department:
+            subjects = subjects.filter(
+                Q(department=student.department) | Q(department='General')
+            )
+
+        grades_complete = True
+        for subject in subjects:
+            try:
+                grade_summary = GradeSummary.objects.get(
+                    student=student,
+                    subject=subject,
+                    grading_config=grading_config
+                )
+                attendance_score = float(grade_summary.attendance_score) if grade_summary.attendance_score else 0
+                assignment_score = float(grade_summary.assignment_score) if grade_summary.assignment_score else 0
+                test_score = float(grade_summary.test_score) if grade_summary.test_score else 0
+                exam_score = float(grade_summary.exam_score) if grade_summary.exam_score else 0
+
+                if not ((attendance_score + assignment_score) > 0 and test_score > 0 and exam_score > 0):
+                    grades_complete = False
+                    break
+            except GradeSummary.DoesNotExist:
+                grades_complete = False
+                break
+
+        if grades_complete:
+            students_data.append({
+                'student_id': student.id,
+                'student_name': student.get_full_name(),
+                'username': student.username,
+                'balance': total_balance
+            })
+
+    return Response({
+        'students': students_data,
+        'class_name': class_session.classroom.name,
+        'class_session_id': class_session_id
+    }, status=status.HTTP_200_OK)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def search_unpaid_fees_students(request):
+    """
+    Search for students with unpaid fees but complete grades across all classes.
+    """
+    from academics.models import StudentSession, Subject
+    from schooladmin.models import StudentFeeRecord, GradeSummary, GradingConfiguration
+    from django.db.models import Q
+
+    # Verify user is admin
+    if request.user.role != 'admin':
+        return Response(
+            {"detail": "Only admins can view this data"},
+            status=status.HTTP_403_FORBIDDEN
+        )
+
+    search_query = request.query_params.get('q', '').strip()
+    if len(search_query) < 2:
+        return Response({'students': []}, status=status.HTTP_200_OK)
+
+    # Get current grading configuration
+    grading_config = GradingConfiguration.objects.filter(is_active=True).first()
+    if not grading_config:
+        return Response(
+            {"detail": "No active grading configuration found"},
+            status=status.HTTP_404_NOT_FOUND
+        )
+
+    academic_year = grading_config.academic_year
+    term = grading_config.term
+
+    # Search for students by name
+    from django.contrib.auth import get_user_model
+    User = get_user_model()
+
+    matching_students = User.objects.filter(
+        role='student'
+    ).filter(
+        Q(first_name__icontains=search_query) |
+        Q(last_name__icontains=search_query) |
+        Q(username__icontains=search_query)
+    )[:50]
+
+    students_data = []
+
+    for student in matching_students:
+        # Get student's current class session
+        student_session = StudentSession.objects.filter(
+            student=student,
+            class_session__academic_year=academic_year,
+            class_session__term=term,
+            is_active=True
+        ).select_related('class_session__classroom').first()
+
+        if not student_session:
+            continue
+
+        class_session = student_session.class_session
+
+        # Check fee completion and calculate balance
+        fee_records = StudentFeeRecord.objects.filter(
+            student=student,
+            fee_structure__academic_year=academic_year
+        )
+
+        fees_incomplete = False
+        total_balance = 0
+
+        if fee_records.exists():
+            for fr in fee_records:
+                if fr.payment_status != 'PAID':
+                    fees_incomplete = True
+                    total_balance += float(fr.fee_structure.amount - fr.amount_paid)
+        else:
+            fees_incomplete = True
+
+        if not fees_incomplete:
+            continue
+
+        # Check grade completion
+        subjects = Subject.objects.filter(class_session=class_session)
+        if student.department:
+            subjects = subjects.filter(
+                Q(department=student.department) | Q(department='General')
+            )
+
+        grades_complete = True
+        for subject in subjects:
+            try:
+                grade_summary = GradeSummary.objects.get(
+                    student=student,
+                    subject=subject,
+                    grading_config=grading_config
+                )
+                attendance_score = float(grade_summary.attendance_score) if grade_summary.attendance_score else 0
+                assignment_score = float(grade_summary.assignment_score) if grade_summary.assignment_score else 0
+                test_score = float(grade_summary.test_score) if grade_summary.test_score else 0
+                exam_score = float(grade_summary.exam_score) if grade_summary.exam_score else 0
+
+                if not ((attendance_score + assignment_score) > 0 and test_score > 0 and exam_score > 0):
+                    grades_complete = False
+                    break
+            except GradeSummary.DoesNotExist:
+                grades_complete = False
+                break
+
+        if grades_complete:
+            students_data.append({
+                'student_id': student.id,
+                'student_name': student.get_full_name(),
+                'username': student.username,
+                'class_name': class_session.classroom.name,
+                'balance': total_balance
+            })
+
+    return Response({
+        'students': students_data,
+        'search_query': search_query
+    }, status=status.HTTP_200_OK)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def send_unpaid_fee_notification(request):
+    """
+    Send notification to a specific student about unpaid fees.
+    """
+    from academics.models import StudentSession, Subject
+    from schooladmin.models import StudentFeeRecord, GradeSummary, GradingConfiguration
+    from logs.models import Notification
+    from django.contrib.auth import get_user_model
+    from django.db.models import Q
+
+    User = get_user_model()
+
+    # Verify user is admin
+    if request.user.role != 'admin':
+        return Response(
+            {"detail": "Only admins can send notifications"},
+            status=status.HTTP_403_FORBIDDEN
+        )
+
+    student_id = request.data.get('student_id')
+    if not student_id:
+        return Response(
+            {"detail": "student_id is required"},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    try:
+        student = User.objects.get(id=student_id, role='student')
+    except User.DoesNotExist:
+        return Response(
+            {"detail": "Student not found"},
+            status=status.HTTP_404_NOT_FOUND
+        )
+
+    # Get current grading configuration
+    grading_config = GradingConfiguration.objects.filter(is_active=True).first()
+    if not grading_config:
+        return Response(
+            {"detail": "No active grading configuration found"},
+            status=status.HTTP_404_NOT_FOUND
+        )
+
+    academic_year = grading_config.academic_year
+    term = grading_config.term
+
+    # Calculate balance
+    fee_records = StudentFeeRecord.objects.filter(
+        student=student,
+        fee_structure__academic_year=academic_year
+    )
+
+    total_balance = 0
+    fee_details = []
+
+    for fr in fee_records:
+        if fr.payment_status != 'PAID':
+            total_balance += float(fr.fee_structure.amount - fr.amount_paid)
+            fee_details.append({
+                'fee_type': fr.fee_structure.name if hasattr(fr.fee_structure, 'name') else 'School Fee',
+                'balance': float(fr.fee_structure.amount - fr.amount_paid)
+            })
+
+    if total_balance == 0:
+        return Response(
+            {"detail": "Student has no outstanding balance"},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    # Build notification message
+    message = f"You have an outstanding balance of ₦{total_balance:,.2f} that needs to be paid.\n\n"
+    message += "Please ensure your fees are fully paid to avoid any disruption to your academic activities.\n\n"
+    message += f"Academic Year: {academic_year}\nTerm: {term}\n\n"
+    message += "Kindly visit the school's bursary department or make payment through the approved channels."
+
+    # Create notification
+    Notification.objects.create(
+        recipient=student,
+        title="Fee Payment Reminder",
+        message=message,
+        notification_type="fee_reminder",
+        priority="high",
+        extra_data={
+            'balance': total_balance,
+            'fee_details': fee_details,
+            'academic_year': academic_year,
+            'term': term
+        }
+    )
+
+    return Response({
+        "message": f"Notification sent successfully to {student.get_full_name()}",
+        "student_name": student.get_full_name(),
+        "balance": total_balance
+    }, status=status.HTTP_200_OK)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def send_bulk_unpaid_fee_notifications(request):
+    """
+    Send notifications to all students with unpaid fees but complete grades.
+    """
+    from academics.models import StudentSession, Subject
+    from schooladmin.models import StudentFeeRecord, GradeSummary, GradingConfiguration
+    from logs.models import Notification
+    from django.db.models import Q
+
+    # Verify user is admin
+    if request.user.role != 'admin':
+        return Response(
+            {"detail": "Only admins can send notifications"},
+            status=status.HTTP_403_FORBIDDEN
+        )
+
+    # Get current grading configuration
+    grading_config = GradingConfiguration.objects.filter(is_active=True).first()
+    if not grading_config:
+        return Response(
+            {"detail": "No active grading configuration found"},
+            status=status.HTTP_404_NOT_FOUND
+        )
+
+    academic_year = grading_config.academic_year
+    term = grading_config.term
+
+    # Get all student sessions for this term
+    student_sessions = StudentSession.objects.filter(
+        class_session__academic_year=academic_year,
+        class_session__term=term,
+        is_active=True
+    ).select_related('student', 'class_session__classroom')
+
+    notifications_sent = 0
+
+    for student_session in student_sessions:
+        student = student_session.student
+        class_session = student_session.class_session
+
+        # Check fee completion and calculate balance
+        fee_records = StudentFeeRecord.objects.filter(
+            student=student,
+            fee_structure__academic_year=academic_year
+        )
+
+        fees_incomplete = False
+        total_balance = 0
+        fee_details = []
+
+        if fee_records.exists():
+            for fr in fee_records:
+                if fr.payment_status != 'PAID':
+                    fees_incomplete = True
+                    total_balance += float(fr.fee_structure.amount - fr.amount_paid)
+                    fee_details.append({
+                        'fee_type': fr.fee_structure.name if hasattr(fr.fee_structure, 'name') else 'School Fee',
+                        'balance': float(fr.fee_structure.amount - fr.amount_paid)
+                    })
+        else:
+            fees_incomplete = True
+
+        if not fees_incomplete:
+            continue  # Skip students with complete fees
+
+        # Check grade completion
+        subjects = Subject.objects.filter(class_session=class_session)
+        if student.department:
+            subjects = subjects.filter(
+                Q(department=student.department) | Q(department='General')
+            )
+
+        grades_complete = True
+        for subject in subjects:
+            try:
+                grade_summary = GradeSummary.objects.get(
+                    student=student,
+                    subject=subject,
+                    grading_config=grading_config
+                )
+                attendance_score = float(grade_summary.attendance_score) if grade_summary.attendance_score else 0
+                assignment_score = float(grade_summary.assignment_score) if grade_summary.assignment_score else 0
+                test_score = float(grade_summary.test_score) if grade_summary.test_score else 0
+                exam_score = float(grade_summary.exam_score) if grade_summary.exam_score else 0
+
+                if not ((attendance_score + assignment_score) > 0 and test_score > 0 and exam_score > 0):
+                    grades_complete = False
+                    break
+            except GradeSummary.DoesNotExist:
+                grades_complete = False
+                break
+
+        # Only notify students with unpaid fees AND complete grades
+        if grades_complete and total_balance > 0:
+            # Build notification message
+            message = f"You have an outstanding balance of ₦{total_balance:,.2f} that needs to be paid.\n\n"
+            message += "Please ensure your fees are fully paid to avoid any disruption to your academic activities.\n\n"
+            message += f"Academic Year: {academic_year}\nTerm: {term}\n\n"
+            message += "Kindly visit the school's bursary department or make payment through the approved channels."
+
+            # Create notification
+            Notification.objects.create(
+                recipient=student,
+                title="Fee Payment Reminder",
+                message=message,
+                notification_type="fee_reminder",
+                priority="high",
+                extra_data={
+                    'balance': total_balance,
+                    'fee_details': fee_details,
+                    'academic_year': academic_year,
+                    'term': term
+                }
+            )
+            notifications_sent += 1
+
+    if notifications_sent == 0:
+        return Response(
+            {"message": "No students found with unpaid fees and complete grades"},
+            status=status.HTTP_200_OK
+        )
+
+    return Response({
+        "message": f"Notifications sent successfully to {notifications_sent} student(s)",
+        "notifications_sent": notifications_sent,
+        "academic_year": academic_year,
+        "term": term
+    }, status=status.HTTP_200_OK)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def send_individual_report(request):
+    """
+    Send report sheet to a single student and their parent(s).
+    """
+    from academics.models import StudentSession
+    from logs.models import Notification
+    from django.utils import timezone
+
+    # Verify user is admin
+    if request.user.role != 'admin':
+        return Response(
+            {"detail": "Only admins can send report sheets"},
+            status=status.HTTP_403_FORBIDDEN
+        )
+
+    student_session_id = request.data.get('student_session_id')
+    if not student_session_id:
+        return Response(
+            {"detail": "student_session_id is required"},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    try:
+        student_session = StudentSession.objects.select_related(
+            'student', 'class_session'
+        ).get(id=student_session_id)
+    except StudentSession.DoesNotExist:
+        return Response(
+            {"detail": "Student session not found"},
+            status=status.HTTP_404_NOT_FOUND
+        )
+
+    if student_session.report_sent:
+        return Response(
+            {"detail": "Report has already been sent for this student"},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    # Mark report as sent
+    student_session.report_sent = True
+    student_session.report_sent_date = timezone.now()
+    student_session.report_sent_by = request.user
+    student_session.save()
+
+    academic_year = student_session.class_session.academic_year
+    term = student_session.class_session.term
+
+    # Create notification for student
+    Notification.objects.create(
+        recipient=student_session.student,
+        title="Report Sheet Available",
+        message=f"Your report sheet for {term}, {academic_year} is now available. Visit the Report Sheet section to view and download it.",
+        notification_type="report_release",
+        priority="high"
+    )
+
+    # Create notification for parent(s)
+    parent_count = 0
+    parents = student_session.student.parents.all()
+    for parent in parents:
+        Notification.objects.create(
+            recipient=parent,
+            title="Report Sheet Available",
+            message=f"{student_session.student.get_full_name()}'s report sheet for {term}, {academic_year} is now available. Visit the Grade Report section to view and download it.",
+            notification_type="report_release",
+            priority="high"
+        )
+        parent_count += 1
+
+    return Response({
+        "message": f"Report sheet sent to {student_session.student.get_full_name()}",
+        "details": {
+            "student_name": student_session.student.get_full_name(),
+            "parent_notifications": parent_count
+        }
+    }, status=status.HTTP_200_OK)
+
+
+# ============================================================================
+# UNPAID FEES + INCOMPLETE GRADES ANALYTICS VIEWS
+# ============================================================================
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_both_issues_classes(request):
+    """
+    Get all classes with students who have BOTH unpaid fees AND incomplete grades.
+    """
+    from academics.models import StudentSession, ClassSession, Subject
+    from schooladmin.models import StudentFeeRecord, GradeSummary, GradingConfiguration
+    from django.db.models import Q
+
+    # Verify user is admin
+    if request.user.role != 'admin':
+        return Response(
+            {"detail": "Only admins can view this data"},
+            status=status.HTTP_403_FORBIDDEN
+        )
+
+    # Get current grading configuration
+    grading_config = GradingConfiguration.objects.filter(is_active=True).first()
+    if not grading_config:
+        return Response(
+            {"detail": "No active grading configuration found"},
+            status=status.HTTP_404_NOT_FOUND
+        )
+
+    academic_year = grading_config.academic_year
+    term = grading_config.term
+
+    # Get all class sessions for current academic year and term
+    class_sessions = ClassSession.objects.filter(
+        academic_year=academic_year,
+        term=term
+    ).select_related('classroom')
+
+    classes_data = []
+
+    for class_session in class_sessions:
+        # Get students in this class
+        student_sessions = StudentSession.objects.filter(
+            class_session=class_session,
+            is_active=True
+        ).select_related('student')
+
+        students_with_both_issues = 0
+
+        for student_session in student_sessions:
+            student = student_session.student
+
+            # Check fee completion
+            fee_records = StudentFeeRecord.objects.filter(
+                student=student,
+                fee_structure__academic_year=academic_year
+            )
+
+            fees_incomplete = False
+            if fee_records.exists():
+                for fr in fee_records:
+                    if fr.payment_status != 'PAID':
+                        fees_incomplete = True
+                        break
+            else:
+                fees_incomplete = True
+
+            if not fees_incomplete:
+                continue  # Skip if fees are complete
+
+            # Check grade completion
+            subjects = Subject.objects.filter(class_session=class_session)
+            if student.department:
+                subjects = subjects.filter(
+                    Q(department=student.department) | Q(department='General')
+                )
+
+            grades_incomplete = False
+            for subject in subjects:
+                try:
+                    grade_summary = GradeSummary.objects.get(
+                        student=student,
+                        subject=subject,
+                        grading_config=grading_config
+                    )
+                    attendance_score = float(grade_summary.attendance_score) if grade_summary.attendance_score else 0
+                    assignment_score = float(grade_summary.assignment_score) if grade_summary.assignment_score else 0
+                    test_score = float(grade_summary.test_score) if grade_summary.test_score else 0
+                    exam_score = float(grade_summary.exam_score) if grade_summary.exam_score else 0
+
+                    if not ((attendance_score + assignment_score) > 0 and test_score > 0 and exam_score > 0):
+                        grades_incomplete = True
+                        break
+                except GradeSummary.DoesNotExist:
+                    grades_incomplete = True
+                    break
+
+            if grades_incomplete:
+                students_with_both_issues += 1
+
+        if students_with_both_issues > 0:
+            classes_data.append({
+                'class_session_id': class_session.id,
+                'class_name': class_session.classroom.name,
+                'students_count': students_with_both_issues
+            })
+
+    # Sort by number of students (highest first)
+    classes_data.sort(key=lambda x: x['students_count'], reverse=True)
+
+    return Response({
+        'classes': classes_data,
+        'academic_year': academic_year,
+        'term': term
+    })
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_both_issues_students(request, class_session_id):
+    """
+    Get students in a class who have BOTH unpaid fees AND incomplete grades.
+    Returns what they owe and count of incomplete subjects.
+    """
+    from academics.models import StudentSession, Subject, ClassSession
+    from schooladmin.models import StudentFeeRecord, GradeSummary, GradingConfiguration
+    from django.db.models import Q
+
+    # Verify user is admin
+    if request.user.role != 'admin':
+        return Response(
+            {"detail": "Only admins can view this data"},
+            status=status.HTTP_403_FORBIDDEN
+        )
+
+    # Get current grading configuration
+    grading_config = GradingConfiguration.objects.filter(is_active=True).first()
+    if not grading_config:
+        return Response(
+            {"detail": "No active grading configuration found"},
+            status=status.HTTP_404_NOT_FOUND
+        )
+
+    try:
+        class_session = ClassSession.objects.get(id=class_session_id)
+    except ClassSession.DoesNotExist:
+        return Response(
+            {"detail": "Class session not found"},
+            status=status.HTTP_404_NOT_FOUND
+        )
+
+    academic_year = grading_config.academic_year
+
+    # Get students in this class
+    student_sessions = StudentSession.objects.filter(
+        class_session=class_session,
+        is_active=True
+    ).select_related('student')
+
+    students_data = []
+
+    for student_session in student_sessions:
+        student = student_session.student
+
+        # Check fee completion and calculate balance
+        fee_records = StudentFeeRecord.objects.filter(
+            student=student,
+            fee_structure__academic_year=academic_year
+        )
+
+        fees_incomplete = False
+        total_balance = 0
+
+        if fee_records.exists():
+            for fr in fee_records:
+                if fr.payment_status != 'PAID':
+                    fees_incomplete = True
+                    total_balance += float(fr.fee_structure.amount - fr.amount_paid)
+        else:
+            fees_incomplete = True
+
+        if not fees_incomplete:
+            continue  # Skip students with complete fees
+
+        # Check grade completion and count incomplete subjects
+        subjects = Subject.objects.filter(class_session=class_session)
+        if student.department:
+            subjects = subjects.filter(
+                Q(department=student.department) | Q(department='General')
+            )
+
+        incomplete_subjects = []
+        for subject in subjects:
+            try:
+                grade_summary = GradeSummary.objects.get(
+                    student=student,
+                    subject=subject,
+                    grading_config=grading_config
+                )
+                attendance_score = float(grade_summary.attendance_score) if grade_summary.attendance_score else 0
+                assignment_score = float(grade_summary.assignment_score) if grade_summary.assignment_score else 0
+                test_score = float(grade_summary.test_score) if grade_summary.test_score else 0
+                exam_score = float(grade_summary.exam_score) if grade_summary.exam_score else 0
+
+                missing = []
+                if not (attendance_score + assignment_score) > 0:
+                    missing.append('Test 1')
+                if not test_score > 0:
+                    missing.append('Test 2')
+                if not exam_score > 0:
+                    missing.append('Exam')
+
+                if missing:
+                    incomplete_subjects.append({
+                        'name': subject.name,
+                        'missing': missing
+                    })
+            except GradeSummary.DoesNotExist:
+                incomplete_subjects.append({
+                    'name': subject.name,
+                    'missing': ['Test 1', 'Test 2', 'Exam']
+                })
+
+        if len(incomplete_subjects) > 0:
+            students_data.append({
+                'student_id': student.id,
+                'student_name': student.get_full_name(),
+                'username': student.username,
+                'balance': total_balance,
+                'incomplete_subjects_count': len(incomplete_subjects),
+                'incomplete_subjects': incomplete_subjects
+            })
+
+    # Sort by balance (highest first)
+    students_data.sort(key=lambda x: x['balance'], reverse=True)
+
+    return Response({
+        'students': students_data,
+        'class_name': class_session.classroom.name
+    })
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def send_both_issues_notification(request):
+    """
+    Send notification to a student about their unpaid fees AND incomplete grades.
+    """
+    from logs.models import Notification
+    from django.contrib.auth import get_user_model
+    from schooladmin.models import StudentFeeRecord, GradeSummary, GradingConfiguration
+    from academics.models import StudentSession, Subject
+    from django.db.models import Q
+
+    User = get_user_model()
+
+    # Verify user is admin
+    if request.user.role != 'admin':
+        return Response(
+            {"detail": "Only admins can send notifications"},
+            status=status.HTTP_403_FORBIDDEN
+        )
+
+    student_id = request.data.get('student_id')
+    if not student_id:
+        return Response(
+            {"detail": "student_id is required"},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    try:
+        student = User.objects.get(id=student_id, role='student')
+    except User.DoesNotExist:
+        return Response(
+            {"detail": "Student not found"},
+            status=status.HTTP_404_NOT_FOUND
+        )
+
+    # Get current grading configuration
+    grading_config = GradingConfiguration.objects.filter(is_active=True).first()
+    if not grading_config:
+        return Response(
+            {"detail": "No active grading configuration found"},
+            status=status.HTTP_404_NOT_FOUND
+        )
+
+    academic_year = grading_config.academic_year
+    term = grading_config.term
+
+    # Calculate balance
+    fee_records = StudentFeeRecord.objects.filter(
+        student=student,
+        fee_structure__academic_year=academic_year
+    )
+
+    total_balance = 0
+    for fr in fee_records:
+        if fr.payment_status != 'PAID':
+            total_balance += float(fr.fee_structure.amount - fr.amount_paid)
+
+    # Get incomplete subjects count
+    student_session = StudentSession.objects.filter(
+        student=student,
+        class_session__academic_year=academic_year,
+        class_session__term=term,
+        is_active=True
+    ).first()
+
+    incomplete_count = 0
+    if student_session:
+        subjects = Subject.objects.filter(class_session=student_session.class_session)
+        if student.department:
+            subjects = subjects.filter(
+                Q(department=student.department) | Q(department='General')
+            )
+
+        for subject in subjects:
+            try:
+                grade_summary = GradeSummary.objects.get(
+                    student=student,
+                    subject=subject,
+                    grading_config=grading_config
+                )
+                attendance_score = float(grade_summary.attendance_score) if grade_summary.attendance_score else 0
+                assignment_score = float(grade_summary.assignment_score) if grade_summary.assignment_score else 0
+                test_score = float(grade_summary.test_score) if grade_summary.test_score else 0
+                exam_score = float(grade_summary.exam_score) if grade_summary.exam_score else 0
+
+                if not ((attendance_score + assignment_score) > 0 and test_score > 0 and exam_score > 0):
+                    incomplete_count += 1
+            except GradeSummary.DoesNotExist:
+                incomplete_count += 1
+
+    # Create notification for student
+    Notification.objects.create(
+        recipient=student,
+        title="Unpaid Fees & Incomplete Grades Notice",
+        message=f"Important: You have an outstanding balance of ₦{total_balance:,.2f} and {incomplete_count} subject(s) with incomplete grades for {term}, {academic_year}. Please settle your fees and ensure all assessments are completed to access your report sheet.",
+        notification_type="fee_reminder",
+        priority="high"
+    )
+
+    # Notify parents as well
+    for parent in student.parents.all():
+        Notification.objects.create(
+            recipient=parent,
+            title="Child's Unpaid Fees & Incomplete Grades",
+            message=f"Important: {student.get_full_name()} has an outstanding balance of ₦{total_balance:,.2f} and {incomplete_count} subject(s) with incomplete grades for {term}, {academic_year}. Please ensure fees are settled and all assessments are completed for report sheet access.",
+            notification_type="fee_reminder",
+            priority="high"
+        )
+
+    return Response({
+        "message": f"Notification sent to {student.get_full_name()} and their parent(s)",
+        "student_name": student.get_full_name()
+    }, status=status.HTTP_200_OK)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def send_bulk_both_issues_notifications(request):
+    """
+    Send notifications to ALL students with BOTH unpaid fees AND incomplete grades.
+    """
+    from logs.models import Notification
+    from schooladmin.models import StudentFeeRecord, GradeSummary, GradingConfiguration
+    from academics.models import StudentSession, Subject
+    from django.db.models import Q
+
+    # Verify user is admin
+    if request.user.role != 'admin':
+        return Response(
+            {"detail": "Only admins can send notifications"},
+            status=status.HTTP_403_FORBIDDEN
+        )
+
+    # Get current grading configuration
+    grading_config = GradingConfiguration.objects.filter(is_active=True).first()
+    if not grading_config:
+        return Response(
+            {"detail": "No active grading configuration found"},
+            status=status.HTTP_404_NOT_FOUND
+        )
+
+    academic_year = grading_config.academic_year
+    term = grading_config.term
+
+    # Get all active student sessions
+    student_sessions = StudentSession.objects.filter(
+        class_session__academic_year=academic_year,
+        class_session__term=term,
+        is_active=True
+    ).select_related('student', 'class_session')
+
+    notifications_sent = 0
+
+    for student_session in student_sessions:
+        student = student_session.student
+
+        # Check fee completion
+        fee_records = StudentFeeRecord.objects.filter(
+            student=student,
+            fee_structure__academic_year=academic_year
+        )
+
+        fees_incomplete = False
+        total_balance = 0
+
+        if fee_records.exists():
+            for fr in fee_records:
+                if fr.payment_status != 'PAID':
+                    fees_incomplete = True
+                    total_balance += float(fr.fee_structure.amount - fr.amount_paid)
+        else:
+            fees_incomplete = True
+
+        if not fees_incomplete:
+            continue
+
+        # Check grade completion
+        subjects = Subject.objects.filter(class_session=student_session.class_session)
+        if student.department:
+            subjects = subjects.filter(
+                Q(department=student.department) | Q(department='General')
+            )
+
+        incomplete_count = 0
+        for subject in subjects:
+            try:
+                grade_summary = GradeSummary.objects.get(
+                    student=student,
+                    subject=subject,
+                    grading_config=grading_config
+                )
+                attendance_score = float(grade_summary.attendance_score) if grade_summary.attendance_score else 0
+                assignment_score = float(grade_summary.assignment_score) if grade_summary.assignment_score else 0
+                test_score = float(grade_summary.test_score) if grade_summary.test_score else 0
+                exam_score = float(grade_summary.exam_score) if grade_summary.exam_score else 0
+
+                if not ((attendance_score + assignment_score) > 0 and test_score > 0 and exam_score > 0):
+                    incomplete_count += 1
+            except GradeSummary.DoesNotExist:
+                incomplete_count += 1
+
+        if incomplete_count == 0:
+            continue
+
+        # Send notification to student
+        Notification.objects.create(
+            recipient=student,
+            title="Unpaid Fees & Incomplete Grades Notice",
+            message=f"Important: You have an outstanding balance of ₦{total_balance:,.2f} and {incomplete_count} subject(s) with incomplete grades for {term}, {academic_year}. Please settle your fees and ensure all assessments are completed to access your report sheet.",
+            notification_type="fee_reminder",
+            priority="high"
+        )
+
+        # Notify parents
+        for parent in student.parents.all():
+            Notification.objects.create(
+                recipient=parent,
+                title="Child's Unpaid Fees & Incomplete Grades",
+                message=f"Important: {student.get_full_name()} has an outstanding balance of ₦{total_balance:,.2f} and {incomplete_count} subject(s) with incomplete grades for {term}, {academic_year}. Please ensure fees are settled and all assessments are completed for report sheet access.",
+                notification_type="fee_reminder",
+                priority="high"
+            )
+
+        notifications_sent += 1
+
+    return Response({
+        "message": f"Notifications sent to {notifications_sent} student(s) and their parents",
+        "notifications_sent": notifications_sent,
+        "academic_year": academic_year,
+        "term": term
+    }, status=status.HTTP_200_OK)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_reports_sent_stats(request):
+    """
+    Get statistics about reports sent by class for the current academic year and term.
+    """
+    from academics.models import StudentSession, ClassSession, Subject
+    from schooladmin.models import StudentFeeRecord, GradeSummary, GradingConfiguration
+    from django.db.models import Q
+
+    # Verify user is admin
+    if request.user.role != 'admin':
+        return Response(
+            {"detail": "Only admins can view this data"},
+            status=status.HTTP_403_FORBIDDEN
+        )
+
+    # Get academic year and term from query params or use active config
+    academic_year = request.query_params.get('academic_year')
+    term = request.query_params.get('term')
+
+    if not academic_year or not term:
+        # Get current grading configuration
+        grading_config = GradingConfiguration.objects.filter(is_active=True).first()
+        if not grading_config:
+            return Response(
+                {"detail": "No active grading configuration found"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        academic_year = grading_config.academic_year
+        term = grading_config.term
+
+    # Get all class sessions for current academic year and term
+    class_sessions = ClassSession.objects.filter(
+        academic_year=academic_year,
+        term=term
+    ).select_related('classroom').order_by('classroom__name')
+
+    classes_data = []
+    total_sent = 0
+    total_not_sent = 0
+
+    for class_session in class_sessions:
+        # Get students in this class
+        student_sessions = StudentSession.objects.filter(
+            class_session=class_session,
+            is_active=True
+        )
+
+        sent_count = student_sessions.filter(report_sent=True).count()
+        total_count = student_sessions.count()
+        not_sent_count = total_count - sent_count
+
+        if total_count > 0:
+            percentage = round((sent_count / total_count) * 100)
+        else:
+            percentage = 0
+
+        classes_data.append({
+            'class_session_id': class_session.id,
+            'class_name': class_session.classroom.name,
+            'sent': sent_count,
+            'not_sent': not_sent_count,
+            'total': total_count,
+            'percentage': percentage
+        })
+
+        total_sent += sent_count
+        total_not_sent += not_sent_count
+
+    total_students = total_sent + total_not_sent
+    overall_percentage = round((total_sent / total_students) * 100) if total_students > 0 else 0
+
+    return Response({
+        "academic_year": academic_year,
+        "term": term,
+        "total_sent": total_sent,
+        "total_not_sent": total_not_sent,
+        "overall_percentage": overall_percentage,
+        "classes": classes_data
+    }, status=status.HTTP_200_OK)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_class_report_sent_students(request, class_session_id):
+    """
+    Get the report sent status for all students in a specific class.
+    """
+    from academics.models import StudentSession, ClassSession, Subject
+    from schooladmin.models import StudentFeeRecord, GradeSummary, GradingConfiguration
+    from django.db.models import Q
+
+    # Verify user is admin
+    if request.user.role != 'admin':
+        return Response(
+            {"detail": "Only admins can view this data"},
+            status=status.HTTP_403_FORBIDDEN
+        )
+
+    # Get class session
+    try:
+        class_session = ClassSession.objects.get(id=class_session_id)
+    except ClassSession.DoesNotExist:
+        return Response(
+            {"detail": "Class session not found"},
+            status=status.HTTP_404_NOT_FOUND
+        )
+
+    # Get current grading configuration
+    grading_config = GradingConfiguration.objects.filter(is_active=True).first()
+    if not grading_config:
+        return Response(
+            {"detail": "No active grading configuration found"},
+            status=status.HTTP_404_NOT_FOUND
+        )
+
+    academic_year = grading_config.academic_year
+    term = grading_config.term
+
+    # Get students in this class
+    student_sessions = StudentSession.objects.filter(
+        class_session=class_session,
+        is_active=True
+    ).select_related('student').order_by('student__last_name', 'student__first_name')
+
+    students_data = []
+
+    for student_session in student_sessions:
+        student = student_session.student
+
+        # Check if report was sent
+        if student_session.report_sent:
+            status_value = 'sent'
+            sent_date = student_session.report_sent_date
+        else:
+            # Determine the reason why not sent
+            # Check fee completion
+            fee_records = StudentFeeRecord.objects.filter(
+                student=student,
+                fee_structure__academic_year=academic_year
+            )
+
+            fees_incomplete = False
+            if fee_records.exists():
+                for fr in fee_records:
+                    if fr.payment_status != 'PAID':
+                        fees_incomplete = True
+                        break
+            else:
+                fees_incomplete = True
+
+            # Check grade completion
+            subjects = Subject.objects.filter(class_session=class_session)
+            if student.department:
+                subjects = subjects.filter(
+                    Q(department=student.department) | Q(department='General')
+                )
+
+            grades_incomplete = False
+            for subject in subjects:
+                try:
+                    grade_summary = GradeSummary.objects.get(
+                        student=student,
+                        subject=subject,
+                        grading_config=grading_config
+                    )
+                    attendance_score = float(grade_summary.attendance_score) if grade_summary.attendance_score else 0
+                    assignment_score = float(grade_summary.assignment_score) if grade_summary.assignment_score else 0
+                    test_score = float(grade_summary.test_score) if grade_summary.test_score else 0
+                    exam_score = float(grade_summary.exam_score) if grade_summary.exam_score else 0
+
+                    if not ((attendance_score + assignment_score) > 0 and test_score > 0 and exam_score > 0):
+                        grades_incomplete = True
+                        break
+                except GradeSummary.DoesNotExist:
+                    grades_incomplete = True
+                    break
+
+            # Determine status
+            if fees_incomplete and grades_incomplete:
+                status_value = 'both_issues'
+            elif fees_incomplete:
+                status_value = 'incomplete_fees'
+            elif grades_incomplete:
+                status_value = 'incomplete_grades'
+            else:
+                status_value = 'not_sent'
+
+            sent_date = None
+
+        students_data.append({
+            'student_id': student.id,
+            'student_name': student.get_full_name(),
+            'username': student.username,
+            'status': status_value,
+            'sent_date': sent_date
+        })
+
+    return Response({
+        "class_name": class_session.classroom.name,
+        "academic_year": academic_year,
+        "term": term,
+        "students": students_data
+    }, status=status.HTTP_200_OK)
+
+
+# ============================================================================
+# SUBJECT GRADING COMPLETION ANALYTICS
+# ============================================================================
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_subject_grading_stats(request):
+    """
+    Get subjects ordered by grading completion percentage.
+    Returns top subjects with most complete grades and bottom with least.
+    """
+    from academics.models import Subject, ClassSession
+    from schooladmin.models import GradeSummary, GradingConfiguration
+    from django.db.models import Count, Q
+
+    if request.user.role != 'admin':
+        return Response(
+            {"detail": "Only admins can view this data"},
+            status=status.HTTP_403_FORBIDDEN
+        )
+
+    academic_year = request.GET.get('academic_year')
+    term = request.GET.get('term')
+
+    if not academic_year or not term:
+        return Response(
+            {"detail": "academic_year and term are required"},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    # Get grading configuration
+    grading_config = GradingConfiguration.objects.filter(
+        academic_year=academic_year,
+        term=term,
+        is_active=True
+    ).first()
+
+    if not grading_config:
+        return Response(
+            {"detail": "No active grading configuration found for this period"},
+            status=status.HTTP_404_NOT_FOUND
+        )
+
+    # Get all class sessions for this academic year and term
+    class_sessions = ClassSession.objects.filter(
+        academic_year=academic_year,
+        term=term
+    )
+
+    # Get all subjects for these class sessions
+    subjects = Subject.objects.filter(
+        class_session__in=class_sessions
+    ).select_related('class_session', 'teacher')
+
+    subject_stats = []
+
+    for subject in subjects:
+        # Get students in this class session
+        student_sessions = StudentSession.objects.filter(
+            class_session=subject.class_session,
+            is_active=True
+        )
+
+        # Filter by department if subject has a department
+        if subject.department and subject.department != 'General':
+            student_sessions = student_sessions.filter(
+                student__department=subject.department
+            )
+
+        total_students = student_sessions.count()
+
+        if total_students == 0:
+            continue
+
+        # Check grade completion for each student
+        complete_count = 0
+        incomplete_count = 0
+
+        for student_session in student_sessions:
+            try:
+                grade_summary = GradeSummary.objects.get(
+                    student=student_session.student,
+                    subject=subject,
+                    grading_config=grading_config
+                )
+
+                # Check if all required scores are entered
+                attendance_score = float(grade_summary.attendance_score) if grade_summary.attendance_score else 0
+                assignment_score = float(grade_summary.assignment_score) if grade_summary.assignment_score else 0
+                test_score = float(grade_summary.test_score) if grade_summary.test_score else 0
+                exam_score = float(grade_summary.exam_score) if grade_summary.exam_score else 0
+
+                # A grade is complete if it has (attendance OR assignment) AND test AND exam scores
+                if (attendance_score + assignment_score) > 0 and test_score > 0 and exam_score > 0:
+                    complete_count += 1
+                else:
+                    incomplete_count += 1
+            except GradeSummary.DoesNotExist:
+                incomplete_count += 1
+
+        completion_percentage = round((complete_count / total_students) * 100, 1) if total_students > 0 else 0
+
+        subject_stats.append({
+            'subject_id': subject.id,
+            'subject_name': subject.name,
+            'class_name': subject.class_session.classroom.name,
+            'teacher_name': subject.teacher.get_full_name() if subject.teacher else 'Not Assigned',
+            'teacher_id': subject.teacher.id if subject.teacher else None,
+            'total_students': total_students,
+            'complete_count': complete_count,
+            'incomplete_count': incomplete_count,
+            'completion_percentage': completion_percentage
+        })
+
+    # Sort by completion percentage (descending)
+    subject_stats.sort(key=lambda x: x['completion_percentage'], reverse=True)
+
+    return Response({
+        'academic_year': academic_year,
+        'term': term,
+        'total_subjects': len(subject_stats),
+        'subjects': subject_stats
+    }, status=status.HTTP_200_OK)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_subject_incomplete_students(request, subject_id):
+    """
+    Get students with incomplete grades for a specific subject.
+    Shows what scores are missing for each student.
+    """
+    from academics.models import Subject
+    from schooladmin.models import GradeSummary, GradingConfiguration
+
+    if request.user.role != 'admin':
+        return Response(
+            {"detail": "Only admins can view this data"},
+            status=status.HTTP_403_FORBIDDEN
+        )
+
+    try:
+        subject = Subject.objects.select_related('class_session', 'teacher').get(id=subject_id)
+    except Subject.DoesNotExist:
+        return Response(
+            {"detail": "Subject not found"},
+            status=status.HTTP_404_NOT_FOUND
+        )
+
+    academic_year = subject.class_session.academic_year
+    term = subject.class_session.term
+
+    # Get grading configuration
+    grading_config = GradingConfiguration.objects.filter(
+        academic_year=academic_year,
+        term=term,
+        is_active=True
+    ).first()
+
+    if not grading_config:
+        return Response(
+            {"detail": "No active grading configuration found"},
+            status=status.HTTP_404_NOT_FOUND
+        )
+
+    # Get students in this class
+    student_sessions = StudentSession.objects.filter(
+        class_session=subject.class_session,
+        is_active=True
+    ).select_related('student')
+
+    # Filter by department if subject has a department
+    if subject.department and subject.department != 'General':
+        student_sessions = student_sessions.filter(
+            student__department=subject.department
+        )
+
+    incomplete_students = []
+
+    for student_session in student_sessions:
+        student = student_session.student
+        missing_scores = []
+
+        try:
+            grade_summary = GradeSummary.objects.get(
+                student=student,
+                subject=subject,
+                grading_config=grading_config
+            )
+
+            attendance_score = float(grade_summary.attendance_score) if grade_summary.attendance_score else 0
+            assignment_score = float(grade_summary.assignment_score) if grade_summary.assignment_score else 0
+            test_score = float(grade_summary.test_score) if grade_summary.test_score else 0
+            exam_score = float(grade_summary.exam_score) if grade_summary.exam_score else 0
+
+            # Check what's missing
+            if (attendance_score + assignment_score) == 0:
+                missing_scores.append('Attendance/Assignment')
+            if test_score == 0:
+                missing_scores.append('Test')
+            if exam_score == 0:
+                missing_scores.append('Exam')
+
+            # Only add if something is missing
+            if missing_scores:
+                incomplete_students.append({
+                    'student_id': student.id,
+                    'student_name': student.get_full_name(),
+                    'username': student.username,
+                    'missing_scores': missing_scores,
+                    'current_scores': {
+                        'attendance': attendance_score,
+                        'assignment': assignment_score,
+                        'test': test_score,
+                        'exam': exam_score
+                    }
+                })
+        except GradeSummary.DoesNotExist:
+            incomplete_students.append({
+                'student_id': student.id,
+                'student_name': student.get_full_name(),
+                'username': student.username,
+                'missing_scores': ['Attendance/Assignment', 'Test', 'Exam'],
+                'current_scores': {
+                    'attendance': 0,
+                    'assignment': 0,
+                    'test': 0,
+                    'exam': 0
+                }
+            })
+
+    # Sort by student name
+    incomplete_students.sort(key=lambda x: x['student_name'])
+
+    return Response({
+        'subject_id': subject.id,
+        'subject_name': subject.name,
+        'class_name': subject.class_session.classroom.name,
+        'teacher_name': subject.teacher.get_full_name() if subject.teacher else 'Not Assigned',
+        'teacher_id': subject.teacher.id if subject.teacher else None,
+        'academic_year': academic_year,
+        'term': term,
+        'total_incomplete': len(incomplete_students),
+        'students': incomplete_students
+    }, status=status.HTTP_200_OK)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def notify_teachers_incomplete_grades(request):
+    """
+    Send notifications to teachers about incomplete grades for their subjects.
+    """
+    from academics.models import Subject, ClassSession
+    from schooladmin.models import GradeSummary, GradingConfiguration
+    from logs.models import Notification
+
+    if request.user.role != 'admin':
+        return Response(
+            {"detail": "Only admins can send notifications"},
+            status=status.HTTP_403_FORBIDDEN
+        )
+
+    academic_year = request.data.get('academic_year')
+    term = request.data.get('term')
+
+    if not academic_year or not term:
+        return Response(
+            {"detail": "academic_year and term are required"},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    # Get grading configuration
+    grading_config = GradingConfiguration.objects.filter(
+        academic_year=academic_year,
+        term=term,
+        is_active=True
+    ).first()
+
+    if not grading_config:
+        return Response(
+            {"detail": "No active grading configuration found"},
+            status=status.HTTP_404_NOT_FOUND
+        )
+
+    # Get all class sessions for this period
+    class_sessions = ClassSession.objects.filter(
+        academic_year=academic_year,
+        term=term
+    )
+
+    # Get all subjects with teachers
+    subjects = Subject.objects.filter(
+        class_session__in=class_sessions,
+        teacher__isnull=False
+    ).select_related('class_session', 'teacher')
+
+    # Group subjects by teacher
+    teacher_subjects = {}
+
+    for subject in subjects:
+        # Check if this subject has incomplete grades
+        student_sessions = StudentSession.objects.filter(
+            class_session=subject.class_session,
+            is_active=True
+        )
+
+        if subject.department and subject.department != 'General':
+            student_sessions = student_sessions.filter(
+                student__department=subject.department
+            )
+
+        incomplete_count = 0
+        total_students = student_sessions.count()
+
+        for student_session in student_sessions:
+            try:
+                grade_summary = GradeSummary.objects.get(
+                    student=student_session.student,
+                    subject=subject,
+                    grading_config=grading_config
+                )
+
+                attendance_score = float(grade_summary.attendance_score) if grade_summary.attendance_score else 0
+                assignment_score = float(grade_summary.assignment_score) if grade_summary.assignment_score else 0
+                test_score = float(grade_summary.test_score) if grade_summary.test_score else 0
+                exam_score = float(grade_summary.exam_score) if grade_summary.exam_score else 0
+
+                if not ((attendance_score + assignment_score) > 0 and test_score > 0 and exam_score > 0):
+                    incomplete_count += 1
+            except GradeSummary.DoesNotExist:
+                incomplete_count += 1
+
+        # Only add if there are incomplete grades
+        if incomplete_count > 0:
+            teacher_id = subject.teacher.id
+            if teacher_id not in teacher_subjects:
+                teacher_subjects[teacher_id] = {
+                    'teacher': subject.teacher,
+                    'subjects': []
+                }
+
+            teacher_subjects[teacher_id]['subjects'].append({
+                'name': subject.name,
+                'class_name': subject.class_session.classroom.name,
+                'incomplete_count': incomplete_count,
+                'total_students': total_students
+            })
+
+    # Send notifications to teachers
+    notifications_sent = 0
+
+    for teacher_id, data in teacher_subjects.items():
+        teacher = data['teacher']
+        subjects_list = data['subjects']
+
+        # Build message
+        subject_lines = []
+        for subj in subjects_list:
+            subject_lines.append(
+                f"• {subj['name']} ({subj['class_name']}): {subj['incomplete_count']}/{subj['total_students']} students incomplete"
+            )
+
+        message = f"You have incomplete grades for the following subjects that need to be entered:\n\n"
+        message += '\n'.join(subject_lines)
+        message += f"\n\nPlease ensure all grades are entered for {term}, {academic_year} as soon as possible."
+
+        # Create notification
+        Notification.objects.create(
+            recipient=teacher,
+            title="Incomplete Grades - Action Required",
+            message=message,
+            notification_type="teacher_grading_reminder",
+            priority="high",
+            extra_data={
+                'subjects': subjects_list,
+                'academic_year': academic_year,
+                'term': term
+            }
+        )
+        notifications_sent += 1
+
+    return Response({
+        'message': f'Notifications sent to {notifications_sent} teacher(s)',
+        'notifications_sent': notifications_sent,
+        'teachers_notified': list(teacher_subjects.keys())
+    }, status=status.HTTP_200_OK)
+
+
+# ============================================================================
+# STUDENT DASHBOARD - ATTENDANCE RANKING
+# ============================================================================
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_class_attendance_ranking(request):
+    """
+    Get attendance ranking for all students in the current user's class.
+    Returns students ordered by average attendance score (highest first).
+    """
+    user = request.user
+
+    if user.role != 'student':
+        return Response(
+            {"detail": "This endpoint is only for students"},
+            status=status.HTTP_403_FORBIDDEN
+        )
+
+    # Get student's current session
+    try:
+        student_session = StudentSession.objects.filter(
+            student=user,
+            is_active=True
+        ).select_related('class_session').first()
+
+        if not student_session:
+            return Response(
+                {"detail": "No active session found for student"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        class_session = student_session.class_session
+
+        # Get all students in the same class session
+        class_students = StudentSession.objects.filter(
+            class_session=class_session,
+            is_active=True
+        ).select_related('student')
+
+        # Get attendance scores from GradeSummary for each student
+        # We'll average across all subjects for each student
+        student_rankings = []
+
+        for student_session_obj in class_students:
+            student = student_session_obj.student
+
+            # Get all grade summaries for this student in current session
+            grade_summaries = GradeSummary.objects.filter(
+                student=student,
+                subject__class_session=class_session
+            )
+
+            if grade_summaries.exists():
+                # Calculate average attendance score across all subjects
+                total_attendance = sum(float(gs.attendance_score) for gs in grade_summaries)
+                avg_attendance = total_attendance / grade_summaries.count()
+            else:
+                avg_attendance = 0.0
+
+            # Get avatar URL (user-uploaded profile picture for social use)
+            avatar_url = None
+            if hasattr(student, 'avatar') and student.avatar:
+                avatar_url = request.build_absolute_uri(student.avatar.url)
+
+            student_rankings.append({
+                'student_id': student.id,
+                'student_name': student.get_full_name(),
+                'username': student.username,
+                'avatar_url': avatar_url,
+                'attendance_score': round(avg_attendance, 2),
+                'is_current_user': student.id == user.id
+            })
+
+        # Sort by attendance score (highest first)
+        student_rankings.sort(key=lambda x: x['attendance_score'], reverse=True)
+
+        # Add rank numbers
+        for idx, student in enumerate(student_rankings, 1):
+            student['rank'] = idx
+
+        return Response({
+            'class_name': class_session.classroom.name,
+            'academic_year': class_session.academic_year,
+            'term': class_session.term,
+            'total_students': len(student_rankings),
+            'rankings': student_rankings
+        }, status=status.HTTP_200_OK)
+
+    except Exception as e:
+        return Response(
+            {"detail": f"Error fetching rankings: {str(e)}"},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_subject_grade_rankings(request):
+    """
+    Get subjects for the student's class and top students by total grade score.
+    For department-based classes, only shows subjects matching the student's department.
+    """
+    user = request.user
+
+    if user.role != 'student':
+        return Response(
+            {"detail": "This endpoint is only for students"},
+            status=status.HTTP_403_FORBIDDEN
+        )
+
+    try:
+        # Get student's current session
+        student_session = StudentSession.objects.filter(
+            student=user,
+            is_active=True
+        ).select_related('class_session').first()
+
+        if not student_session:
+            return Response(
+                {"detail": "No active session found for student"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        class_session = student_session.class_session
+
+        # Get subjects for this class session
+        subjects = Subject.objects.filter(class_session=class_session)
+
+        # Filter by department if student has one (for senior classes)
+        if user.department:
+            # Include subjects that match department OR have no department restriction
+            subjects = subjects.filter(
+                models.Q(department=user.department) |
+                models.Q(department__isnull=True) |
+                models.Q(department='')
+            )
+
+        subjects = subjects.order_by('name')
+
+        subjects_data = []
+        for subject in subjects:
+            subjects_data.append({
+                'id': subject.id,
+                'name': subject.name,
+                'teacher': subject.teacher.get_full_name() if subject.teacher else 'Not Assigned'
+            })
+
+        return Response({
+            'class_name': class_session.classroom.name,
+            'academic_year': class_session.academic_year,
+            'term': class_session.term,
+            'department': user.department or None,
+            'subjects': subjects_data
+        }, status=status.HTTP_200_OK)
+
+    except Exception as e:
+        return Response(
+            {"detail": f"Error fetching subjects: {str(e)}"},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_subject_top_students(request, subject_id):
+    """
+    Get top students by total grade score for a specific subject.
+    """
+    user = request.user
+
+    if user.role != 'student':
+        return Response(
+            {"detail": "This endpoint is only for students"},
+            status=status.HTTP_403_FORBIDDEN
+        )
+
+    try:
+        # Get student's current session
+        student_session = StudentSession.objects.filter(
+            student=user,
+            is_active=True
+        ).select_related('class_session').first()
+
+        if not student_session:
+            return Response(
+                {"detail": "No active session found for student"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        class_session = student_session.class_session
+
+        # Verify subject belongs to student's class
+        try:
+            subject = Subject.objects.get(id=subject_id, class_session=class_session)
+        except Subject.DoesNotExist:
+            return Response(
+                {"detail": "Subject not found in your class"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        # Get all grade summaries for this subject
+        grade_summaries = GradeSummary.objects.filter(
+            subject=subject
+        ).select_related('student').order_by('-total_score')
+
+        student_rankings = []
+        for idx, gs in enumerate(grade_summaries, 1):
+            # Get avatar URL
+            avatar_url = None
+            if hasattr(gs.student, 'avatar') and gs.student.avatar:
+                avatar_url = request.build_absolute_uri(gs.student.avatar.url)
+
+            student_rankings.append({
+                'rank': idx,
+                'student_id': gs.student.id,
+                'student_name': gs.student.get_full_name(),
+                'username': gs.student.username,
+                'avatar_url': avatar_url,
+                'total_score': float(gs.total_score),
+                'is_current_user': gs.student.id == user.id
+            })
+
+        return Response({
+            'subject_id': subject.id,
+            'subject_name': subject.name,
+            'teacher': subject.teacher.get_full_name() if subject.teacher else 'Not Assigned',
+            'total_students': len(student_rankings),
+            'rankings': student_rankings
+        }, status=status.HTTP_200_OK)
+
+    except Exception as e:
+        return Response(
+            {"detail": f"Error fetching rankings: {str(e)}"},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )

@@ -10,6 +10,15 @@
   box-sizing: border-box;
 }
 
+/* Analytics greeting */
+.analytics-greeting {
+  color: #333333;
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin-top: 0;
+  margin-bottom: 1.5rem;
+}
+
 /* Dashboard cards grid */
 .dashboard-cards-grid {
   display: grid;
@@ -27,6 +36,11 @@
   box-sizing: border-box;
 }
 
+/* Full width grid item - spans both columns */
+.grid-item-full-width {
+  grid-column: 1 / -1;
+}
+
 /* Desktop layout - 2 column grid */
 @media (min-width: 769px) {
   .analytics-container {
@@ -38,10 +52,7 @@
     gap: 1.75rem;
   }
 
-  /* Make tests tile span both columns */
-  .grid-item:nth-child(3) {
-    grid-column: 1 / -1;
-  }
+  /* Tests and Exams tiles are side by side (no spanning) */
 }
 
 /* Large screens - tiles grow to fill space */
@@ -73,7 +84,12 @@
 @media (max-width: 768px) {
   .analytics-container {
     padding: 0.5rem;
-    margin-top: 3rem; /* Push content down to avoid header overlap */
+    margin-top: 0;
+  }
+
+  .analytics-greeting {
+    font-size: 1.25rem;
+    margin-top: 0;
   }
 
   .dashboard-cards-grid {

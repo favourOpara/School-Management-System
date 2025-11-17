@@ -543,6 +543,173 @@ class UserRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
+def student_attendance_report(request):
+    """
+    Get attendance report for logged-in student.
+
+    Query Parameters:
+    - academic_year: Academic year (optional) - defaults to current session
+    - term: Term (optional) - defaults to current session
+
+    Returns attendance statistics and detailed records.
+    """
+    from schooladmin.models import AttendanceRecord as GradingAttendanceRecord
+    from attendance.models import AttendanceCalendar, AttendanceSchoolDay, AttendanceHolidayLabel
+    from django.db.models import Count, Q
+    from datetime import datetime
+
+    student = request.user
+
+    # Verify user is a student
+    if student.role != 'student':
+        return Response(
+            {"detail": "Only students can access this endpoint"},
+            status=status.HTTP_403_FORBIDDEN
+        )
+
+    # Get academic_year and term from query params or use current session
+    academic_year = request.query_params.get('academic_year')
+    term = request.query_params.get('term')
+
+    # If not provided, get student's current session
+    if not academic_year or not term:
+        current_session = StudentSession.objects.filter(
+            student=student,
+            is_active=True
+        ).select_related('class_session').first()
+
+        if current_session:
+            academic_year = current_session.class_session.academic_year
+            term = current_session.class_session.term
+        else:
+            return Response(
+                {"detail": "No active session found for student"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+    # Get the student's class session for this academic year and term
+    student_session = StudentSession.objects.filter(
+        student=student,
+        class_session__academic_year=academic_year,
+        class_session__term=term
+    ).select_related('class_session').first()
+
+    if not student_session:
+        return Response(
+            {"detail": f"No class session found for {academic_year} - {term}"},
+            status=status.HTTP_404_NOT_FOUND
+        )
+
+    class_session = student_session.class_session
+
+    # Get total school days and holidays from the attendance calendar
+    total_school_days = 0
+    total_holidays = 0
+    holidays_list = []
+
+    try:
+        attendance_calendar = AttendanceCalendar.objects.get(
+            academic_year=academic_year,
+            term=term
+        )
+
+        # Get school days from the attendance calendar system
+        school_days = AttendanceSchoolDay.objects.filter(calendar=attendance_calendar)
+        total_school_days = school_days.count()
+
+        # Get holidays from the attendance calendar system
+        holiday_days = AttendanceHolidayLabel.objects.filter(calendar=attendance_calendar)
+        total_holidays = holiday_days.count()
+
+        # Build holidays list
+        holidays_list = [{
+            'date': holiday.date.strftime('%Y-%m-%d'),
+            'label': holiday.label,
+            'type': holiday.get_holiday_type_display()
+        } for holiday in holiday_days.order_by('date')]
+
+    except AttendanceCalendar.DoesNotExist:
+        # No attendance calendar exists, that's okay - we'll show 0
+        pass
+
+    # Get attendance records from grading system (schooladmin.AttendanceRecord)
+    attendance_records = GradingAttendanceRecord.objects.filter(
+        student=student,
+        class_session=class_session
+    ).select_related('class_session').order_by('date')
+
+    # Calculate attendance statistics
+    # Get unique dates where student was present
+    present_records = attendance_records.filter(is_present=True)
+    attended_dates = present_records.values('date').distinct()
+    days_attended = attended_dates.count()
+
+    # Get unique dates where student was absent
+    absent_records = attendance_records.filter(is_present=False)
+    absent_dates = absent_records.values('date').distinct()
+    days_not_attended = absent_dates.count()
+
+    # Calculate attendance percentage based on calendar school days
+    attendance_percentage = (days_attended / total_school_days * 100) if total_school_days > 0 else 0
+
+    # Prepare detailed attendance records by date (only show days absent)
+    attendance_by_date = {}
+    for record in absent_records:
+        date_str = record.date.strftime('%Y-%m-%d')
+        if date_str not in attendance_by_date:
+            attendance_by_date[date_str] = {
+                'date': date_str,
+                'subjects': []
+            }
+        # Note: Grading attendance is per class session, not per subject
+        subject_info = {
+            'subject_name': f"Absent",
+            'marked_at': record.recorded_at.isoformat() if record.recorded_at else None
+        }
+        if attendance_by_date[date_str]['subjects']:
+            # If we already have an entry for this date, skip duplicate
+            continue
+        attendance_by_date[date_str]['subjects'].append(subject_info)
+
+    # Get available sessions for this student
+    available_sessions = StudentSession.objects.filter(
+        student=student
+    ).select_related('class_session').values(
+        'class_session__academic_year',
+        'class_session__term'
+    ).distinct().order_by('-class_session__academic_year', 'class_session__term')
+
+    sessions_list = [{
+        'academic_year': session['class_session__academic_year'],
+        'term': session['class_session__term']
+    } for session in available_sessions]
+
+    return Response({
+        'student': {
+            'id': student.id,
+            'full_name': student.get_full_name(),
+            'username': student.username,
+            'classroom': student.classroom.name if student.classroom else None
+        },
+        'session': {
+            'academic_year': academic_year,
+            'term': term
+        },
+        'statistics': {
+            'days_attended': days_attended,
+            'days_not_attended': days_not_attended,
+            'total_school_days': total_school_days,
+            'total_holidays': total_holidays,
+            'attendance_percentage': round(attendance_percentage, 2)
+        },
+        'attendance_records': list(attendance_by_date.values()),
+        'holidays': holidays_list,
+        'available_sessions': sessions_list
+    })
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
 def parent_attendance_report(request):
     """
     Get attendance report for parent's children.
@@ -752,3 +919,814 @@ def parent_attendance_report(request):
         'children': children_list,
         'available_sessions': sessions_list
     })
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def parent_grade_report(request):
+    """
+    Get grade report (report sheet) for parent's children.
+
+    Query Parameters:
+    - child_id: Student ID (optional) - defaults to first child if not provided
+    - academic_year: Academic year (optional) - defaults to current session
+    - term: Term (optional) - defaults to current session
+
+    Returns complete report sheet with all subjects, scores, and grades.
+    """
+    from schooladmin.models import GradeSummary, GradingConfiguration
+    from academics.models import Subject
+    from django.db.models import Q
+
+    parent = request.user
+
+    # Verify user is a parent
+    if parent.role != 'parent':
+        return Response(
+            {"detail": "Only parents can access this endpoint"},
+            status=status.HTTP_403_FORBIDDEN
+        )
+
+    # Get all children
+    children = parent.children.filter(role='student').order_by('first_name', 'last_name')
+
+    if not children.exists():
+        return Response(
+            {"detail": "No children found for this parent"},
+            status=status.HTTP_404_NOT_FOUND
+        )
+
+    # Get child_id from query params or default to first child
+    child_id = request.query_params.get('child_id')
+    if child_id:
+        try:
+            child = children.get(id=child_id)
+        except CustomUser.DoesNotExist:
+            return Response(
+                {"detail": "Child not found or not linked to this parent"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+    else:
+        child = children.first()
+
+    # Get academic_year and term from query params or use current session
+    academic_year = request.query_params.get('academic_year')
+    term = request.query_params.get('term')
+
+    # If not provided, get child's current session
+    if not academic_year or not term:
+        current_session = StudentSession.objects.filter(
+            student=child,
+            is_active=True
+        ).select_related('class_session').first()
+
+        if current_session:
+            academic_year = current_session.class_session.academic_year
+            term = current_session.class_session.term
+        else:
+            return Response(
+                {"detail": "No active session found for student"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+    # Get the student's class session for this academic year and term
+    student_session = StudentSession.objects.filter(
+        student=child,
+        class_session__academic_year=academic_year,
+        class_session__term=term,
+        is_active=True
+    ).select_related('class_session__classroom').first()
+
+    if not student_session:
+        return Response(
+            {"detail": f"Student not enrolled in {academic_year} - {term}"},
+            status=status.HTTP_404_NOT_FOUND
+        )
+
+    class_session = student_session.class_session
+
+    # Get grading configuration
+    try:
+        grading_config = GradingConfiguration.objects.get(
+            academic_year=academic_year,
+            term=term,
+            is_active=True
+        )
+    except GradingConfiguration.DoesNotExist:
+        return Response(
+            {"detail": "No grading configuration found for this session"},
+            status=status.HTTP_404_NOT_FOUND
+        )
+
+    # Custom grading scale for report sheet
+    def get_report_grade(score):
+        """Return grade based on custom report sheet scale"""
+        if score >= 75:
+            return 'A1'
+        elif score >= 70:
+            return 'B2'
+        elif score >= 65:
+            return 'B3'
+        elif score >= 60:
+            return 'C4'
+        elif score >= 55:
+            return 'C5'
+        elif score >= 50:
+            return 'C6'
+        elif score >= 45:
+            return 'D7'
+        elif score >= 40:
+            return 'E8'
+        else:
+            return 'F9'
+
+    # Get all subjects for this student
+    subjects = Subject.objects.filter(
+        class_session=class_session
+    ).select_related('teacher')
+
+    # Filter by department if student has one
+    if child.department:
+        subjects = subjects.filter(
+            Q(department=child.department) | Q(department='General')
+        )
+
+    # Get all children for dropdown (needed for filters even if grades incomplete)
+    children_list = [{
+        'id': c.id,
+        'full_name': c.get_full_name(),
+        'username': c.username,
+        'classroom': c.classroom.name if c.classroom else None
+    } for c in children]
+
+    # Get available sessions for this child (needed for filters even if grades incomplete)
+    available_sessions = StudentSession.objects.filter(
+        student=child
+    ).select_related('class_session').values(
+        'class_session__academic_year',
+        'class_session__term'
+    ).distinct().order_by('-class_session__academic_year', 'class_session__term')
+
+    sessions_list = [{
+        'academic_year': session['class_session__academic_year'],
+        'term': session['class_session__term']
+    } for session in available_sessions]
+
+    # Check if ALL subjects have COMPLETE grades before showing report
+    # Complete means: Test 1 (attendance + assignment), Test 2 (test), Exam, and Total are all filled
+    grades_complete = True
+    for subject in subjects:
+        try:
+            grade_summary = GradeSummary.objects.get(
+                student=child,
+                subject=subject,
+                grading_config=grading_config
+            )
+
+            # Get all score components
+            attendance_score = float(grade_summary.attendance_score) if grade_summary.attendance_score else 0
+            assignment_score = float(grade_summary.assignment_score) if grade_summary.assignment_score else 0
+            test_score = float(grade_summary.test_score) if grade_summary.test_score else 0
+            exam_score = float(grade_summary.exam_score) if grade_summary.exam_score else 0
+            total_score = float(grade_summary.total_score) if grade_summary.total_score else 0
+
+            # Test 1 = attendance + assignment (must be > 0)
+            test1_complete = (attendance_score + assignment_score) > 0
+            # Test 2 = test score (must be > 0)
+            test2_complete = test_score > 0
+            # Exam (must be > 0)
+            exam_complete = exam_score > 0
+            # Total (must be > 0)
+            total_complete = total_score > 0
+
+            # If any component is missing, grades are incomplete
+            if not (test1_complete and test2_complete and exam_complete and total_complete):
+                grades_complete = False
+                break
+
+        except GradeSummary.DoesNotExist:
+            # No grade summary = grades incomplete
+            grades_complete = False
+            break
+
+    # If grades are not complete, do not show the report
+    # But still return filter data so users can check other sessions
+    if not grades_complete:
+        return Response(
+            {
+                "detail": "Report sheet is not available. Grades are incomplete for this session.",
+                "children": children_list,
+                "available_sessions": sessions_list
+            },
+            status=status.HTTP_403_FORBIDDEN
+        )
+
+    subjects_data = []
+
+    for subject in subjects:
+        # Get GradeSummary for this student and subject
+        try:
+            grade_summary = GradeSummary.objects.get(
+                student=child,
+                subject=subject,
+                grading_config=grading_config
+            )
+
+            # 1st Test = Attendance + Assignment
+            first_test_score = float(grade_summary.attendance_score) + float(grade_summary.assignment_score)
+
+            # 2nd Test = Test score
+            second_test_score = float(grade_summary.test_score)
+
+            # Exam = Exam score
+            exam_score = float(grade_summary.exam_score)
+
+            # Total
+            total_score = float(grade_summary.total_score)
+
+            # Get report sheet grade
+            letter_grade = get_report_grade(total_score)
+
+            subjects_data.append({
+                'subject_name': subject.name,
+                'first_test_score': round(first_test_score, 2),
+                'second_test_score': round(second_test_score, 2),
+                'exam_score': round(exam_score, 2),
+                'total_score': round(total_score, 2),
+                'letter_grade': letter_grade
+            })
+
+        except GradeSummary.DoesNotExist:
+            # If no grade summary exists, show zeros
+            subjects_data.append({
+                'subject_name': subject.name,
+                'first_test_score': 0,
+                'second_test_score': 0,
+                'exam_score': 0,
+                'total_score': 0,
+                'letter_grade': 'F9'
+            })
+
+    # Calculate grand total and average
+    grand_total = sum(s['total_score'] for s in subjects_data)
+    average = round(grand_total / len(subjects_data), 2) if subjects_data else 0
+
+    # Calculate class position
+    all_students = StudentSession.objects.filter(
+        class_session=class_session,
+        is_active=True
+    ).select_related('student')
+
+    student_averages = []
+    for ss in all_students:
+        student_subjects = Subject.objects.filter(class_session=class_session)
+        if ss.student.department:
+            student_subjects = student_subjects.filter(
+                Q(department=ss.student.department) | Q(department='General')
+            )
+
+        total = 0
+        count = 0
+        for subj in student_subjects:
+            try:
+                grade_summary = GradeSummary.objects.get(
+                    student=ss.student,
+                    subject=subj,
+                    grading_config=grading_config
+                )
+                total += float(grade_summary.total_score)
+                count += 1
+            except GradeSummary.DoesNotExist:
+                pass
+
+        student_avg = total / count if count > 0 else 0
+        student_averages.append({
+            'student_id': ss.student.id,
+            'average': student_avg
+        })
+
+    # Sort by average descending and find position
+    student_averages.sort(key=lambda x: x['average'], reverse=True)
+    position = next((i + 1 for i, s in enumerate(student_averages) if s['student_id'] == child.id), None)
+
+    # Student photo URL
+    photo_url = None
+    if hasattr(child, 'profile_picture') and child.profile_picture:
+        photo_url = request.build_absolute_uri(child.profile_picture.url)
+
+    # Get all children for dropdown
+    children_list = [{
+        'id': c.id,
+        'full_name': c.get_full_name(),
+        'username': c.username,
+        'classroom': c.classroom.name if c.classroom else None
+    } for c in children]
+
+    # Get available sessions for this child
+    available_sessions = StudentSession.objects.filter(
+        student=child
+    ).select_related('class_session').values(
+        'class_session__academic_year',
+        'class_session__term'
+    ).distinct().order_by('-class_session__academic_year', 'class_session__term')
+
+    sessions_list = [{
+        'academic_year': session['class_session__academic_year'],
+        'term': session['class_session__term']
+    } for session in available_sessions]
+
+    return Response({
+        'student': {
+            'id': child.id,
+            'student_id': child.username,
+            'name': child.get_full_name(),
+            'class': class_session.classroom.name,
+            'department': child.department or '',
+            'photo_url': photo_url
+        },
+        'session': {
+            'academic_year': academic_year,
+            'term': term
+        },
+        'grading_config': {
+            'first_test_max': 20,
+            'second_test_max': 20,
+            'exam_max': 60,
+            'total_max': 100
+        },
+        'subjects': subjects_data,
+        'summary': {
+            'grand_total': round(grand_total, 2),
+            'average': average,
+            'position': position,
+            'total_students': len(student_averages)
+        },
+        'children': children_list,
+        'available_sessions': sessions_list
+    })
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def student_grade_report(request):
+    """
+    Get grade report (report sheet) for student.
+
+    Query Parameters:
+    - academic_year: Academic year (optional) - defaults to current session
+    - term: Term (optional) - defaults to current session
+
+    Returns complete report sheet with all subjects, scores, and grades.
+    """
+    from schooladmin.models import GradeSummary, GradingConfiguration
+    from academics.models import Subject
+    from django.db.models import Q
+
+    student = request.user
+
+    # Verify user is a student
+    if student.role != 'student':
+        return Response(
+            {"detail": "Only students can access this endpoint"},
+            status=status.HTTP_403_FORBIDDEN
+        )
+
+    # Get academic_year and term from query params or use current session
+    academic_year = request.query_params.get('academic_year')
+    term = request.query_params.get('term')
+
+    # If not provided, get student's current session
+    if not academic_year or not term:
+        current_session = StudentSession.objects.filter(
+            student=student,
+            is_active=True
+        ).select_related('class_session').first()
+
+        if current_session:
+            academic_year = current_session.class_session.academic_year
+            term = current_session.class_session.term
+        else:
+            return Response(
+                {"detail": "No active session found for student"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+    # Get the student's class session for this academic year and term
+    student_session = StudentSession.objects.filter(
+        student=student,
+        class_session__academic_year=academic_year,
+        class_session__term=term,
+        is_active=True
+    ).select_related('class_session__classroom').first()
+
+    if not student_session:
+        return Response(
+            {"detail": f"Student not enrolled in {academic_year} - {term}"},
+            status=status.HTTP_404_NOT_FOUND
+        )
+
+    class_session = student_session.class_session
+
+    # Security check: Verify report has been released and fees are paid
+    from schooladmin.models import StudentFeeRecord
+
+    # Check if report has been released
+    if not student_session.report_sent:
+        # Get all available sessions for filter options
+        all_sessions = StudentSession.objects.filter(
+            student=student,
+            is_active=True
+        ).select_related('class_session')
+        available_sessions = [
+            {
+                'academic_year': ss.class_session.academic_year,
+                'term': ss.class_session.term
+            }
+            for ss in all_sessions
+        ]
+        return Response(
+            {
+                "detail": "Report sheet has not been released yet. Please check back later.",
+                "available_sessions": available_sessions
+            },
+            status=status.HTTP_403_FORBIDDEN
+        )
+
+    # Check if fees are paid
+    fee_records = StudentFeeRecord.objects.filter(
+        student=student,
+        fee_structure__academic_year=academic_year
+    )
+
+    if fee_records.exists():
+        for fee_record in fee_records:
+            if fee_record.payment_status != 'PAID':
+                # Get all available sessions for filter options
+                all_sessions = StudentSession.objects.filter(
+                    student=student,
+                    is_active=True
+                ).select_related('class_session')
+                available_sessions = [
+                    {
+                        'academic_year': ss.class_session.academic_year,
+                        'term': ss.class_session.term
+                    }
+                    for ss in all_sessions
+                ]
+                return Response(
+                    {
+                        "detail": "Report sheet access denied. Please complete your fee payment first.",
+                        "available_sessions": available_sessions
+                    },
+                    status=status.HTTP_403_FORBIDDEN
+                )
+    else:
+        # No fee records - fees not set up
+        all_sessions = StudentSession.objects.filter(
+            student=student,
+            is_active=True
+        ).select_related('class_session')
+        available_sessions = [
+            {
+                'academic_year': ss.class_session.academic_year,
+                'term': ss.class_session.term
+            }
+            for ss in all_sessions
+        ]
+        return Response(
+            {
+                "detail": "Report sheet access denied. Fee records not found.",
+                "available_sessions": available_sessions
+            },
+            status=status.HTTP_403_FORBIDDEN
+        )
+
+    # Get grading configuration
+    try:
+        grading_config = GradingConfiguration.objects.get(
+            academic_year=academic_year,
+            term=term,
+            is_active=True
+        )
+    except GradingConfiguration.DoesNotExist:
+        return Response(
+            {"detail": "No grading configuration found for this session"},
+            status=status.HTTP_404_NOT_FOUND
+        )
+
+    # Custom grading scale for report sheet
+    def get_report_grade(score):
+        """Return grade based on custom report sheet scale"""
+        if score >= 75:
+            return 'A1'
+        elif score >= 70:
+            return 'B2'
+        elif score >= 65:
+            return 'B3'
+        elif score >= 60:
+            return 'C4'
+        elif score >= 55:
+            return 'C5'
+        elif score >= 50:
+            return 'C6'
+        elif score >= 45:
+            return 'D7'
+        elif score >= 40:
+            return 'E8'
+        else:
+            return 'F9'
+
+    # Get all subjects for this student
+    subjects = Subject.objects.filter(
+        class_session=class_session
+    ).select_related('teacher')
+
+    # Filter by department if student has one
+    if student.department:
+        subjects = subjects.filter(
+            Q(department=student.department) | Q(department='General')
+        )
+
+    # Get available sessions for this student (needed for filters even if grades incomplete)
+    available_sessions = StudentSession.objects.filter(
+        student=student
+    ).select_related('class_session').values(
+        'class_session__academic_year',
+        'class_session__term'
+    ).distinct().order_by('-class_session__academic_year', 'class_session__term')
+
+    sessions_list = [{
+        'academic_year': session['class_session__academic_year'],
+        'term': session['class_session__term']
+    } for session in available_sessions]
+
+    # Check if ALL subjects have COMPLETE grades before showing report
+    # Complete means: Test 1 (attendance + assignment), Test 2 (test), Exam, and Total are all filled
+    grades_complete = True
+    for subject in subjects:
+        try:
+            grade_summary = GradeSummary.objects.get(
+                student=student,
+                subject=subject,
+                grading_config=grading_config
+            )
+
+            # Get all score components
+            attendance_score = float(grade_summary.attendance_score) if grade_summary.attendance_score else 0
+            assignment_score = float(grade_summary.assignment_score) if grade_summary.assignment_score else 0
+            test_score = float(grade_summary.test_score) if grade_summary.test_score else 0
+            exam_score = float(grade_summary.exam_score) if grade_summary.exam_score else 0
+            total_score = float(grade_summary.total_score) if grade_summary.total_score else 0
+
+            # Test 1 = attendance + assignment (must be > 0)
+            test1_complete = (attendance_score + assignment_score) > 0
+            # Test 2 = test score (must be > 0)
+            test2_complete = test_score > 0
+            # Exam (must be > 0)
+            exam_complete = exam_score > 0
+            # Total (must be > 0)
+            total_complete = total_score > 0
+
+            # If any component is missing, grades are incomplete
+            if not (test1_complete and test2_complete and exam_complete and total_complete):
+                grades_complete = False
+                break
+
+        except GradeSummary.DoesNotExist:
+            # No grade summary = grades incomplete
+            grades_complete = False
+            break
+
+    # If grades are not complete, do not show the report
+    # But still return filter data so students can check other sessions
+    if not grades_complete:
+        return Response(
+            {
+                "detail": "Report sheet is not available. Grades are incomplete for this session.",
+                "available_sessions": sessions_list
+            },
+            status=status.HTTP_403_FORBIDDEN
+        )
+
+    subjects_data = []
+
+    for subject in subjects:
+        # Get GradeSummary for this student and subject
+        try:
+            grade_summary = GradeSummary.objects.get(
+                student=student,
+                subject=subject,
+                grading_config=grading_config
+            )
+
+            # 1st Test = Attendance + Assignment
+            first_test_score = float(grade_summary.attendance_score) + float(grade_summary.assignment_score)
+
+            # 2nd Test = Test score
+            second_test_score = float(grade_summary.test_score)
+
+            # Exam = Exam score
+            exam_score = float(grade_summary.exam_score)
+
+            # Total
+            total_score = float(grade_summary.total_score)
+
+            # Get report sheet grade
+            letter_grade = get_report_grade(total_score)
+
+            subjects_data.append({
+                'subject_name': subject.name,
+                'first_test_score': round(first_test_score, 2),
+                'second_test_score': round(second_test_score, 2),
+                'exam_score': round(exam_score, 2),
+                'total_score': round(total_score, 2),
+                'letter_grade': letter_grade
+            })
+
+        except GradeSummary.DoesNotExist:
+            # If no grade summary exists, show zeros
+            subjects_data.append({
+                'subject_name': subject.name,
+                'first_test_score': 0,
+                'second_test_score': 0,
+                'exam_score': 0,
+                'total_score': 0,
+                'letter_grade': 'F9'
+            })
+
+    # Calculate grand total and average
+    grand_total = sum(s['total_score'] for s in subjects_data)
+    average = round(grand_total / len(subjects_data), 2) if subjects_data else 0
+
+    # Calculate class position
+    all_students = StudentSession.objects.filter(
+        class_session=class_session,
+        is_active=True
+    ).select_related('student')
+
+    student_averages = []
+    for ss in all_students:
+        student_subjects = Subject.objects.filter(class_session=class_session)
+        if ss.student.department:
+            student_subjects = student_subjects.filter(
+                Q(department=ss.student.department) | Q(department='General')
+            )
+
+        total = 0
+        count = 0
+        for subj in student_subjects:
+            try:
+                grade_summary = GradeSummary.objects.get(
+                    student=ss.student,
+                    subject=subj,
+                    grading_config=grading_config
+                )
+                total += float(grade_summary.total_score)
+                count += 1
+            except GradeSummary.DoesNotExist:
+                pass
+
+        student_avg = total / count if count > 0 else 0
+        student_averages.append({
+            'student_id': ss.student.id,
+            'average': student_avg
+        })
+
+    # Sort by average descending and find position
+    student_averages.sort(key=lambda x: x['average'], reverse=True)
+    position = next((i + 1 for i, s in enumerate(student_averages) if s['student_id'] == student.id), None)
+
+    # Student photo URL
+    photo_url = None
+    if hasattr(student, 'profile_picture') and student.profile_picture:
+        photo_url = request.build_absolute_uri(student.profile_picture.url)
+
+    # Get available sessions for this student
+    available_sessions = StudentSession.objects.filter(
+        student=student
+    ).select_related('class_session').values(
+        'class_session__academic_year',
+        'class_session__term'
+    ).distinct().order_by('-class_session__academic_year', 'class_session__term')
+
+    sessions_list = [{
+        'academic_year': session['class_session__academic_year'],
+        'term': session['class_session__term']
+    } for session in available_sessions]
+
+    return Response({
+        'student': {
+            'id': student.id,
+            'student_id': student.username,
+            'name': student.get_full_name(),
+            'class': class_session.classroom.name,
+            'department': student.department or '',
+            'photo_url': photo_url
+        },
+        'session': {
+            'academic_year': academic_year,
+            'term': term
+        },
+        'grading_config': {
+            'first_test_max': 20,
+            'second_test_max': 20,
+            'exam_max': 60,
+            'total_max': 100
+        },
+        'subjects': subjects_data,
+        'summary': {
+            'grand_total': round(grand_total, 2),
+            'average': average,
+            'position': position,
+            'total_students': len(student_averages)
+        },
+        'available_sessions': sessions_list
+    })
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def upload_avatar(request):
+    """
+    Allow users to upload their own avatar/profile picture.
+    This is separate from the admin-controlled profile_picture used for report sheets.
+    """
+    user = request.user
+
+    if 'avatar' not in request.FILES:
+        return Response(
+            {"detail": "No avatar file provided"},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    avatar_file = request.FILES['avatar']
+
+    # Validate file type
+    allowed_types = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp']
+    if avatar_file.content_type not in allowed_types:
+        return Response(
+            {"detail": "Invalid file type. Please upload a JPEG, PNG, GIF, or WebP image."},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    # Validate file size (max 5MB)
+    if avatar_file.size > 5 * 1024 * 1024:
+        return Response(
+            {"detail": "File too large. Maximum size is 5MB."},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    # Delete old avatar if exists
+    if user.avatar:
+        user.avatar.delete(save=False)
+
+    # Save new avatar
+    user.avatar = avatar_file
+    user.save()
+
+    # Build absolute URL for the avatar
+    avatar_url = request.build_absolute_uri(user.avatar.url)
+
+    return Response({
+        "detail": "Avatar uploaded successfully",
+        "avatar_url": avatar_url
+    }, status=status.HTTP_200_OK)
+
+
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def remove_avatar(request):
+    """Remove user's avatar"""
+    user = request.user
+
+    if user.avatar:
+        user.avatar.delete(save=True)
+        return Response({"detail": "Avatar removed successfully"}, status=status.HTTP_200_OK)
+
+    return Response({"detail": "No avatar to remove"}, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_current_user_profile(request):
+    """Get current user's profile information including avatar"""
+    user = request.user
+
+    avatar_url = None
+    if user.avatar:
+        avatar_url = request.build_absolute_uri(user.avatar.url)
+
+    profile_picture_url = None
+    if user.profile_picture:
+        profile_picture_url = request.build_absolute_uri(user.profile_picture.url)
+
+    return Response({
+        'id': user.id,
+        'username': user.username,
+        'first_name': user.first_name,
+        'last_name': user.last_name,
+        'middle_name': user.middle_name or '',
+        'email': user.email,
+        'role': user.role,
+        'avatar_url': avatar_url,
+        'profile_picture_url': profile_picture_url,  # Admin-controlled, for reports
+    }, status=status.HTTP_200_OK)

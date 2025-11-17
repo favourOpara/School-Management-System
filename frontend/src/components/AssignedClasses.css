@@ -6,7 +6,7 @@
   padding: 2rem;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   min-height: 500px;
-  margin-top: 1.5rem; /* Add space to avoid header overlap */
+  margin-top: 0;
 }
 
 .assigned-classes-header {
@@ -306,9 +306,9 @@
 /* Responsive Design */
 @media (max-width: 768px) {
   .assigned-classes-container {
-    padding: 1rem;
+    padding: 0 1rem 1rem 1rem;
   }
-  
+
   .subjects-tiles {
     grid-template-columns: 1fr;
   }

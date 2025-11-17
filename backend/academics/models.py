@@ -106,23 +106,43 @@ class StudentSession(models.Model):
     Links students to specific academic sessions while preserving historical data
     """
     student = models.ForeignKey(
-        'users.CustomUser', 
-        on_delete=models.CASCADE, 
+        'users.CustomUser',
+        on_delete=models.CASCADE,
         limit_choices_to={'role': 'student'},
         related_name='student_sessions'
     )
     class_session = models.ForeignKey(
-        'ClassSession', 
+        'ClassSession',
         on_delete=models.CASCADE,
         related_name='enrolled_students'
     )
     date_enrolled = models.DateTimeField(auto_now_add=True)
     is_active = models.BooleanField(default=True)
-    
+
+    # Report sheet distribution tracking
+    report_sent = models.BooleanField(
+        default=False,
+        help_text="Whether report sheet has been sent to student and parent"
+    )
+    report_sent_date = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="Date and time when report was sent"
+    )
+    report_sent_by = models.ForeignKey(
+        'users.CustomUser',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        limit_choices_to={'role': 'admin'},
+        related_name='sent_reports',
+        help_text="Admin who sent the report"
+    )
+
     class Meta:
         unique_together = ('student', 'class_session')
         ordering = ['-class_session__academic_year', 'class_session__term']
-    
+
     def __str__(self):
         return f"{self.student.username} - {self.class_session}"
 

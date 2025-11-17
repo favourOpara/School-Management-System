@@ -1,5 +1,5 @@
 // src/pages/TeacherDashboard.jsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import RoleBasedSidebar from '../components/RoleBasedSidebar';
 import AssignedClasses from '../components/AssignedClasses';
@@ -7,6 +7,7 @@ import SetTest from '../components/SetTest';
 import SetExam from '../components/SetExam';
 import ViewQuestions from '../components/ViewQuestions';
 import ManualGrading from '../components/ManualGrading';
+import TopHeader from '../components/TopHeader';
 import './TeacherDashboard.css';
 
 const getGreeting = () => {
@@ -20,6 +21,7 @@ const TeacherDashboard = () => {
   const location = useLocation();
   const [activeTab, setActiveTab] = useState('dashboard');
   const [userName, setUserName] = useState('');
+  const sidebarRef = useRef(null);
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -38,7 +40,7 @@ const TeacherDashboard = () => {
       case 'dashboard':
         return (
           <div>
-            <h2 className="teacher-dashboard-greeting">{getGreeting()}, {userName}</h2>
+            <h2 className="teacher-dashboard-greeting">{getGreeting()}, {userName} 😊</h2>
             <p className="teacher-dashboard-subtitle">Welcome to your teacher dashboard.</p>
             <div className="teacher-dashboard-grid">
               <div className="teacher-dashboard-card">
@@ -126,11 +128,13 @@ const TeacherDashboard = () => {
 
   return (
     <div className="teacher-dashboard-container">
-      <RoleBasedSidebar 
-        userRole="teacher" 
-        activeTab={activeTab} 
-        setActiveTab={setActiveTab} 
+      <RoleBasedSidebar
+        ref={sidebarRef}
+        userRole="teacher"
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
       />
+      <TopHeader onMenuClick={() => sidebarRef.current?.openSidebar()} />
       <main className="teacher-dashboard-main">
         {renderContent()}
       </main>

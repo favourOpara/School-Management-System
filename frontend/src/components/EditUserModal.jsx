@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import Select from 'react-select';
 import './EditUserModal.css';
@@ -21,6 +21,16 @@ const EditUserModal = ({ user, onClose, onUpdated }) => {
     department: '',
   });
 
+  const [profilePicture, setProfilePicture] = useState(null);
+  const [previewUrl, setPreviewUrl] = useState(null);
+  const [currentPhotoUrl, setCurrentPhotoUrl] = useState(null);
+  const [showCamera, setShowCamera] = useState(false);
+  const [stream, setStream] = useState(null);
+  const [message, setMessage] = useState('');
+  const videoRef = useRef(null);
+  const canvasRef = useRef(null);
+  const fileInputRef = useRef(null);
+
   const token = localStorage.getItem('accessToken');
 
   useEffect(() => {
@@ -38,7 +48,21 @@ const EditUserModal = ({ user, onClose, onUpdated }) => {
       password: '',
       confirm_password: '',
     });
+
+    // Set current photo URL if exists
+    if (user.profile_picture) {
+      setCurrentPhotoUrl(user.profile_picture);
+    }
   }, [user]);
+
+  useEffect(() => {
+    // Cleanup camera stream on unmount
+    return () => {
+      if (stream) {
+        stream.getTracks().forEach(track => track.stop());
+      }
+    };
+  }, [stream]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -75,32 +99,135 @@ const EditUserModal = ({ user, onClose, onUpdated }) => {
     }));
   };
 
+  const handleFileSelect = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      if (file.size > 100 * 1024) {
+        setMessage('Image file size must not exceed 100KB.');
+        return;
+      }
+      setProfilePicture(file);
+      setPreviewUrl(URL.createObjectURL(file));
+      setMessage('');
+    }
+  };
+
+  const handleUploadClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const startCamera = async () => {
+    try {
+      const mediaStream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'user' }
+      });
+      setStream(mediaStream);
+      setShowCamera(true);
+      if (videoRef.current) {
+        videoRef.current.srcObject = mediaStream;
+      }
+    } catch (err) {
+      console.error('Error accessing camera:', err);
+      setMessage('Unable to access camera. Please check permissions.');
+    }
+  };
+
+  const capturePhoto = () => {
+    if (videoRef.current && canvasRef.current) {
+      const video = videoRef.current;
+      const canvas = canvasRef.current;
+      canvas.width = 120;
+      canvas.height = 150;
+      const ctx = canvas.getContext('2d');
+
+      // Calculate crop dimensions to maintain aspect ratio
+      const videoAspect = video.videoWidth / video.videoHeight;
+      const targetAspect = 120 / 150;
+
+      let sourceX = 0;
+      let sourceY = 0;
+      let sourceWidth = video.videoWidth;
+      let sourceHeight = video.videoHeight;
+
+      if (videoAspect > targetAspect) {
+        sourceWidth = video.videoHeight * targetAspect;
+        sourceX = (video.videoWidth - sourceWidth) / 2;
+      } else {
+        sourceHeight = video.videoWidth / targetAspect;
+        sourceY = (video.videoHeight - sourceHeight) / 2;
+      }
+
+      ctx.drawImage(video, sourceX, sourceY, sourceWidth, sourceHeight, 0, 0, 120, 150);
+
+      canvas.toBlob((blob) => {
+        if (blob) {
+          const file = new File([blob], 'profile.jpg', { type: 'image/jpeg' });
+          setProfilePicture(file);
+          setPreviewUrl(URL.createObjectURL(file));
+          stopCamera();
+          setMessage('');
+        }
+      }, 'image/jpeg', 0.85);
+    }
+  };
+
+  const stopCamera = () => {
+    if (stream) {
+      stream.getTracks().forEach(track => track.stop());
+      setStream(null);
+    }
+    setShowCamera(false);
+  };
+
+  const removePhoto = () => {
+    setProfilePicture(null);
+    setPreviewUrl(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const payload = { ...formData };
+      const payload = new FormData();
 
-      payload.role = 'student';
+      // Add all form fields
+      Object.keys(formData).forEach(key => {
+        if (formData[key]) {
+          payload.append(key, formData[key]);
+        }
+      });
 
-      if (payload.classroom === '') {
-        payload.classroom = null;
+      payload.append('role', 'student');
+
+      if (formData.classroom === '') {
+        payload.set('classroom', '');
       }
 
-      if (!payload.password) {
-        delete payload.password;
-        delete payload.confirm_password;
+      if (!formData.password) {
+        payload.delete('password');
+        payload.delete('confirm_password');
       }
 
-      if (!payload.date_of_birth) {
-        delete payload.date_of_birth;
+      if (!formData.date_of_birth) {
+        payload.delete('date_of_birth');
       }
 
-      if (!payload.department) {
-        delete payload.department;
+      if (!formData.department) {
+        payload.delete('department');
+      }
+
+      // Add profile picture if selected
+      if (profilePicture) {
+        payload.append('profile_picture', profilePicture);
       }
 
       const res = await axios.put(`http://127.0.0.1:8000/api/users/${user.id}/`, payload, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'multipart/form-data'
+        }
       });
 
       alert('User updated successfully.');
@@ -108,7 +235,14 @@ const EditUserModal = ({ user, onClose, onUpdated }) => {
       if (onUpdated) onUpdated(res.data);
     } catch (err) {
       console.error('Error updating user:', err);
-      alert('Failed to update user.');
+      if (err.response?.data) {
+        const errors = Object.entries(err.response.data)
+          .map(([field, msgs]) => `${field}: ${Array.isArray(msgs) ? msgs.join(', ') : msgs}`)
+          .join('\n');
+        alert(errors || 'Failed to update user.');
+      } else {
+        alert('Failed to update user.');
+      }
     }
   };
 
@@ -197,6 +331,64 @@ const EditUserModal = ({ user, onClose, onUpdated }) => {
           {/* Password Fields */}
           <input type="password" name="password" value={formData.password} onChange={handleChange} placeholder="New Password (Optional)" />
           <input type="password" name="confirm_password" value={formData.confirm_password} onChange={handleChange} placeholder="Confirm Password" />
+
+          {/* Photo Upload Section */}
+          <div className="edit-photo-upload-section">
+            <label>Student Photo (max 100KB)</label>
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleFileSelect}
+              accept="image/*"
+              style={{ display: 'none' }}
+            />
+
+            {/* Show current photo if exists and no new photo selected */}
+            {currentPhotoUrl && !previewUrl && !showCamera && (
+              <div className="current-photo">
+                <p className="photo-label">Current Photo:</p>
+                <img src={currentPhotoUrl} alt="Current student" className="current-photo-img" />
+              </div>
+            )}
+
+            {!previewUrl && !showCamera && (
+              <div className="photo-buttons">
+                <button type="button" onClick={handleUploadClick} className="upload-btn">
+                  {currentPhotoUrl ? 'Change Photo' : 'Upload Photo'}
+                </button>
+                <button type="button" onClick={startCamera} className="camera-btn">
+                  Take Photo
+                </button>
+              </div>
+            )}
+
+            {showCamera && (
+              <div className="camera-container">
+                <video ref={videoRef} autoPlay playsInline className="camera-video" />
+                <canvas ref={canvasRef} style={{ display: 'none' }} />
+                <div className="camera-controls">
+                  <button type="button" onClick={capturePhoto} className="capture-btn">
+                    Capture
+                  </button>
+                  <button type="button" onClick={stopCamera} className="cancel-btn">
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {previewUrl && (
+              <div className="photo-preview">
+                <p className="photo-label">New Photo:</p>
+                <img src={previewUrl} alt="New student preview" className="preview-image" />
+                <button type="button" onClick={removePhoto} className="remove-photo-btn">
+                  Remove
+                </button>
+              </div>
+            )}
+
+            {message && <p className="photo-error-message">{message}</p>}
+          </div>
 
           <div className="button-group">
             <button type="submit" className="edit_user_save-btn">Save Changes</button>

@@ -8,6 +8,7 @@
 .teacher-dashboard-main {
   margin-left: 100px;
   padding: 2rem;
+  padding-top: 50px; /* Account for top header */
   flex: 1;
   min-height: 100vh;
   background-color: #fafafa;
@@ -15,8 +16,9 @@
 
 .teacher-dashboard-greeting {
   color: #333333;
-  font-size: 2rem;
+  font-size: 1.5rem;
   font-weight: 600;
+  margin-top: 0;
   margin-bottom: 0.5rem;
 }
 
@@ -85,10 +87,12 @@
   .teacher-dashboard-main {
     margin-left: 0;
     padding: 1rem;
+    padding-top: 50px; /* Account for top header */
   }
-  
+
   .teacher-dashboard-greeting {
-    font-size: 1.5rem;
+    font-size: 1.25rem;
+    margin-top: 0;
   }
   
   .teacher-dashboard-grid {

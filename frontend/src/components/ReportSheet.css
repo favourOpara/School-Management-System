@@ -1,6 +1,6 @@
 /* Report Sheet Styles */
 .report-sheet-container {
-  padding: 24px;
+  padding: 0 24px 24px 24px;
   max-width: 1400px;
   margin: 0 auto;
 }
@@ -651,7 +651,7 @@
 
 @media (max-width: 768px) {
   .report-sheet-container {
-    padding: 16px;
+    padding: 0 16px 16px 16px;
   }
 
   .filters-grid {

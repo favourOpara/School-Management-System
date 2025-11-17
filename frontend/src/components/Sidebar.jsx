@@ -1,5 +1,5 @@
 // src/components/Sidebar.jsx
-import React, { useState } from 'react';
+import React, { useState, forwardRef, useImperativeHandle } from 'react';
 import {
   Menu, X,
   User, LayoutDashboard, Users, BookOpen,
@@ -8,9 +8,13 @@ import {
 } from 'lucide-react';
 import './Sidebar.css';
 
-const Sidebar = ({ activeTab, setActiveTab }) => {
+const Sidebar = forwardRef(({ activeTab, setActiveTab }, ref) => {
   const [isOpen, setIsOpen] = useState(false);
   const [openDropdown, setOpenDropdown] = useState(null);
+
+  useImperativeHandle(ref, () => ({
+    openSidebar: () => setIsOpen(true)
+  }));
 
   const handleLogout = () => {
     localStorage.clear();
@@ -29,12 +33,6 @@ const Sidebar = ({ activeTab, setActiveTab }) => {
 
   return (
     <>
-      <div className="mobile-header">
-        <button className="hamburger" onClick={() => setIsOpen(true)}>
-          <Menu />
-        </button>
-      </div>
-
       <div className={`sidebar ${isOpen ? 'open' : ''}`}>
         <button className="close-btn" onClick={() => setIsOpen(false)}>
           <X />
@@ -158,14 +156,9 @@ const Sidebar = ({ activeTab, setActiveTab }) => {
             </li>
           </ul>
         </nav>
-
-        <button className="logout-btn" onClick={handleLogout}>
-          <LogOut style={{ marginBottom: '0.3rem' }} />
-          Logout
-        </button>
       </div>
     </>
   );
-};
+});
 
 export default Sidebar;

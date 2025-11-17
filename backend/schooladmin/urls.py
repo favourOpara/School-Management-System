@@ -41,8 +41,36 @@ from .views import (
     get_test_completion_stats, get_class_subjects_for_tests, get_subject_test_scores,
     update_test_score, unlock_test_scores,
 
+    # Exam Completion Analytics Views
+    get_exam_completion_stats, get_class_subjects_for_exams, get_subject_exam_scores, update_exam_score,
+
     # Report Sheet Views
-    get_students_for_report, get_report_sheet
+    get_students_for_report, get_report_sheet,
+
+    # Report Access Analytics Views
+    get_report_access_stats, send_report_sheets, get_eligible_classes_for_reports,
+    get_eligible_students_in_class, send_individual_report,
+
+    # Incomplete Grades Analytics Views
+    get_incomplete_grades_classes, get_incomplete_grades_students, search_incomplete_grades_students,
+    send_incomplete_grade_notification, send_bulk_incomplete_grade_notifications,
+
+    # Unpaid Fees Analytics Views
+    get_unpaid_fees_classes, get_unpaid_fees_students, search_unpaid_fees_students,
+    send_unpaid_fee_notification, send_bulk_unpaid_fee_notifications,
+
+    # Both Issues (Unpaid Fees + Incomplete Grades) Analytics Views
+    get_both_issues_classes, get_both_issues_students,
+    send_both_issues_notification, send_bulk_both_issues_notifications,
+
+    # Reports Sent Analytics Views
+    get_reports_sent_stats, get_class_report_sent_students,
+
+    # Subject Grading Completion Analytics Views
+    get_subject_grading_stats, get_subject_incomplete_students, notify_teachers_incomplete_grades,
+
+    # Student Dashboard Views
+    get_class_attendance_ranking
 )
 
 urlpatterns = [
@@ -134,8 +162,59 @@ urlpatterns = [
     path('analytics/tests/scores/unlock/', unlock_test_scores, name='unlock-test-scores'),
 
     # ============================================================================
+    # EXAM COMPLETION ANALYTICS URLS
+    # ============================================================================
+    path('analytics/exams/', get_exam_completion_stats, name='exam-completion-stats'),
+    path('analytics/exams/class/<int:class_session_id>/subjects/', get_class_subjects_for_exams, name='class-subjects-for-exams'),
+    path('analytics/exams/subject/<int:subject_id>/scores/', get_subject_exam_scores, name='subject-exam-scores'),
+    path('analytics/exams/scores/update/', update_exam_score, name='update-exam-score'),
+
+    # ============================================================================
+    # REPORT ACCESS ANALYTICS URLS
+    # ============================================================================
+    path('analytics/report-access/', get_report_access_stats, name='report-access-stats'),
+    path('analytics/report-access/send/', send_report_sheets, name='send-report-sheets'),
+    path('analytics/report-access/classes/', get_eligible_classes_for_reports, name='eligible-classes-for-reports'),
+    path('analytics/report-access/class/<int:class_session_id>/students/', get_eligible_students_in_class, name='eligible-students-in-class'),
+    path('analytics/report-access/send-individual/', send_individual_report, name='send-individual-report'),
+
+    # Incomplete grades endpoints
+    path('analytics/incomplete-grades/classes/', get_incomplete_grades_classes, name='incomplete-grades-classes'),
+    path('analytics/incomplete-grades/class/<int:class_session_id>/students/', get_incomplete_grades_students, name='incomplete-grades-students'),
+    path('analytics/incomplete-grades/search/', search_incomplete_grades_students, name='search-incomplete-grades-students'),
+    path('analytics/incomplete-grades/notify/', send_incomplete_grade_notification, name='send-incomplete-grade-notification'),
+    path('analytics/incomplete-grades/notify-all/', send_bulk_incomplete_grade_notifications, name='send-bulk-incomplete-grade-notifications'),
+
+    # Unpaid fees endpoints
+    path('analytics/unpaid-fees/classes/', get_unpaid_fees_classes, name='unpaid-fees-classes'),
+    path('analytics/unpaid-fees/class/<int:class_session_id>/students/', get_unpaid_fees_students, name='unpaid-fees-students'),
+    path('analytics/unpaid-fees/search/', search_unpaid_fees_students, name='search-unpaid-fees-students'),
+    path('analytics/unpaid-fees/notify/', send_unpaid_fee_notification, name='send-unpaid-fee-notification'),
+    path('analytics/unpaid-fees/notify-all/', send_bulk_unpaid_fee_notifications, name='send-bulk-unpaid-fee-notifications'),
+
+    # Both issues (unpaid fees + incomplete grades) endpoints
+    path('analytics/both-issues/classes/', get_both_issues_classes, name='both-issues-classes'),
+    path('analytics/both-issues/class/<int:class_session_id>/students/', get_both_issues_students, name='both-issues-students'),
+    path('analytics/both-issues/notify/', send_both_issues_notification, name='send-both-issues-notification'),
+    path('analytics/both-issues/notify-all/', send_bulk_both_issues_notifications, name='send-bulk-both-issues-notifications'),
+
+    # Reports sent by class endpoints
+    path('analytics/reports-sent/', get_reports_sent_stats, name='reports-sent-stats'),
+    path('analytics/reports-sent/class/<int:class_session_id>/students/', get_class_report_sent_students, name='class-report-sent-students'),
+
+    # Subject grading completion endpoints
+    path('analytics/subject-grading/', get_subject_grading_stats, name='subject-grading-stats'),
+    path('analytics/subject-grading/<int:subject_id>/incomplete/', get_subject_incomplete_students, name='subject-incomplete-students'),
+    path('analytics/subject-grading/notify-teachers/', notify_teachers_incomplete_grades, name='notify-teachers-incomplete-grades'),
+
+    # ============================================================================
     # REPORT SHEET URLS
     # ============================================================================
     path('reports/students/', get_students_for_report, name='get-students-for-report'),
     path('reports/student/<int:student_id>/', get_report_sheet, name='get-report-sheet'),
+
+    # ============================================================================
+    # STUDENT DASHBOARD URLS
+    # ============================================================================
+    path('student/dashboard/attendance-ranking/', get_class_attendance_ranking, name='student-attendance-ranking'),
 ]

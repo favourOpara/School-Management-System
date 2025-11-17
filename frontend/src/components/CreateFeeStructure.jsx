@@ -5,6 +5,7 @@ import EditFeeModal from './EditFeeModal';
 import FeeStudentModal from './FeeStudentModal';
 import './viewfees.css';
 import './createfees.css';
+import { useDialog } from '../contexts/DialogContext';
 
 const termOptions = [
   { value: 'First Term', label: 'First Term' },
@@ -34,6 +35,7 @@ const customSelectStyles = {
 };
 
 const CreateFeeStructure = () => {
+  const { showConfirm } = useDialog();
   const [activeTab, setActiveTab] = useState('create');
 
   // form state
@@ -143,7 +145,15 @@ const CreateFeeStructure = () => {
   };
 
   const handleDelete = async feeId => {
-    if (!window.confirm('Delete this fee?')) return;
+    const confirmed = await showConfirm({
+      title: 'Delete Fee Structure',
+      message: 'Are you sure you want to delete this fee structure? This action cannot be undone.',
+      confirmText: 'Delete',
+      cancelText: 'Cancel',
+      confirmButtonClass: 'confirm-btn-danger'
+    });
+    if (!confirmed) return;
+
     try {
       await axios.delete(`http://127.0.0.1:8000/api/schooladmin/fees/${feeId}/delete/`, {
         headers: { Authorization: `Bearer ${token}` },

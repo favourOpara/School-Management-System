@@ -676,10 +676,10 @@ class NotificationDetailView(APIView):
         """Helper method to get human-readable time difference"""
         from django.utils import timezone
         from datetime import timedelta
-        
+
         now = timezone.now()
         diff = now - timestamp
-        
+
         if diff < timedelta(minutes=1):
             return "Just now"
         elif diff < timedelta(hours=1):
@@ -690,3 +690,124 @@ class NotificationDetailView(APIView):
             return f"{diff.days} days ago"
         else:
             return timestamp.strftime("%b %d, %Y at %I:%M %p")
+
+
+class DirectNotificationsView(APIView):
+    """Get direct notifications (Notification model) for the current user"""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        from .models import Notification
+
+        # Get all notifications for the user first (without slicing)
+        all_notifications = Notification.objects.filter(
+            recipient=request.user
+        ).order_by('-created_at')
+
+        # Count unread before slicing
+        unread_count = all_notifications.filter(is_read=False).count()
+
+        # Now slice for display
+        notifications = all_notifications[:50]
+
+        notifications_data = []
+        for notif in notifications:
+            notifications_data.append({
+                'id': notif.id,
+                'title': notif.title,
+                'message': notif.message,
+                'notification_type': notif.notification_type,
+                'priority': notif.priority,
+                'is_read': notif.is_read,
+                'is_popup_shown': notif.is_popup_shown,
+                'created_at': notif.created_at,
+                'read_at': notif.read_at,
+                'extra_data': notif.extra_data
+            })
+
+        return Response({
+            'notifications': notifications_data,
+            'unread_count': unread_count
+        })
+
+
+class PendingPopupNotificationsView(APIView):
+    """Get notifications that need to show popup (popup not yet shown)"""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        from .models import Notification
+
+        # Get notifications that haven't been shown as popup yet
+        pending_popups = Notification.objects.filter(
+            recipient=request.user,
+            is_popup_shown=False
+        ).order_by('-created_at')
+
+        notifications_data = []
+        for notif in pending_popups:
+            notifications_data.append({
+                'id': notif.id,
+                'title': notif.title,
+                'message': notif.message,
+                'notification_type': notif.notification_type,
+                'priority': notif.priority,
+                'created_at': notif.created_at,
+                'extra_data': notif.extra_data
+            })
+
+        return Response({
+            'notifications': notifications_data,
+            'count': len(notifications_data)
+        })
+
+
+class MarkPopupShownView(APIView):
+    """Mark a notification's popup as shown"""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, notification_id):
+        from .models import Notification
+
+        try:
+            notification = Notification.objects.get(
+                id=notification_id,
+                recipient=request.user
+            )
+            notification.mark_popup_shown()
+
+            return Response({
+                'message': 'Popup marked as shown',
+                'notification_id': notification_id
+            })
+        except Notification.DoesNotExist:
+            return Response(
+                {'error': 'Notification not found'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+
+class MarkDirectNotificationReadView(APIView):
+    """Mark a direct notification as read"""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, notification_id):
+        from .models import Notification
+
+        try:
+            notification = Notification.objects.get(
+                id=notification_id,
+                recipient=request.user
+            )
+            notification.mark_as_read()
+
+            return Response({
+                'message': 'Notification marked as read',
+                'notification_id': notification_id,
+                'read_at': notification.read_at
+            })
+        except Notification.DoesNotExist:
+            return Response(
+                {'error': 'Notification not found'},
+                status=status.HTTP_404_NOT_FOUND
+            )

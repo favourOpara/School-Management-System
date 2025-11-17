@@ -1,5 +1,5 @@
 // src/components/RoleBasedSidebar.jsx
-import React, { useState } from 'react';
+import React, { useState, forwardRef, useImperativeHandle } from 'react';
 import {
   Menu, X, User, LayoutDashboard, LogOut, Settings, Shield,
   BookOpen, Users, Calendar, DollarSign, FileText, MessageCircle,
@@ -7,9 +7,13 @@ import {
 } from 'lucide-react';
 import './Sidebar.css';
 
-const RoleBasedSidebar = ({ activeTab, setActiveTab, userRole }) => {
+const RoleBasedSidebar = forwardRef(({ activeTab, setActiveTab, userRole }, ref) => {
   const [isOpen, setIsOpen] = useState(false);
   const [openDropdown, setOpenDropdown] = useState(null);
+
+  useImperativeHandle(ref, () => ({
+    openSidebar: () => setIsOpen(true)
+  }));
 
   const handleLogout = () => {
     localStorage.clear();
@@ -50,7 +54,8 @@ const RoleBasedSidebar = ({ activeTab, setActiveTab, userRole }) => {
             label: 'Dashboard',
             submenu: [
               { key: 'dashboard', icon: <LayoutDashboard />, label: 'Overview' },
-              { key: 'activity-logs', icon: <ClipboardList />, label: 'Activity Logs' }
+              { key: 'activity-logs', icon: <ClipboardList />, label: 'Activity Logs' },
+              { key: 'report-sheet', icon: <FileText />, label: 'Report Sheet' }
             ]
           },
           {
@@ -172,12 +177,6 @@ const RoleBasedSidebar = ({ activeTab, setActiveTab, userRole }) => {
 
   return (
     <>
-      <div className="mobile-header">
-        <button className="hamburger" onClick={() => setIsOpen(true)}>
-          <Menu />
-        </button>
-      </div>
-
       <div className={`sidebar ${isOpen ? 'open' : ''}`}>
         <button className="close-btn" onClick={() => setIsOpen(false)}>
           <X />
@@ -209,14 +208,9 @@ const RoleBasedSidebar = ({ activeTab, setActiveTab, userRole }) => {
             ))}
           </ul>
         </nav>
-
-        <button className="logout-btn" onClick={handleLogout}>
-          <LogOut style={{ marginBottom: '0.3rem' }} />
-          Logout
-        </button>
       </div>
     </>
   );
-};
+});
 
 export default RoleBasedSidebar;

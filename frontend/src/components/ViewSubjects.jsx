@@ -4,8 +4,10 @@ import axios from 'axios';
 import Select from 'react-select';
 import './ViewSubjects.css';
 import SubjectModal from './SubjectModal';
+import { useDialog } from '../contexts/DialogContext';
 
 const ViewSubjects = () => {
+  const { showConfirm, showAlert } = useDialog();
   const token = localStorage.getItem('accessToken');
   const [academicYears, setAcademicYears] = useState([]);
   const [selectedYear, setSelectedYear] = useState('');
@@ -85,9 +87,17 @@ const ViewSubjects = () => {
   };
 
   const handleSubjectDelete = async (subjectId, subjectName) => {
-    // Add confirmation dialog before deleting
-    if (!window.confirm(`Are you sure you want to delete selected subject?`)) {
-      return; // User cancelled, don't delete
+    // Show confirmation dialog before deleting
+    const confirmed = await showConfirm({
+      title: 'Delete Subject',
+      message: 'Are you sure you want to delete this subject? This action cannot be undone.',
+      confirmText: 'Delete',
+      cancelText: 'Cancel',
+      confirmButtonClass: 'confirm-btn-danger'
+    });
+
+    if (!confirmed) {
+      return; // User cancelled
     }
 
     try {
@@ -97,7 +107,10 @@ const ViewSubjects = () => {
       setModalSubjects(prev => prev.filter(sub => sub.id !== subjectId));
     } catch (err) {
       console.error('❌ Error deleting subject:', err);
-      alert('Failed to delete subject. Please try again.');
+      showAlert({
+        type: 'error',
+        message: 'Failed to delete subject. Please try again.'
+      });
     }
   };
 

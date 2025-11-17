@@ -3,7 +3,7 @@
   display: flex;
   justify-content: flex-start;
   align-items: flex-start;
-  padding: 1rem;
+  padding: 0 1rem 1rem 1rem;
   min-height: 100vh;
   background-color: #ffffff;
 }
@@ -58,7 +58,7 @@
 }
 
 /* Submit Button */
-.create-student-form button {
+.create-student-form button[type="submit"] {
   padding: 0.9rem;
   font-size: 1rem;
   background-color: #1565c0;
@@ -68,10 +68,135 @@
   border-radius: 6px;
   cursor: pointer;
   transition: background-color 0.3s ease;
+  flex: 1 1 100%;
 }
 
-.create-student-form button:hover {
+.create-student-form button[type="submit"]:hover {
   background-color: #0d47a1;
+}
+
+/* Photo Upload Section */
+.photo-upload-section {
+  flex: 1 1 100%;
+  margin: 1rem 0;
+  padding: 1rem;
+  border: 2px dashed #ccc;
+  border-radius: 8px;
+  background-color: #fafafa;
+}
+
+.photo-upload-section label {
+  display: block;
+  margin-bottom: 0.75rem;
+  color: #555;
+  font-weight: 500;
+  font-size: 0.95rem;
+}
+
+.photo-buttons {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+}
+
+.upload-btn,
+.camera-btn {
+  padding: 0.75rem 1.5rem;
+  font-size: 0.95rem;
+  background-color: #1976d2;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.upload-btn:hover,
+.camera-btn:hover {
+  background-color: #1565c0;
+}
+
+/* Camera Section */
+.camera-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+.camera-video {
+  width: 240px;
+  height: 300px;
+  border-radius: 8px;
+  border: 2px solid #1976d2;
+  background-color: #000;
+  object-fit: cover;
+}
+
+.camera-controls {
+  display: flex;
+  gap: 1rem;
+}
+
+.capture-btn {
+  padding: 0.75rem 1.5rem;
+  background-color: #2e7d32;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.95rem;
+  transition: background-color 0.3s ease;
+}
+
+.capture-btn:hover {
+  background-color: #1b5e20;
+}
+
+.cancel-btn {
+  padding: 0.75rem 1.5rem;
+  background-color: #d32f2f;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.95rem;
+  transition: background-color 0.3s ease;
+}
+
+.cancel-btn:hover {
+  background-color: #b71c1c;
+}
+
+/* Photo Preview */
+.photo-preview {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+.preview-image {
+  width: 120px;
+  height: 150px;
+  border-radius: 8px;
+  border: 2px solid #1976d2;
+  object-fit: cover;
+}
+
+.remove-photo-btn {
+  padding: 0.6rem 1.2rem;
+  background-color: #d32f2f;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: background-color 0.3s ease;
+}
+
+.remove-photo-btn:hover {
+  background-color: #b71c1c;
 }
 
 /* Messages */
@@ -130,6 +255,20 @@
     width: 100%;
     font-size: 0.95rem;
     padding: 0.75rem;
+  }
+
+  .photo-buttons {
+    flex-direction: column;
+  }
+
+  .upload-btn,
+  .camera-btn {
+    width: 100%;
+  }
+
+  .camera-video {
+    width: 200px;
+    height: 250px;
   }
 
   .form-message.success,

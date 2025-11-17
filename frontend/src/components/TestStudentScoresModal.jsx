@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import './TestStudentScoresModal.css';
+import { useDialog } from '../contexts/DialogContext';
 
 const TestStudentScoresModal = ({ subjectData, onClose }) => {
+  const { showConfirm, showAlert } = useDialog();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -89,26 +91,45 @@ const TestStudentScoresModal = ({ subjectData, onClose }) => {
     setEditValue(currentScore.toString());
   };
 
-  const handleSaveScore = async (studentId, assessmentId, submissionId, totalMarks) => {
+  const handleSaveScore = async (studentId, assessmentId, submissionId, totalMarks, isManual = false) => {
     try {
       const scoreValue = parseFloat(editValue);
 
-      console.log('Saving score:', { studentId, assessmentId, submissionId, scoreValue, totalMarks });
+      console.log('Saving score:', { studentId, assessmentId, submissionId, scoreValue, totalMarks, isManual });
 
       if (isNaN(scoreValue) || scoreValue < 0) {
-        alert('Please enter a valid score');
+        showAlert({
+          type: 'error',
+          message: 'Please enter a valid score'
+        });
         return;
       }
 
       if (scoreValue > totalMarks) {
-        alert(`Score cannot exceed ${totalMarks}`);
+        showAlert({
+          type: 'error',
+          message: `Score cannot exceed ${totalMarks}`
+        });
         return;
       }
 
-      // Send student_id and assessment_id if no submission exists, otherwise send submission_id
-      const requestData = submissionId
-        ? { submission_id: submissionId, score: scoreValue }
-        : { student_id: studentId, assessment_id: assessmentId, score: scoreValue };
+      // Build request data based on whether this is a manual or online test score
+      let requestData;
+      if (isManual || !assessmentId) {
+        // Manual test score - send student_id, subject_id, and is_manual flag
+        requestData = {
+          student_id: studentId,
+          subject_id: data.subject_id,
+          score: scoreValue,
+          is_manual: true
+        };
+      } else if (submissionId) {
+        // Online test with existing submission
+        requestData = { submission_id: submissionId, score: scoreValue };
+      } else {
+        // Online test without submission - create new submission
+        requestData = { student_id: studentId, assessment_id: assessmentId, score: scoreValue };
+      }
 
       console.log('Request data:', requestData);
 
@@ -125,7 +146,10 @@ const TestStudentScoresModal = ({ subjectData, onClose }) => {
       fetchScores(); // Reload data
     } catch (err) {
       console.error('Error updating score:', err);
-      alert('Failed to update score. Please try again.');
+      showAlert({
+        type: 'error',
+        message: 'Failed to update score. Please try again.'
+      });
     }
   };
 
@@ -135,9 +159,14 @@ const TestStudentScoresModal = ({ subjectData, onClose }) => {
   };
 
   const handleUnlockScores = async () => {
-    if (!window.confirm('Are you sure you want to unlock test scores for this subject? Students will be able to see their results.')) {
-      return;
-    }
+    const confirmed = await showConfirm({
+      title: 'Unlock Test Scores',
+      message: 'Are you sure you want to unlock test scores for this subject? Students will be able to see their results.',
+      confirmText: 'Unlock',
+      cancelText: 'Cancel',
+      confirmButtonClass: 'confirm-btn-warning'
+    });
+    if (!confirmed) return;
 
     try {
       setUnlocking(true);
@@ -150,11 +179,17 @@ const TestStudentScoresModal = ({ subjectData, onClose }) => {
         { headers }
       );
 
-      alert('Test scores unlocked successfully!');
+      showAlert({
+        type: 'success',
+        message: 'Test scores unlocked successfully!'
+      });
       fetchScores(); // Reload data
     } catch (err) {
       console.error('Error unlocking scores:', err);
-      alert('Failed to unlock test scores. Please try again.');
+      showAlert({
+        type: 'error',
+        message: 'Failed to unlock test scores. Please try again.'
+      });
     } finally {
       setUnlocking(false);
     }
@@ -254,7 +289,8 @@ const TestStudentScoresModal = ({ subjectData, onClose }) => {
                                     student.student_id,
                                     score.assessment_id,
                                     score.submission_id,
-                                    score.total_marks
+                                    score.total_marks,
+                                    score.is_manual
                                   )}
                                 >
                                   ✓
@@ -269,7 +305,7 @@ const TestStudentScoresModal = ({ subjectData, onClose }) => {
                             </div>
                           ) : (
                             <div
-                              className={`score-display ${score.is_submitted ? 'submitted' : 'not-submitted'} editable`}
+                              className={`score-display ${score.is_submitted ? 'submitted' : 'not-submitted'} ${score.is_manual ? 'manual' : ''} editable`}
                               onClick={() => {
                                 console.log('Clicked to edit:', {
                                   student: student.student_name,
@@ -277,7 +313,8 @@ const TestStudentScoresModal = ({ subjectData, onClose }) => {
                                   student_id: student.student_id,
                                   assessment_id: score.assessment_id,
                                   submission_id: score.submission_id,
-                                  current_score: score.score
+                                  current_score: score.score,
+                                  is_manual: score.is_manual
                                 });
                                 handleEditScore(
                                   student.student_id,
@@ -291,7 +328,10 @@ const TestStudentScoresModal = ({ subjectData, onClose }) => {
                             >
                               <span className="score-value">{score.score}</span>
                               <span className="score-total">/{score.total_marks}</span>
-                              {!score.is_submitted && (
+                              {score.is_manual && (
+                                <span className="manual-badge">Manual</span>
+                              )}
+                              {!score.is_submitted && !score.is_manual && (
                                 <span className="not-submitted-badge">Not submitted</span>
                               )}
                             </div>

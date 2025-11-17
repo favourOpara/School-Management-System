@@ -1,5 +1,5 @@
 // src/pages/AdminDashboard.jsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
 import ClassForm from '../components/ClassForm';
@@ -19,6 +19,7 @@ import Settings from '../components/Settings';
 import ViewResults from '../components/ViewResults'; // NEW IMPORT
 import ReviewQuestions from '../components/ReviewQuestions';
 import ReportSheet from '../components/ReportSheet';
+import TopHeader from '../components/TopHeader';
 import './AdminDashboard.css';
 
 const getGreeting = () => {
@@ -30,8 +31,9 @@ const getGreeting = () => {
 
 const AdminDashboard = () => {
   const location = useLocation();
-  const [activeTab, setActiveTab] = useState('dashboard');
+  const [activeTab, setActiveTab] = useState('analytics');
   const [userName, setUserName] = useState('');
+  const sidebarRef = useRef(null);
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -50,7 +52,7 @@ const AdminDashboard = () => {
       case 'dashboard':
         return (
           <div>
-            <h2 className="admin-dashboard-greeting">{getGreeting()}, {userName}</h2>
+            <h2 className="admin-dashboard-greeting">{getGreeting()}, {userName} 😊</h2>
             <p className="admin-dashboard-subtitle">Welcome to the admin dashboard. Manage your school's operations from here.</p>
             <div className="admin-dashboard-grid">
               <div className="admin-dashboard-card">
@@ -124,7 +126,8 @@ const AdminDashboard = () => {
 
   return (
     <div className="admin-dashboard-container">
-      <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
+      <Sidebar ref={sidebarRef} activeTab={activeTab} setActiveTab={setActiveTab} />
+      <TopHeader onMenuClick={() => sidebarRef.current?.openSidebar()} />
       <main className="admin-dashboard-main">
         {renderContent()}
       </main>

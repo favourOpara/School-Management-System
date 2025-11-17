@@ -2,8 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { Clock, AlertCircle, CheckCircle, ArrowLeft } from 'lucide-react';
 import './TakeAssessment.css';
+import { useDialog } from '../contexts/DialogContext';
 
 const TakeAssessment = () => {
+  const { showConfirm } = useDialog();
   const { assessmentId } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
@@ -88,8 +90,15 @@ const TakeAssessment = () => {
       ? 'Time is up! Your answers will be submitted automatically.'
       : `Are you sure you want to submit your ${assessment.assessment_type === 'final_exam' ? 'exam' : 'test'}?\n\nYou have answered ${Object.keys(answers).length} out of ${assessment.questions?.length || 0} questions.`;
 
-    if (!isAutoSubmit && !window.confirm(confirmMessage)) {
-      return;
+    if (!isAutoSubmit) {
+      const confirmed = await showConfirm({
+        title: `Submit ${assessment.assessment_type === 'final_exam' ? 'Exam' : 'Test'}`,
+        message: confirmMessage,
+        confirmText: 'Submit',
+        cancelText: 'Cancel',
+        confirmButtonClass: 'confirm-btn-primary'
+      });
+      if (!confirmed) return;
     }
 
     try {

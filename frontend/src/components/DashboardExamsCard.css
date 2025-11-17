@@ -1,0 +1,299 @@
+/* ===============================
+   EXAMS DASHBOARD CARD STYLES
+   =============================== */
+
+/* Wrapper that contains the card */
+.exams-dashboard-wrapper {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Exams-specific card styling (inherits from .dashboard-card) */
+.exams-dashboard-card {
+  /* Additional exams-specific styles if needed */
+}
+
+/* Card header */
+.exams-card-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.exams-card-header h2 {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.exams-card-header p {
+  margin: 0.25rem 0 0 0;
+  font-size: 0.85rem;
+  color: #6b7280;
+}
+
+/* Filters section */
+.exams-filters {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.exams-filter-select {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Unlock all button */
+.exams-unlock-all-btn {
+  padding: 0.75rem 1.5rem;
+  background-color: #3b82f6;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  white-space: nowrap;
+}
+
+.exams-unlock-all-btn:hover:not(:disabled) {
+  background-color: #2563eb;
+}
+
+.exams-unlock-all-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Dashboard controls (filters) */
+.exams-dashboard-controls {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.exams-dashboard-controls > div {
+  min-width: 150px;
+}
+
+.exams-dashboard-filter-btn,
+.exams-dashboard-close-btn {
+  display: none;
+  padding: 0.5rem 1rem;
+  background-color: #3b82f6;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.exams-dashboard-filter-btn:hover {
+  background-color: #2563eb;
+}
+
+.exams-dashboard-close-btn {
+  background-color: #6b7280;
+}
+
+.exams-dashboard-close-btn:hover {
+  background-color: #4b5563;
+}
+
+/* Class list */
+.exams-class-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.exams-class-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem;
+  background-color: #f9fafb;
+  border-radius: 8px;
+  transition: all 0.2s;
+  cursor: pointer;
+}
+
+.exams-class-list li:hover {
+  background-color: #f3f4f6;
+  transform: translateX(4px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.exams-class-name {
+  font-weight: 600;
+  color: #1f2937;
+  font-size: 1rem;
+  min-width: 120px;
+}
+
+/* Progress bar */
+.exams-progress-bar {
+  flex: 1;
+  height: 24px;
+  background-color: #e5e7eb;
+  border-radius: 12px;
+  overflow: hidden;
+  margin: 0 1rem;
+  position: relative;
+}
+
+.exams-filled {
+  height: 100%;
+  transition: width 0.5s ease-in-out;
+  border-radius: 12px;
+}
+
+.exams-pct-label {
+  font-weight: 700;
+  color: #1f2937;
+  font-size: 1rem;
+  min-width: 50px;
+  text-align: right;
+}
+
+/* No data / error states */
+.exams-no-data,
+.exams-error-data {
+  padding: 2rem;
+  text-align: center;
+  color: #1f2937;
+  font-size: 1rem;
+  list-style: none;
+}
+
+.exams-error-data {
+  color: #d32f2f;
+}
+
+/* Summary section */
+.exams-summary {
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 2px solid #e5e7eb;
+  text-align: center;
+}
+
+.exams-summary-text {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+/* ===============================
+   MOBILE RESPONSIVE STYLES
+   =============================== */
+
+@media (max-width: 768px) {
+  .exams-dashboard-card {
+    padding: 1rem;
+  }
+
+  .exams-card-header {
+    flex-direction: row;
+    gap: 1rem;
+    align-items: flex-start;
+  }
+
+  .exams-card-header h2 {
+    font-size: 1rem;
+  }
+
+  /* Mobile filters layout */
+  .exams-filters {
+    flex-wrap: wrap;
+  }
+
+  /* Keep select dropdowns always visible on mobile */
+  .exams-filter-select {
+    flex: 1 1 45%;
+  }
+
+  /* Show filter button by default on mobile */
+  .exams-dashboard-filter-btn {
+    display: block;
+    width: 100%;
+    margin-top: 0.5rem;
+  }
+
+  /* Hide close button by default on mobile */
+  .exams-dashboard-close-btn {
+    display: none;
+    width: 100%;
+    margin-top: 0.5rem;
+  }
+
+  /* When filters are active: hide filter button, show close button */
+  .exams-filters-active .exams-dashboard-filter-btn {
+    display: none;
+  }
+
+  .exams-filters-active .exams-dashboard-close-btn {
+    display: block;
+  }
+
+  .exams-class-list li {
+    flex-direction: column;
+    gap: 0.75rem;
+    align-items: stretch;
+    padding: 0.875rem;
+  }
+
+  .exams-class-list li:hover {
+    transform: none;
+    box-shadow: none;
+  }
+
+  .exams-class-name {
+    text-align: center;
+    font-size: 0.95rem;
+  }
+
+  .exams-progress-bar {
+    margin: 0;
+    width: 100%;
+  }
+
+  .exams-pct-label {
+    text-align: center;
+    font-size: 0.95rem;
+  }
+
+  .exams-summary-text {
+    font-size: 0.9rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .exams-card-header-title h2 {
+    font-size: 1.1rem;
+  }
+
+  .exams-class-name {
+    font-size: 0.875rem;
+  }
+
+  .exams-pct-label {
+    font-size: 0.875rem;
+  }
+
+  .exams-summary-text {
+    font-size: 0.85rem;
+  }
+}

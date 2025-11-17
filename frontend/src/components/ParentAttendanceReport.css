@@ -1,6 +1,6 @@
 /* Parent Attendance Report Styles */
 .parent-attendance-container {
-  padding: 24px;
+  padding: 0 24px 24px 24px;
   max-width: 1400px;
   margin: 0 auto;
 }
@@ -358,8 +358,7 @@
 /* Responsive */
 @media (max-width: 768px) {
   .parent-attendance-container {
-    padding: 16px;
-    padding-top: 80px; /* Push down to avoid main header blocking */
+    padding: 0 16px 16px 16px;
   }
 
   .parent-attendance-header {

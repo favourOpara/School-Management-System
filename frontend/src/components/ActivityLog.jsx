@@ -4,6 +4,7 @@ import './ActivityLog.css';
 
 const ActivityLog = () => {
   const [notifications, setNotifications] = useState([]);
+  const [directNotifications, setDirectNotifications] = useState([]);
   const [summary, setSummary] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -11,6 +12,7 @@ const ActivityLog = () => {
   const [userRole, setUserRole] = useState(null);
   const [userInfo, setUserInfo] = useState(null);
   const [selectedNotification, setSelectedNotification] = useState(null);
+  const [selectedDirectNotification, setSelectedDirectNotification] = useState(null);
   const [modalLoading, setModalLoading] = useState(false);
 
   const token = localStorage.getItem('accessToken');
@@ -71,6 +73,52 @@ const ActivityLog = () => {
       setError('Failed to load notifications.');
     } finally {
       setLoading(false);
+    }
+
+    // Also fetch direct notifications for students (outside try-catch to ensure it runs)
+    if (user && user.role === 'student') {
+      fetchDirectNotifications();
+    }
+  };
+
+  // Fetch direct notifications (Notification model)
+  const fetchDirectNotifications = async () => {
+    try {
+      const response = await axios.get(
+        'http://127.0.0.1:8000/api/logs/notifications/direct/',
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      console.log('Direct notifications fetched:', response.data);
+      setDirectNotifications(response.data.notifications || []);
+    } catch (err) {
+      console.error('Error fetching direct notifications:', err);
+    }
+  };
+
+  // Mark direct notification as read
+  const markDirectAsRead = async (notificationId) => {
+    try {
+      await axios.post(
+        `http://127.0.0.1:8000/api/logs/notifications/${notificationId}/read-direct/`,
+        {},
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      setDirectNotifications(prev =>
+        prev.map(notif =>
+          notif.id === notificationId ? { ...notif, is_read: true } : notif
+        )
+      );
+    } catch (error) {
+      console.error('Error marking direct notification as read:', error);
     }
   };
 
@@ -188,15 +236,54 @@ const ActivityLog = () => {
         return 'content-type-note';
       case 'announcement':
         return 'content-type-announcement';
+      case 'incomplete_grades':
+        return 'content-type-alert';
+      case 'report_release':
+        return 'content-type-success';
       default:
         return 'content-type-default';
     }
   };
 
+  const getDirectNotificationIcon = (type) => {
+    switch (type) {
+      case 'incomplete_grades':
+        return '⚠️';
+      case 'report_release':
+        return '📋';
+      case 'fee_reminder':
+        return '💰';
+      default:
+        return '🔔';
+    }
+  };
+
+  const formatTimeAgo = (dateString) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diff = now - date;
+    const minutes = Math.floor(diff / 60000);
+    const hours = Math.floor(minutes / 60);
+    const days = Math.floor(hours / 24);
+
+    if (minutes < 1) return 'Just now';
+    if (minutes < 60) return `${minutes} minutes ago`;
+    if (hours < 24) return `${hours} hours ago`;
+    if (days < 7) return `${days} days ago`;
+    return date.toLocaleDateString();
+  };
+
   const filteredNotifications = notifications.filter(notif => {
     if (filter === 'all') return true;
     if (filter === 'unread') return notif.is_new;
+    if (filter === 'direct') return false; // Direct notifications handled separately
     return notif.content_type === filter;
+  });
+
+  const filteredDirectNotifications = directNotifications.filter(notif => {
+    if (filter === 'all' || filter === 'direct') return true;
+    if (filter === 'unread') return !notif.is_read;
+    return false;
   });
 
   if (loading) {
@@ -268,94 +355,154 @@ const ActivityLog = () => {
 
       {/* Filters */}
       <div className="filters">
-        {['all', 'unread', 'assignment', 'note', 'announcement'].map((filterType) => (
+        {['all', 'unread', 'direct', 'assignment', 'note', 'announcement'].map((filterType) => (
           <button
             key={filterType}
             onClick={() => setFilter(filterType)}
             className={`filter-btn ${filter === filterType ? 'active' : ''}`}
           >
-            {filterType.charAt(0).toUpperCase() + filterType.slice(1)}
+            {filterType === 'direct' ? 'Alerts' : filterType.charAt(0).toUpperCase() + filterType.slice(1)}
           </button>
         ))}
       </div>
 
       {/* Notifications List */}
       <div className="notifications-list">
-        {filteredNotifications.length === 0 ? (
+        {filteredNotifications.length === 0 && filteredDirectNotifications.length === 0 ? (
           <div className="empty-state">
             <div className="empty-icon">🔔</div>
             <h3>No notifications</h3>
             <p>
-              {filter === 'unread' 
-                ? 'All caught up! No unread notifications.' 
+              {filter === 'unread'
+                ? 'All caught up! No unread notifications.'
                 : 'No notifications to display.'}
             </p>
           </div>
         ) : (
-          filteredNotifications.map((notification) => (
-            <div
-              key={notification.id}
-              className={`notification-card ${
-                notification.is_new && userRole === 'student' ? 'unread' : 'read'
-              }`}
-              onClick={() => openNotificationPreview(notification.id)}
-            >
-              <div className="notification-content">
-                <div className="notification-icon">
-                  {getContentIcon(notification.content_type)}
-                </div>
-                
-                <div className="notification-body">
-                  <div className="notification-header">
-                    <span className={`content-type ${getContentTypeClass(notification.content_type)}`}>
-                      {notification.content_type}
-                    </span>
-                    {notification.is_new && userRole === 'student' && (
-                      <span className="new-badge">NEW</span>
-                    )}
+          <>
+            {/* Direct Notifications (Alerts) */}
+            {filteredDirectNotifications.map((notification) => (
+              <div
+                key={`direct-${notification.id}`}
+                className={`notification-card ${!notification.is_read ? 'unread' : 'read'} direct-notification`}
+                onClick={() => setSelectedDirectNotification(notification)}
+              >
+                <div className="notification-content">
+                  <div className="notification-icon">
+                    {getDirectNotificationIcon(notification.notification_type)}
                   </div>
-                  
-                  <h3 className="notification-title">
-                    {notification.content_title}
-                  </h3>
-                  
-                  <p className="notification-action">
-                    {notification.action}
-                  </p>
-                  
-                  <div className="notification-meta">
-                    <span className="meta-item">
-                      📚 {notification.subject_name}
-                    </span>
-                    <span className="meta-item">
-                      {notification.classroom_name}
-                    </span>
-                    {userRole === 'admin' && (
-                      <span className="meta-item">
-                        👨‍🏫 {notification.teacher_name || notification.user_full_name}
+
+                  <div className="notification-body">
+                    <div className="notification-header">
+                      <span className={`content-type ${getContentTypeClass(notification.notification_type)}`}>
+                        {notification.notification_type.replace('_', ' ')}
                       </span>
-                    )}
-                    <span className="meta-item">
-                      🕐 {notification.time_ago}
-                    </span>
+                      {!notification.is_read && (
+                        <span className="new-badge">NEW</span>
+                      )}
+                      <span className={`priority-badge priority-${notification.priority}`}>
+                        {notification.priority}
+                      </span>
+                    </div>
+
+                    <h3 className="notification-title">
+                      {notification.title}
+                    </h3>
+
+                    <p className="notification-action">
+                      {notification.message.split('\n')[0].substring(0, 100)}
+                      {notification.message.length > 100 ? '...' : ''}
+                    </p>
+
+                    <div className="notification-meta">
+                      <span className="meta-item">
+                        🕐 {formatTimeAgo(notification.created_at)}
+                      </span>
+                    </div>
                   </div>
+
+                  {!notification.is_read && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        markDirectAsRead(notification.id);
+                      }}
+                      className="mark-read-btn"
+                      title="Mark as read"
+                    >
+                      ✓
+                    </button>
+                  )}
                 </div>
-                
-                {notification.is_new && userRole === 'student' && (
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      markAsRead(notification.id);
-                    }}
-                    className="mark-read-btn"
-                    title="Mark as read"
-                  >
-                    ✓
-                  </button>
-                )}
               </div>
-            </div>
-          ))
+            ))}
+
+            {/* Activity Log Notifications */}
+            {filteredNotifications.map((notification) => (
+              <div
+                key={notification.id}
+                className={`notification-card ${
+                  notification.is_new && userRole === 'student' ? 'unread' : 'read'
+                }`}
+                onClick={() => openNotificationPreview(notification.id)}
+              >
+                <div className="notification-content">
+                  <div className="notification-icon">
+                    {getContentIcon(notification.content_type)}
+                  </div>
+
+                  <div className="notification-body">
+                    <div className="notification-header">
+                      <span className={`content-type ${getContentTypeClass(notification.content_type)}`}>
+                        {notification.content_type}
+                      </span>
+                      {notification.is_new && userRole === 'student' && (
+                        <span className="new-badge">NEW</span>
+                      )}
+                    </div>
+
+                    <h3 className="notification-title">
+                      {notification.content_title}
+                    </h3>
+
+                    <p className="notification-action">
+                      {notification.action}
+                    </p>
+
+                    <div className="notification-meta">
+                      <span className="meta-item">
+                        📚 {notification.subject_name}
+                      </span>
+                      <span className="meta-item">
+                        {notification.classroom_name}
+                      </span>
+                      {userRole === 'admin' && (
+                        <span className="meta-item">
+                          👨‍🏫 {notification.teacher_name || notification.user_full_name}
+                        </span>
+                      )}
+                      <span className="meta-item">
+                        🕐 {notification.time_ago}
+                      </span>
+                    </div>
+                  </div>
+
+                  {notification.is_new && userRole === 'student' && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        markAsRead(notification.id);
+                      }}
+                      className="mark-read-btn"
+                      title="Mark as read"
+                    >
+                      ✓
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
+          </>
         )}
       </div>
 
@@ -447,6 +594,74 @@ const ActivityLog = () => {
                 )}
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Direct Notification Detail Modal */}
+      {selectedDirectNotification && (
+        <div className="notification-modal-overlay" onClick={() => setSelectedDirectNotification(null)}>
+          <div className="notification-modal direct-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="notification-modal-header">
+              <h2 className="notification-modal-title">
+                {getDirectNotificationIcon(selectedDirectNotification.notification_type)} {selectedDirectNotification.title}
+              </h2>
+              <button className="notification-modal-close" onClick={() => setSelectedDirectNotification(null)}>
+                ✕
+              </button>
+            </div>
+
+            <div className="notification-modal-content">
+              <div className="notification-modal-info">
+                <div className="notification-modal-meta">
+                  <span className={`content-type ${getContentTypeClass(selectedDirectNotification.notification_type)}`}>
+                    {selectedDirectNotification.notification_type.replace('_', ' ')}
+                  </span>
+                  <span className={`priority-badge priority-${selectedDirectNotification.priority}`}>
+                    {selectedDirectNotification.priority} priority
+                  </span>
+                  <span className="notification-modal-time">
+                    {formatTimeAgo(selectedDirectNotification.created_at)}
+                  </span>
+                </div>
+              </div>
+
+              <div className="notification-modal-body">
+                <div className="direct-notification-message">
+                  {selectedDirectNotification.message}
+                </div>
+
+                {selectedDirectNotification.extra_data &&
+                  selectedDirectNotification.notification_type === 'incomplete_grades' &&
+                  selectedDirectNotification.extra_data.incomplete_subjects && (
+                    <div className="incomplete-subjects-detail">
+                      <h4>Incomplete Subjects:</h4>
+                      <ul>
+                        {selectedDirectNotification.extra_data.incomplete_subjects.map((subject, idx) => (
+                          <li key={idx}>
+                            <strong>{subject.name}</strong>
+                            <span className="missing-scores">Missing: {subject.missing.join(', ')}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+              </div>
+
+              {!selectedDirectNotification.is_read && (
+                <div className="notification-modal-actions">
+                  <button
+                    onClick={() => {
+                      markDirectAsRead(selectedDirectNotification.id);
+                      setSelectedDirectNotification(null);
+                    }}
+                    className="mark-read-modal-btn"
+                  >
+                    Mark as Read
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}

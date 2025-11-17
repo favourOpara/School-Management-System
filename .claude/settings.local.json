@@ -1,7 +1,34 @@
 {
   "permissions": {
     "allow": [
-      "Bash(then venv/Scripts/python manage.py shell -c \"from schooladmin.models import GradeSummary; gs = GradeSummary.objects.get(student__username=''paulnwosu541'', subject__name=''Data science''); print(f''Attendance: {gs.attendance_score}''); print(f''Assignment: {gs.assignment_score}''); print(f''Test: {gs.test_score}''); print(f''Exam: {gs.exam_score}''); print(f''Total in DB: {gs.total_score}''); expected = float(gs.attendance_score) + float(gs.assignment_score) + float(gs.test_score) + float(gs.exam_score); print(f''Expected: {expected}''); print(f''FIXED: {abs(float(gs.total_score) - expected) < 0.01}'')\")"
+      "Bash(then venv/Scripts/python manage.py shell -c \"from schooladmin.models import GradeSummary; gs = GradeSummary.objects.get(student__username=''paulnwosu541'', subject__name=''Data science''); print(f''Attendance: {gs.attendance_score}''); print(f''Assignment: {gs.assignment_score}''); print(f''Test: {gs.test_score}''); print(f''Exam: {gs.exam_score}''); print(f''Total in DB: {gs.total_score}''); expected = float(gs.attendance_score) + float(gs.assignment_score) + float(gs.test_score) + float(gs.exam_score); print(f''Expected: {expected}''); print(f''FIXED: {abs(float(gs.total_score) - expected) < 0.01}'')\")",
+      "Bash(test:*)",
+      "Bash(cat:*)",
+      "Bash(source venv/bin/activate)",
+      "Bash(source venv/Scripts/activate)",
+      "Bash(backend/venv/bin/pip:*)",
+      "Bash(backend/venv/Scripts/pip.exe list:*)",
+      "Bash(sed:*)",
+      "Bash(bin/pip list:*)",
+      "Bash(bin/pip show:*)",
+      "Bash(for dir in Lib/site-packages/*.dist-info)",
+      "Bash(paste:*)",
+      "Bash(python manage.py makemigrations:*)",
+      "Bash(./venv/bin/python:*)",
+      "Bash(python manage.py check:*)",
+      "Bash(ExamStudentScoresModal.css)",
+      "Bash(ExamSubjectsModal.css)",
+      "Bash(python manage.py runserver:*)",
+      "Bash(npm start)",
+      "Bash(npm run:*)",
+      "Bash(python manage.py shell:*)",
+      "Bash(python -m py_compile:*)",
+      "Bash(python3 -m py_compile:*)",
+      "Bash(python3 manage.py shell:*)",
+      "Bash(python3:*)",
+      "Bash(npx eslint:*)",
+      "Bash(node -e:*)",
+      "Bash(python manage.py migrate:*)"
     ],
     "deny": [],
     "ask": []

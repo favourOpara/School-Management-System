@@ -2,8 +2,10 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import './ViewClasses.css';
+import { useDialog } from '../contexts/DialogContext';
 
 const ViewClasses = () => {
+  const { showConfirm } = useDialog();
   const token = localStorage.getItem('accessToken');
   const [activeView, setActiveView] = useState('class'); // class | session
   const [permanentClasses, setPermanentClasses] = useState([]);
@@ -139,7 +141,14 @@ const ViewClasses = () => {
       const confirmMessage = `Delete ${sessionsToDelete.length} class session${sessionsToDelete.length > 1 ? 's' : ''} from ${filters.academic_year} - ${filters.term}?\n\n` +
         sessionsToDelete.map(sess => sess.classroom.name).join(', ');
 
-      if (!window.confirm(confirmMessage)) return;
+      const confirmed = await showConfirm({
+        title: 'Delete Class Sessions',
+        message: confirmMessage,
+        confirmText: 'Delete All',
+        cancelText: 'Cancel',
+        confirmButtonClass: 'confirm-btn-danger'
+      });
+      if (!confirmed) return;
     } else {
       // Single-select mode (original logic)
       const match = sessions.find(sess =>
@@ -149,8 +158,16 @@ const ViewClasses = () => {
       );
 
       if (!match) return setError('No matching session to delete.');
-      if (!window.confirm(`Delete ${match.classroom.name} (${match.term}, ${match.academic_year})?`)) return;
-      
+
+      const confirmed = await showConfirm({
+        title: 'Delete Class Session',
+        message: `Delete ${match.classroom.name} (${match.term}, ${match.academic_year})? This action cannot be undone.`,
+        confirmText: 'Delete',
+        cancelText: 'Cancel',
+        confirmButtonClass: 'confirm-btn-danger'
+      });
+      if (!confirmed) return;
+
       sessionsToDelete = [match];
     }
 
@@ -180,7 +197,15 @@ const ViewClasses = () => {
     setError('');
     const match = permanentClasses.find(cls => cls.name === filters.name);
     if (!match) return setError('No matching permanent class to delete.');
-    if (!window.confirm(`Delete ${match.name}? All sessions will be removed.`)) return;
+
+    const confirmed = await showConfirm({
+      title: 'Delete Permanent Class',
+      message: `Delete ${match.name}? All sessions will be removed. This action cannot be undone.`,
+      confirmText: 'Delete',
+      cancelText: 'Cancel',
+      confirmButtonClass: 'confirm-btn-danger'
+    });
+    if (!confirmed) return;
 
     try {
       await axios.delete(`http://127.0.0.1:8000/api/academics/classes/${match.id}/`, {

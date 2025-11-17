@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import Select from 'react-select';
+import { CalendarCheck } from 'lucide-react';
 import AttendanceStudentModal from './AttendanceStudentModal';
 import './DashboardAttendanceCard.css';
 
@@ -237,37 +238,42 @@ const DashboardAttendanceCard = () => {
     <div className={`attendance-dashboard-wrapper ${isFiltered ? 'attendance-filters-active' : ''}`}>
       <div className="dashboard-card attendance-dashboard-card">
         <div className="attendance-card-header">
-          <div className="attendance-card-header-title">
+          <CalendarCheck size={28} color="#3b82f6" />
+          <div>
             <h2>Attendance by Class</h2>
+            <p>Track student attendance rates</p>
           </div>
-          <div className="attendance-dashboard-controls">
-            <Select
-              options={academicYears}
-              value={selectedYear}
-              onChange={setSelectedYear}
-              placeholder="Year"
-              styles={selectStyles}
-            />
-            <Select
-              options={termOptions}
-              value={selectedTerm}
-              onChange={setSelectedTerm}
-              placeholder="Term"
-              styles={selectStyles}
-            />
-            <button 
-              className="attendance-dashboard-filter-btn" 
-              onClick={toggleFilters}
-            >
-              Filter
-            </button>
-            <button 
-              className="attendance-dashboard-close-btn" 
-              onClick={toggleFilters}
-            >
-              Close
-            </button>
-          </div>
+        </div>
+
+        <div className="attendance-filters">
+          <Select
+            options={academicYears}
+            value={selectedYear}
+            onChange={setSelectedYear}
+            placeholder="Year"
+            styles={selectStyles}
+            className="attendance-filter-select"
+          />
+          <Select
+            options={termOptions}
+            value={selectedTerm}
+            onChange={setSelectedTerm}
+            placeholder="Term"
+            styles={selectStyles}
+            className="attendance-filter-select"
+          />
+          <button
+            className="attendance-dashboard-filter-btn"
+            onClick={toggleFilters}
+          >
+            Filter
+          </button>
+          <button
+            className="attendance-dashboard-close-btn"
+            onClick={toggleFilters}
+          >
+            Close
+          </button>
         </div>
 
         <ul className="attendance-class-list">

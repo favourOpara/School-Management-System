@@ -1,0 +1,176 @@
+/* Alert Dialog Overlay */
+.alert-dialog-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  z-index: 10001;
+  pointer-events: none;
+  padding-top: 2rem;
+}
+
+/* Alert Content */
+.alert-dialog-content {
+  background: white;
+  border-radius: 10px;
+  width: 90%;
+  max-width: 500px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  padding: 1.25rem;
+  animation: slideDown 0.3s ease-out;
+  pointer-events: auto;
+  border-left: 5px solid;
+  position: relative;
+}
+
+@keyframes slideDown {
+  from {
+    transform: translateY(-100px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* Alert Types */
+.alert-success {
+  border-left-color: #10b981;
+  background-color: #f0fdf4;
+}
+
+.alert-error {
+  border-left-color: #ef4444;
+  background-color: #fef2f2;
+}
+
+.alert-warning {
+  border-left-color: #f59e0b;
+  background-color: #fffbeb;
+}
+
+.alert-info {
+  border-left-color: #3b82f6;
+  background-color: #eff6ff;
+}
+
+/* Alert Icon */
+.alert-dialog-icon {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  font-weight: bold;
+}
+
+.alert-success .alert-dialog-icon {
+  background-color: #d1fae5;
+  color: #065f46;
+}
+
+.alert-error .alert-dialog-icon {
+  background-color: #fee2e2;
+  color: #991b1b;
+}
+
+.alert-warning .alert-dialog-icon {
+  background-color: #fef3c7;
+  color: #92400e;
+}
+
+.alert-info .alert-dialog-icon {
+  background-color: #dbeafe;
+  color: #1e40af;
+}
+
+/* Alert Text */
+.alert-dialog-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.alert-dialog-title {
+  margin: 0 0 0.25rem 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #1f2937;
+}
+
+.alert-dialog-message {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: #4b5563;
+  white-space: pre-line;
+}
+
+/* Close Button */
+.alert-dialog-close {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  border: none;
+  background: transparent;
+  color: #6b7280;
+  font-size: 1.75rem;
+  line-height: 1;
+  cursor: pointer;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  padding: 0;
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+}
+
+.alert-dialog-close:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+  color: #1f2937;
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+  .alert-dialog-overlay {
+    padding-top: 1rem;
+  }
+
+  .alert-dialog-content {
+    width: 95%;
+    padding: 1rem;
+  }
+
+  .alert-dialog-icon {
+    width: 36px;
+    height: 36px;
+    font-size: 1.25rem;
+  }
+
+  .alert-dialog-title {
+    font-size: 0.95rem;
+  }
+
+  .alert-dialog-message {
+    font-size: 0.85rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .alert-dialog-content {
+    max-width: none;
+  }
+}

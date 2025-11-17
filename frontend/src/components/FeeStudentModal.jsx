@@ -3,6 +3,7 @@ import Select from 'react-select';
 import axios from 'axios';
 import * as XLSX from 'xlsx';
 import './feestudentmodal.css';
+import { useDialog } from '../contexts/DialogContext';
 
 const paymentStatusOptions = [
   { value: 'ALL', label: 'All' },
@@ -33,6 +34,7 @@ const customSelectStyles = {
 };
 
 const FeeStudentModal = ({ data = {}, onClose }) => {
+  const { showAlert } = useDialog();
   const {
     className = 'Class',
     students = [],
@@ -110,10 +112,16 @@ const FeeStudentModal = ({ data = {}, onClose }) => {
         })
       );
 
-      alert('Payment records updated successfully.');
+      showAlert({
+        type: 'success',
+        message: 'Payment records updated successfully.'
+      });
     } catch (err) {
       console.error(err);
-      alert('Failed to update one or more records.');
+      showAlert({
+        type: 'error',
+        message: 'Failed to update one or more records.'
+      });
     }
     setSaving(false);
   };

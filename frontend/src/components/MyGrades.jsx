@@ -343,26 +343,56 @@ const MyGrades = () => {
                       )}
                     </div>
 
-                    {/* Test Scores */}
-                    {subject.test_visible && (
+                    {/* Test Scores - Show manual scores or online scores */}
+                    {(subject.test_visible || subject.manual_test_visible) && (
                       <div className="grade-section">
                         <div className="grade-header">
                           <span className="grade-label">
                             Tests
-                            {subject.test_count > 0 && (
+                            {subject.manual_test_visible && (
+                              <span className="assignment-count">(Manual Entry)</span>
+                            )}
+                            {!subject.manual_test_visible && subject.test_count > 0 && (
                               <span className="assignment-count">
                                 ({subject.test_count} test{subject.test_count !== 1 ? 's' : ''})
                               </span>
                             )}
                           </span>
-                          {subject.test_count > 0 && (
+                          {subject.manual_test_visible ? (
+                            <span className="grade-value">
+                              {subject.manual_test_score}/{subject.manual_test_max}
+                            </span>
+                          ) : subject.test_count > 0 ? (
                             <span className="grade-value">
                               Average: {subject.test_average}%
                             </span>
-                          )}
+                          ) : null}
                         </div>
 
-                        {subject.test_count > 0 ? (
+                        {subject.manual_test_visible ? (
+                          <>
+                            <div className="progress-bar">
+                              <div
+                                className="progress-fill"
+                                style={{
+                                  width: `${(subject.manual_test_score / subject.manual_test_max) * 100}%`,
+                                  backgroundColor: getGradeColor((subject.manual_test_score / subject.manual_test_max) * 100)
+                                }}
+                              />
+                            </div>
+                            <div className="grade-footer">
+                              <span className="percentage">
+                                {((subject.manual_test_score / subject.manual_test_max) * 100).toFixed(2)}%
+                              </span>
+                              <span
+                                className="letter-grade"
+                                style={{ color: getGradeColor((subject.manual_test_score / subject.manual_test_max) * 100) }}
+                              >
+                                {getGradeLetter((subject.manual_test_score / subject.manual_test_max) * 100)}
+                              </span>
+                            </div>
+                          </>
+                        ) : subject.test_count > 0 ? (
                           <>
                             <div className="progress-bar">
                               <div
@@ -434,26 +464,56 @@ const MyGrades = () => {
                       </div>
                     )}
 
-                    {/* Exam Scores */}
-                    {subject.exam_visible && (
+                    {/* Exam Scores - Show manual scores or online scores */}
+                    {(subject.exam_visible || subject.manual_exam_visible) && (
                       <div className="grade-section">
                         <div className="grade-header">
                           <span className="grade-label">
                             Exams
-                            {subject.exam_count > 0 && (
+                            {subject.manual_exam_visible && (
+                              <span className="assignment-count">(Manual Entry)</span>
+                            )}
+                            {!subject.manual_exam_visible && subject.exam_count > 0 && (
                               <span className="assignment-count">
                                 ({subject.exam_count} exam{subject.exam_count !== 1 ? 's' : ''})
                               </span>
                             )}
                           </span>
-                          {subject.exam_count > 0 && (
+                          {subject.manual_exam_visible ? (
+                            <span className="grade-value">
+                              {subject.manual_exam_score}/{subject.manual_exam_max}
+                            </span>
+                          ) : subject.exam_count > 0 ? (
                             <span className="grade-value">
                               Average: {subject.exam_average}%
                             </span>
-                          )}
+                          ) : null}
                         </div>
 
-                        {subject.exam_count > 0 ? (
+                        {subject.manual_exam_visible ? (
+                          <>
+                            <div className="progress-bar">
+                              <div
+                                className="progress-fill"
+                                style={{
+                                  width: `${(subject.manual_exam_score / subject.manual_exam_max) * 100}%`,
+                                  backgroundColor: getGradeColor((subject.manual_exam_score / subject.manual_exam_max) * 100)
+                                }}
+                              />
+                            </div>
+                            <div className="grade-footer">
+                              <span className="percentage">
+                                {((subject.manual_exam_score / subject.manual_exam_max) * 100).toFixed(2)}%
+                              </span>
+                              <span
+                                className="letter-grade"
+                                style={{ color: getGradeColor((subject.manual_exam_score / subject.manual_exam_max) * 100) }}
+                              >
+                                {getGradeLetter((subject.manual_exam_score / subject.manual_exam_max) * 100)}
+                              </span>
+                            </div>
+                          </>
+                        ) : subject.exam_count > 0 ? (
                           <>
                             <div className="progress-bar">
                               <div
@@ -525,7 +585,7 @@ const MyGrades = () => {
                     )}
 
                     {/* Hidden Grades Notice - only show if no tests/exams released */}
-                    {!subject.test_visible && !subject.exam_visible && (
+                    {!subject.test_visible && !subject.exam_visible && !subject.manual_test_visible && !subject.manual_exam_visible && (
                       <div className="hidden-grades-notice">
                         <Clock size={16} />
                         <span>Test and exam results will be released by admin</span>

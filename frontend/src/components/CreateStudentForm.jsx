@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import './CreateStudentForm.css';
 
@@ -21,6 +21,13 @@ const CreateStudentForm = ({ onSuccess }) => {
   const [classrooms, setClassrooms] = useState([]);
   const [academicYears, setAcademicYears] = useState([]);
   const [message, setMessage] = useState('');
+  const [profilePicture, setProfilePicture] = useState(null);
+  const [previewUrl, setPreviewUrl] = useState(null);
+  const [showCamera, setShowCamera] = useState(false);
+  const [stream, setStream] = useState(null);
+  const videoRef = useRef(null);
+  const canvasRef = useRef(null);
+  const fileInputRef = useRef(null);
   const token = localStorage.getItem('accessToken');
 
   const DEPARTMENTS = ['Science', 'Arts', 'Commercial'];
@@ -50,8 +57,105 @@ const CreateStudentForm = ({ onSuccess }) => {
     fetchData();
   }, [token]);
 
+  useEffect(() => {
+    // Cleanup camera stream on unmount
+    return () => {
+      if (stream) {
+        stream.getTracks().forEach(track => track.stop());
+      }
+    };
+  }, [stream]);
+
   const handleChange = e => {
     setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
+  };
+
+  const handleFileSelect = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      if (file.size > 100 * 1024) {
+        setMessage('Image file size must not exceed 100KB.');
+        return;
+      }
+      setProfilePicture(file);
+      setPreviewUrl(URL.createObjectURL(file));
+      setMessage('');
+    }
+  };
+
+  const handleUploadClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const startCamera = async () => {
+    try {
+      const mediaStream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'user' }
+      });
+      setStream(mediaStream);
+      setShowCamera(true);
+      if (videoRef.current) {
+        videoRef.current.srcObject = mediaStream;
+      }
+    } catch (err) {
+      console.error('Error accessing camera:', err);
+      setMessage('Unable to access camera. Please check permissions.');
+    }
+  };
+
+  const capturePhoto = () => {
+    if (videoRef.current && canvasRef.current) {
+      const video = videoRef.current;
+      const canvas = canvasRef.current;
+      canvas.width = 120;
+      canvas.height = 150;
+      const ctx = canvas.getContext('2d');
+
+      // Calculate crop dimensions to maintain aspect ratio
+      const videoAspect = video.videoWidth / video.videoHeight;
+      const targetAspect = 120 / 150;
+
+      let sourceX = 0;
+      let sourceY = 0;
+      let sourceWidth = video.videoWidth;
+      let sourceHeight = video.videoHeight;
+
+      if (videoAspect > targetAspect) {
+        sourceWidth = video.videoHeight * targetAspect;
+        sourceX = (video.videoWidth - sourceWidth) / 2;
+      } else {
+        sourceHeight = video.videoWidth / targetAspect;
+        sourceY = (video.videoHeight - sourceHeight) / 2;
+      }
+
+      ctx.drawImage(video, sourceX, sourceY, sourceWidth, sourceHeight, 0, 0, 120, 150);
+
+      canvas.toBlob((blob) => {
+        if (blob) {
+          const file = new File([blob], 'profile.jpg', { type: 'image/jpeg' });
+          setProfilePicture(file);
+          setPreviewUrl(URL.createObjectURL(file));
+          stopCamera();
+          setMessage('');
+        }
+      }, 'image/jpeg', 0.85);
+    }
+  };
+
+  const stopCamera = () => {
+    if (stream) {
+      stream.getTracks().forEach(track => track.stop());
+      setStream(null);
+    }
+    setShowCamera(false);
+  };
+
+  const removePhoto = () => {
+    setProfilePicture(null);
+    setPreviewUrl(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
   };
 
   const handleSubmit = async e => {
@@ -63,16 +167,28 @@ const CreateStudentForm = ({ onSuccess }) => {
       return;
     }
 
-    const payload = {
-      ...formData,
-      role: 'student'
-    };
+    const payload = new FormData();
+    Object.keys(formData).forEach(key => {
+      if (formData[key]) {
+        payload.append(key, formData[key]);
+      }
+    });
+    payload.append('role', 'student');
+
+    if (profilePicture) {
+      payload.append('profile_picture', profilePicture);
+    }
 
     try {
       await axios.post(
         'http://127.0.0.1:8000/api/users/create-user/',
         payload,
-        { headers: { Authorization: `Bearer ${token}` } }
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'multipart/form-data'
+          }
+        }
       );
 
       setMessage('Student created successfully.');
@@ -90,6 +206,11 @@ const CreateStudentForm = ({ onSuccess }) => {
         date_of_birth: '',
         department: ''
       });
+      setProfilePicture(null);
+      setPreviewUrl(null);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
 
       if (onSuccess) onSuccess();
     } catch (err) {
@@ -157,6 +278,52 @@ const CreateStudentForm = ({ onSuccess }) => {
           </select>
 
           <input type="date" name="date_of_birth" value={formData.date_of_birth} onChange={handleChange} required />
+
+          <div className="photo-upload-section">
+            <label>Student Photo (optional, max 100KB)</label>
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleFileSelect}
+              accept="image/*"
+              style={{ display: 'none' }}
+            />
+
+            {!previewUrl && !showCamera && (
+              <div className="photo-buttons">
+                <button type="button" onClick={handleUploadClick} className="upload-btn">
+                  Upload Photo
+                </button>
+                <button type="button" onClick={startCamera} className="camera-btn">
+                  Take Photo
+                </button>
+              </div>
+            )}
+
+            {showCamera && (
+              <div className="camera-container">
+                <video ref={videoRef} autoPlay playsInline className="camera-video" />
+                <canvas ref={canvasRef} style={{ display: 'none' }} />
+                <div className="camera-controls">
+                  <button type="button" onClick={capturePhoto} className="capture-btn">
+                    Capture
+                  </button>
+                  <button type="button" onClick={stopCamera} className="cancel-btn">
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {previewUrl && (
+              <div className="photo-preview">
+                <img src={previewUrl} alt="Student preview" className="preview-image" />
+                <button type="button" onClick={removePhoto} className="remove-photo-btn">
+                  Remove Photo
+                </button>
+              </div>
+            )}
+          </div>
 
           <button type="submit">Create Student</button>
         </form>

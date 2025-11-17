@@ -153,6 +153,7 @@ body {
 
   .sidebar.open {
     transform: translateX(0);
+    z-index: 2000; /* Higher than TopHeader (1000) to ensure close button is accessible */
   }
 
   .sidebar-logo {

@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import Select from 'react-select';
+import { ClipboardList } from 'lucide-react';
 import TestSubjectsModal from './TestSubjectsModal';
 import TestStudentScoresModal from './TestStudentScoresModal';
 import './DashboardTestsCard.css';
+import { useDialog } from '../contexts/DialogContext';
 
 const termOptions = [
   { value: 'First Term', label: 'First Term' },
@@ -42,6 +44,7 @@ const selectStyles = {
 };
 
 const DashboardTestsCard = () => {
+  const { showConfirm, showAlert } = useDialog();
   const [academicYears, setAcademicYears] = useState([]);
   const [selectedYear, setSelectedYear] = useState(null);
   const [selectedTerm, setSelectedTerm] = useState(termOptions[0]);
@@ -129,9 +132,9 @@ const DashboardTestsCard = () => {
 
   const calculateOverallCompletion = () => {
     if (classStats.length === 0) return 0;
-    const totalStudents = classStats.reduce((sum, cls) => sum + cls.total_students, 0);
+    const totalPossible = classStats.reduce((sum, cls) => sum + (cls.total_possible_submissions || cls.total_students), 0);
     const totalCompleted = classStats.reduce((sum, cls) => sum + cls.students_completed, 0);
-    return totalStudents > 0 ? Math.round((totalCompleted / totalStudents) * 100) : 0;
+    return totalPossible > 0 ? Math.round((totalCompleted / totalPossible) * 100) : 0;
   };
 
   const handleClassClick = (classData) => {
@@ -144,13 +147,21 @@ const DashboardTestsCard = () => {
 
   const handleUnlockAll = async () => {
     if (!selectedYear || !selectedTerm) {
-      alert('Please select academic year and term first');
+      showAlert({
+        type: 'warning',
+        message: 'Please select academic year and term first'
+      });
       return;
     }
 
-    if (!window.confirm(`Are you sure you want to unlock ALL test scores for ${selectedYear.label} - ${selectedTerm.label}? Students will be able to see their results.`)) {
-      return;
-    }
+    const confirmed = await showConfirm({
+      title: 'Unlock All Test Scores',
+      message: `Are you sure you want to unlock ALL test scores for ${selectedYear.label} - ${selectedTerm.label}? Students will be able to see their results.`,
+      confirmText: 'Unlock All',
+      cancelText: 'Cancel',
+      confirmButtonClass: 'confirm-btn-warning'
+    });
+    if (!confirmed) return;
 
     try {
       setUnlocking(true);
@@ -164,10 +175,16 @@ const DashboardTestsCard = () => {
         { headers }
       );
 
-      alert('All test scores unlocked successfully!');
+      showAlert({
+        type: 'success',
+        message: 'All test scores unlocked successfully!'
+      });
     } catch (err) {
       console.error('Error unlocking test scores:', err);
-      alert('Failed to unlock test scores. Please try again.');
+      showAlert({
+        type: 'error',
+        message: 'Failed to unlock test scores. Please try again.'
+      });
     } finally {
       setUnlocking(false);
     }
@@ -177,44 +194,49 @@ const DashboardTestsCard = () => {
     <div className={`tests-dashboard-wrapper ${isFiltered ? 'tests-filters-active' : ''}`}>
       <div className="dashboard-card tests-dashboard-card">
         <div className="tests-card-header">
-          <div className="tests-card-header-title">
+          <ClipboardList size={28} color="#f59e0b" />
+          <div>
             <h2>Tests Average by Class</h2>
-            <button
-              className="tests-unlock-all-btn"
-              onClick={handleUnlockAll}
-              disabled={unlocking || !selectedYear || !selectedTerm}
-            >
-              {unlocking ? 'Unlocking...' : '🔓 Unlock All Test Scores'}
-            </button>
+            <p>Track test completion rates</p>
           </div>
-          <div className="tests-dashboard-controls">
-            <Select
-              options={academicYears}
-              value={selectedYear}
-              onChange={setSelectedYear}
-              placeholder="Year"
-              styles={selectStyles}
-            />
-            <Select
-              options={termOptions}
-              value={selectedTerm}
-              onChange={setSelectedTerm}
-              placeholder="Term"
-              styles={selectStyles}
-            />
-            <button
-              className="tests-dashboard-filter-btn"
-              onClick={toggleFilters}
-            >
-              Filter
-            </button>
-            <button
-              className="tests-dashboard-close-btn"
-              onClick={toggleFilters}
-            >
-              Close
-            </button>
-          </div>
+          <button
+            className="tests-unlock-all-btn"
+            onClick={handleUnlockAll}
+            disabled={unlocking || !selectedYear || !selectedTerm}
+          >
+            {unlocking ? 'Unlocking...' : '🔓 Unlock All'}
+          </button>
+        </div>
+
+        <div className="tests-filters">
+          <Select
+            options={academicYears}
+            value={selectedYear}
+            onChange={setSelectedYear}
+            placeholder="Year"
+            styles={selectStyles}
+            className="tests-filter-select"
+          />
+          <Select
+            options={termOptions}
+            value={selectedTerm}
+            onChange={setSelectedTerm}
+            placeholder="Term"
+            styles={selectStyles}
+            className="tests-filter-select"
+          />
+          <button
+            className="tests-dashboard-filter-btn"
+            onClick={toggleFilters}
+          >
+            Filter
+          </button>
+          <button
+            className="tests-dashboard-close-btn"
+            onClick={toggleFilters}
+          >
+            Close
+          </button>
         </div>
 
         <ul className="tests-class-list">
@@ -280,8 +302,8 @@ const DashboardTestsCard = () => {
         {classStats.length > 0 && (
           <div className="tests-summary">
             <p className="tests-summary-text">
-              Overall: {classStats.reduce((sum, cls) => sum + cls.students_completed, 0)} students completed out of{' '}
-              {classStats.reduce((sum, cls) => sum + cls.total_students, 0)} total students
+              Overall: {classStats.reduce((sum, cls) => sum + cls.students_completed, 0)} test submissions out of{' '}
+              {classStats.reduce((sum, cls) => sum + (cls.total_possible_submissions || cls.total_students), 0)} total possible
               {' '}({calculateOverallCompletion()}%)
             </p>
             <p style={{ fontSize: '0.85rem', color: '#666', marginTop: '5px' }}>

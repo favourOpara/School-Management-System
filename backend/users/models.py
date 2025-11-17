@@ -2,6 +2,18 @@ from django.contrib.auth.models import AbstractUser, BaseUserManager
 from django.db import models
 from academics.models import Class
 
+
+def student_photo_upload_path(instance, filename):
+    """Generate upload path for student photos (admin-controlled for reports)"""
+    ext = filename.split('.')[-1]
+    return f'student_photos/{instance.username}_{instance.id}.{ext}'
+
+
+def user_avatar_upload_path(instance, filename):
+    """Generate upload path for user avatars (self-uploaded profile pictures)"""
+    ext = filename.split('.')[-1]
+    return f'avatars/{instance.username}_{instance.id}.{ext}'
+
 class CustomUserManager(BaseUserManager):
     def create_user(self, username, password=None, **extra_fields):
         if not username:
@@ -50,6 +62,8 @@ class CustomUser(AbstractUser):
     term = models.CharField(max_length=20, blank=True)
     date_of_birth = models.DateField(null=True, blank=True)
     phone_number = models.CharField(max_length=20, null=True, blank=True)
+    profile_picture = models.ImageField(upload_to=student_photo_upload_path, null=True, blank=True)
+    avatar = models.ImageField(upload_to=user_avatar_upload_path, null=True, blank=True)
 
     # NEW: Department field only for students in senior classes
     department = models.CharField(max_length=20, choices=DEPARTMENT_CHOICES, null=True, blank=True)

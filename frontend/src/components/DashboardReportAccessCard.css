@@ -1,0 +1,672 @@
+/* Dashboard Report Access Card Styles */
+
+.report-access-card {
+  background: white;
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  border: 1px solid #e5e7eb;
+  transition: all 0.3s ease;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.report-access-card:hover {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  transform: translateY(-2px);
+}
+
+/* Header */
+.report-access-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 2px solid #f3f4f6;
+}
+
+.report-access-header h3 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #1f2937;
+}
+
+.report-access-header p {
+  margin: 4px 0 0 0;
+  font-size: 0.875rem;
+  color: #6b7280;
+}
+
+/* Filters */
+.report-access-filters {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.ra-filter-select {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Stats Container */
+.report-access-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  flex: 1;
+}
+
+/* Section Styles */
+.report-access-section {
+  background: #f9fafb;
+  border-radius: 12px;
+  padding: 16px;
+  border: 1px solid #e5e7eb;
+  transition: all 0.2s ease;
+}
+
+.report-access-section:hover {
+  background: #f3f4f6;
+  border-color: #d1d5db;
+}
+
+.report-access-section.clickable {
+  cursor: pointer;
+}
+
+.report-access-section.clickable:hover {
+  border-color: #10b981;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.15);
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.section-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.complete-icon {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: white;
+}
+
+.fees-paid-icon {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  color: white;
+}
+
+.fees-unpaid-icon {
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  color: white;
+}
+
+.incomplete-icon {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  color: white;
+}
+
+.section-info h4 {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.section-info p {
+  margin: 4px 0 0 0;
+  font-size: 0.8rem;
+  color: #6b7280;
+}
+
+/* Complete Section (No Bar) */
+.complete-section .section-count {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  margin-top: 8px;
+  margin-left: 52px;
+}
+
+.count-value {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #10b981;
+  line-height: 1;
+}
+
+.count-total {
+  font-size: 1.2rem;
+  font-weight: 500;
+  color: #6b7280;
+}
+
+/* Section Bar (for sections with progress bars) */
+.section-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.progress-bar {
+  flex: 1;
+  height: 10px;
+  background: #e5e7eb;
+  border-radius: 5px;
+  overflow: hidden;
+  position: relative;
+}
+
+.progress-fill {
+  height: 100%;
+  border-radius: 5px;
+  transition: width 0.5s ease;
+}
+
+.fees-paid-fill {
+  background: linear-gradient(90deg, #3b82f6 0%, #2563eb 100%);
+}
+
+.fees-unpaid-fill {
+  background: linear-gradient(90deg, #f59e0b 0%, #d97706 100%);
+}
+
+.incomplete-fill {
+  background: linear-gradient(90deg, #ef4444 0%, #dc2626 100%);
+}
+
+.percentage-text {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #1f2937;
+  min-width: 45px;
+  text-align: right;
+}
+
+/* Loading State */
+.report-access-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  text-align: center;
+}
+
+.spinner-small {
+  width: 40px;
+  height: 40px;
+  border: 4px solid #f3f4f6;
+  border-top-color: #10b981;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 12px;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.report-access-loading p {
+  margin: 0;
+  color: #6b7280;
+  font-size: 0.9rem;
+}
+
+/* Error State */
+.report-access-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  text-align: center;
+}
+
+.report-access-error svg {
+  color: #ef4444;
+  margin-bottom: 12px;
+}
+
+.report-access-error p {
+  margin: 0;
+  color: #6b7280;
+  font-size: 0.9rem;
+}
+
+/* Empty State */
+.report-access-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  text-align: center;
+}
+
+.report-access-empty svg {
+  color: #d1d5db;
+  margin-bottom: 12px;
+}
+
+.report-access-empty p {
+  margin: 0;
+  color: #9ca3af;
+  font-size: 0.9rem;
+}
+
+.ra-no-data {
+  text-align: center;
+  padding: 2rem;
+  color: #6b7280;
+}
+
+/* Responsive Styles */
+@media (max-width: 768px) {
+  .report-access-card {
+    padding: 16px;
+  }
+
+  .report-access-header {
+    margin-bottom: 16px;
+  }
+
+  .report-access-header h3 {
+    font-size: 1.1rem;
+  }
+
+  .report-access-stats {
+    gap: 12px;
+  }
+
+  .report-access-section {
+    padding: 12px;
+  }
+
+  .section-icon {
+    width: 36px;
+    height: 36px;
+  }
+
+  .section-info h4 {
+    font-size: 0.875rem;
+  }
+
+  .section-info p {
+    font-size: 0.75rem;
+  }
+
+  .count-value {
+    font-size: 1.5rem;
+  }
+
+  .count-total {
+    font-size: 1rem;
+  }
+
+  .complete-section .section-count {
+    margin-left: 48px;
+  }
+}
+
+@media (max-width: 480px) {
+  .report-access-card {
+    padding: 12px;
+  }
+
+  .report-access-header h3 {
+    font-size: 1rem;
+  }
+
+  .section-icon {
+    width: 32px;
+    height: 32px;
+  }
+
+  .section-header {
+    gap: 8px;
+  }
+
+  .count-value {
+    font-size: 1.25rem;
+  }
+
+  .count-total {
+    font-size: 0.9rem;
+  }
+
+  .complete-section .section-count {
+    margin-left: 40px;
+  }
+}
+
+/* Send Report Button */
+.send-report-btn {
+  margin-top: 16px;
+  margin-left: 52px;
+  padding: 10px 20px;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.2s ease;
+}
+
+.send-report-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #059669 0%, #047857 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+.send-report-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.notify-all-btn {
+  margin-top: 16px;
+  margin-left: 52px;
+  padding: 8px 16px;
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+}
+
+.notify-all-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #d97706 0%, #b45309 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
+}
+
+.notify-all-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.notify-all-btn.fee-notify-btn {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+}
+
+.notify-all-btn.fee-notify-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+}
+
+/* Modal Overlay */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Confirmation Modal */
+.confirmation-modal {
+  background: white;
+  border-radius: 16px;
+  padding: 32px;
+  max-width: 500px;
+  width: 90%;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.confirmation-modal h3 {
+  margin: 0 0 16px 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #1f2937;
+}
+
+.confirmation-modal p {
+  margin: 0 0 12px 0;
+  font-size: 1rem;
+  color: #6b7280;
+  line-height: 1.5;
+}
+
+.warning-text {
+  color: #f59e0b !important;
+  font-weight: 500;
+  font-size: 0.9rem !important;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 24px;
+  justify-content: flex-end;
+}
+
+.cancel-btn, .confirm-btn {
+  padding: 10px 24px;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: none;
+}
+
+.cancel-btn {
+  background: #f3f4f6;
+  color: #6b7280;
+}
+
+.cancel-btn:hover:not(:disabled) {
+  background: #e5e7eb;
+}
+
+.confirm-btn {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: white;
+}
+
+.confirm-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #059669 0%, #047857 100%);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+.cancel-btn:disabled, .confirm-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Send Result Message */
+.send-result {
+  margin-top: 16px;
+  padding: 16px;
+  border-radius: 12px;
+  position: relative;
+  animation: slideDown 0.3s ease;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.send-result.success {
+  background: #d1fae5;
+  border: 1px solid #10b981;
+  color: #065f46;
+}
+
+.send-result.error {
+  background: #fee2e2;
+  border: 1px solid #ef4444;
+  color: #991b1b;
+}
+
+.send-result p {
+  margin: 0;
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.send-details {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.send-details small {
+  font-size: 0.85rem;
+  opacity: 0.9;
+}
+
+.close-result-btn {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: inherit;
+  opacity: 0.6;
+  transition: opacity 0.2s;
+  padding: 0;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.close-result-btn:hover {
+  opacity: 1;
+}
+
+/* Wrapper */
+.report-access-wrapper {
+  width: 100%;
+  height: 100%;
+}
+
+/* Filter/Close buttons - hidden by default on desktop */
+.ra-filter-btn,
+.ra-close-btn {
+  display: none;
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.ra-filter-btn {
+  background-color: #3b82f6;
+  color: white;
+}
+
+.ra-filter-btn:hover {
+  background-color: #2563eb;
+}
+
+.ra-close-btn {
+  background-color: #6b7280;
+  color: white;
+}
+
+.ra-close-btn:hover {
+  background-color: #4b5563;
+}
+
+@media (max-width: 768px) {
+  .report-access-card {
+    padding: 1rem;
+  }
+
+  /* Mobile filters layout */
+  .report-access-filters {
+    flex-wrap: wrap;
+  }
+
+  /* Keep select dropdowns always visible on mobile */
+  .ra-filter-select {
+    flex: 1 1 45%;
+  }
+
+  /* Show filter button by default on mobile */
+  .ra-filter-btn {
+    display: block;
+    width: 100%;
+    margin-top: 0.5rem;
+  }
+
+  /* Hide close button by default on mobile */
+  .ra-close-btn {
+    display: none;
+    width: 100%;
+    margin-top: 0.5rem;
+  }
+
+  /* When filters are active: hide filter button, show close button */
+  .ra-filters-active .ra-filter-btn {
+    display: none;
+  }
+
+  .ra-filters-active .ra-close-btn {
+    display: block;
+  }
+}

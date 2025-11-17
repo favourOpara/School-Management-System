@@ -101,7 +101,7 @@ html, body {
   display: flex;
   justify-content: center;
   align-items: flex-start;
-  padding: 2rem 1rem;
+  padding: 0 1rem 2rem 1rem;
   min-height: 100vh;
   background-color: #ffffff;
   width: 100%;

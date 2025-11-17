@@ -1,0 +1,360 @@
+/* ===============================
+   EXAM STUDENT SCORES MODAL
+   =============================== */
+
+/* Larger modal for scores table */
+.exam-scores-modal-content {
+  background: white;
+  border-radius: 12px;
+  width: 100%;
+  max-width: 1200px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+}
+
+.exam-scores-body {
+  padding: 0;
+}
+
+/* Notice section */
+.exam-scores-notice-section {
+  padding: 1rem 1.5rem;
+  background-color: #fef3c7;
+  border-bottom: 2px solid #f59e0b;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.notice-message {
+  margin: 0;
+  font-size: 0.95rem;
+  color: #92400e;
+  font-weight: 500;
+  flex: 1;
+}
+
+.notice-btn {
+  padding: 0.75rem 1.5rem;
+  background-color: #3b82f6;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  white-space: nowrap;
+}
+
+.notice-btn:hover:not(:disabled) {
+  background-color: #2563eb;
+}
+
+.notice-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Table wrapper with scroll */
+.exam-scores-table-wrapper {
+  overflow-x: auto;
+  overflow-y: auto;
+  max-height: calc(90vh - 200px);
+}
+
+/* Scores table */
+.exam-scores-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.exam-scores-table thead {
+  background-color: #f3f4f6;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.exam-scores-table th,
+.exam-scores-table td {
+  padding: 1rem;
+  text-align: left;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.exam-scores-table th {
+  font-weight: 600;
+  color: #1f2937;
+  white-space: nowrap;
+}
+
+/* Sticky first column */
+.sticky-col {
+  position: sticky;
+  left: 0;
+  background-color: white;
+  z-index: 5;
+  box-shadow: 2px 0 4px rgba(0, 0, 0, 0.05);
+}
+
+.exam-scores-table thead .sticky-col {
+  background-color: #f3f4f6;
+  z-index: 15;
+}
+
+/* Assessment header */
+.assessment-header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 120px;
+}
+
+.assessment-title {
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: #1f2937;
+}
+
+.assessment-marks {
+  font-size: 0.75rem;
+  color: #6b7280;
+  font-weight: 400;
+}
+
+.assessment-status {
+  font-size: 0.75rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-weight: 500;
+}
+
+.assessment-status.released {
+  background-color: #d1fae5;
+  color: #065f46;
+}
+
+.assessment-status.locked {
+  background-color: #fee2e2;
+  color: #991b1b;
+}
+
+/* Student name cell */
+.student-name-cell {
+  min-width: 200px;
+}
+
+.student-name {
+  font-weight: 600;
+  color: #1f2937;
+  margin-bottom: 0.25rem;
+}
+
+.student-username {
+  font-size: 0.8rem;
+  color: #6b7280;
+}
+
+/* Score cell */
+.score-cell {
+  text-align: center;
+  padding: 0.5rem;
+}
+
+.score-display {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.5rem;
+  border-radius: 6px;
+  transition: background-color 0.2s;
+  min-width: 60px;
+}
+
+.score-display.editable {
+  cursor: pointer;
+}
+
+.score-display.editable:hover {
+  background-color: #f3f4f6;
+  border: 1px solid #3b82f6;
+}
+
+.score-display.not-editable {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+.score-display.not-submitted {
+  opacity: 0.5;
+}
+
+.score-value {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #1f2937;
+}
+
+.score-total {
+  font-size: 0.85rem;
+  color: #6b7280;
+}
+
+.not-submitted-badge {
+  font-size: 0.7rem;
+  color: #d32f2f;
+  font-weight: 500;
+  margin-top: 0.25rem;
+}
+
+.manual-badge {
+  font-size: 0.65rem;
+  color: #6366f1;
+  font-weight: 600;
+  background-color: #e0e7ff;
+  padding: 0.15rem 0.4rem;
+  border-radius: 3px;
+  margin-top: 0.25rem;
+}
+
+.score-display.manual {
+  background-color: #f5f3ff;
+  border: 1px solid #c7d2fe;
+}
+
+/* Score editing */
+.score-edit-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.score-input {
+  width: 80px;
+  padding: 0.5rem;
+  border: 2px solid #3b82f6;
+  border-radius: 4px;
+  font-size: 1rem;
+  text-align: center;
+  font-weight: 600;
+}
+
+.score-input:focus {
+  outline: none;
+  border-color: #2563eb;
+}
+
+.score-edit-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.score-save-btn,
+.score-cancel-btn {
+  padding: 0.25rem 0.5rem;
+  border: none;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.score-save-btn {
+  background-color: #10b981;
+  color: white;
+}
+
+.score-save-btn:hover {
+  background-color: #059669;
+}
+
+.score-cancel-btn {
+  background-color: #ef4444;
+  color: white;
+}
+
+.score-cancel-btn:hover {
+  background-color: #dc2626;
+}
+
+/* ===============================
+   MOBILE RESPONSIVE STYLES
+   =============================== */
+
+@media (max-width: 768px) {
+  .exam-scores-modal-content {
+    max-width: 98%;
+    max-height: 95vh;
+  }
+
+  .exam-scores-notice-section {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .notice-btn {
+    width: 100%;
+  }
+
+  .exam-scores-table {
+    font-size: 0.85rem;
+  }
+
+  .exam-scores-table th,
+  .exam-scores-table td {
+    padding: 0.75rem 0.5rem;
+  }
+
+  .student-name-cell {
+    min-width: 150px;
+  }
+
+  .assessment-header {
+    min-width: 100px;
+  }
+
+  .score-value {
+    font-size: 1rem;
+  }
+
+  .score-input {
+    width: 70px;
+    font-size: 0.9rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .exam-scores-table {
+    font-size: 0.8rem;
+  }
+
+  .exam-scores-table th,
+  .exam-scores-table td {
+    padding: 0.5rem 0.25rem;
+  }
+
+  .student-name {
+    font-size: 0.85rem;
+  }
+
+  .student-username {
+    font-size: 0.75rem;
+  }
+
+  .assessment-title {
+    font-size: 0.85rem;
+  }
+
+  .assessment-marks {
+    font-size: 0.7rem;
+  }
+}

@@ -8,22 +8,41 @@
 .student-dashboard-main {
   margin-left: 100px;
   padding: 2rem;
+  padding-top: 50px; /* Account for top header */
   flex: 1;
   min-height: 100vh;
   background-color: #fafafa;
 }
 
 .student-dashboard-greeting {
-  color: #333333;
-  font-size: 2rem;
-  font-weight: 600;
-  margin-bottom: 0.5rem;
+  color: #1a1a2e;
+  font-size: 1.75rem;
+  font-weight: 700;
+  margin-top: 0;
+  margin-bottom: 0.25rem;
+  letter-spacing: -0.5px;
 }
 
 .student-dashboard-subtitle {
   color: #666666;
-  font-size: 1.1rem;
-  margin-bottom: 2rem;
+  font-size: 1rem;
+  margin-bottom: 1.5rem;
+  opacity: 0.8;
+}
+
+/* Gen Z Dashboard Layout */
+.student-home-dashboard {
+  max-width: 800px;
+}
+
+.dashboard-welcome {
+  margin-bottom: 1.5rem;
+}
+
+.dashboard-records-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.5rem;
 }
 
 .student-dashboard-grid {
@@ -85,12 +104,22 @@
   .student-dashboard-main {
     margin-left: 0;
     padding: 1rem;
+    padding-top: 50px; /* Account for top header */
   }
-  
+
   .student-dashboard-greeting {
     font-size: 1.5rem;
+    margin-top: 0;
   }
-  
+
+  .student-dashboard-subtitle {
+    font-size: 0.9rem;
+  }
+
+  .dashboard-records-grid {
+    gap: 1rem;
+  }
+
   .student-dashboard-grid {
     grid-template-columns: 1fr;
   }

@@ -1,0 +1,251 @@
+/* ===============================
+   TEST MODALS SHARED STYLES
+   =============================== */
+
+/* Modal overlay */
+.exam-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1rem;
+}
+
+/* Modal content container */
+.exam-modal-content {
+  background: white;
+  border-radius: 12px;
+  width: 100%;
+  max-width: 700px;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+}
+
+/* Modal header */
+.exam-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 1.5rem;
+  border-bottom: 2px solid #e5e7eb;
+}
+
+.exam-modal-header h2 {
+  margin: 0 0 0.5rem 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #1f2937;
+}
+
+.exam-modal-subtitle {
+  margin: 0;
+  font-size: 0.9rem;
+  color: #6b7280;
+}
+
+.exam-modal-close-btn {
+  background: none;
+  border: none;
+  font-size: 2rem;
+  color: #9ca3af;
+  cursor: pointer;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.exam-modal-close-btn:hover {
+  background-color: #f3f4f6;
+  color: #1f2937;
+}
+
+/* Modal body */
+.exam-modal-body {
+  padding: 1.5rem;
+  overflow-y: auto;
+  flex: 1;
+}
+
+/* Loading, error, no data states */
+.exam-modal-loading,
+.exam-modal-error,
+.exam-modal-no-data {
+  text-align: center;
+  padding: 2rem;
+  font-size: 1rem;
+  color: #6b7280;
+}
+
+.exam-modal-error {
+  color: #d32f2f;
+}
+
+/* ===============================
+   SUBJECTS LIST STYLES
+   =============================== */
+
+.exam-subjects-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.exam-subject-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.25rem;
+  background-color: #f9fafb;
+  border-radius: 8px;
+  border: 2px solid transparent;
+  transition: all 0.2s;
+  cursor: pointer;
+}
+
+.exam-subject-item:hover {
+  background-color: #f3f4f6;
+  border-color: #3b82f6;
+  transform: translateX(4px);
+}
+
+.exam-subject-item.no-tests,
+.exam-subject-item.no-exams {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.exam-subject-item.no-tests:hover,
+.exam-subject-item.no-exams:hover {
+  background-color: #f9fafb;
+  border-color: transparent;
+  transform: none;
+}
+
+.exam-subject-info {
+  flex: 1;
+}
+
+.exam-subject-name {
+  margin: 0 0 0.5rem 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.exam-subject-teacher {
+  margin: 0 0 0.25rem 0;
+  font-size: 0.9rem;
+  color: #6b7280;
+}
+
+.exam-subject-stats {
+  margin: 0;
+  font-size: 0.85rem;
+  color: #9ca3af;
+}
+
+.exam-subject-no-tests,
+.exam-subject-no-exams {
+  margin: 0;
+  font-size: 0.85rem;
+  color: #d32f2f;
+  font-weight: 500;
+}
+
+.exam-subject-completion {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  min-width: 200px;
+}
+
+.exam-subject-progress-bar {
+  flex: 1;
+  height: 24px;
+  background-color: #e5e7eb;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.exam-subject-progress-fill {
+  height: 100%;
+  transition: width 0.5s ease-in-out;
+  border-radius: 12px;
+}
+
+.exam-subject-percentage {
+  font-weight: 700;
+  color: #1f2937;
+  font-size: 1rem;
+  min-width: 50px;
+  text-align: right;
+}
+
+/* ===============================
+   MOBILE RESPONSIVE STYLES
+   =============================== */
+
+@media (max-width: 768px) {
+  .exam-modal-content {
+    max-width: 95%;
+    max-height: 90vh;
+  }
+
+  .exam-modal-header {
+    padding: 1rem;
+  }
+
+  .exam-modal-header h2 {
+    font-size: 1.25rem;
+  }
+
+  .exam-modal-body {
+    padding: 1rem;
+  }
+
+  .exam-subject-item {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 1rem;
+  }
+
+  .exam-subject-item:hover {
+    transform: none;
+  }
+
+  .exam-subject-completion {
+    width: 100%;
+    min-width: auto;
+  }
+
+  .exam-subject-name {
+    font-size: 1rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .exam-modal-header h2 {
+    font-size: 1.1rem;
+  }
+
+  .exam-modal-subtitle {
+    font-size: 0.85rem;
+  }
+
+  .exam-subject-item {
+    padding: 1rem;
+  }
+}

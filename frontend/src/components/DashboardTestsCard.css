@@ -18,34 +18,33 @@
 /* Card header */
 .tests-card-header {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1.5rem;
-  padding-bottom: 1rem;
-  border-bottom: 2px solid #e5e7eb;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 1rem;
 }
 
-.tests-card-header-title {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-}
-
-.tests-card-header-title h2 {
+.tests-card-header h2 {
   margin: 0;
-  font-size: 1.5rem;
-  font-weight: 700;
+  font-size: 1.1rem;
+  font-weight: 600;
   color: #1f2937;
+}
+
+.tests-card-header p {
+  margin: 0.25rem 0 0 0;
+  font-size: 0.85rem;
+  color: #6b7280;
 }
 
 /* Unlock all button */
 .tests-unlock-all-btn {
-  padding: 0.75rem 1.5rem;
+  margin-left: auto;
+  padding: 0.5rem 1rem;
   background-color: #3b82f6;
   color: white;
   border: none;
   border-radius: 6px;
-  font-size: 0.9rem;
+  font-size: 0.8rem;
   font-weight: 600;
   cursor: pointer;
   transition: background-color 0.2s;
@@ -59,6 +58,18 @@
 .tests-unlock-all-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+/* Filters section */
+.tests-filters {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.tests-filter-select {
+  flex: 1;
+  min-width: 0;
 }
 
 /* Dashboard controls (filters) */
@@ -210,41 +221,38 @@
     text-align: center;
   }
 
+  .tests-card-header {
+    flex-direction: row;
+    align-items: flex-start;
+  }
+
   .tests-unlock-all-btn {
-    width: 100%;
-    font-size: 0.85rem;
-    padding: 0.6rem 1rem;
+    font-size: 0.75rem;
+    padding: 0.4rem 0.8rem;
   }
 
-  /* Mobile controls layout */
-  .tests-dashboard-controls {
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
+  /* Mobile filters layout */
+  .tests-filters {
+    flex-wrap: wrap;
   }
 
-  /* Hide select dropdowns by default on mobile */
-  .tests-dashboard-controls > div {
-    display: none;
-    width: 100%;
-    min-width: auto;
-  }
-
-  /* Show select dropdowns when filters are active */
-  .tests-filters-active .tests-dashboard-controls > div {
-    display: block;
+  /* Keep select dropdowns always visible on mobile */
+  .tests-filter-select {
+    flex: 1 1 45%;
   }
 
   /* Show filter button by default on mobile */
   .tests-dashboard-filter-btn {
     display: block;
     width: 100%;
+    margin-top: 0.5rem;
   }
 
   /* Hide close button by default on mobile */
   .tests-dashboard-close-btn {
     display: none;
     width: 100%;
+    margin-top: 0.5rem;
   }
 
   /* When filters are active: hide filter button, show close button */

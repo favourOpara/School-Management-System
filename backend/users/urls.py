@@ -12,7 +12,13 @@ from .views import (
     CustomTokenObtainPairView,
     student_history,
     individual_student_history,
-    parent_attendance_report
+    student_attendance_report,
+    parent_attendance_report,
+    parent_grade_report,
+    student_grade_report,
+    upload_avatar,
+    remove_avatar,
+    get_current_user_profile
 )
 from rest_framework_simplejwt.views import TokenRefreshView
 
@@ -31,5 +37,11 @@ urlpatterns = [
     path('login/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('student-history/', student_history, name='student_history'),
     path('student-history/<int:student_id>/', individual_student_history, name='individual_student_history'),
+    path('student/attendance-report/', student_attendance_report, name='student_attendance_report'),
     path('parent/attendance-report/', parent_attendance_report, name='parent_attendance_report'),
+    path('parent/grade-report/', parent_grade_report, name='parent_grade_report'),
+    path('student/grade-report/', student_grade_report, name='student_grade_report'),
+    path('profile/', get_current_user_profile, name='user_profile'),
+    path('avatar/upload/', upload_avatar, name='upload_avatar'),
+    path('avatar/remove/', remove_avatar, name='remove_avatar'),
 ]

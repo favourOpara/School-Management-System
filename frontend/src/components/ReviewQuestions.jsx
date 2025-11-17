@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Edit2, Eye, Lock, Unlock, Trash2 } from 'lucide-react';
 import './ReviewQuestions.css';
+import { useDialog } from '../contexts/DialogContext';
 
 const ReviewQuestions = () => {
+  const { showConfirm, showAlert } = useDialog();
   const [sessions, setSessions] = useState([]);
   const [classes, setClasses] = useState([]);
   const [allSubjects, setAllSubjects] = useState([]);
@@ -194,9 +196,14 @@ const ReviewQuestions = () => {
   const handleDeleteAssessment = async (assessment) => {
     const confirmMessage = `Are you sure you want to delete "${assessment.title}"?\n\nThis will permanently delete:\n- ${assessment.questions?.length || 0} questions\n- All associated options and answers\n\nThis action cannot be undone.`;
 
-    if (!window.confirm(confirmMessage)) {
-      return;
-    }
+    const confirmed = await showConfirm({
+      title: 'Delete Assessment',
+      message: confirmMessage,
+      confirmText: 'Delete',
+      cancelText: 'Cancel',
+      confirmButtonClass: 'confirm-btn-danger'
+    });
+    if (!confirmed) return;
 
     try {
       const token = localStorage.getItem('accessToken');
@@ -214,13 +221,19 @@ const ReviewQuestions = () => {
       }
 
       const data = await response.json();
-      alert(data.message);
+      showAlert({
+        type: 'success',
+        message: data.message
+      });
 
       // Refresh assessments
       await handleSearch();
     } catch (err) {
       setError(err.message);
-      alert('Error deleting assessment: ' + err.message);
+      showAlert({
+        type: 'error',
+        message: 'Error deleting assessment: ' + err.message
+      });
     }
   };
 
@@ -239,9 +252,14 @@ const ReviewQuestions = () => {
       ? `for ${selectedTerm} ${selectedAcademicYear}`
       : 'matching the current filters';
 
-    if (!window.confirm(`Are you sure you want to unlock all ${typeLabel} ${filterSummary}?`)) {
-      return;
-    }
+    const confirmed = await showConfirm({
+      title: 'Unlock Assessments',
+      message: `Are you sure you want to unlock all ${typeLabel} ${filterSummary}?`,
+      confirmText: 'Unlock',
+      cancelText: 'Cancel',
+      confirmButtonClass: 'confirm-btn-warning'
+    });
+    if (!confirmed) return;
 
     try {
       const token = localStorage.getItem('accessToken');

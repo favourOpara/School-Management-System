@@ -3,8 +3,10 @@ import React, { useState, useEffect } from 'react';
 import { BookOpen, Filter, AlertCircle, CheckCircle, Search, Users } from 'lucide-react';
 import GradesModal from './GradesModal';
 import './ViewResults.css';
+import { useDialog } from '../contexts/DialogContext';
 
 const ViewResults = () => {
+  const { showConfirm } = useDialog();
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [messageType, setMessageType] = useState('');
@@ -153,9 +155,14 @@ const ViewResults = () => {
       return;
     }
 
-    if (!window.confirm(`Sync attendance grades for ${selectedYear} - ${selectedTerm}?\n\nThis will calculate attendance scores from your marked attendance records and update the grading system.`)) {
-      return;
-    }
+    const confirmed = await showConfirm({
+      title: 'Sync Attendance Grades',
+      message: `Sync attendance grades for ${selectedYear} - ${selectedTerm}?\n\nThis will calculate attendance scores from your marked attendance records and update the grading system.`,
+      confirmText: 'Sync',
+      cancelText: 'Cancel',
+      confirmButtonClass: 'confirm-btn-primary'
+    });
+    if (!confirmed) return;
 
     try {
       setSyncing(true);

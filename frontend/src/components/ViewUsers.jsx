@@ -5,8 +5,10 @@ import EditUserModal from './EditUserModal';
 import EditParentModal from './EditParentModal';
 import EditTeacherModal from './EditTeacherModal';
 import './ViewUsers.css';
+import { useDialog } from '../contexts/DialogContext';
 
 const ViewUsers = () => {
+  const { showConfirm, showAlert } = useDialog();
   const [userType, setUserType] = useState('');
   const [academicYear, setAcademicYear] = useState('');
   const [term, setTerm] = useState('');
@@ -48,7 +50,10 @@ const ViewUsers = () => {
       setFilteredUsers([]);
     } catch (err) {
       console.error('Error fetching student history:', err);
-      alert('Failed to load student history.');
+      showAlert({
+        type: 'error',
+        message: 'Failed to load student history.'
+      });
     }
   };
 
@@ -140,7 +145,10 @@ const ViewUsers = () => {
       setShowHistoryModal(true);
     } catch (err) {
       console.error('Error fetching individual student history:', err);
-      alert('Failed to load student history.');
+      showAlert({
+        type: 'error',
+        message: 'Failed to load student history.'
+      });
     }
   };
 
@@ -150,17 +158,31 @@ const ViewUsers = () => {
   };
 
   const handleDelete = async (userId) => {
-    if (!window.confirm('Are you sure you want to delete this user?')) return;
+    const confirmed = await showConfirm({
+      title: 'Delete User',
+      message: 'Are you sure you want to delete this user? This action cannot be undone.',
+      confirmText: 'Delete',
+      cancelText: 'Cancel',
+      confirmButtonClass: 'confirm-btn-danger'
+    });
+    if (!confirmed) return;
+
     try {
       await axios.delete(`http://127.0.0.1:8000/api/users/${userId}/`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setUsers(prev => prev.filter(u => u.id !== userId));
       setFilteredUsers(prev => prev.filter(u => u.id !== userId));
-      alert('User deleted successfully.');
+      showAlert({
+        type: 'success',
+        message: 'User deleted successfully.'
+      });
     } catch (err) {
       console.error('Error deleting user:', err);
-      alert('Failed to delete user.');
+      showAlert({
+        type: 'error',
+        message: 'Failed to delete user.'
+      });
     }
   };
 

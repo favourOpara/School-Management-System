@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import Select from 'react-select';
+import { DollarSign } from 'lucide-react';
 import FeeStudentModal from './FeeStudentModal';
 import './DashboardCards.css';
 
@@ -104,39 +105,44 @@ const DashboardFeesCard = () => {
     <div className={`dashboard-cards ${isFiltered ? 'filters-active' : ''}`}>
       <div className="dashboard-card">
         <div className="card-header">
-          <div className="card-header-title">
+          <DollarSign size={28} color="#10b981" />
+          <div>
             <h2>Fees by Class</h2>
+            <p>Track fee payment status</p>
           </div>
-          <div className="dashboard-controls">
-            <Select
-              options={academicYears}
-              value={selectedYear}
-              onChange={setSelectedYear}
-              placeholder="Year"
-              styles={selectStyles}
-            />
-            <Select
-              options={termOptions}
-              value={selectedTerm}
-              onChange={setSelectedTerm}
-              placeholder="Term"
-              styles={selectStyles}
-            />
-            {/* Mobile-only filter button */}
-            <button 
-              className="dashboard-filter-btn" 
-              onClick={toggleFilters}
-            >
-              Filter
-            </button>
-            {/* Mobile-only close button */}
-            <button 
-              className="dashboard-close-btn" 
-              onClick={toggleFilters}
-            >
-              Close
-            </button>
-          </div>
+        </div>
+
+        <div className="card-filters">
+          <Select
+            options={academicYears}
+            value={selectedYear}
+            onChange={setSelectedYear}
+            placeholder="Year"
+            styles={selectStyles}
+            className="card-filter-select"
+          />
+          <Select
+            options={termOptions}
+            value={selectedTerm}
+            onChange={setSelectedTerm}
+            placeholder="Term"
+            styles={selectStyles}
+            className="card-filter-select"
+          />
+          {/* Mobile-only filter button */}
+          <button
+            className="dashboard-filter-btn"
+            onClick={toggleFilters}
+          >
+            Filter
+          </button>
+          {/* Mobile-only close button */}
+          <button
+            className="dashboard-close-btn"
+            onClick={toggleFilters}
+          >
+            Close
+          </button>
         </div>
 
         <ul className="class-list">

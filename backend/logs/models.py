@@ -244,3 +244,58 @@ class NotificationPreference(models.Model):
     
     def __str__(self):
         return f"{self.user.username} - {self.notification_type} - Enabled: {self.is_enabled}"
+
+
+class Notification(models.Model):
+    """
+    Direct notifications for users (reports, reminders, alerts)
+    """
+    NOTIFICATION_TYPES = [
+        ('report_release', 'Report Release'),
+        ('incomplete_grades', 'Incomplete Grades'),
+        ('fee_reminder', 'Fee Reminder'),
+        ('general', 'General'),
+        ('system', 'System'),
+    ]
+
+    PRIORITY_CHOICES = [
+        ('low', 'Low'),
+        ('medium', 'Medium'),
+        ('high', 'High'),
+    ]
+
+    recipient = models.ForeignKey(User, on_delete=models.CASCADE, related_name='notifications')
+    title = models.CharField(max_length=200)
+    message = models.TextField()
+    notification_type = models.CharField(max_length=30, choices=NOTIFICATION_TYPES, default='general')
+    priority = models.CharField(max_length=10, choices=PRIORITY_CHOICES, default='medium')
+    is_read = models.BooleanField(default=False)
+    is_popup_shown = models.BooleanField(default=False, help_text="Whether the popup has been shown to user")
+    created_at = models.DateTimeField(auto_now_add=True)
+    read_at = models.DateTimeField(null=True, blank=True)
+    extra_data = models.JSONField(null=True, blank=True, help_text="Additional data for the notification")
+
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['recipient', 'is_read']),
+            models.Index(fields=['recipient', 'is_popup_shown']),
+            models.Index(fields=['recipient', 'created_at']),
+            models.Index(fields=['notification_type', 'created_at']),
+        ]
+
+    def __str__(self):
+        return f"{self.recipient.username} - {self.title} - Read: {self.is_read}"
+
+    def mark_as_read(self):
+        """Mark notification as read"""
+        if not self.is_read:
+            self.is_read = True
+            self.read_at = timezone.now()
+            self.save(update_fields=['is_read', 'read_at'])
+
+    def mark_popup_shown(self):
+        """Mark popup as shown"""
+        if not self.is_popup_shown:
+            self.is_popup_shown = True
+            self.save(update_fields=['is_popup_shown'])

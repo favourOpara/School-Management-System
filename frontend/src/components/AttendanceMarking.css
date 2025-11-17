@@ -1,6 +1,6 @@
 /* src/components/AttendanceMarking.css */
 .attendance-marking-container {
-  padding: 20px;
+  padding: 0 20px 20px 20px;
   max-width: 1200px;
   margin: 0 auto;
   background-color: #f8f9fa;
@@ -477,9 +477,9 @@
 /* Responsive Design */
 @media (max-width: 768px) {
   .attendance-marking-container {
-    padding: 10px;
+    padding: 0 10px 10px 10px;
   }
-  
+
   .attendance-header,
   .attendance-controls,
   .students-list,
