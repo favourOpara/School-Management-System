@@ -28,7 +28,7 @@ class UserCreateSerializer(serializers.ModelSerializer):
         ]
         extra_kwargs = {
             'password': {'write_only': True},
-            'email': {'required': False},
+            'email': {'required': True},  # Required for email notifications
             'phone_number': {'required': False},
             'date_of_birth': {'required': False},
         }
@@ -127,12 +127,16 @@ class UserCreateSerializer(serializers.ModelSerializer):
         return instance
 
 
-# 🔹 Admin creates teacher (NO email or phone)
+# 🔹 Admin creates teacher (WITH email and phone - REQUIRED for email notifications)
 class TeacherSignupSerializer(serializers.ModelSerializer):
     class Meta:
         model = CustomUser
-        fields = ['username', 'password', 'first_name', 'last_name']
-        extra_kwargs = {'password': {'write_only': True}}
+        fields = ['username', 'password', 'first_name', 'last_name', 'email', 'phone_number']
+        extra_kwargs = {
+            'password': {'write_only': True},
+            'email': {'required': True},
+            'phone_number': {'required': False},
+        }
 
     def create(self, validated_data):
         validated_data['role'] = 'teacher'
