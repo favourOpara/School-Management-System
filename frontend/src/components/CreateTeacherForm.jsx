@@ -9,7 +9,9 @@ const CreateTeacherForm = ({ onSuccess }) => {
     username: '',
     password: '',
     first_name: '',
-    last_name: ''
+    last_name: '',
+    email: '',
+    phone_number: ''
   });
 
   const [message, setMessage] = useState('');
@@ -33,7 +35,9 @@ const CreateTeacherForm = ({ onSuccess }) => {
         username: '',
         password: '',
         first_name: '',
-        last_name: ''
+        last_name: '',
+        email: '',
+        phone_number: ''
       });
 
       if (onSuccess) onSuccess();
@@ -84,6 +88,21 @@ const CreateTeacherForm = ({ onSuccess }) => {
             value={formData.password}
             onChange={handleChange}
             required
+          />
+          <input
+            type="email"
+            name="email"
+            placeholder="Email"
+            value={formData.email}
+            onChange={handleChange}
+            required
+          />
+          <input
+            type="tel"
+            name="phone_number"
+            placeholder="Phone Number (optional)"
+            value={formData.phone_number}
+            onChange={handleChange}
           />
 
           <button type="submit">Create Teacher</button>

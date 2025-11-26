@@ -10452,10 +10452,16 @@ def get_current_session_info(request):
         current_config = GradingConfiguration.objects.filter(is_active=True).first()
 
         if not current_config:
-            return Response(
-                {"detail": "No active grading configuration found"},
-                status=status.HTTP_404_NOT_FOUND
-            )
+            return Response({
+                "configured": False,
+                "current_term": None,
+                "academic_year": None,
+                "is_third_term": False,
+                "can_move_to_next_term": False,
+                "can_move_to_next_session": False,
+                "can_revert": False,
+                "message": "No active grading configuration found. Please create a session first."
+            }, status=status.HTTP_200_OK)
 
         # Check if there's a previous session to revert to
         term_order = ["First Term", "Second Term", "Third Term"]
@@ -10482,6 +10488,7 @@ def get_current_session_info(request):
                 ).exists()
 
         return Response({
+            "configured": True,
             "current_term": current_config.term,
             "academic_year": current_config.academic_year,
             "is_third_term": current_config.term == "Third Term",

@@ -91,7 +91,7 @@ const CreateParentForm = () => {
           <input type="password" name="password" placeholder="Password" value={formData.password} onChange={handleChange} required />
           <input type="text" name="first_name" placeholder="First Name" value={formData.first_name} onChange={handleChange} required />
           <input type="text" name="last_name" placeholder="Last Name" value={formData.last_name} onChange={handleChange} required />
-          <input type="email" name="email" placeholder="Email (for contact)" value={formData.email} onChange={handleChange} />
+          <input type="email" name="email" placeholder="Email" value={formData.email} onChange={handleChange} required />
           <input type="tel" name="phone_number" placeholder="Phone Number" value={formData.phone_number} onChange={handleChange} />
 
           <label className="field-label">Select Children</label>

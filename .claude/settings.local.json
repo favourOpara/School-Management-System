@@ -54,7 +54,10 @@
       "Bash(../venv/bin/python:*)",
       "Bash(chmod:*)",
       "Bash(node update-api-urls.js:*)",
-      "Bash(node update-api-urls.cjs:*)"
+      "Bash(node update-api-urls.cjs:*)",
+      "Bash(npm install:*)",
+      "Bash(sudo npm install:*)",
+      "Bash(brew install:*)"
     ],
     "deny": [],
     "ask": []

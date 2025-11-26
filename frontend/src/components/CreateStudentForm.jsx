@@ -12,6 +12,8 @@ const CreateStudentForm = ({ onSuccess }) => {
     username: '',
     password: '',
     confirm_password: '',
+    email: '',
+    phone_number: '',
     gender: '',
     classroom: '',
     academic_year: '',
@@ -201,6 +203,8 @@ const CreateStudentForm = ({ onSuccess }) => {
         username: '',
         password: '',
         confirm_password: '',
+        email: '',
+        phone_number: '',
         gender: '',
         classroom: '',
         academic_year: '',
@@ -242,6 +246,8 @@ const CreateStudentForm = ({ onSuccess }) => {
           <input type="text" name="username" placeholder="Username" value={formData.username} onChange={handleChange} required />
           <input type="password" name="password" placeholder="Password" value={formData.password} onChange={handleChange} required />
           <input type="password" name="confirm_password" placeholder="Confirm Password" value={formData.confirm_password} onChange={handleChange} required />
+          <input type="email" name="email" placeholder="Email" value={formData.email} onChange={handleChange} required />
+          <input type="tel" name="phone_number" placeholder="Phone Number (optional)" value={formData.phone_number} onChange={handleChange} />
 
           <select name="gender" value={formData.gender} onChange={handleChange} required>
             <option value="">Select Gender</option>
