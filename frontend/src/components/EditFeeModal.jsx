@@ -3,7 +3,7 @@ import Select from 'react-select';
 import axios from 'axios';
 import API_BASE_URL from '../config';
 
-import './editfeemodal.css';
+import './EditFeeModal.css';
 
 const termOptions = [
   { value: 'First Term', label: 'First Term' },
