@@ -45,7 +45,13 @@
       "Bash(ps:*)",
       "Bash(xargs ps:*)",
       "Bash(mkdir:*)",
-      "Bash(./venv/bin/pip:*)"
+      "Bash(./venv/bin/pip:*)",
+      "Bash(FILTER_BRANCH_SQUELCH_WARNING=1 git filter-branch -f --tree-filter 'for file in EMAIL_NOTIFICATION_SYSTEM.md RAILWAY_DEPLOYMENT.md RAILWAY_DEPLOYMENT_STEPS.md; do [ -f \"\"$file\"\" ] && sed -i.bak \"\"s/xsmtpsib-[a-zA-Z0-9-]*/your-brevo-smtp-api-key/g; s/9c8b11001@smtp-brevo\\.com/your-brevo-login-email/g\"\" \"\"$file\"\" && rm -f \"\"$file.bak\"\"; done; true' -- 1a9a83d..HEAD)",
+      "Bash(git reset:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(git rm:*)",
+      "Bash(../venv/bin/python:*)"
     ],
     "deny": [],
     "ask": []
