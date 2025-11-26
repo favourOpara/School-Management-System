@@ -251,8 +251,8 @@ const EditUserModal = ({ user, onClose, onUpdated }) => {
   const selectedClassroomName = classrooms.find(c => c.id === formData.classroom)?.name || '';
 
   return (
-    <div className="modal-overlay">
-      <div className="modal-container">
+    <div className="edit-user-modal-overlay">
+      <div className="edit-user-modal-container">
         <h3>Edit Student</h3>
         <form onSubmit={handleSubmit} className="edit-user-form">
           <input type="text" name="first_name" value={formData.first_name} onChange={handleChange} placeholder="First Name" required />
