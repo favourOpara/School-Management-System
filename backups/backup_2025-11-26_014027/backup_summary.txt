@@ -1,0 +1,69 @@
+======================================================================
+SCHOOL MANAGEMENT SYSTEM - DATABASE BACKUP SUMMARY
+======================================================================
+
+Backup Date: 2025-11-26 01:40:27
+Backup ID: 2025-11-26_014027
+
+TABLES BACKED UP:
+----------------------------------------------------------------------
+academics.assessment                              4 records
+academics.assessmentsubmission                    8 records
+academics.assignmentsubmission                    3 records
+academics.class                                   6 records
+academics.classsession                           24 records
+academics.contentfile                             0 records
+academics.department                              4 records
+academics.matchingpair                            0 records
+academics.question                                8 records
+academics.questionoption                         20 records
+academics.studentanswer                          14 records
+academics.studentcontentview                      0 records
+academics.studentsession                        176 records
+academics.subject                               144 records
+academics.subjectcontent                          3 records
+academics.submissionfile                          1 records
+academics.topic                                   0 records
+attendance.attendancecalendar                      1 records
+attendance.attendanceholidaylabel                  2 records
+attendance.attendancerecord                        0 records
+attendance.attendanceschoolday                    65 records
+attendance.holidaylabel                            7 records
+attendance.schoolday                              85 records
+attendance.sessioncalendar                         3 records
+logs.activitylog                            39 records
+logs.notification                          142 records
+logs.notificationpreference                  0 records
+logs.notificationstatus                     80 records
+schooladmin.announcement                            1 records
+schooladmin.attendancerecord                      491 records
+schooladmin.configurationtemplate                   0 records
+schooladmin.feepaymenthistory                       0 records
+schooladmin.feereceipt                              1 records
+schooladmin.feestructure                            8 records
+schooladmin.gradecomponent                         16 records
+schooladmin.gradesummary                          215 records
+schooladmin.gradingconfiguration                    4 records
+schooladmin.gradingscale                            1 records
+schooladmin.studentfeerecord                      185 records
+schooladmin.studentgrade                            0 records
+users.customuser                             59 records
+----------------------------------------------------------------------
+TOTAL                                1820 records
+======================================================================
+
+FILES INCLUDED:
+  - database_backup_2025-11-26_014027.xlsx (All tables in Excel format)
+  - db.sqlite3 (Raw SQLite database)
+  - backup_summary.txt (This file)
+
+RESTORATION:
+  To restore from SQLite backup:
+    1. Stop the Django server
+    2. Replace backend/db.sqlite3 with the backed up db.sqlite3
+    3. Restart the Django server
+
+  To restore from Excel:
+    1. Use the Excel file to review and manually re-enter data
+    2. Or use a custom import script
+

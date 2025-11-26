@@ -43,7 +43,9 @@
       "Bash(playwright install)",
       "Bash(kill:*)",
       "Bash(ps:*)",
-      "Bash(xargs ps:*)"
+      "Bash(xargs ps:*)",
+      "Bash(mkdir:*)",
+      "Bash(./venv/bin/pip:*)"
     ],
     "deny": [],
     "ask": []
