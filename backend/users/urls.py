@@ -21,7 +21,8 @@ from .views import (
     get_current_user_profile,
     change_admin_username,
     change_admin_password,
-    change_password
+    change_password,
+    initialize_admin
 )
 from rest_framework_simplejwt.views import TokenRefreshView
 
@@ -50,4 +51,5 @@ urlpatterns = [
     path('admin/change-username/', change_admin_username, name='change_admin_username'),
     path('admin/change-password/', change_admin_password, name='change_admin_password'),
     path('change-password/', change_password, name='change_password'),
+    path('initialize-admin/', initialize_admin, name='initialize_admin'),
 ]

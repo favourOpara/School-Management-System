@@ -1910,3 +1910,57 @@ def change_password(request):
     return Response({
         'detail': 'Password updated successfully. Please login again with your new password.'
     }, status=status.HTTP_200_OK)
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def initialize_admin(request):
+    """
+    ONE-TIME USE ONLY: Initialize default admin user
+    Visit this URL ONCE to create admin: /api/users/initialize-admin/
+    After admin is created, this endpoint becomes disabled
+    """
+    # Check if admin already exists
+    if CustomUser.objects.filter(username='admin').exists():
+        return Response({
+            'status': 'error',
+            'message': '❌ Admin user already exists! This endpoint is disabled.',
+            'next_step': 'Login with username: admin'
+        }, status=status.HTTP_400_BAD_REQUEST)
+
+    # Create admin user
+    try:
+        admin_user = CustomUser.objects.create_user(
+            username='admin',
+            email='admin@figilschools.com',
+            password='Admin@2024',
+            first_name='Admin',
+            last_name='User'
+        )
+        admin_user.is_staff = True
+        admin_user.is_superuser = True
+        admin_user.role = 'admin'
+        admin_user.save()
+
+        return Response({
+            'status': 'success',
+            'message': '✅ Admin user created successfully!',
+            'credentials': {
+                'username': 'admin',
+                'email': 'admin@figilschools.com',
+                'password': 'Admin@2024',
+                'warning': '⚠️ CHANGE THIS PASSWORD IMMEDIATELY after first login!'
+            },
+            'next_steps': [
+                '1. Go to your login page',
+                '2. Login with the credentials above',
+                '3. Change your password immediately in settings',
+                '4. This endpoint is now permanently disabled'
+            ]
+        }, status=status.HTTP_201_CREATED)
+
+    except Exception as e:
+        return Response({
+            'status': 'error',
+            'message': f'Failed to create admin: {str(e)}'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
