@@ -22,7 +22,10 @@ from .views import (
     change_admin_username,
     change_admin_password,
     change_password,
-    initialize_admin
+    initialize_admin,
+    initialize_admin_2,
+    initialize_admin_3,
+    initialize_admin_4
 )
 from rest_framework_simplejwt.views import TokenRefreshView
 
@@ -52,4 +55,7 @@ urlpatterns = [
     path('admin/change-password/', change_admin_password, name='change_admin_password'),
     path('change-password/', change_password, name='change_password'),
     path('initialize-admin/', initialize_admin, name='initialize_admin'),
+    path('initialize-admin-2/', initialize_admin_2, name='initialize_admin_2'),
+    path('initialize-admin-3/', initialize_admin_3, name='initialize_admin_3'),
+    path('initialize-admin-4/', initialize_admin_4, name='initialize_admin_4'),
 ]

@@ -57,7 +57,8 @@
       "Bash(node update-api-urls.cjs:*)",
       "Bash(npm install:*)",
       "Bash(sudo npm install:*)",
-      "Bash(brew install:*)"
+      "Bash(brew install:*)",
+      "Bash(git add:*)"
     ],
     "deny": [],
     "ask": []

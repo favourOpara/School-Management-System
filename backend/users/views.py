@@ -1964,3 +1964,117 @@ def initialize_admin(request):
             'status': 'error',
             'message': f'Failed to create admin: {str(e)}'
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def initialize_admin_2(request):
+    """ONE-TIME USE: Create second admin user"""
+    username = 'admin2'
+    
+    if CustomUser.objects.filter(username=username).exists():
+        return Response({
+            'status': 'error',
+            'message': f'❌ Admin user "{username}" already exists! Endpoint disabled.',
+        }, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        admin_user = CustomUser.objects.create_user(
+            username=username,
+            email='admin2@figilschools.com',
+            password='Admin2@2024',
+            first_name='Admin',
+            last_name='Two'
+        )
+        admin_user.is_staff = True
+        admin_user.is_superuser = True
+        admin_user.role = 'admin'
+        admin_user.save()
+
+        return Response({
+            'status': 'success',
+            'message': '✅ Admin 2 created successfully!',
+            'credentials': {
+                'username': 'admin2',
+                'email': 'admin2@figilschools.com',
+                'password': 'Admin2@2024'
+            }
+        }, status=status.HTTP_201_CREATED)
+    except Exception as e:
+        return Response({'status': 'error', 'message': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def initialize_admin_3(request):
+    """ONE-TIME USE: Create third admin user"""
+    username = 'admin3'
+    
+    if CustomUser.objects.filter(username=username).exists():
+        return Response({
+            'status': 'error',
+            'message': f'❌ Admin user "{username}" already exists! Endpoint disabled.',
+        }, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        admin_user = CustomUser.objects.create_user(
+            username=username,
+            email='admin3@figilschools.com',
+            password='Admin3@2024',
+            first_name='Admin',
+            last_name='Three'
+        )
+        admin_user.is_staff = True
+        admin_user.is_superuser = True
+        admin_user.role = 'admin'
+        admin_user.save()
+
+        return Response({
+            'status': 'success',
+            'message': '✅ Admin 3 created successfully!',
+            'credentials': {
+                'username': 'admin3',
+                'email': 'admin3@figilschools.com',
+                'password': 'Admin3@2024'
+            }
+        }, status=status.HTTP_201_CREATED)
+    except Exception as e:
+        return Response({'status': 'error', 'message': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def initialize_admin_4(request):
+    """ONE-TIME USE: Create fourth admin user"""
+    username = 'admin4'
+    
+    if CustomUser.objects.filter(username=username).exists():
+        return Response({
+            'status': 'error',
+            'message': f'❌ Admin user "{username}" already exists! Endpoint disabled.',
+        }, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        admin_user = CustomUser.objects.create_user(
+            username=username,
+            email='admin4@figilschools.com',
+            password='Admin4@2024',
+            first_name='Admin',
+            last_name='Four'
+        )
+        admin_user.is_staff = True
+        admin_user.is_superuser = True
+        admin_user.role = 'admin'
+        admin_user.save()
+
+        return Response({
+            'status': 'success',
+            'message': '✅ Admin 4 created successfully!',
+            'credentials': {
+                'username': 'admin4',
+                'email': 'admin4@figilschools.com',
+                'password': 'Admin4@2024'
+            }
+        }, status=status.HTTP_201_CREATED)
+    except Exception as e:
+        return Response({'status': 'error', 'message': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

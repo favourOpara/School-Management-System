@@ -266,7 +266,7 @@ class TeacherDetailSerializer(serializers.ModelSerializer):
         model = CustomUser
         fields = [
             'id', 'username', 'first_name', 'last_name', 'full_name',
-            'gender', 'email', 'phone_number', 'assigned_subjects'
+            'role', 'gender', 'email', 'phone_number', 'assigned_subjects'
         ]
 
     def get_full_name(self, obj):
