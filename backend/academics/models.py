@@ -14,9 +14,43 @@ def upload_to_content_files(instance, filename):
     return f'subject_files/{instance.content.subject.id}/{instance.content.id}/{filename}'
 
 
+class Department(models.Model):
+    """
+    Departments for senior classes (Science, Arts, Commercial)
+    Students in S.S.S classes choose one of these departments
+    """
+    DEPARTMENT_CHOICES = [
+        ('Science', 'Science'),
+        ('Arts', 'Arts'),
+        ('Commercial', 'Commercial'),
+    ]
+
+    name = models.CharField(
+        max_length=20,
+        choices=DEPARTMENT_CHOICES,
+        unique=True,
+        help_text="Department name"
+    )
+    description = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.name
+
+    class Meta:
+        ordering = ['name']
+
+
 class Class(models.Model):
+    """
+    A class/grade level (e.g., J.S.S.1, S.S.S.2)
+    """
     name = models.CharField(max_length=50, unique=True)
     description = models.TextField(blank=True)
+    has_departments = models.BooleanField(
+        default=False,
+        help_text="If True, students and subjects in this class must select a department (Science/Arts/Commercial)"
+    )
 
     def __str__(self):
         return self.name

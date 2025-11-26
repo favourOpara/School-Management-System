@@ -375,15 +375,15 @@ const ViewQuestions = () => {
 
   if (loading && !hasFiltered) {
     return (
-      <div className="view-questions-container">
+      <div className="vq-main-wrapper">
         <div className="view-questions-loading">Loading...</div>
       </div>
     );
   }
 
   return (
-    <div className="view-questions-container">
-      <div className="view-questions-header">
+    <div className="vq-main-wrapper">
+      <div className="vq-page-header">
         <h2>View Questions</h2>
         <p>Filter and view your created assessments and questions</p>
       </div>

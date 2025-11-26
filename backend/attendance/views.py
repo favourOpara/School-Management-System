@@ -267,41 +267,74 @@ def update_attendance_calendar(request):
     
     try:
         with transaction.atomic():
-            calendar.school_days.all().delete()
-            calendar.holidays.all().delete()
-            
-            created_dates = set()
+            # Instead of deleting all and recreating, do a smart update:
+            # 1. Parse incoming dates
+            incoming_school_days = set()
             for day_str in school_days:
                 try:
                     day_date = datetime.strptime(day_str, '%Y-%m-%d').date()
-                    if day_date not in created_dates:
-                        AttendanceSchoolDay.objects.create(
-                            calendar=calendar,
-                            date=day_date
-                        )
-                        created_dates.add(day_date)
+                    incoming_school_days.add(day_date)
                 except ValueError:
                     return Response(
-                        {'error': f'Invalid date format: {day_str}. Use YYYY-MM-DD'}, 
+                        {'error': f'Invalid date format: {day_str}. Use YYYY-MM-DD'},
                         status=status.HTTP_400_BAD_REQUEST
                     )
-            
-            created_holiday_dates = set()
+
+            # Get existing school days
+            existing_school_days = set(
+                calendar.school_days.values_list('date', flat=True)
+            )
+
+            # Add new school days
+            dates_to_add = incoming_school_days - existing_school_days
+            for date_to_add in dates_to_add:
+                AttendanceSchoolDay.objects.create(
+                    calendar=calendar,
+                    date=date_to_add
+                )
+
+            # Remove school days that are no longer in the list
+            dates_to_remove = existing_school_days - incoming_school_days
+            calendar.school_days.filter(date__in=dates_to_remove).delete()
+
+            created_dates = incoming_school_days
+
+            # Handle holidays similarly
+            incoming_holidays = {}
             for holiday in holidays:
                 try:
                     holiday_date = datetime.strptime(holiday['date'], '%Y-%m-%d').date()
-                    if holiday_date not in created_holiday_dates:
-                        AttendanceHolidayLabel.objects.create(
-                            calendar=calendar,
-                            date=holiday_date,
-                            label=holiday['label']
-                        )
-                        created_holiday_dates.add(holiday_date)
+                    incoming_holidays[holiday_date] = holiday['label']
                 except (ValueError, KeyError):
                     return Response(
-                        {'error': f'Invalid holiday format: {holiday}'}, 
+                        {'error': f'Invalid holiday format: {holiday}'},
                         status=status.HTTP_400_BAD_REQUEST
                     )
+
+            # Get existing holidays
+            existing_holidays = {
+                h.date: h for h in calendar.holidays.all()
+            }
+
+            # Add new holidays
+            for holiday_date, label in incoming_holidays.items():
+                if holiday_date not in existing_holidays:
+                    AttendanceHolidayLabel.objects.create(
+                        calendar=calendar,
+                        date=holiday_date,
+                        label=label
+                    )
+                else:
+                    # Update label if changed
+                    if existing_holidays[holiday_date].label != label:
+                        existing_holidays[holiday_date].label = label
+                        existing_holidays[holiday_date].save()
+
+            # Remove holidays that are no longer in the list
+            holidays_to_remove = set(existing_holidays.keys()) - set(incoming_holidays.keys())
+            calendar.holidays.filter(date__in=holidays_to_remove).delete()
+
+            created_holiday_dates = incoming_holidays
             
             matching_sessions = ClassSession.objects.filter(
                 academic_year=academic_year,
@@ -337,6 +370,15 @@ def delete_attendance_calendar(request):
     """
     Delete an attendance calendar and CASCADE delete all related attendance records
     - used by EditAttendanceCalendar.jsx
+
+    WARNING: This is a DESTRUCTIVE operation that will:
+    1. Delete all attendance records (schooladmin.AttendanceRecord) for this session
+    2. Delete all attendance-related grades (StudentGrade)
+    3. Reset attendance scores in GradeSummary to 0
+    4. Delete the calendar and all its school days and holidays
+
+    This should ONLY be used if you want to completely remove historical data.
+    For normal session transitions, DO NOT delete old calendars - create new ones instead.
     """
     academic_year = request.data.get('academic_year')
     term = request.data.get('term')

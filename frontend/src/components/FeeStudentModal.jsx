@@ -2,8 +2,10 @@ import React, { useState, useEffect } from 'react';
 import Select from 'react-select';
 import axios from 'axios';
 import * as XLSX from 'xlsx';
+import { FileText } from 'lucide-react';
 import './feestudentmodal.css';
 import { useDialog } from '../contexts/DialogContext';
+import GenerateReceiptModal from './GenerateReceiptModal';
 
 const paymentStatusOptions = [
   { value: 'ALL', label: 'All' },
@@ -48,6 +50,9 @@ const FeeStudentModal = ({ data = {}, onClose }) => {
   const [filteredRecords, setFilteredRecords] = useState([]);
   const [editedPaid, setEditedPaid] = useState({});
   const [saving, setSaving] = useState(false);
+  const [showReceiptModal, setShowReceiptModal] = useState(false);
+  const [selectedStudent, setSelectedStudent] = useState(null);
+  const [searchQuery, setSearchQuery] = useState('');
 
   // 1) Initialize when `students` arrives
   useEffect(() => {
@@ -59,14 +64,26 @@ const FeeStudentModal = ({ data = {}, onClose }) => {
     setEditedPaid(initPaid);
   }, [students]);
 
-  // 2) Recompute filteredRecords on status or data change
+  // 2) Recompute filteredRecords on status, search query, or data change
   useEffect(() => {
-    setFilteredRecords(
-      selectedStatus.value === 'ALL'
-        ? records
-        : records.filter(r => r.payment_status === selectedStatus.value)
-    );
-  }, [records, selectedStatus]);
+    let filtered = records;
+
+    // Filter by payment status
+    if (selectedStatus.value !== 'ALL') {
+      filtered = filtered.filter(r => r.payment_status === selectedStatus.value);
+    }
+
+    // Filter by search query
+    if (searchQuery.trim() !== '') {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter(r =>
+        r.full_name.toLowerCase().includes(query) ||
+        r.username.toLowerCase().includes(query)
+      );
+    }
+
+    setFilteredRecords(filtered);
+  }, [records, selectedStatus, searchQuery]);
 
   // 3) Handle inline edits
   const handlePaidChange = (recordId, value) => {
@@ -142,21 +159,38 @@ const FeeStudentModal = ({ data = {}, onClose }) => {
     XLSX.writeFile(wb, `${className.replace(/\s+/g, '_')}_Students.xlsx`);
   };
 
+  // 6) Handle Generate Receipt
+  const handleGenerateReceipt = (record) => {
+    setSelectedStudent(record);
+    setShowReceiptModal(true);
+  };
+
   return (
     <div className="fee-student-modal-overlay">
       <div className="fee-student-modal">
         <div className="modal-header">
           <h3>{className} — Student Fee Records</h3>
-          
+
           <div className="filter-export-row">
-            <div className="status-filter">
-              <label>Filter by Payment Status:</label>
-              <Select
-                options={paymentStatusOptions}
-                value={selectedStatus}
-                onChange={setSelectedStatus}
-                styles={customSelectStyles}
-              />
+            <div className="search-filter-container">
+              <div className="search-bar">
+                <input
+                  type="text"
+                  placeholder="Search by name or username..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="search-input"
+                />
+              </div>
+              <div className="status-filter">
+                <label>Payment Status:</label>
+                <Select
+                  options={paymentStatusOptions}
+                  value={selectedStatus}
+                  onChange={setSelectedStatus}
+                  styles={customSelectStyles}
+                />
+              </div>
             </div>
             <button className="export-btn" onClick={exportToExcel}>
               Export to Excel
@@ -175,12 +209,13 @@ const FeeStudentModal = ({ data = {}, onClose }) => {
                   <th>Paid</th>
                   <th>Outstanding</th>
                   <th>Status</th>
+                  <th>Receipt</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredRecords.length === 0 ? (
                   <tr>
-                    <td colSpan="6" style={{ textAlign: 'center' }}>
+                    <td colSpan="7" style={{ textAlign: 'center' }}>
                       No records match selected filter.
                     </td>
                   </tr>
@@ -202,6 +237,15 @@ const FeeStudentModal = ({ data = {}, onClose }) => {
                       </td>
                       <td>₦{r.outstanding}</td>
                       <td>{r.payment_status}</td>
+                      <td>
+                        <button
+                          className="generate-receipt-btn"
+                          onClick={() => handleGenerateReceipt(r)}
+                          title="Generate Receipt"
+                        >
+                          <FileText size={18} />
+                        </button>
+                      </td>
                     </tr>
                   ))
                 )}
@@ -228,6 +272,18 @@ const FeeStudentModal = ({ data = {}, onClose }) => {
           </div>
         </div>
       </div>
+
+      {/* Receipt Generation Modal */}
+      {showReceiptModal && selectedStudent && (
+        <GenerateReceiptModal
+          student={selectedStudent}
+          onClose={() => setShowReceiptModal(false)}
+          onGenerated={() => {
+            // Optionally refresh the data after receipt generation
+            setShowReceiptModal(false);
+          }}
+        />
+      )}
     </div>
   );
 };

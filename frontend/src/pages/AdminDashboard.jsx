@@ -19,7 +19,11 @@ import Settings from '../components/Settings';
 import ViewResults from '../components/ViewResults'; // NEW IMPORT
 import ReviewQuestions from '../components/ReviewQuestions';
 import ReportSheet from '../components/ReportSheet';
+import AdminFeeReceipts from '../components/AdminFeeReceipts';
+import Announcements from '../components/Announcements';
 import TopHeader from '../components/TopHeader';
+import SessionManagement from '../components/SessionManagement';
+import AdminProfileSettings from '../components/AdminProfileSettings';
 import './AdminDashboard.css';
 
 const getGreeting = () => {
@@ -33,6 +37,7 @@ const AdminDashboard = () => {
   const location = useLocation();
   const [activeTab, setActiveTab] = useState('analytics');
   const [userName, setUserName] = useState('');
+  const [showProfileSettings, setShowProfileSettings] = useState(false);
   const sidebarRef = useRef(null);
 
   useEffect(() => {
@@ -52,7 +57,6 @@ const AdminDashboard = () => {
       case 'dashboard':
         return (
           <div>
-            <h2 className="admin-dashboard-greeting">{getGreeting()}, {userName} 😊</h2>
             <p className="admin-dashboard-subtitle">Welcome to the admin dashboard. Manage your school's operations from here.</p>
             <div className="admin-dashboard-grid">
               <div className="admin-dashboard-card">
@@ -111,10 +115,14 @@ const AdminDashboard = () => {
         return <AttendanceMarking />;
       case 'fees':
         return <CreateFeeStructure />;
+      case 'fee-receipts':
+        return <AdminFeeReceipts />;
       case 'results': // NEW CASE
         return <ViewResults />;
       case 'review-questions':
         return <ReviewQuestions />;
+      case 'announcements':
+        return <Announcements />;
       default:
         return (
           <div className="admin-dashboard-section">
@@ -127,10 +135,25 @@ const AdminDashboard = () => {
   return (
     <div className="admin-dashboard-container">
       <Sidebar ref={sidebarRef} activeTab={activeTab} setActiveTab={setActiveTab} />
-      <TopHeader onMenuClick={() => sidebarRef.current?.openSidebar()} />
+      <TopHeader
+        onMenuClick={() => sidebarRef.current?.openSidebar()}
+        onSettingsClick={() => setShowProfileSettings(true)}
+      />
       <main className="admin-dashboard-main">
+        <div className="admin-dashboard-header-container">
+          <div className="admin-dashboard-header-left">
+            <h2 className="admin-dashboard-greeting">{getGreeting()}, {userName} 😊</h2>
+          </div>
+          <div className="admin-dashboard-header-right">
+            <SessionManagement />
+          </div>
+        </div>
         {renderContent()}
       </main>
+
+      {showProfileSettings && (
+        <AdminProfileSettings onClose={() => setShowProfileSettings(false)} />
+      )}
     </div>
   );
 };

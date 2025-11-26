@@ -7,11 +7,11 @@ const ClassManagementForm = () => {
   const { showLoader, hideLoader } = useLoading();
   const token = localStorage.getItem('accessToken');
 
-  const [activeForm, setActiveForm] = useState('class');
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [classInput, setClassInput] = useState('');
   const [stagedClassNames, setStagedClassNames] = useState([]);
+  const [stagedClassesWithDept, setStagedClassesWithDept] = useState({});
   const [sessionData, setSessionData] = useState({
     classrooms: [],
     academic_year: '',
@@ -26,7 +26,8 @@ const ClassManagementForm = () => {
     target_academic_year: '',
     target_term: '',
     copy_students: false,
-    copy_subjects: false
+    copy_subjects: false,
+    promote_students: false
   });
 
   const fetchClasses = async () => {
@@ -70,7 +71,9 @@ const ClassManagementForm = () => {
   const handleAddStagedClass = (e) => {
     e.preventDefault();
     if (classInput.trim() && !stagedClassNames.includes(classInput.trim())) {
-      setStagedClassNames(prev => [...prev, classInput.trim()]);
+      const className = classInput.trim();
+      setStagedClassNames(prev => [...prev, className]);
+      setStagedClassesWithDept(prev => ({ ...prev, [className]: false }));
       setClassInput('');
       setMessage('');
     }
@@ -78,6 +81,18 @@ const ClassManagementForm = () => {
 
   const handleDeleteStagedClass = (name) => {
     setStagedClassNames(prev => prev.filter(n => n !== name));
+    setStagedClassesWithDept(prev => {
+      const updated = { ...prev };
+      delete updated[name];
+      return updated;
+    });
+  };
+
+  const handleDepartmentToggle = (className) => {
+    setStagedClassesWithDept(prev => ({
+      ...prev,
+      [className]: !prev[className]
+    }));
   };
 
   const handleSubmitClass = async (e) => {
@@ -88,13 +103,17 @@ const ClassManagementForm = () => {
 
     try {
       const promises = stagedClassNames.map(name =>
-        axios.post('http://127.0.0.1:8000/api/academics/classes/', { name }, {
+        axios.post('http://127.0.0.1:8000/api/academics/classes/', {
+          name,
+          has_departments: stagedClassesWithDept[name] || false
+        }, {
           headers: { Authorization: `Bearer ${token}` }
         })
       );
       await Promise.all(promises);
       setMessage('Class names added successfully.');
       setStagedClassNames([]);
+      setStagedClassesWithDept({});
       await fetchClasses();
     } catch (err) {
       if (err.response?.data) {
@@ -191,14 +210,31 @@ const ClassManagementForm = () => {
       });
 
       if (response.status === 200) {
-        setMessage(`${response.data.message}. Students copied: ${response.data.details.students_copied}, Subjects copied: ${response.data.details.subjects_copied}`);
+        let successMsg = response.data.message;
+        const details = response.data.details;
+
+        if (details.students_promoted > 0) {
+          successMsg += ` Students promoted: ${details.students_promoted}`;
+          if (details.students_graduated > 0) {
+            successMsg += `, Graduated: ${details.students_graduated}`;
+          }
+        } else {
+          successMsg += ` Students copied: ${details.students_copied}`;
+        }
+
+        if (details.subjects_copied > 0) {
+          successMsg += `, Subjects copied: ${details.subjects_copied}`;
+        }
+
+        setMessage(successMsg);
         setInheritanceData({
           source_academic_year: '',
           source_term: '',
           target_academic_year: '',
           target_term: '',
           copy_students: false,
-          copy_subjects: false
+          copy_subjects: false,
+          promote_students: false
         });
         await fetchSessions(); // Refresh sessions after copying
       }
@@ -217,161 +253,241 @@ const ClassManagementForm = () => {
   };
 
   return (
-    <div className="class-form-wrapper">
-      <div className="class-form-container">
-        <div className="toggle-buttons">
-          <button className={activeForm === 'class' ? 'active' : ''} onClick={() => setActiveForm('class')}>Add Class Name</button>
-          <button className={activeForm === 'session' ? 'active' : ''} onClick={() => setActiveForm('session')}>Add Class Session</button>
-          <button className={activeForm === 'inherit' ? 'active' : ''} onClick={() => setActiveForm('inherit')}>Copy from Previous Session</button>
-        </div>
+    <div className="class-management-page">
+      <div className="page-header">
+        <h1>Class Management</h1>
+        <p className="page-subtitle">Configure classes, sessions, and term transitions</p>
+      </div>
 
-        {activeForm === 'class' ? (
-          <>
-            <h3>Add Class Name</h3>
-            <form onSubmit={handleSubmitClass} className="class-form">
-              <div style={{ display: 'flex', gap: '10px' }}>
+      {/* Messages */}
+      {message && <div className="alert alert-success">{message}</div>}
+      {error && <div className="alert alert-error">{error}</div>}
+
+      {/* Section 1: Add Class Name */}
+      <div className="class-mgmt-section">
+        <div className="class-section-header">
+          <h2>Class Names</h2>
+          <p className="section-description">Create and manage class names (e.g., J.S.S.1, S.S.S.2)</p>
+        </div>
+        <div className="section-content">
+          <form onSubmit={handleSubmitClass} className="settings-form">
+            <div className="form-row">
+              <div className="form-group-inline">
                 <input
                   type="text"
                   name="classInput"
-                  placeholder="Enter class name"
+                  placeholder="Enter class name (e.g., J.S.S.1)"
                   value={classInput}
                   onChange={handleClassNameInput}
+                  className="form-input"
                 />
-                <button onClick={handleAddStagedClass}>+</button>
+                <button type="button" onClick={handleAddStagedClass} className="btn-secondary">Add</button>
+              </div>
+            </div>
+
+            {stagedClassNames.length > 0 && (
+              <div className="staged-items">
+                {stagedClassNames.map((name, index) => (
+                  <div key={index} className="staged-item">
+                    <div className="staged-item-content">
+                      <span className="staged-name">{name}</span>
+                      <label className="department-checkbox">
+                        <input
+                          type="checkbox"
+                          checked={stagedClassesWithDept[name] || false}
+                          onChange={() => handleDepartmentToggle(name)}
+                        />
+                        <span className="checkbox-label">Department-based class?</span>
+                      </label>
+                    </div>
+                    <button type="button" className="btn-remove" onClick={() => handleDeleteStagedClass(name)}>Remove</button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div className="form-actions">
+              <button type="submit" className="btn-primary" disabled={stagedClassNames.length === 0}>
+                Create {stagedClassNames.length} Class{stagedClassNames.length !== 1 ? 'es' : ''}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      {/* Section 2: Add Class Session */}
+      <div className="class-mgmt-section">
+        <div className="class-section-header">
+          <h2>Class Sessions</h2>
+          <p className="section-description">Create sessions for specific classes, academic years, and terms</p>
+        </div>
+        <div className="section-content">
+          <form onSubmit={handleSubmitSession} className="settings-form">
+            <div className="form-row">
+              <div className="form-group">
+                <label className="form-label">Select Classes</label>
+                <select name="classrooms" multiple value={sessionData.classrooms} onChange={handleSessionChange} required className="form-input form-select-multiple">
+                  {classes.map(cls => (
+                    <option key={cls.id} value={cls.id}>{cls.name}</option>
+                  ))}
+                </select>
+                <span className="form-hint">Hold Ctrl (or Cmd) to select multiple classes</span>
+              </div>
+            </div>
+
+            <div className="form-row-grid">
+              <div className="form-group">
+                <label className="form-label">Academic Year</label>
+                <input
+                  type="text"
+                  name="academic_year"
+                  placeholder="2024/2025"
+                  value={sessionData.academic_year}
+                  onChange={handleSessionChange}
+                  required
+                  className="form-input"
+                />
               </div>
 
-              {stagedClassNames.length > 0 && (
-                <ul style={{ marginTop: '1rem' }}>
-                  {stagedClassNames.map((name, index) => (
-                    <li key={index} className="staged-class-item" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      {name}
-                      <span style={{ cursor: 'pointer', color: 'red' }} onClick={() => handleDeleteStagedClass(name)}>✖</span>
-                    </li>
-                  ))}
-                </ul>
-              )}
+              <div className="form-group">
+                <label className="form-label">Term</label>
+                <select name="term" value={sessionData.term} onChange={handleSessionChange} required className="form-input">
+                  <option value="">Select Term</option>
+                  <option value="First Term">First Term</option>
+                  <option value="Second Term">Second Term</option>
+                  <option value="Third Term">Third Term</option>
+                </select>
+              </div>
+            </div>
 
-              <button type="submit" disabled={stagedClassNames.length === 0}>Add Class(es)</button>
-            </form>
-          </>
-        ) : activeForm === 'session' ? (
-          <>
-            <h3>Add Class Session</h3>
-            <form onSubmit={handleSubmitSession} className="class-form">
-              <select name="classrooms" multiple value={sessionData.classrooms} onChange={handleSessionChange} required>
-                {classes.map(cls => (
-                  <option key={cls.id} value={cls.id}>{cls.name}</option>
-                ))}
-              </select>
+            <div className="form-actions">
+              <button type="submit" className="btn-primary">Create Session(s)</button>
+            </div>
+          </form>
+        </div>
+      </div>
 
-              <input
-                type="text"
-                name="academic_year"
-                placeholder="Academic Year (e.g. 2024/2025)"
-                value={sessionData.academic_year}
-                onChange={handleSessionChange}
-                required
-              />
+      {/* Section 3: Copy from Previous Session */}
+      <div className="class-mgmt-section">
+        <div className="class-section-header">
+          <h2>Session Migration</h2>
+          <p className="section-description">Copy students and subjects from a previous session to a new one</p>
+        </div>
+        <div className="section-content">
+          <form onSubmit={handleSubmitInheritance} className="settings-form">
+            <div className="subsection">
+              <h3 className="subsection-title">Source Session</h3>
+              <div className="form-row-grid">
+                <div className="form-group">
+                  <label className="form-label">Academic Year</label>
+                  <select name="source_academic_year" value={inheritanceData.source_academic_year} onChange={handleInheritanceChange} required className="form-input">
+                    <option value="">Select Academic Year</option>
+                    {[...new Set(sessions.map(s => s.academic_year))].map(year => (
+                      <option key={year} value={year}>{year}</option>
+                    ))}
+                  </select>
+                </div>
 
-              <select name="term" value={sessionData.term} onChange={handleSessionChange} required>
-                <option value="">Select Term</option>
-                <option value="First Term">First Term</option>
-                <option value="Second Term">Second Term</option>
-                <option value="Third Term">Third Term</option>
-              </select>
+                <div className="form-group">
+                  <label className="form-label">Term</label>
+                  <select name="source_term" value={inheritanceData.source_term} onChange={handleInheritanceChange} required className="form-input">
+                    <option value="">Select Term</option>
+                    {inheritanceData.source_academic_year &&
+                      [...new Set(sessions
+                        .filter(s => s.academic_year === inheritanceData.source_academic_year)
+                        .map(s => s.term))].map(term => (
+                          <option key={term} value={term}>{term}</option>
+                        ))
+                    }
+                  </select>
+                </div>
+              </div>
+            </div>
 
-              <button type="submit">Add Session(s)</button>
-            </form>
-          </>
-        ) : (
-          <>
-            <h3>Copy from Previous Session</h3>
-            <form onSubmit={handleSubmitInheritance} className="class-form">
-              <select name="source_academic_year" value={inheritanceData.source_academic_year} onChange={handleInheritanceChange} required>
-                <option value="">Select Source Academic Year</option>
-                {[...new Set(sessions.map(s => s.academic_year))].map(year => (
-                  <option key={year} value={year}>{year}</option>
-                ))}
-              </select>
+            <div className="subsection">
+              <h3 className="subsection-title">Target Session</h3>
+              <div className="form-row-grid">
+                <div className="form-group">
+                  <label className="form-label">Academic Year</label>
+                  <select name="target_academic_year" value={inheritanceData.target_academic_year} onChange={handleInheritanceChange} required className="form-input">
+                    <option value="">Select Academic Year</option>
+                    {[...new Set(sessions.map(s => s.academic_year))].map(year => (
+                      <option key={year} value={year}>{year}</option>
+                    ))}
+                  </select>
+                </div>
 
-              <select name="source_term" value={inheritanceData.source_term} onChange={handleInheritanceChange} required>
-                <option value="">Select Source Term</option>
-                {inheritanceData.source_academic_year && 
-                  [...new Set(sessions
-                    .filter(s => s.academic_year === inheritanceData.source_academic_year)
-                    .map(s => s.term))].map(term => (
-                      <option key={term} value={term}>{term}</option>
-                    ))
-                }
-              </select>
+                <div className="form-group">
+                  <label className="form-label">Term</label>
+                  <select name="target_term" value={inheritanceData.target_term} onChange={handleInheritanceChange} required className="form-input">
+                    <option value="">Select Term</option>
+                    {inheritanceData.target_academic_year &&
+                      [...new Set(sessions
+                        .filter(s => s.academic_year === inheritanceData.target_academic_year)
+                        .map(s => s.term))].map(term => (
+                          <option key={term} value={term}>{term}</option>
+                        ))
+                    }
+                  </select>
+                </div>
+              </div>
+            </div>
 
-              <select name="target_academic_year" value={inheritanceData.target_academic_year} onChange={handleInheritanceChange} required>
-                <option value="">Select Target Academic Year</option>
-                {[...new Set(sessions.map(s => s.academic_year))].map(year => (
-                  <option key={year} value={year}>{year}</option>
-                ))}
-              </select>
-
-              <select name="target_term" value={inheritanceData.target_term} onChange={handleInheritanceChange} required>
-                <option value="">Select Target Term</option>
-                {inheritanceData.target_academic_year && 
-                  [...new Set(sessions
-                    .filter(s => s.academic_year === inheritanceData.target_academic_year)
-                    .map(s => s.term))].map(term => (
-                      <option key={term} value={term}>{term}</option>
-                    ))
-                }
-              </select>
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginTop: '1rem', padding: '1rem', backgroundColor: '#f8f9fa', borderRadius: '6px' }}>
-                <h4 style={{ margin: '0 0 0.5rem 0', color: '#0d47a1', fontSize: '1.1rem' }}>Select what to copy:</h4>
-                
-                <label style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: 'pointer', padding: '0.5rem', border: '1px solid #dee2e6', borderRadius: '4px', backgroundColor: 'white' }}>
+            <div className="subsection">
+              <h3 className="subsection-title">Migration Options</h3>
+              <div className="checkbox-group">
+                <label className="checkbox-label">
                   <input
                     type="checkbox"
                     name="copy_students"
                     checked={inheritanceData.copy_students}
                     onChange={handleInheritanceChange}
-                    style={{ 
-                      width: '18px', 
-                      height: '18px', 
-                      cursor: 'pointer',
-                      border: '2px solid #6c757d',
-                      borderRadius: '3px',
-                      accentColor: '#0d47a1',
-                      outline: 'none'
-                    }}
+                    className="checkbox-input"
                   />
-                  <span style={{ fontSize: '1rem', fontWeight: '500', color: '#212529' }}>Copy Students</span>
+                  <div className="checkbox-content">
+                    <span className="checkbox-title">Copy Students</span>
+                    <span className="checkbox-description">Migrate all enrolled students to the new session</span>
+                  </div>
                 </label>
 
-                <label style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: 'pointer', padding: '0.5rem', border: '1px solid #dee2e6', borderRadius: '4px', backgroundColor: 'white' }}>
+                <label className="checkbox-label">
                   <input
                     type="checkbox"
                     name="copy_subjects"
                     checked={inheritanceData.copy_subjects}
                     onChange={handleInheritanceChange}
-                    style={{ 
-                      width: '18px', 
-                      height: '18px', 
-                      cursor: 'pointer',
-                      border: '2px solid #6c757d',
-                      borderRadius: '3px',
-                      accentColor: '#0d47a1',
-                      outline: 'none'
-                    }}
+                    className="checkbox-input"
                   />
-                  <span style={{ fontSize: '1rem', fontWeight: '500', color: '#212529' }}>Copy Subjects</span>
+                  <div className="checkbox-content">
+                    <span className="checkbox-title">Copy Subjects</span>
+                    <span className="checkbox-description">Duplicate subject assignments and teacher mappings</span>
+                  </div>
                 </label>
+
+                {inheritanceData.source_term === 'Third Term' && inheritanceData.copy_students && (
+                  <label className="checkbox-label" style={{ backgroundColor: '#fff8e1', padding: '1rem', border: '1px solid #ffc107', borderRadius: '6px' }}>
+                    <input
+                      type="checkbox"
+                      name="promote_students"
+                      checked={inheritanceData.promote_students}
+                      onChange={handleInheritanceChange}
+                      className="checkbox-input"
+                      style={{ accentColor: '#ff9800' }}
+                    />
+                    <div className="checkbox-content">
+                      <span className="checkbox-title" style={{ color: '#e65100' }}>Promote Students to Next Class</span>
+                      <span className="checkbox-description">Move students to the next grade level (J.S.S.1 → J.S.S.2, J.S.S.3 → S.S.S.1, etc.)</span>
+                    </div>
+                  </label>
+                )}
               </div>
+            </div>
 
-              <button type="submit" style={{ backgroundColor: '#28a745' }}>Copy Data</button>
-            </form>
-          </>
-        )}
-
-        {message && <p className="form-message success">{message}</p>}
-        {error && <p className="form-message error">{error}</p>}
+            <div className="form-actions">
+              <button type="submit" className="btn-primary">Migrate Data</button>
+            </div>
+          </form>
+        </div>
       </div>
     </div>
   );

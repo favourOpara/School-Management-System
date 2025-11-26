@@ -13,7 +13,7 @@ import os
 from .models import (
     Class, ClassSession, Subject, Topic, StudentSession, SubjectContent,
     StudentContentView, AssignmentSubmission, SubmissionFile,
-    Assessment, Question, QuestionOption, MatchingPair
+    Assessment, Question, QuestionOption, MatchingPair, Department
 )
 from .serializers import (
     ClassSerializer, ClassSessionSerializer, SubjectSerializer, TopicSerializer,
@@ -22,7 +22,8 @@ from .serializers import (
     StudentContentViewSerializer, AssignmentSubmissionSerializer,
     StudentAssignmentListSerializer, CreateSubmissionSerializer,
     SubmissionFileSerializer, CreateAssessmentSerializer, AssessmentSerializer,
-    AssessmentSubmissionSerializer as AssessmentSubmissionSerializerClass
+    AssessmentSubmissionSerializer as AssessmentSubmissionSerializerClass,
+    DepartmentSerializer
 )
 from users.models import CustomUser
 
@@ -39,6 +40,92 @@ class IsTeacherRole(permissions.BasePermission):
 class IsTeacherOrAdmin(permissions.BasePermission):
     def has_permission(self, request, view):
         return request.user.is_authenticated and request.user.role in ['teacher', 'admin']
+
+
+# ========================
+# DEPARTMENT MANAGEMENT VIEWS (ADMIN ONLY)
+# ========================
+
+class DepartmentListCreateView(generics.ListCreateAPIView):
+    queryset = Department.objects.all()
+    serializer_class = DepartmentSerializer
+    permission_classes = [permissions.IsAdminUser]
+
+
+class DepartmentDetailView(generics.RetrieveUpdateDestroyAPIView):
+    queryset = Department.objects.all()
+    serializer_class = DepartmentSerializer
+    permission_classes = [permissions.IsAdminUser]
+    lookup_field = 'id'
+
+
+@api_view(['POST'])
+@permission_classes([permissions.IsAdminUser])
+def assign_classes_to_department(request, department_id):
+    """
+    Assign multiple classes to a department
+    Expected payload: { "class_ids": [1, 2, 3] }
+    """
+    try:
+        department = Department.objects.get(id=department_id)
+    except Department.DoesNotExist:
+        return Response(
+            {"detail": "Department not found"},
+            status=status.HTTP_404_NOT_FOUND
+        )
+
+    class_ids = request.data.get('class_ids', [])
+
+    if not isinstance(class_ids, list):
+        return Response(
+            {"detail": "class_ids must be a list"},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    # Get all classes
+    classes = Class.objects.filter(id__in=class_ids)
+
+    if classes.count() != len(class_ids):
+        return Response(
+            {"detail": "Some class IDs are invalid"},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    # Assign classes to department
+    for cls in classes:
+        cls.department = department
+        cls.save()
+
+    return Response(
+        {
+            "detail": f"Successfully assigned {classes.count()} classes to {department.name}",
+            "department": DepartmentSerializer(department).data
+        },
+        status=status.HTTP_200_OK
+    )
+
+
+@api_view(['POST'])
+@permission_classes([permissions.IsAdminUser])
+def remove_class_from_department(request, class_id):
+    """
+    Remove a class from its department
+    """
+    try:
+        cls = Class.objects.get(id=class_id)
+    except Class.DoesNotExist:
+        return Response(
+            {"detail": "Class not found"},
+            status=status.HTTP_404_NOT_FOUND
+        )
+
+    cls.department = None
+    cls.save()
+
+    return Response(
+        {"detail": f"Successfully removed {cls.name} from department"},
+        status=status.HTTP_200_OK
+    )
 
 
 # ========================
@@ -1073,6 +1160,19 @@ def release_grade(request, submission_id):
 class SessionInheritanceView(APIView):
     permission_classes = [permissions.IsAdminUser]
 
+    @staticmethod
+    def get_next_class(current_class_name):
+        """Maps current class to next class for promotion"""
+        promotion_map = {
+            'J.S.S.1': 'J.S.S.2',
+            'J.S.S.2': 'J.S.S.3',
+            'J.S.S.3': 'S.S.S.1',
+            'S.S.S.1': 'S.S.S.2',
+            'S.S.S.2': 'S.S.S.3',
+            'S.S.S.3': None  # Graduated
+        }
+        return promotion_map.get(current_class_name)
+
     def post(self, request):
         data = request.data
         source_academic_year = data.get('source_academic_year')
@@ -1081,6 +1181,7 @@ class SessionInheritanceView(APIView):
         target_term = data.get('target_term')
         copy_students = data.get('copy_students', False)
         copy_subjects = data.get('copy_subjects', False)
+        promote_students = data.get('promote_students', False)
 
         if not all([source_academic_year, source_term, target_academic_year, target_term]):
             return Response(
@@ -1091,6 +1192,18 @@ class SessionInheritanceView(APIView):
         if not (copy_students or copy_subjects):
             return Response(
                 {"detail": "At least one of 'copy_students' or 'copy_subjects' must be True."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if promote_students and source_term != "Third Term":
+            return Response(
+                {"detail": "Students can only be promoted after Third Term."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if promote_students and not copy_students:
+            return Response(
+                {"detail": "copy_students must be True when promote_students is enabled."},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
@@ -1119,6 +1232,8 @@ class SessionInheritanceView(APIView):
                     )
 
                 copied_students = 0
+                promoted_students = 0
+                graduated_students = 0
                 copied_subjects = 0
 
                 if copy_students:
@@ -1131,20 +1246,46 @@ class SessionInheritanceView(APIView):
                     for source_student_session in source_student_sessions:
                         student = source_student_session.student
                         source_class_session = source_student_session.class_session
-                        
-                        target_class_session = target_sessions.filter(
-                            classroom=source_class_session.classroom
-                        ).first()
-                        
+                        current_class_name = source_class_session.classroom.name
+
+                        if promote_students:
+                            # Get the next class for promotion
+                            next_class_name = self.get_next_class(current_class_name)
+
+                            if next_class_name is None:
+                                # S.S.S.3 students - mark as graduated
+                                graduated_students += 1
+                                source_student_session.is_active = False
+                                source_student_session.save()
+                                continue
+
+                            # Find target session with promoted class
+                            try:
+                                target_classroom = Class.objects.get(name=next_class_name)
+                                target_class_session = target_sessions.filter(
+                                    classroom=target_classroom
+                                ).first()
+                            except Class.DoesNotExist:
+                                # Next class doesn't exist, skip this student
+                                continue
+                        else:
+                            # Keep same class
+                            target_class_session = target_sessions.filter(
+                                classroom=source_class_session.classroom
+                            ).first()
+
                         if target_class_session:
                             new_student_session, created = StudentSession.objects.get_or_create(
                                 student=student,
                                 class_session=target_class_session,
                                 defaults={'is_active': True}
                             )
-                            
+
                             if created:
-                                copied_students += 1
+                                if promote_students:
+                                    promoted_students += 1
+                                else:
+                                    copied_students += 1
                                 source_student_session.is_active = False
                                 source_student_session.save()
 
@@ -1169,13 +1310,21 @@ class SessionInheritanceView(APIView):
                                     )
                                     copied_subjects += 1
 
+                message = "Data migrated successfully"
+                if promote_students:
+                    message = f"Students promoted successfully. {promoted_students} promoted, {graduated_students} graduated."
+
+                response_details = {
+                    "students_copied": copied_students,
+                    "students_promoted": promoted_students if promote_students else 0,
+                    "students_graduated": graduated_students if promote_students else 0,
+                    "subjects_copied": copied_subjects,
+                    "note": "Students retain their original usernames and personal data. Historical data is preserved in previous StudentSession records."
+                }
+
                 return Response({
-                    "message": "Data copied successfully",
-                    "details": {
-                        "students_copied": copied_students,
-                        "subjects_copied": copied_subjects,
-                        "note": "Students retain their original usernames and personal data. Historical data is preserved in previous StudentSession records."
-                    }
+                    "message": message,
+                    "details": response_details
                 }, status=status.HTTP_200_OK)
 
         except Exception as e:
@@ -1191,8 +1340,9 @@ class SessionStudentsView(APIView):
     def get(self, request, session_id):
         try:
             session = ClassSession.objects.get(id=session_id)
+            # Remove is_active filter to show historical students
             student_sessions = StudentSession.objects.filter(
-                class_session=session, is_active=True
+                class_session=session
             ).select_related('student').order_by('student__first_name', 'student__last_name')
 
             students = [
@@ -1974,3 +2124,159 @@ class StudentSubmitAssessmentView(APIView):
             'needs_grading': not submission.is_graded,
             'submission': serializer.data
         }, status=status.HTTP_201_CREATED)
+
+
+# ========================
+# STUDENT MY CLASSES VIEW
+# ========================
+
+@api_view(['GET'])
+@permission_classes([permissions.IsAuthenticated])
+def get_student_class_info(request):
+    """
+    Get student's current class information with subjects.
+    Returns class info, subjects, and content summaries.
+    """
+    user = request.user
+
+    if user.role != 'student':
+        return Response(
+            {'error': 'Only students can access this endpoint'},
+            status=status.HTTP_403_FORBIDDEN
+        )
+
+    # Get student's active session
+    student_session = StudentSession.objects.filter(
+        student=user,
+        is_active=True
+    ).select_related(
+        'class_session',
+        'class_session__classroom'
+    ).first()
+
+    if not student_session:
+        return Response({
+            'has_class': False,
+            'message': 'You are not enrolled in any class'
+        })
+
+    class_session = student_session.class_session
+    classroom = class_session.classroom
+
+    # Get subjects for this class session
+    # Filter by department if student has one set
+    subjects_query = Subject.objects.filter(
+        class_session=class_session
+    ).select_related('teacher')
+
+    if user.department and user.department != 'General':
+        subjects_query = subjects_query.filter(
+            Q(department='General') | Q(department=user.department)
+        )
+
+    subjects_data = []
+    for subject in subjects_query.order_by('name'):
+        # Get content counts
+        notes_count = SubjectContent.objects.filter(
+            subject=subject,
+            content_type='note',
+            is_active=True
+        ).count()
+
+        announcements_count = SubjectContent.objects.filter(
+            subject=subject,
+            content_type='announcement',
+            is_active=True
+        ).count()
+
+        assignments_count = SubjectContent.objects.filter(
+            subject=subject,
+            content_type='assignment',
+            is_active=True
+        ).count()
+
+        # Get recent content (latest 5 of each type)
+        recent_notes = SubjectContent.objects.filter(
+            subject=subject,
+            content_type='note',
+            is_active=True
+        ).order_by('-created_at')[:5].values(
+            'id', 'title', 'description', 'created_at'
+        )
+
+        recent_announcements = SubjectContent.objects.filter(
+            subject=subject,
+            content_type='announcement',
+            is_active=True
+        ).order_by('-created_at')[:5].values(
+            'id', 'title', 'description', 'created_at'
+        )
+
+        recent_assignments = SubjectContent.objects.filter(
+            subject=subject,
+            content_type='assignment',
+            is_active=True
+        ).order_by('-created_at')[:5].values(
+            'id', 'title', 'description', 'due_date', 'max_score', 'created_at'
+        )
+
+        # Get assignment submissions for this student
+        assignment_grades = []
+        for assignment in recent_assignments:
+            submission = AssignmentSubmission.objects.filter(
+                student=user,
+                assignment_id=assignment['id']
+            ).first()
+
+            assignment_data = {
+                'id': assignment['id'],
+                'title': assignment['title'],
+                'description': assignment['description'],
+                'due_date': assignment['due_date'],
+                'max_score': assignment['max_score'],
+                'created_at': assignment['created_at'],
+                'submission_status': 'not_submitted',
+                'score': None,
+                'feedback': None,
+                'grade_released': False
+            }
+
+            if submission:
+                assignment_data['submission_status'] = submission.status
+                if submission.grade_released:
+                    assignment_data['score'] = float(submission.score) if submission.score else None
+                    assignment_data['feedback'] = submission.feedback
+                    assignment_data['grade_released'] = True
+
+            assignment_grades.append(assignment_data)
+
+        subjects_data.append({
+            'id': subject.id,
+            'name': subject.name,
+            'department': subject.department,
+            'teacher': {
+                'id': subject.teacher.id if subject.teacher else None,
+                'name': f"{subject.teacher.first_name} {subject.teacher.last_name}" if subject.teacher else 'Not Assigned'
+            },
+            'content_summary': {
+                'notes': notes_count,
+                'announcements': announcements_count,
+                'assignments': assignments_count
+            },
+            'recent_notes': list(recent_notes),
+            'recent_announcements': list(recent_announcements),
+            'assignments_with_grades': assignment_grades
+        })
+
+    return Response({
+        'has_class': True,
+        'student_name': f"{user.first_name} {user.last_name}",
+        'class_info': {
+            'id': class_session.id,
+            'class_name': classroom.name,
+            'academic_year': class_session.academic_year,
+            'term': class_session.term
+        },
+        'subjects': subjects_data,
+        'total_subjects': len(subjects_data)
+    })

@@ -28,7 +28,22 @@
       "Bash(python3:*)",
       "Bash(npx eslint:*)",
       "Bash(node -e:*)",
-      "Bash(python manage.py migrate:*)"
+      "Bash(python manage.py migrate:*)",
+      "Bash(pkill:*)",
+      "Bash(find:*)",
+      "Bash(pip install:*)",
+      "Bash(pgrep:*)",
+      "Bash(/Users/newuser/Downloads/School-Management-System/backend/venv/bin/python:*)",
+      "Bash(/Users/newuser/Downloads/School-Management-System/backend/venv/bin/pip:*)",
+      "Bash(./venv/bin/pip install:*)",
+      "Bash(./venv/bin/playwright install:*)",
+      "Bash(lsof:*)",
+      "Bash(xargs kill -9)",
+      "Bash(curl:*)",
+      "Bash(playwright install)",
+      "Bash(kill:*)",
+      "Bash(ps:*)",
+      "Bash(xargs ps:*)"
     ],
     "deny": [],
     "ask": []

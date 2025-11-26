@@ -10,7 +10,12 @@ import StudentAttendanceReport from '../components/StudentAttendanceReport';
 import StudentGradeReport from '../components/StudentGradeReport';
 import NotificationPopup from '../components/NotificationPopup';
 import TopHeader from '../components/TopHeader';
+import PasswordChange from '../components/PasswordChange';
 import AttendanceLeaderboard from '../components/AttendanceLeaderboard';
+import SubjectRankings from '../components/SubjectRankings';
+import MySubjectGrades from '../components/MySubjectGrades';
+import FeeStatus from '../components/FeeStatus';
+import MyClasses from '../components/MyClasses';
 import './StudentDashboard.css';
 
 const getGreeting = () => {
@@ -24,6 +29,7 @@ const StudentDashboard = () => {
   const location = useLocation();
   const [activeTab, setActiveTab] = useState('dashboard');
   const [userName, setUserName] = useState('');
+  const [showPasswordChange, setShowPasswordChange] = useState(false);
   const sidebarRef = useRef(null);
 
   useEffect(() => {
@@ -50,16 +56,15 @@ const StudentDashboard = () => {
 
             <div className="dashboard-records-grid">
               <AttendanceLeaderboard />
+              <SubjectRankings />
+              <MySubjectGrades type="highest" />
+              <MySubjectGrades type="lowest" />
+              <FeeStatus />
             </div>
           </div>
         );
       case 'my-classes':
-        return (
-          <div className="student-dashboard-section">
-            <h2 className="student-dashboard-section-title">My Classes</h2>
-            <p className="student-dashboard-section-text">Here you can view all your enrolled classes and class schedules.</p>
-          </div>
-        );
+        return <MyClasses />;
       case 'my-grades':
         return <MyGrades />; // USE THE NEW COMPONENT
       case 'assignments':
@@ -103,11 +108,17 @@ const StudentDashboard = () => {
         activeTab={activeTab}
         setActiveTab={setActiveTab}
       />
-      <TopHeader onMenuClick={() => sidebarRef.current?.openSidebar()} />
+      <TopHeader
+        onMenuClick={() => sidebarRef.current?.openSidebar()}
+        onPasswordChangeClick={() => setShowPasswordChange(true)}
+      />
       <main className="student-dashboard-main">
         {renderContent()}
       </main>
       <NotificationPopup />
+      {showPasswordChange && (
+        <PasswordChange onClose={() => setShowPasswordChange(false)} />
+      )}
     </div>
   );
 };

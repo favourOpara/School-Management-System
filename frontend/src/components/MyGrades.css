@@ -169,8 +169,120 @@
 /* Subjects Grid */
 .subjects-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
   gap: 24px;
+}
+
+/* Subject Grade Tile */
+.subject-grade-tile {
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 12px;
+  overflow: hidden;
+  transition: box-shadow 0.3s, transform 0.2s;
+}
+
+.subject-grade-tile:hover {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
+}
+
+.tile-header {
+  background: linear-gradient(135deg, #1976d2 0%, #1565c0 100%);
+  padding: 16px 20px;
+  color: white;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.tile-header h3 {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 600;
+}
+
+.tile-dept-badge {
+  background: rgba(255, 255, 255, 0.2);
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.tile-teacher {
+  padding: 10px 20px;
+  background: #f5f7fa;
+  color: #666;
+  font-size: 0.85rem;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.scores-table {
+  padding: 16px 20px;
+}
+
+.score-row {
+  display: flex;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.score-row:last-child {
+  border-bottom: none;
+}
+
+.score-label {
+  flex: 1;
+  font-weight: 500;
+  color: #555;
+  font-size: 0.95rem;
+}
+
+.score-value {
+  font-weight: 600;
+  color: #333;
+  font-size: 1rem;
+  min-width: 50px;
+  text-align: right;
+}
+
+.score-max {
+  color: #999;
+  font-size: 0.85rem;
+  margin-left: 4px;
+  min-width: 40px;
+}
+
+.tile-total {
+  display: flex;
+  align-items: center;
+  padding: 14px 20px;
+  background: #f8f9fa;
+  border-top: 2px solid #e0e0e0;
+}
+
+.total-label {
+  flex: 1;
+  font-weight: 600;
+  color: #333;
+  font-size: 1rem;
+}
+
+.total-value {
+  font-weight: 700;
+  font-size: 1.3rem;
+  margin-right: 8px;
+}
+
+.total-grade {
+  background: #e3f2fd;
+  color: #1976d2;
+  padding: 4px 12px;
+  border-radius: 6px;
+  font-weight: 700;
+  font-size: 1rem;
 }
 
 .subject-card {
@@ -520,7 +632,7 @@
 
 @media (max-width: 480px) {
   .my-grades-container {
-    padding: 90px 12px 12px 12px; /* Even more top padding for smaller mobile screens */
+    padding: 0 12px 12px 12px;
   }
 
   .grades-header h2 {

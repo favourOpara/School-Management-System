@@ -1,15 +1,16 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { LogOut, Menu, User, Camera, ChevronDown, X } from 'lucide-react';
+import { LogOut, Menu, User, Camera, ChevronDown, X, Settings, Lock } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import './TopHeader.css';
 
-const TopHeader = ({ onMenuClick }) => {
+const TopHeader = ({ onMenuClick, onSettingsClick, onPasswordChangeClick }) => {
   const navigate = useNavigate();
   const [showDropdown, setShowDropdown] = useState(false);
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [userName, setUserName] = useState('');
+  const [userRole, setUserRole] = useState('');
   const dropdownRef = useRef(null);
   const fileInputRef = useRef(null);
 
@@ -39,6 +40,7 @@ const TopHeader = ({ onMenuClick }) => {
         const data = await response.json();
         setAvatarUrl(data.avatar_url);
         setUserName(`${data.first_name} ${data.last_name}`);
+        setUserRole(data.role);
       }
     } catch (err) {
       console.error('Failed to fetch profile:', err);
@@ -168,6 +170,36 @@ const TopHeader = ({ onMenuClick }) => {
                   <Camera size={16} />
                   <span>Change Profile Picture</span>
                 </button>
+                {userRole === 'admin' && onSettingsClick && (
+                  <>
+                    <div className="dropdown-divider" />
+                    <button
+                      className="dropdown-item"
+                      onClick={() => {
+                        onSettingsClick();
+                        setShowDropdown(false);
+                      }}
+                    >
+                      <Settings size={16} />
+                      <span>Account Settings</span>
+                    </button>
+                  </>
+                )}
+                {userRole !== 'admin' && onPasswordChangeClick && (
+                  <>
+                    <div className="dropdown-divider" />
+                    <button
+                      className="dropdown-item"
+                      onClick={() => {
+                        onPasswordChangeClick();
+                        setShowDropdown(false);
+                      }}
+                    >
+                      <Lock size={16} />
+                      <span>Change Password</span>
+                    </button>
+                  </>
+                )}
                 <div className="dropdown-divider" />
                 <button className="dropdown-item logout" onClick={handleLogout}>
                   <LogOut size={16} />

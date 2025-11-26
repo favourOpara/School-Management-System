@@ -61,6 +61,8 @@ const NotificationPopup = () => {
     switch (type) {
       case 'incomplete_grades':
         return <AlertTriangle size={20} color="#f59e0b" />;
+      case 'teacher_grading_reminder':
+        return <AlertTriangle size={20} color="#f59e0b" />;
       case 'report_release':
         return <FileCheck size={20} color="#10b981" />;
       default:
@@ -127,6 +129,22 @@ const NotificationPopup = () => {
                       <li key={idx}>
                         <strong>{subject.name}</strong>
                         <span className="missing-items">{subject.missing.join(', ')}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {currentNotification.extra_data && currentNotification.notification_type === 'teacher_grading_reminder' && (
+                <div className="incomplete-details">
+                  <h4>Subjects Requiring Grades:</h4>
+                  <ul>
+                    {currentNotification.extra_data.subjects?.map((subject, idx) => (
+                      <li key={idx}>
+                        <strong>{subject.name}</strong> ({subject.class_name})
+                        <span className="missing-items">
+                          {subject.incomplete_count}/{subject.total_students} students incomplete
+                        </span>
                       </li>
                     ))}
                   </ul>

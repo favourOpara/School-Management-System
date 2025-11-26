@@ -288,9 +288,9 @@ const ActivityLog = () => {
 
   if (loading) {
     return (
-      <div className="notifications-main-wrapper">
-        <div className="notifications-loading-container">
-          <div className="notifications-spinner"></div>
+      <div className="activity-log-container">
+        <div className="activity-log-loading-container">
+          <div className="activity-log-spinner"></div>
           <p>Loading notifications...</p>
         </div>
       </div>
@@ -299,11 +299,11 @@ const ActivityLog = () => {
 
   if (error) {
     return (
-      <div className="notifications-main-wrapper">
-        <div className="notifications-error-container">
+      <div className="activity-log-container">
+        <div className="activity-log-error-container">
           <h3>Error</h3>
           <p>{error}</p>
-          <button onClick={fetchNotifications} className="notifications-retry-btn">
+          <button onClick={fetchNotifications} className="activity-log-retry-btn">
             Retry
           </button>
         </div>
@@ -312,9 +312,9 @@ const ActivityLog = () => {
   }
 
   return (
-    <div className="notifications-main-wrapper">
+    <div className="activity-log-container">
       {/* Header */}
-      <div className="notifications-header-section">
+      <div className="activity-log-header-section">
         <div className="notifications-header-left">
           <h1 className="notifications-main-title">
             🔔 {userRole === 'admin' ? 'All Notifications' : 'My Notifications'}

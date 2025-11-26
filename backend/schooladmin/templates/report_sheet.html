@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Report Sheet - {{ student.name }}</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+            background: white;
+            padding: 10px;
+            font-size: 11px;
+        }
+
+        .report-card {
+            background: white;
+            border: 5px solid #d4af37;
+            border-radius: 6px;
+            padding: 20px;
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        /* Report Header */
+        .report-header {
+            text-align: center;
+            margin-bottom: 15px;
+        }
+
+        .school-logo {
+            margin-bottom: 8px;
+        }
+
+        .school-logo img {
+            width: 60px;
+            height: 60px;
+            object-fit: contain;
+        }
+
+        .school-name {
+            font-size: 1.3rem;
+            color: #7b1fa2;
+            margin: 0 0 4px 0;
+            font-weight: 700;
+        }
+
+        .report-title {
+            font-size: 0.95rem;
+            color: #333;
+            margin: 0 0 4px 0;
+            font-weight: 600;
+        }
+
+        .report-term {
+            font-size: 0.75rem;
+            color: #666;
+            margin: 0;
+        }
+
+        /* Student Info Section */
+        .student-info-section {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 15px;
+            gap: 20px;
+        }
+
+        .student-details {
+            flex: 0 1 auto;
+            max-width: 70%;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            font-size: 0.85rem;
+        }
+
+        .detail-row-compact {
+            display: flex;
+            gap: 30px;
+            margin-bottom: 4px;
+        }
+
+        .detail-item {
+            display: flex;
+            gap: 6px;
+            flex: 1;
+        }
+
+        .detail-label {
+            font-weight: 600;
+            color: #333;
+            white-space: nowrap;
+        }
+
+        .detail-value {
+            color: #555;
+        }
+
+        .passport-photo {
+            width: 90px;
+            height: 110px;
+            flex-shrink: 0;
+            border: 2px solid #ddd;
+            border-radius: 3px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        .passport-photo img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .photo-placeholder {
+            text-align: center;
+            color: #999;
+            font-size: 0.7rem;
+            padding: 6px;
+        }
+
+        /* Grades Table */
+        .grades-table-container {
+            margin-bottom: 15px;
+        }
+
+        .grades-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 0;
+        }
+
+        .grades-table thead {
+            background: #7b1fa2;
+            color: white;
+        }
+
+        .grades-table th {
+            padding: 6px 8px;
+            text-align: center;
+            font-weight: 600;
+            font-size: 0.75rem;
+            border: 1px solid white;
+            color: white;
+        }
+
+        .grades-table th:first-child {
+            text-align: left;
+        }
+
+        .grades-table tbody tr {
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .grades-table td {
+            padding: 5px 8px;
+            text-align: center;
+            font-size: 0.75rem;
+        }
+
+        .grades-table td.subject-name {
+            text-align: left;
+            font-weight: 500;
+        }
+
+        .grades-table td.score {
+            font-weight: 500;
+            color: #333;
+        }
+
+        .grades-table td.total {
+            font-weight: 700;
+            color: #1976d2;
+        }
+
+        .grades-table td.grade {
+            font-weight: 700;
+            color: #7b1fa2;
+            font-size: 0.8rem;
+        }
+
+        /* Summary Rows */
+        .summary-row {
+            font-weight: 600;
+            background: #f5f5f5;
+        }
+
+        .summary-row td {
+            padding: 6px 8px;
+        }
+
+        .summary-label {
+            text-align: left !important;
+            font-weight: 700;
+            color: #333;
+            padding-left: 8px !important;
+        }
+
+        .summary-value {
+            font-weight: 700;
+            color: #1976d2;
+            font-size: 0.85rem;
+        }
+
+        .position-row {
+            background: #c8e6c9 !important;
+        }
+
+        .position-row .summary-value {
+            color: #2e7d32;
+        }
+
+        /* Report Footer */
+        .report-footer {
+            text-align: center;
+            padding-top: 10px;
+            border-top: 1px solid #e0e0e0;
+        }
+
+        .report-footer p {
+            margin: 0;
+            font-size: 0.7rem;
+            color: #666;
+        }
+
+        /* Print styles to ensure single page */
+        @media print {
+            body {
+                padding: 5px;
+            }
+            .report-card {
+                page-break-inside: avoid;
+                page-break-after: avoid;
+            }
+        }
+
+        @page {
+            size: A4;
+            margin: 0.3in;
+        }
+    </style>
+</head>
+<body>
+    <div class="report-card">
+        <!-- Header -->
+        <div class="report-header">
+            <div class="school-logo">
+                <img src="{{ logo_url }}" alt="School Logo" />
+            </div>
+            <h1 class="school-name">Figil High School</h1>
+            <h2 class="report-title">Student Result Management System</h2>
+            <p class="report-term">
+                Term {{ term_text }} ({{ session.academic_year }} Academic Session Report)
+            </p>
+        </div>
+
+        <!-- Student Info -->
+        <div class="student-info-section">
+            <div class="student-details">
+                <div class="detail-row-compact">
+                    <div class="detail-item">
+                        <span class="detail-label">Student ID:</span>
+                        <span class="detail-value">{{ student.student_id }}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Student Name:</span>
+                        <span class="detail-value">{{ student.name }}</span>
+                    </div>
+                </div>
+                <div class="detail-row-compact">
+                    <div class="detail-item">
+                        <span class="detail-label">Class:</span>
+                        <span class="detail-value">{{ student.class }}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Department:</span>
+                        <span class="detail-value">{{ student.department }}</span>
+                    </div>
+                </div>
+            </div>
+            <div class="passport-photo">
+                {% if student.photo_url %}
+                    <img src="{{ student.photo_url }}" alt="Student" />
+                {% else %}
+                    <div class="photo-placeholder">
+                        <span>Passport Photo</span>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Grades Table -->
+        <div class="grades-table-container">
+            <table class="grades-table">
+                <thead>
+                    <tr>
+                        <th>Subjects</th>
+                        <th>1st Test<br />({{ grading_config.first_test_max }}marks)</th>
+                        <th>2nd Test<br />({{ grading_config.second_test_max }}marks)</th>
+                        <th>Exam<br />({{ grading_config.exam_max }}marks)</th>
+                        <th>Total<br />({{ grading_config.total_max }}marks)</th>
+                        <th>Grades</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for subject in subjects %}
+                    <tr>
+                        <td class="subject-name">{{ subject.subject_name }}</td>
+                        <td class="score">{{ subject.first_test_score }}</td>
+                        <td class="score">{{ subject.second_test_score }}</td>
+                        <td class="score">{{ subject.exam_score }}</td>
+                        <td class="score total">{{ subject.total_score }}</td>
+                        <td class="grade">{{ subject.letter_grade }}</td>
+                    </tr>
+                    {% endfor %}
+                    <tr class="summary-row">
+                        <td class="summary-label">Grand Total</td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td class="summary-value">{{ summary.grand_total }}</td>
+                        <td></td>
+                    </tr>
+                    <tr class="summary-row">
+                        <td class="summary-label">Average</td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td class="summary-value">{{ summary.average }}</td>
+                        <td></td>
+                    </tr>
+                    <tr class="summary-row position-row">
+                        <td class="summary-label">Position</td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td class="summary-value">
+                            {% if summary.position %}{{ summary.position }} of {{ summary.total_students }}{% else %}-{% endif %}
+                        </td>
+                        <td></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Footer -->
+        <div class="report-footer">
+            <p>Generated on {{ generated_date }}</p>
+        </div>
+    </div>
+</body>
+</html>

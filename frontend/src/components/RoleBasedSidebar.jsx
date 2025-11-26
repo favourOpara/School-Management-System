@@ -3,7 +3,7 @@ import React, { useState, forwardRef, useImperativeHandle } from 'react';
 import {
   Menu, X, User, LayoutDashboard, LogOut, Settings, Shield,
   BookOpen, Users, Calendar, DollarSign, FileText, MessageCircle,
-  ClipboardCheck, GraduationCap, UserCheck, ClipboardList, Edit2
+  ClipboardCheck, GraduationCap, UserCheck, ClipboardList, Edit2, Bell
 } from 'lucide-react';
 import './Sidebar.css';
 
@@ -32,22 +32,9 @@ const RoleBasedSidebar = forwardRef(({ activeTab, setActiveTab, userRole }, ref)
 
   // Define menu items based on user role
   const getMenuItems = () => {
-    const commonItems = [
-      {
-        key: 'account',
-        icon: <User />,
-        label: 'Account',
-        submenu: [
-          { key: 'profile', icon: <Shield />, label: 'Profile' },
-          { key: 'settings', icon: <Settings />, label: 'Settings' }
-        ]
-      }
-    ];
-
     switch (userRole) {
       case 'student':
         return [
-          ...commonItems,
           {
             key: 'dashboard',
             icon: <LayoutDashboard />,
@@ -81,7 +68,6 @@ const RoleBasedSidebar = forwardRef(({ activeTab, setActiveTab, userRole }, ref)
 
       case 'teacher':
         return [
-          ...commonItems,
           {
             key: 'dashboard',
             icon: <LayoutDashboard />,
@@ -95,8 +81,7 @@ const RoleBasedSidebar = forwardRef(({ activeTab, setActiveTab, userRole }, ref)
             icon: <BookOpen />,
             label: 'My Classes',
             submenu: [
-              { key: 'assigned-classes', icon: <BookOpen />, label: 'Assigned Classes' },
-              { key: 'student-list', icon: <Users />, label: 'Student List' }
+              { key: 'assigned-classes', icon: <BookOpen />, label: 'Assigned Classes' }
             ]
           },
           {
@@ -116,27 +101,25 @@ const RoleBasedSidebar = forwardRef(({ activeTab, setActiveTab, userRole }, ref)
             submenu: [
               { key: 'manual-grading', icon: <Edit2 />, label: 'Manual Grading' }
             ]
+          },
+          {
+            key: 'communication',
+            icon: <Bell />,
+            label: 'Communication',
+            submenu: [
+              { key: 'announcements', icon: <Bell />, label: 'Announcements' }
+            ]
           }
         ];
 
       case 'parent':
         return [
-          ...commonItems,
           {
             key: 'dashboard',
             icon: <LayoutDashboard />,
             label: 'Dashboard',
             submenu: [
               { key: 'dashboard', icon: <LayoutDashboard />, label: 'Overview' }
-            ]
-          },
-          {
-            key: 'children',
-            icon: <Users />,
-            label: 'My Children',
-            submenu: [
-              { key: 'children-overview', icon: <Users />, label: 'Children Overview' },
-              { key: 'academic-progress', icon: <GraduationCap />, label: 'Academic Progress' }
             ]
           },
           {
@@ -153,8 +136,7 @@ const RoleBasedSidebar = forwardRef(({ activeTab, setActiveTab, userRole }, ref)
             icon: <DollarSign />,
             label: 'Fees',
             submenu: [
-              { key: 'fee-payments', icon: <DollarSign />, label: 'Fee Payments' },
-              { key: 'payment-history', icon: <FileText />, label: 'Payment History' }
+              { key: 'fee-receipts', icon: <FileText />, label: 'Fee Receipts' }
             ]
           },
           {
@@ -169,7 +151,7 @@ const RoleBasedSidebar = forwardRef(({ activeTab, setActiveTab, userRole }, ref)
         ];
 
       default:
-        return commonItems;
+        return [];
     }
   };
 

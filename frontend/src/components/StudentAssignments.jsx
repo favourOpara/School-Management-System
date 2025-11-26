@@ -16,6 +16,8 @@ const StudentAssignments = () => {
   const [submissionText, setSubmissionText] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState({ text: '', type: '' });
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [detailsAssignment, setDetailsAssignment] = useState(null);
 
   const token = localStorage.getItem('accessToken');
 
@@ -177,10 +179,16 @@ const StudentAssignments = () => {
       }
 
       const data = await response.json();
-      setSelectedAssignment(data);
+      setDetailsAssignment(data);
+      setShowDetailsModal(true);
     } catch (err) {
       showMessage(err.message, 'error');
     }
+  };
+
+  const closeDetailsModal = () => {
+    setShowDetailsModal(false);
+    setDetailsAssignment(null);
   };
 
   const formatDate = (dateString) => {
@@ -315,7 +323,7 @@ const StudentAssignments = () => {
           </div>
         ) : (
           filteredAssignments.map((assignment) => (
-            <div key={assignment.id} className="assignment-card">
+            <div key={assignment.id} className="assignment-card compact">
               <div className="assignment-header">
                 <div className="assignment-title-section">
                   <h3>{assignment.title}</h3>
@@ -327,79 +335,10 @@ const StudentAssignments = () => {
                     {assignment.subject_name}
                   </span>
                   <span className="meta-item">
-                    📚 {assignment.classroom_name}
-                  </span>
-                  <span className="meta-item">
-                    👨‍🏫 {assignment.teacher_name}
-                  </span>
-                </div>
-              </div>
-
-              <div className="assignment-body">
-                <p className="assignment-description">{assignment.description}</p>
-
-                <div className="assignment-details">
-                  <div className="detail-item">
                     <Calendar size={16} />
-                    <span>Due: {formatDate(assignment.due_date)}</span>
-                  </div>
-                  {assignment.max_score && (
-                    <div className="detail-item">
-                      <FileText size={16} />
-                      <span>Max Score: {assignment.max_score} points</span>
-                    </div>
-                  )}
-                  {assignment.files_count > 0 && (
-                    <div className="detail-item">
-                      <Download size={16} />
-                      <span>{assignment.files_count} attachment(s)</span>
-                    </div>
-                  )}
+                    Due: {formatDate(assignment.due_date)}
+                  </span>
                 </div>
-
-                {/* SHOW TEACHER'S ASSIGNMENT FILES WITH DOWNLOAD LINKS */}
-                {assignment.files && assignment.files.length > 0 && (
-                  <div className="assignment-files">
-                    <h4>📎 Assignment Files:</h4>
-                    <div className="file-list">
-                      {assignment.files.map((file, index) => (
-                        <a 
-                          key={index}
-                          href={file.file_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="file-download-link"
-                          download
-                        >
-                          <FileText size={16} />
-                          <span>{file.original_name}</span>
-                          <small>({file.formatted_file_size})</small>
-                          <Download size={14} className="download-icon" />
-                        </a>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {assignment.my_submission && (
-                  <div className="submission-info">
-                    <p className="submitted-label">
-                      <CheckCircle size={16} />
-                      Submitted on {formatDate(assignment.my_submission.submitted_at)}
-                      {assignment.my_submission.is_late && ' (Late)'}
-                    </p>
-                    <p className="submission-count-info">
-                      Submission {assignment.my_submission.submission_count}/2
-                      {assignment.my_submission.submission_count >= 2 && ' - Max submissions reached'}
-                    </p>
-                    {assignment.my_submission.can_view_grade && (
-                      <div className="grade-display">
-                        <strong>Grade: </strong>
-                        {assignment.my_submission.score}/{assignment.max_score}
-                      </div>
-                    )}
-                  </div>
-                )}
               </div>
 
               <div className="assignment-actions">
@@ -417,7 +356,7 @@ const StudentAssignments = () => {
                     disabled={assignment.is_overdue}
                   >
                     <Upload size={16} />
-                    Submit Assignment
+                    Submit
                   </button>
                 ) : assignment.my_submission.can_resubmit ? (
                   <button
@@ -425,7 +364,7 @@ const StudentAssignments = () => {
                     className="update-btn"
                   >
                     <Upload size={16} />
-                    Update Submission ({assignment.my_submission.submission_count}/2)
+                    Update ({assignment.my_submission.submission_count}/2)
                   </button>
                 ) : (
                   <button
@@ -433,8 +372,7 @@ const StudentAssignments = () => {
                     disabled
                     title="Maximum submissions reached"
                   >
-                    <Upload size={16} />
-                    Max Submissions Reached
+                    Max Reached
                   </button>
                 )}
               </div>
@@ -541,6 +479,138 @@ const StudentAssignments = () => {
               >
                 {submitting ? 'Submitting...' : 'Submit Assignment'}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Details Modal */}
+      {showDetailsModal && detailsAssignment && (
+        <div className="modal-overlay" onClick={closeDetailsModal}>
+          <div className="modal-content details-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>Assignment Details</h2>
+              <button onClick={closeDetailsModal} className="close-btn">
+                <X size={24} />
+              </button>
+            </div>
+
+            <div className="modal-body">
+              <div className="details-section">
+                <h3>{detailsAssignment.title}</h3>
+                {getStatusBadge(detailsAssignment)}
+              </div>
+
+              <div className="details-meta">
+                <div className="meta-row">
+                  <span><FileText size={16} /> Subject:</span>
+                  <strong>{detailsAssignment.subject_name}</strong>
+                </div>
+                <div className="meta-row">
+                  <span>📚 Class:</span>
+                  <strong>{detailsAssignment.classroom_name}</strong>
+                </div>
+                <div className="meta-row">
+                  <span>👨‍🏫 Teacher:</span>
+                  <strong>{detailsAssignment.teacher_name}</strong>
+                </div>
+                <div className="meta-row">
+                  <span><Calendar size={16} /> Due Date:</span>
+                  <strong>{formatDate(detailsAssignment.due_date)}</strong>
+                </div>
+                {detailsAssignment.max_score && (
+                  <div className="meta-row">
+                    <span>Max Score:</span>
+                    <strong>{detailsAssignment.max_score} points</strong>
+                  </div>
+                )}
+              </div>
+
+              <div className="details-description">
+                <h4>Description</h4>
+                <p>{detailsAssignment.description}</p>
+              </div>
+
+              {detailsAssignment.files && detailsAssignment.files.length > 0 && (
+                <div className="details-files">
+                  <h4>📎 Assignment Files</h4>
+                  <div className="file-list">
+                    {detailsAssignment.files.map((file, index) => (
+                      <a
+                        key={index}
+                        href={file.file_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="file-download-link"
+                        download
+                      >
+                        <FileText size={16} />
+                        <span>{file.original_name}</span>
+                        <small>({file.formatted_file_size})</small>
+                        <Download size={14} className="download-icon" />
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {detailsAssignment.my_submission && (
+                <div className="details-submission">
+                  <h4>Your Submission</h4>
+                  <div className="submission-details">
+                    <p>
+                      <CheckCircle size={16} />
+                      Submitted on {formatDate(detailsAssignment.my_submission.submitted_at)}
+                      {detailsAssignment.my_submission.is_late && ' (Late)'}
+                    </p>
+                    <p>
+                      Submission Count: {detailsAssignment.my_submission.submission_count}/2
+                    </p>
+                    {detailsAssignment.my_submission.can_view_grade && (
+                      <div className="grade-display">
+                        <strong>Grade: </strong>
+                        {detailsAssignment.my_submission.score}/{detailsAssignment.max_score}
+                      </div>
+                    )}
+                    {detailsAssignment.my_submission.feedback && (
+                      <div className="feedback-section">
+                        <strong>Teacher Feedback:</strong>
+                        <p>{detailsAssignment.my_submission.feedback}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="modal-footer">
+              <button onClick={closeDetailsModal} className="cancel-btn">
+                Close
+              </button>
+              {!detailsAssignment.my_submission ? (
+                <button
+                  onClick={() => {
+                    closeDetailsModal();
+                    openSubmissionModal(detailsAssignment);
+                  }}
+                  className="submit-modal-btn"
+                  disabled={detailsAssignment.is_overdue}
+                >
+                  <Upload size={16} />
+                  Submit Assignment
+                </button>
+              ) : detailsAssignment.my_submission.can_resubmit && (
+                <button
+                  onClick={() => {
+                    closeDetailsModal();
+                    openSubmissionModal(detailsAssignment);
+                  }}
+                  className="submit-modal-btn"
+                >
+                  <Upload size={16} />
+                  Update Submission
+                </button>
+              )}
             </div>
           </div>
         </div>

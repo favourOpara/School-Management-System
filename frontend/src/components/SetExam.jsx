@@ -41,6 +41,7 @@ const SetExam = () => {
       imagePreview: null
     }
   ]);
+  const [bulkQuestionCount, setBulkQuestionCount] = useState('');
 
   useEffect(() => {
     fetchSessions();
@@ -215,6 +216,18 @@ const SetExam = () => {
 
   const handleAddQuestion = () => {
     setQuestions([...questions, getDefaultQuestionData('multiple_choice')]);
+  };
+
+  const handleBulkAddQuestions = () => {
+    const count = parseInt(bulkQuestionCount);
+    if (count && count > 0 && count <= 50) {
+      const newQuestions = [];
+      for (let i = 0; i < count; i++) {
+        newQuestions.push(getDefaultQuestionData('multiple_choice'));
+      }
+      setQuestions([...questions, ...newQuestions]);
+      setBulkQuestionCount('');
+    }
   };
 
   const handleRemoveQuestion = (index) => {
@@ -724,14 +737,36 @@ const SetExam = () => {
             <div className="set-exam-questions-section">
               <div className="set-exam-questions-header">
                 <h3>Questions</h3>
-                <button
-                  type="button"
-                  onClick={handleAddQuestion}
-                  className="set-exam-add-question-btn"
-                >
-                  <Plus size={16} />
-                  Add Question
-                </button>
+                <div className="question-actions-group">
+                  <button
+                    type="button"
+                    onClick={handleAddQuestion}
+                    className="set-exam-add-question-btn"
+                  >
+                    <Plus size={16} />
+                    Add 1
+                  </button>
+                  <div className="bulk-add-group">
+                    <input
+                      type="number"
+                      value={bulkQuestionCount}
+                      onChange={(e) => setBulkQuestionCount(e.target.value)}
+                      placeholder="10"
+                      min="1"
+                      max="50"
+                      className="bulk-question-input"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleBulkAddQuestions}
+                      className="set-exam-add-question-btn"
+                      disabled={!bulkQuestionCount || parseInt(bulkQuestionCount) <= 0 || parseInt(bulkQuestionCount) > 50}
+                    >
+                      <Plus size={16} />
+                      Add Multiple
+                    </button>
+                  </div>
+                </div>
               </div>
 
               {questions.map((question, index) => (

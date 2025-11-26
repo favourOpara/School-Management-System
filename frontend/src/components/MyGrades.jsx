@@ -1,13 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { BookOpen, Award, CheckCircle, Clock, ChevronDown, ChevronUp, RefreshCw } from 'lucide-react';
+import { BookOpen, Award, CheckCircle, Clock, RefreshCw } from 'lucide-react';
 import './MyGrades.css';
 
 const MyGrades = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [gradesData, setGradesData] = useState(null);
-  const [expandedSubject, setExpandedSubject] = useState(null);
-  
   // Filter states
   const [selectedYear, setSelectedYear] = useState('');
   const [selectedTerm, setSelectedTerm] = useState('');
@@ -64,23 +62,39 @@ const MyGrades = () => {
     }
   };
 
-  const toggleSubject = (subjectId) => {
-    setExpandedSubject(expandedSubject === subjectId ? null : subjectId);
-  };
-
   const getGradeColor = (percentage) => {
-    if (percentage >= 90) return '#4caf50';
-    if (percentage >= 80) return '#8bc34a';
-    if (percentage >= 70) return '#ffc107';
-    if (percentage >= 60) return '#ff9800';
+    if (!gradesData?.grading_scale) {
+      // Fallback if no scale data
+      if (percentage >= 90) return '#4caf50';
+      if (percentage >= 80) return '#8bc34a';
+      if (percentage >= 70) return '#ffc107';
+      if (percentage >= 60) return '#ff9800';
+      return '#f44336';
+    }
+
+    const scale = gradesData.grading_scale;
+    if (percentage >= scale.a_min) return '#4caf50';
+    if (percentage >= scale.b_min) return '#8bc34a';
+    if (percentage >= scale.c_min) return '#ffc107';
+    if (percentage >= scale.d_min) return '#ff9800';
     return '#f44336';
   };
 
   const getGradeLetter = (percentage) => {
-    if (percentage >= 90) return 'A';
-    if (percentage >= 80) return 'B';
-    if (percentage >= 70) return 'C';
-    if (percentage >= 60) return 'D';
+    if (!gradesData?.grading_scale) {
+      // Fallback if no scale data
+      if (percentage >= 90) return 'A';
+      if (percentage >= 80) return 'B';
+      if (percentage >= 70) return 'C';
+      if (percentage >= 60) return 'D';
+      return 'F';
+    }
+
+    const scale = gradesData.grading_scale;
+    if (percentage >= scale.a_min) return 'A';
+    if (percentage >= scale.b_min) return 'B';
+    if (percentage >= scale.c_min) return 'C';
+    if (percentage >= scale.d_min) return 'D';
     return 'F';
   };
 
@@ -111,7 +125,7 @@ const MyGrades = () => {
   return (
     <div className="my-grades-container">
       <div className="grades-header">
-        <h2>My Grades</h2>
+        <h2><Award size={28} /> Grade Check 📊</h2>
         <div className="grades-session-info">
           {gradesData && (
             <span className="session-badge">
@@ -200,397 +214,95 @@ const MyGrades = () => {
 
           <div className="subjects-grid">
             {gradesData.subjects.map(subject => {
-              const isExpanded = expandedSubject === subject.subject_id;
               const hasAssignments = subject.assignment_count > 0;
-              
+
+              // Calculate scores for display
+              const attendanceScore = subject.attendance_score || 0;
+              const assignmentScore = hasAssignments
+                ? ((subject.assignment_average / 100) * gradesData.grading_config.assignment_percentage).toFixed(1)
+                : 0;
+
+              let testScore = 0;
+              if (subject.manual_test_visible) {
+                testScore = subject.manual_test_score || 0;
+              } else if (subject.test_visible && subject.test_count > 0) {
+                testScore = ((subject.test_average / 100) * gradesData.grading_config.test_percentage).toFixed(1);
+              }
+
+              let examScore = 0;
+              if (subject.manual_exam_visible) {
+                examScore = subject.manual_exam_score || 0;
+              } else if (subject.exam_visible && subject.exam_count > 0) {
+                examScore = ((subject.exam_average / 100) * gradesData.grading_config.exam_percentage).toFixed(1);
+              }
+
+              const totalScore = (
+                parseFloat(attendanceScore) +
+                parseFloat(assignmentScore) +
+                parseFloat(testScore) +
+                parseFloat(examScore)
+              ).toFixed(1);
+
               return (
-                <div key={subject.subject_id} className="subject-card">
-                  <div className="subject-card-header">
-                    <div className="subject-info">
-                      <div className="subject-title">
-                        <BookOpen size={20} />
-                        <h3>{subject.subject_name}</h3>
-                      </div>
-                      <p className="subject-meta">
-                        {subject.teacher_name} • {subject.class_name}
-                        {subject.department && subject.department !== 'General' && (
-                          <span className="dept-badge">{subject.department}</span>
-                        )}
-                      </p>
+                <div key={subject.subject_id} className="subject-grade-tile">
+                  {/* Subject Title Header */}
+                  <div className="tile-header">
+                    <h3>{subject.subject_name}</h3>
+                    {subject.department && subject.department !== 'General' && (
+                      <span className="tile-dept-badge">{subject.department}</span>
+                    )}
+                  </div>
+
+                  {/* Teacher Info */}
+                  <div className="tile-teacher">
+                    {subject.teacher_name}
+                  </div>
+
+                  {/* Scores Table */}
+                  <div className="scores-table">
+                    <div className="score-row">
+                      <span className="score-label">Attendance</span>
+                      <span className="score-value">{attendanceScore}</span>
+                      <span className="score-max">/ {subject.attendance_max}</span>
+                    </div>
+
+                    <div className="score-row">
+                      <span className="score-label">Assignment</span>
+                      <span className="score-value">
+                        {hasAssignments ? assignmentScore : '-'}
+                      </span>
+                      <span className="score-max">/ {gradesData.grading_config.assignment_percentage}</span>
+                    </div>
+
+                    <div className="score-row">
+                      <span className="score-label">Test</span>
+                      <span className="score-value">
+                        {(subject.test_visible || subject.manual_test_visible) ? testScore : '-'}
+                      </span>
+                      <span className="score-max">/ {gradesData.grading_config.test_percentage}</span>
+                    </div>
+
+                    <div className="score-row">
+                      <span className="score-label">Exam</span>
+                      <span className="score-value">
+                        {(subject.exam_visible || subject.manual_exam_visible) ? examScore : '-'}
+                      </span>
+                      <span className="score-max">/ {gradesData.grading_config.exam_percentage}</span>
                     </div>
                   </div>
 
-                  <div className="subject-card-body">
-                    {/* Attendance Score */}
-                    <div className="grade-section">
-                      <div className="grade-header">
-                        <span className="grade-label">Attendance</span>
-                        <span className="grade-value">
-                          {subject.attendance_score}/{subject.attendance_max}
-                        </span>
-                      </div>
-                      <div className="progress-bar">
-                        <div 
-                          className="progress-fill"
-                          style={{
-                            width: `${subject.attendance_percentage}%`,
-                            backgroundColor: getGradeColor(subject.attendance_percentage)
-                          }}
-                        />
-                      </div>
-                      <div className="grade-footer">
-                        <span className="percentage">{subject.attendance_percentage}%</span>
-                        <span 
-                          className="letter-grade"
-                          style={{ color: getGradeColor(subject.attendance_percentage) }}
-                        >
-                          {getGradeLetter(subject.attendance_percentage)}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Assignment Grades */}
-                    <div className="grade-section">
-                      <div className="grade-header">
-                        <span className="grade-label">
-                          Assignments
-                          {hasAssignments && (
-                            <span className="assignment-count">
-                              ({subject.assignment_count} graded)
-                            </span>
-                          )}
-                        </span>
-                        {hasAssignments && (
-                          <span className="grade-value">
-                            Average: {subject.assignment_average}%
-                          </span>
-                        )}
-                      </div>
-
-                      {hasAssignments ? (
-                        <>
-                          <div className="progress-bar">
-                            <div 
-                              className="progress-fill"
-                              style={{
-                                width: `${subject.assignment_average}%`,
-                                backgroundColor: getGradeColor(subject.assignment_average)
-                              }}
-                            />
-                          </div>
-                          <div className="grade-footer">
-                            <span className="percentage">{subject.assignment_average}%</span>
-                            <span 
-                              className="letter-grade"
-                              style={{ color: getGradeColor(subject.assignment_average) }}
-                            >
-                              {getGradeLetter(subject.assignment_average)}
-                            </span>
-                          </div>
-
-                          {/* Expandable Assignment Details */}
-                          <button 
-                            className="expand-btn"
-                            onClick={() => toggleSubject(subject.subject_id)}
-                          >
-                            {isExpanded ? (
-                              <>
-                                <ChevronUp size={16} />
-                                Hide Details
-                              </>
-                            ) : (
-                              <>
-                                <ChevronDown size={16} />
-                                View Details
-                              </>
-                            )}
-                          </button>
-
-                          {isExpanded && (
-                            <div className="assignment-details">
-                              {subject.assignment_details.map((assignment, index) => (
-                                <div key={index} className="assignment-item">
-                                  <div className="assignment-header">
-                                    <h4>{assignment.assignment_title}</h4>
-                                    <span 
-                                      className="assignment-score"
-                                      style={{ color: getGradeColor(assignment.percentage) }}
-                                    >
-                                      {assignment.score}/{assignment.max_score}
-                                    </span>
-                                  </div>
-                                  <div className="assignment-meta">
-                                    <span className="percentage">
-                                      {assignment.percentage}%
-                                    </span>
-                                    <span className="graded-date">
-                                      Graded: {new Date(assignment.graded_at).toLocaleDateString()}
-                                    </span>
-                                  </div>
-                                  {assignment.feedback && (
-                                    <div className="assignment-feedback">
-                                      <strong>Feedback:</strong>
-                                      <p>{assignment.feedback}</p>
-                                    </div>
-                                  )}
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </>
-                      ) : (
-                        <p className="no-data">No assignment grades yet</p>
-                      )}
-                    </div>
-
-                    {/* Test Scores - Show manual scores or online scores */}
-                    {(subject.test_visible || subject.manual_test_visible) && (
-                      <div className="grade-section">
-                        <div className="grade-header">
-                          <span className="grade-label">
-                            Tests
-                            {subject.manual_test_visible && (
-                              <span className="assignment-count">(Manual Entry)</span>
-                            )}
-                            {!subject.manual_test_visible && subject.test_count > 0 && (
-                              <span className="assignment-count">
-                                ({subject.test_count} test{subject.test_count !== 1 ? 's' : ''})
-                              </span>
-                            )}
-                          </span>
-                          {subject.manual_test_visible ? (
-                            <span className="grade-value">
-                              {subject.manual_test_score}/{subject.manual_test_max}
-                            </span>
-                          ) : subject.test_count > 0 ? (
-                            <span className="grade-value">
-                              Average: {subject.test_average}%
-                            </span>
-                          ) : null}
-                        </div>
-
-                        {subject.manual_test_visible ? (
-                          <>
-                            <div className="progress-bar">
-                              <div
-                                className="progress-fill"
-                                style={{
-                                  width: `${(subject.manual_test_score / subject.manual_test_max) * 100}%`,
-                                  backgroundColor: getGradeColor((subject.manual_test_score / subject.manual_test_max) * 100)
-                                }}
-                              />
-                            </div>
-                            <div className="grade-footer">
-                              <span className="percentage">
-                                {((subject.manual_test_score / subject.manual_test_max) * 100).toFixed(2)}%
-                              </span>
-                              <span
-                                className="letter-grade"
-                                style={{ color: getGradeColor((subject.manual_test_score / subject.manual_test_max) * 100) }}
-                              >
-                                {getGradeLetter((subject.manual_test_score / subject.manual_test_max) * 100)}
-                              </span>
-                            </div>
-                          </>
-                        ) : subject.test_count > 0 ? (
-                          <>
-                            <div className="progress-bar">
-                              <div
-                                className="progress-fill"
-                                style={{
-                                  width: `${subject.test_average}%`,
-                                  backgroundColor: getGradeColor(subject.test_average)
-                                }}
-                              />
-                            </div>
-                            <div className="grade-footer">
-                              <span className="percentage">{subject.test_average}%</span>
-                              <span
-                                className="letter-grade"
-                                style={{ color: getGradeColor(subject.test_average) }}
-                              >
-                                {getGradeLetter(subject.test_average)}
-                              </span>
-                            </div>
-
-                            {/* Expandable Test Details */}
-                            <button
-                              className="expand-btn"
-                              onClick={() => toggleSubject('test_' + subject.subject_id)}
-                            >
-                              {expandedSubject === 'test_' + subject.subject_id ? (
-                                <>
-                                  <ChevronUp size={16} />
-                                  Hide Details
-                                </>
-                              ) : (
-                                <>
-                                  <ChevronDown size={16} />
-                                  View Details
-                                </>
-                              )}
-                            </button>
-
-                            {expandedSubject === 'test_' + subject.subject_id && (
-                              <div className="assignment-details">
-                                {subject.test_details.map((test, index) => (
-                                  <div key={index} className="assignment-item">
-                                    <div className="assignment-header">
-                                      <h4>{test.test_title}</h4>
-                                      <span
-                                        className="assignment-score"
-                                        style={{ color: getGradeColor(test.percentage) }}
-                                      >
-                                        {test.score}/{test.max_score}
-                                      </span>
-                                    </div>
-                                    <div className="assignment-meta">
-                                      <span className="test-type-badge">{test.test_type}</span>
-                                      <span className="percentage">
-                                        {test.percentage}%
-                                      </span>
-                                      {test.not_submitted && (
-                                        <span className="not-submitted-badge">Not submitted</span>
-                                      )}
-                                    </div>
-                                  </div>
-                                ))}
-                              </div>
-                            )}
-                          </>
-                        ) : (
-                          <p className="no-data">No test scores yet</p>
-                        )}
-                      </div>
-                    )}
-
-                    {/* Exam Scores - Show manual scores or online scores */}
-                    {(subject.exam_visible || subject.manual_exam_visible) && (
-                      <div className="grade-section">
-                        <div className="grade-header">
-                          <span className="grade-label">
-                            Exams
-                            {subject.manual_exam_visible && (
-                              <span className="assignment-count">(Manual Entry)</span>
-                            )}
-                            {!subject.manual_exam_visible && subject.exam_count > 0 && (
-                              <span className="assignment-count">
-                                ({subject.exam_count} exam{subject.exam_count !== 1 ? 's' : ''})
-                              </span>
-                            )}
-                          </span>
-                          {subject.manual_exam_visible ? (
-                            <span className="grade-value">
-                              {subject.manual_exam_score}/{subject.manual_exam_max}
-                            </span>
-                          ) : subject.exam_count > 0 ? (
-                            <span className="grade-value">
-                              Average: {subject.exam_average}%
-                            </span>
-                          ) : null}
-                        </div>
-
-                        {subject.manual_exam_visible ? (
-                          <>
-                            <div className="progress-bar">
-                              <div
-                                className="progress-fill"
-                                style={{
-                                  width: `${(subject.manual_exam_score / subject.manual_exam_max) * 100}%`,
-                                  backgroundColor: getGradeColor((subject.manual_exam_score / subject.manual_exam_max) * 100)
-                                }}
-                              />
-                            </div>
-                            <div className="grade-footer">
-                              <span className="percentage">
-                                {((subject.manual_exam_score / subject.manual_exam_max) * 100).toFixed(2)}%
-                              </span>
-                              <span
-                                className="letter-grade"
-                                style={{ color: getGradeColor((subject.manual_exam_score / subject.manual_exam_max) * 100) }}
-                              >
-                                {getGradeLetter((subject.manual_exam_score / subject.manual_exam_max) * 100)}
-                              </span>
-                            </div>
-                          </>
-                        ) : subject.exam_count > 0 ? (
-                          <>
-                            <div className="progress-bar">
-                              <div
-                                className="progress-fill"
-                                style={{
-                                  width: `${subject.exam_average}%`,
-                                  backgroundColor: getGradeColor(subject.exam_average)
-                                }}
-                              />
-                            </div>
-                            <div className="grade-footer">
-                              <span className="percentage">{subject.exam_average}%</span>
-                              <span
-                                className="letter-grade"
-                                style={{ color: getGradeColor(subject.exam_average) }}
-                              >
-                                {getGradeLetter(subject.exam_average)}
-                              </span>
-                            </div>
-
-                            {/* Expandable Exam Details */}
-                            <button
-                              className="expand-btn"
-                              onClick={() => toggleSubject('exam_' + subject.subject_id)}
-                            >
-                              {expandedSubject === 'exam_' + subject.subject_id ? (
-                                <>
-                                  <ChevronUp size={16} />
-                                  Hide Details
-                                </>
-                              ) : (
-                                <>
-                                  <ChevronDown size={16} />
-                                  View Details
-                                </>
-                              )}
-                            </button>
-
-                            {expandedSubject === 'exam_' + subject.subject_id && (
-                              <div className="assignment-details">
-                                {subject.exam_details.map((exam, index) => (
-                                  <div key={index} className="assignment-item">
-                                    <div className="assignment-header">
-                                      <h4>{exam.exam_title}</h4>
-                                      <span
-                                        className="assignment-score"
-                                        style={{ color: getGradeColor(exam.percentage) }}
-                                      >
-                                        {exam.score}/{exam.max_score}
-                                      </span>
-                                    </div>
-                                    <div className="assignment-meta">
-                                      <span className="percentage">
-                                        {exam.percentage}%
-                                      </span>
-                                      {exam.not_submitted && (
-                                        <span className="not-submitted-badge">Not submitted</span>
-                                      )}
-                                    </div>
-                                  </div>
-                                ))}
-                              </div>
-                            )}
-                          </>
-                        ) : (
-                          <p className="no-data">No exam scores yet</p>
-                        )}
-                      </div>
-                    )}
-
-                    {/* Hidden Grades Notice - only show if no tests/exams released */}
-                    {!subject.test_visible && !subject.exam_visible && !subject.manual_test_visible && !subject.manual_exam_visible && (
-                      <div className="hidden-grades-notice">
-                        <Clock size={16} />
-                        <span>Test and exam results will be released by admin</span>
-                      </div>
-                    )}
+                  {/* Total Score */}
+                  <div className="tile-total">
+                    <span className="total-label">Total</span>
+                    <span
+                      className="total-value"
+                      style={{ color: getGradeColor(totalScore) }}
+                    >
+                      {totalScore}
+                    </span>
+                    <span className="total-grade">
+                      {getGradeLetter(totalScore)}
+                    </span>
                   </div>
                 </div>
               );

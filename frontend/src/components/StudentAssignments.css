@@ -689,3 +689,143 @@
     gap: 0.5rem;
   }
 }
+
+/* Compact Assignment Card */
+.assignment-card.compact {
+  padding: 1rem 1.25rem;
+}
+
+.assignment-card.compact .assignment-header {
+  margin-bottom: 0.75rem;
+}
+
+.assignment-card.compact .assignment-title-section h3 {
+  font-size: 1rem;
+  margin-bottom: 0.25rem;
+}
+
+.assignment-card.compact .assignment-meta {
+  gap: 1rem;
+}
+
+.assignment-card.compact .assignment-actions {
+  margin-top: 0;
+  padding-top: 0.75rem;
+  border-top: 1px solid #eee;
+}
+
+/* Details Modal */
+.details-modal {
+  max-width: 700px;
+}
+
+.details-section {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.details-section h3 {
+  margin: 0;
+  font-size: 1.3rem;
+  color: #1a1a1a;
+}
+
+.details-meta {
+  background: #f8f9fa;
+  padding: 1rem;
+  border-radius: 8px;
+  margin-bottom: 1.5rem;
+}
+
+.meta-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.meta-row:last-child {
+  border-bottom: none;
+}
+
+.meta-row span {
+  color: #666;
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  min-width: 120px;
+}
+
+.meta-row strong {
+  color: #333;
+}
+
+.details-description {
+  margin-bottom: 1.5rem;
+}
+
+.details-description h4 {
+  margin: 0 0 0.5rem 0;
+  color: #333;
+  font-size: 1rem;
+}
+
+.details-description p {
+  margin: 0;
+  color: #555;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+
+.details-files {
+  margin-bottom: 1.5rem;
+}
+
+.details-files h4 {
+  margin: 0 0 0.75rem 0;
+  color: #333;
+  font-size: 1rem;
+}
+
+.details-submission {
+  background: #e8f5e9;
+  padding: 1rem;
+  border-radius: 8px;
+  border: 1px solid #c8e6c9;
+}
+
+.details-submission h4 {
+  margin: 0 0 0.75rem 0;
+  color: #2e7d32;
+  font-size: 1rem;
+}
+
+.submission-details p {
+  margin: 0.5rem 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #555;
+}
+
+.feedback-section {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid #c8e6c9;
+}
+
+.feedback-section strong {
+  color: #2e7d32;
+  display: block;
+  margin-bottom: 0.5rem;
+}
+
+.feedback-section p {
+  margin: 0;
+  color: #555;
+  line-height: 1.5;
+}

@@ -179,8 +179,8 @@ const ManualGrading = () => {
   }
 
   return (
-    <div className="manual-grading-container">
-      <div className="manual-grading-header">
+    <div className="mg-main-wrapper">
+      <div className="mg-page-header">
         <h2>Manual Grading</h2>
         <p>Enter test and exam scores for students when no online assessments are set</p>
       </div>
@@ -201,8 +201,7 @@ const ManualGrading = () => {
           ) : (
             subjects.map(subject => (
               <div key={subject.id} className="subject-card" onClick={() => handleSubjectSelect(subject)}>
-                <h3>{subject.name}</h3>
-                <p className="subject-class">{subject.class_name}</p>
+                <h3 className="subject-name">{subject.name}</h3>
                 <p className="subject-session">{subject.academic_year} - {subject.term}</p>
                 <div className="grade-status">
                   {subject.can_grade_test ? (
@@ -221,7 +220,7 @@ const ManualGrading = () => {
           )}
         </div>
       ) : (
-        <div className="grading-section">
+        <div className="mg-grading-container">
           <div className="grading-controls">
             <button className="back-btn" onClick={() => setSelectedSubject(null)}>
               ← Back to Subjects

@@ -3,17 +3,33 @@ from .models import (
     Class, ClassSession, Subject, Topic, SubjectContent, ContentFile,
     StudentContentView, AssignmentSubmission, SubmissionFile,
     Assessment, Question, QuestionOption, MatchingPair,
-    AssessmentSubmission, StudentAnswer
+    AssessmentSubmission, StudentAnswer, Department
 )
 from users.models import CustomUser
 import re
 from django.utils import timezone
 
 
+class DepartmentSerializer(serializers.ModelSerializer):
+    class_count = serializers.SerializerMethodField()
+    classes = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Department
+        fields = ['id', 'name', 'description', 'created_at', 'class_count', 'classes']
+
+    def get_class_count(self, obj):
+        return obj.classes.count()
+
+    def get_classes(self, obj):
+        # Simple list of class names
+        return [{'id': cls.id, 'name': cls.name} for cls in obj.classes.all()]
+
+
 class ClassSerializer(serializers.ModelSerializer):
     class Meta:
         model = Class
-        fields = ['id', 'name', 'description']
+        fields = ['id', 'name', 'description', 'has_departments']
 
 
 class ClassSessionSerializer(serializers.ModelSerializer):

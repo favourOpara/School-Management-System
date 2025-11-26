@@ -28,11 +28,11 @@ const HomePage = () => {
       // Store tokens
       localStorage.setItem('accessToken', data.access);
       localStorage.setItem('refreshToken', data.refresh);
-      
+
       // Store user info for easy access
       localStorage.setItem('userRole', data.role);
       localStorage.setItem('userId', data.user_id);
-      localStorage.setItem('userName', data.full_name);
+      localStorage.setItem('userName', data.username);
       
       // Navigate based on user role
       switch (data.role) {

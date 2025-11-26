@@ -139,35 +139,37 @@ class ActivityLog(models.Model):
     def create_notification_status_records(self):
         """
         Create NotificationStatus records for users who should see this notification
+        Creates notifications for both students AND their parents
         """
         if not self.is_notification or not self.subject:
             return
-        
+
         from academics.models import StudentSession
-        
+
         # Get all students enrolled in this subject's class session
         student_sessions = StudentSession.objects.filter(
             class_session=self.subject.class_session,
             is_active=True
         ).select_related('student')
-        
+
         # Filter students by department for SS classes with specific departments
         relevant_students = []
         for student_session in student_sessions:
             student = student_session.student
-            
+
             # If it's SS class and subject has specific department, filter by student department
-            if (self.subject.class_session.classroom and 
-                self.subject.class_session.classroom.name.startswith('S.S.S.') and 
-                self.subject.department != 'General' and 
+            if (self.subject.class_session.classroom and
+                self.subject.class_session.classroom.name.startswith('S.S.S.') and
+                self.subject.department != 'General' and
                 student.department != self.subject.department):
                 continue  # Skip students not in this department
-            
+
             relevant_students.append(student)
-        
-        # Bulk create notification status records
+
+        # Bulk create notification status records for students and their parents
         notification_statuses = []
         for student in relevant_students:
+            # Add notification for student
             notification_statuses.append(
                 NotificationStatus(
                     user=student,
@@ -175,7 +177,18 @@ class ActivityLog(models.Model):
                     is_read=False
                 )
             )
-        
+
+            # Add notifications for all parents of this student
+            parents = student.parents.all()
+            for parent in parents:
+                notification_statuses.append(
+                    NotificationStatus(
+                        user=parent,
+                        activity_log=self,
+                        is_read=False
+                    )
+                )
+
         if notification_statuses:
             NotificationStatus.objects.bulk_create(
                 notification_statuses,
@@ -254,6 +267,9 @@ class Notification(models.Model):
         ('report_release', 'Report Release'),
         ('incomplete_grades', 'Incomplete Grades'),
         ('fee_reminder', 'Fee Reminder'),
+        ('teacher_grading_reminder', 'Teacher Grading Reminder'),
+        ('announcement', 'Announcement'),
+        ('graduation', 'Graduation'),
         ('general', 'General'),
         ('system', 'System'),
     ]

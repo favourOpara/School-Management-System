@@ -782,7 +782,7 @@
 
 @media (max-width: 480px) {
   .parent-grade-container {
-    padding: 90px 12px 12px 12px;
+    padding: 0 12px 12px 12px;
   }
 
   .download-report-btn {

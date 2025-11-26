@@ -55,12 +55,30 @@ const DashboardFeesCard = () => {
   useEffect(() => {
     const fetchYears = async () => {
       try {
+        // First, get the current active session
+        const sessionInfoRes = await axios.get('http://127.0.0.1:8000/api/schooladmin/session/info/', { headers });
+        const currentYear = sessionInfoRes.data.academic_year;
+        const currentTerm = sessionInfoRes.data.current_term;
+
+        // Then get all available sessions
         const res = await axios.get('http://127.0.0.1:8000/api/academics/sessions/', { headers });
         if (Array.isArray(res.data)) {
           const years = [...new Set(res.data.map(s => s.academic_year))].sort();
           const options = years.map(y => ({ value: y, label: y }));
           setAcademicYears(options);
-          if (options.length > 0) setSelectedYear(options[options.length - 1]);
+
+          // Set the current active session as default
+          const currentYearOption = options.find(opt => opt.value === currentYear);
+          if (currentYearOption) {
+            setSelectedYear(currentYearOption);
+            const currentTermOption = termOptions.find(opt => opt.value === currentTerm);
+            if (currentTermOption) {
+              setSelectedTerm(currentTermOption);
+            }
+          } else if (options.length > 0) {
+            // Fallback to the last year if current year is not found
+            setSelectedYear(options[options.length - 1]);
+          }
         }
       } catch (err) {
         console.error('Error fetching academic years:', err);

@@ -973,7 +973,7 @@ def parent_grade_report(request):
     academic_year = request.query_params.get('academic_year')
     term = request.query_params.get('term')
 
-    # If not provided, get child's current session
+    # If not provided, default to child's current ACTIVE session
     if not academic_year or not term:
         current_session = StudentSession.objects.filter(
             student=child,
@@ -984,17 +984,27 @@ def parent_grade_report(request):
             academic_year = current_session.class_session.academic_year
             term = current_session.class_session.term
         else:
-            return Response(
-                {"detail": "No active session found for student"},
-                status=status.HTTP_404_NOT_FOUND
-            )
+            # If no active session, fall back to most recent session
+            current_session = StudentSession.objects.filter(
+                student=child
+            ).select_related('class_session').order_by(
+                '-class_session__academic_year', '-class_session__term'
+            ).first()
 
-    # Get the student's class session for this academic year and term
+            if current_session:
+                academic_year = current_session.class_session.academic_year
+                term = current_session.class_session.term
+            else:
+                return Response(
+                    {"detail": "No session found for student"},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+
+    # Get the student's class session for this academic year and term (allow historical)
     student_session = StudentSession.objects.filter(
         student=child,
         class_session__academic_year=academic_year,
-        class_session__term=term,
-        is_active=True
+        class_session__term=term
     ).select_related('class_session__classroom').first()
 
     if not student_session:
@@ -1005,12 +1015,11 @@ def parent_grade_report(request):
 
     class_session = student_session.class_session
 
-    # Get grading configuration
+    # Get grading configuration (allow historical access)
     try:
         grading_config = GradingConfiguration.objects.get(
             academic_year=academic_year,
-            term=term,
-            is_active=True
+            term=term
         )
     except GradingConfiguration.DoesNotExist:
         return Response(
@@ -1294,7 +1303,7 @@ def student_grade_report(request):
     academic_year = request.query_params.get('academic_year')
     term = request.query_params.get('term')
 
-    # If not provided, get student's current session
+    # If not provided, default to student's current ACTIVE session
     if not academic_year or not term:
         current_session = StudentSession.objects.filter(
             student=student,
@@ -1305,17 +1314,27 @@ def student_grade_report(request):
             academic_year = current_session.class_session.academic_year
             term = current_session.class_session.term
         else:
-            return Response(
-                {"detail": "No active session found for student"},
-                status=status.HTTP_404_NOT_FOUND
-            )
+            # If no active session, fall back to most recent session
+            current_session = StudentSession.objects.filter(
+                student=student
+            ).select_related('class_session').order_by(
+                '-class_session__academic_year', '-class_session__term'
+            ).first()
 
-    # Get the student's class session for this academic year and term
+            if current_session:
+                academic_year = current_session.class_session.academic_year
+                term = current_session.class_session.term
+            else:
+                return Response(
+                    {"detail": "No session found for student"},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+
+    # Get the student's class session for this academic year and term (allow historical)
     student_session = StudentSession.objects.filter(
         student=student,
         class_session__academic_year=academic_year,
-        class_session__term=term,
-        is_active=True
+        class_session__term=term
     ).select_related('class_session__classroom').first()
 
     if not student_session:
@@ -1331,11 +1350,12 @@ def student_grade_report(request):
 
     # Check if report has been released
     if not student_session.report_sent:
-        # Get all available sessions for filter options
+        # Get all available sessions for filter options (include historical)
         all_sessions = StudentSession.objects.filter(
-            student=student,
-            is_active=True
-        ).select_related('class_session')
+            student=student
+        ).select_related('class_session').order_by(
+            '-class_session__academic_year', '-class_session__term'
+        )
         available_sessions = [
             {
                 'academic_year': ss.class_session.academic_year,
@@ -1360,11 +1380,12 @@ def student_grade_report(request):
     if fee_records.exists():
         for fee_record in fee_records:
             if fee_record.payment_status != 'PAID':
-                # Get all available sessions for filter options
+                # Get all available sessions for filter options (include historical)
                 all_sessions = StudentSession.objects.filter(
-                    student=student,
-                    is_active=True
-                ).select_related('class_session')
+                    student=student
+                ).select_related('class_session').order_by(
+                    '-class_session__academic_year', '-class_session__term'
+                )
                 available_sessions = [
                     {
                         'academic_year': ss.class_session.academic_year,
@@ -1382,9 +1403,10 @@ def student_grade_report(request):
     else:
         # No fee records - fees not set up
         all_sessions = StudentSession.objects.filter(
-            student=student,
-            is_active=True
-        ).select_related('class_session')
+            student=student
+        ).select_related('class_session').order_by(
+            '-class_session__academic_year', '-class_session__term'
+        )
         available_sessions = [
             {
                 'academic_year': ss.class_session.academic_year,
@@ -1400,12 +1422,11 @@ def student_grade_report(request):
             status=status.HTTP_403_FORBIDDEN
         )
 
-    # Get grading configuration
+    # Get grading configuration (allow historical access)
     try:
         grading_config = GradingConfiguration.objects.get(
             academic_year=academic_year,
-            term=term,
-            is_active=True
+            term=term
         )
     except GradingConfiguration.DoesNotExist:
         return Response(
@@ -1729,4 +1750,163 @@ def get_current_user_profile(request):
         'role': user.role,
         'avatar_url': avatar_url,
         'profile_picture_url': profile_picture_url,  # Admin-controlled, for reports
+    }, status=status.HTTP_200_OK)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated, IsAdminRole])
+def change_admin_username(request):
+    """Allow admin to change their own username"""
+    user = request.user
+    new_username = request.data.get('new_username')
+    current_password = request.data.get('current_password')
+
+    if not new_username or not current_password:
+        return Response(
+            {'detail': 'Both new_username and current_password are required'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    # Verify current password
+    if not user.check_password(current_password):
+        return Response(
+            {'detail': 'Current password is incorrect'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    # Check if new username already exists
+    if CustomUser.objects.filter(username=new_username).exclude(id=user.id).exists():
+        return Response(
+            {'detail': 'Username already exists'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    # Validate username (alphanumeric, underscores only)
+    if not new_username.replace('_', '').isalnum():
+        return Response(
+            {'detail': 'Username can only contain letters, numbers, and underscores'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    # Update username
+    old_username = user.username
+    user.username = new_username
+    user.save()
+
+    return Response({
+        'detail': 'Username updated successfully',
+        'old_username': old_username,
+        'new_username': new_username
+    }, status=status.HTTP_200_OK)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated, IsAdminRole])
+def change_admin_password(request):
+    """Allow admin to change their own password"""
+    user = request.user
+    current_password = request.data.get('current_password')
+    new_password = request.data.get('new_password')
+    confirm_password = request.data.get('confirm_password')
+
+    if not current_password or not new_password or not confirm_password:
+        return Response(
+            {'detail': 'All fields (current_password, new_password, confirm_password) are required'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    # Verify current password
+    if not user.check_password(current_password):
+        return Response(
+            {'detail': 'Current password is incorrect'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    # Check if new passwords match
+    if new_password != confirm_password:
+        return Response(
+            {'detail': 'New passwords do not match'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    # Validate password strength
+    if len(new_password) < 8:
+        return Response(
+            {'detail': 'Password must be at least 8 characters long'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    # Check for at least one uppercase, one lowercase, and one number
+    has_upper = any(c.isupper() for c in new_password)
+    has_lower = any(c.islower() for c in new_password)
+    has_digit = any(c.isdigit() for c in new_password)
+
+    if not (has_upper and has_lower and has_digit):
+        return Response(
+            {'detail': 'Password must contain at least one uppercase letter, one lowercase letter, and one number'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    # Update password
+    user.set_password(new_password)
+    user.save()
+
+    return Response({
+        'detail': 'Password updated successfully. Please login again with your new password.'
+    }, status=status.HTTP_200_OK)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def change_password(request):
+    """Allow any authenticated user (student, parent, teacher) to change their own password"""
+    user = request.user
+    current_password = request.data.get('current_password')
+    new_password = request.data.get('new_password')
+    confirm_password = request.data.get('confirm_password')
+
+    if not current_password or not new_password or not confirm_password:
+        return Response(
+            {'detail': 'All fields (current_password, new_password, confirm_password) are required'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    # Verify current password
+    if not user.check_password(current_password):
+        return Response(
+            {'detail': 'Current password is incorrect'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    # Check if new passwords match
+    if new_password != confirm_password:
+        return Response(
+            {'detail': 'New passwords do not match'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    # Validate password strength
+    if len(new_password) < 8:
+        return Response(
+            {'detail': 'Password must be at least 8 characters long'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    # Check for at least one uppercase, one lowercase, and one number
+    has_upper = any(c.isupper() for c in new_password)
+    has_lower = any(c.islower() for c in new_password)
+    has_digit = any(c.isdigit() for c in new_password)
+
+    if not (has_upper and has_lower and has_digit):
+        return Response(
+            {'detail': 'Password must contain at least one uppercase letter, one lowercase letter, and one number'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    # Update password
+    user.set_password(new_password)
+    user.save()
+
+    return Response({
+        'detail': 'Password updated successfully. Please login again with your new password.'
     }, status=status.HTTP_200_OK)

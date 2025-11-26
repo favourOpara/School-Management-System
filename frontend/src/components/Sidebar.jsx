@@ -4,7 +4,7 @@ import {
   Menu, X,
   User, LayoutDashboard, Users, BookOpen,
   LogOut, Settings, Shield, PlusCircle, Eye, Book,
-  ClipboardList, CalendarCheck, DollarSign, BarChart3
+  ClipboardList, CalendarCheck, DollarSign, BarChart3, FileText, Megaphone
 } from 'lucide-react';
 import './Sidebar.css';
 
@@ -44,20 +44,10 @@ const Sidebar = forwardRef(({ activeTab, setActiveTab }, ref) => {
 
         <nav className="sidebar-nav">
           <ul className={openDropdown ? 'collapsed' : ''}>
-            <li onClick={() => handleDropdownToggle('account')}>
-              <User />
-              <span>Account</span>
+            <li onClick={() => handleTabClick('settings')}>
+              <Settings />
+              <span>Settings</span>
             </li>
-            {openDropdown === 'account' && (
-              <ul className="sidebar-submenu">
-                <li onClick={() => handleTabClick('profile')}>
-                  <Shield /><span>Profile</span>
-                </li>
-                <li onClick={() => handleTabClick('settings')}>
-                  <Settings /><span>Settings</span>
-                </li>
-              </ul>
-            )}
 
             <li onClick={() => handleDropdownToggle('dashboard')}>
               <LayoutDashboard />
@@ -140,6 +130,9 @@ const Sidebar = forwardRef(({ activeTab, setActiveTab }, ref) => {
                 <li onClick={() => handleTabClick('fees')}>
                   <DollarSign /><span>Fees</span>
                 </li>
+                <li onClick={() => handleTabClick('fee-receipts')}>
+                  <FileText /><span>Fee Receipts</span>
+                </li>
                 <li onClick={() => handleTabClick('results')}>
                   <BookOpen /><span>Results</span>
                 </li>
@@ -153,6 +146,12 @@ const Sidebar = forwardRef(({ activeTab, setActiveTab }, ref) => {
             <li onClick={() => handleTabClick('mark-attendance')}>
               <CalendarCheck />
               <span>Mark Attendance</span>
+            </li>
+
+            {/* ANNOUNCEMENTS SECTION */}
+            <li onClick={() => handleTabClick('announcements')}>
+              <Megaphone />
+              <span>Announcements</span>
             </li>
           </ul>
         </nav>

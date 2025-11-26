@@ -136,6 +136,9 @@ class FeeStudentsView(APIView):
 @api_view(['PATCH'])
 @permission_classes([IsAuthenticated, IsAdminRole])
 def update_fee_payment(request, record_id):
+    from schooladmin.models import FeePaymentHistory
+    from decimal import Decimal
+
     try:
         rec = StudentFeeRecord.objects.get(id=record_id)
     except StudentFeeRecord.DoesNotExist:
@@ -148,17 +151,166 @@ def update_fee_payment(request, record_id):
                         status=status.HTTP_400_BAD_REQUEST)
 
     try:
-        amt = float(amt)
-    except ValueError:
+        amt = Decimal(str(amt))
+    except (ValueError, TypeError):
         return Response({"detail": "amount_paid must be a number."},
                         status=status.HTTP_400_BAD_REQUEST)
 
+    # Store previous values for history
+    previous_total = rec.amount_paid
+    fee_amount = rec.fee_structure.amount
+    previous_balance = fee_amount - previous_total
+    new_balance = fee_amount - amt
+
+    # Only create history if amount changed
+    if amt != previous_total:
+        payment_amount = amt - previous_total
+        transaction_type = 'payment' if payment_amount > 0 else 'adjustment'
+
+        # Create payment history record
+        FeePaymentHistory.objects.create(
+            fee_record=rec,
+            transaction_type=transaction_type,
+            amount=abs(payment_amount),
+            previous_total=previous_total,
+            new_total=amt,
+            balance_before=previous_balance,
+            balance_after=new_balance,
+            payment_method=request.data.get('payment_method', ''),
+            transaction_reference=request.data.get('transaction_reference', ''),
+            remarks=request.data.get('remarks', ''),
+            recorded_by=request.user
+        )
+
     rec.amount_paid = amt
-    rec.payment_status = 'PAID' if amt >= rec.fee_structure.amount else 'UNPAID'
+    rec.payment_status = 'PAID' if amt >= fee_amount else ('PARTIAL' if amt > 0 else 'UNPAID')
     rec.save(update_fields=['amount_paid', 'payment_status'])
 
     serializer = StudentFeeRecordSerializer(rec)
     return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated, IsAdminRole])
+def get_fee_payment_history(request, record_id):
+    """
+    Get payment history for a specific fee record
+    """
+    from schooladmin.models import FeePaymentHistory
+
+    try:
+        rec = StudentFeeRecord.objects.select_related(
+            'student', 'fee_structure'
+        ).get(id=record_id)
+    except StudentFeeRecord.DoesNotExist:
+        return Response(
+            {"detail": "Fee record not found."},
+            status=status.HTTP_404_NOT_FOUND
+        )
+
+    # Get payment history
+    history = FeePaymentHistory.objects.filter(
+        fee_record=rec
+    ).select_related('recorded_by').order_by('-transaction_date')
+
+    history_data = [{
+        'transaction_type': h.transaction_type,
+        'amount': float(h.amount),
+        'previous_total': float(h.previous_total),
+        'new_total': float(h.new_total),
+        'balance_before': float(h.balance_before),
+        'balance_after': float(h.balance_after),
+        'payment_method': h.payment_method,
+        'transaction_reference': h.transaction_reference,
+        'remarks': h.remarks,
+        'recorded_by': f"{h.recorded_by.first_name} {h.recorded_by.last_name}" if h.recorded_by else 'System',
+        'transaction_date': h.transaction_date.isoformat()
+    } for h in history]
+
+    return Response({
+        'student_name': f"{rec.student.first_name} {rec.student.last_name}",
+        'fee_name': rec.fee_structure.name,
+        'total_fee': float(rec.fee_structure.amount),
+        'amount_paid': float(rec.amount_paid),
+        'balance': float(rec.fee_structure.amount - rec.amount_paid),
+        'payment_status': rec.payment_status,
+        'history': history_data
+    })
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated, IsAdminRole])
+def generate_fee_receipt(request, record_id):
+    """
+    Generate and send fee receipt to parent
+    """
+    from schooladmin.models import FeeReceipt, FeePaymentHistory
+    from logs.models import Notification
+    from datetime import datetime
+    import random
+    import string
+
+    try:
+        rec = StudentFeeRecord.objects.select_related(
+            'student', 'fee_structure'
+        ).get(id=record_id)
+    except StudentFeeRecord.DoesNotExist:
+        return Response(
+            {"detail": "Fee record not found."},
+            status=status.HTTP_404_NOT_FOUND
+        )
+
+    # Generate unique receipt number
+    timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
+    random_suffix = ''.join(random.choices(string.digits, k=4))
+    receipt_number = f"RCT-{timestamp}-{random_suffix}"
+
+    # Get remarks from request
+    remarks = request.data.get('remarks', '')
+
+    # Create receipt
+    receipt = FeeReceipt.objects.create(
+        student=rec.student,
+        receipt_number=receipt_number,
+        academic_year=rec.fee_structure.academic_year,
+        term=rec.fee_structure.term,
+        total_fees=rec.fee_structure.amount,
+        amount_paid=rec.amount_paid,
+        balance=rec.fee_structure.amount - rec.amount_paid,
+        status='paid' if rec.amount_paid >= rec.fee_structure.amount else ('partial' if rec.amount_paid > 0 else 'pending'),
+        remarks=remarks,
+        issued_by=request.user
+    )
+
+    # Get parent(s)
+    parents = rec.student.parents.all()
+
+    # Send notification to parent(s)
+    for parent in parents:
+        Notification.objects.create(
+            recipient=parent,
+            notification_type='fee_receipt',
+            title='New Fee Receipt',
+            message=f"A new fee receipt (#{receipt.receipt_number}) has been issued for {rec.student.first_name} {rec.student.last_name}. Total: ₦{rec.fee_structure.amount}, Paid: ₦{rec.amount_paid}, Balance: ₦{receipt.balance}",
+            priority='normal',
+            extra_data={
+                'receipt_id': receipt.id,
+                'student_name': f"{rec.student.first_name} {rec.student.last_name}",
+                'receipt_number': receipt.receipt_number
+            }
+        )
+
+    # Mark notification as sent
+    receipt.notification_sent = True
+    receipt.notification_sent_at = datetime.now()
+    receipt.save()
+
+    return Response({
+        'success': True,
+        'receipt_id': receipt.id,
+        'receipt_number': receipt.receipt_number,
+        'message': f'Receipt generated and sent to {parents.count()} parent(s)'
+    }, status=status.HTTP_201_CREATED)
 
 
 @api_view(['GET'])
@@ -174,13 +326,19 @@ def fee_dashboard_view(request):
     response_data = []
 
     for fee in fees:
-        students = CustomUser.objects.filter(role='student', classroom__in=fee.classes.all())
+        # Get all student sessions for the classes in this fee structure
+        # and the specified academic year and term (including historic data)
+        student_sessions = StudentSession.objects.filter(
+            class_session__classroom__in=fee.classes.all(),
+            class_session__academic_year=academic_year,
+            class_session__term=term
+        ).select_related('student', 'class_session__classroom')
+
         grouped = {}
 
-        for student in students:
-            cls = student.classroom
-            if not cls:
-                continue
+        for student_session in student_sessions:
+            student = student_session.student
+            cls = student_session.class_session.classroom
 
             cid = cls.id
             cname = cls.name
@@ -213,7 +371,7 @@ def fee_dashboard_view(request):
                 "student_id": student.id,
                 "full_name": f"{student.first_name} {student.last_name}",
                 "username": student.username,
-                "academic_year": student.academic_year,
+                "academic_year": academic_year,
                 "fee_name": fee.name,
                 "fee_amount": fee.amount,
                 "amount_paid": paid_amt,
@@ -247,20 +405,26 @@ class GradingScaleDetailView(generics.RetrieveUpdateDestroyAPIView):
 
 
 class GradingConfigurationListCreateView(generics.ListCreateAPIView):
-    queryset = GradingConfiguration.objects.filter(is_active=True).order_by('-academic_year', 'term')
+    queryset = GradingConfiguration.objects.all().order_by('-academic_year', 'term')
     serializer_class = GradingConfigurationSerializer
     permission_classes = [IsAuthenticated, IsAdminRole]
-    
+
     def get_queryset(self):
         queryset = super().get_queryset()
         academic_year = self.request.query_params.get('academic_year')
         term = self.request.query_params.get('term')
-        
+        include_inactive = self.request.query_params.get('include_inactive', 'true').lower() == 'true'
+
+        # By default, show all configurations (active and inactive) for historical access
+        # Only filter by is_active if explicitly requested
+        if not include_inactive:
+            queryset = queryset.filter(is_active=True)
+
         if academic_year:
             queryset = queryset.filter(academic_year=academic_year)
         if term:
             queryset = queryset.filter(term=term)
-        
+
         return queryset
 
 
@@ -566,7 +730,6 @@ def get_subjects_by_session(request):
         # Base query for students in this class session
         student_query = StudentSession.objects.filter(
             class_session=class_session,
-            is_active=True
         )
         
         # Determine if we should filter by department
@@ -636,22 +799,29 @@ def get_subject_grades(request, subject_id):
         )
     
     class_session = subject.class_session
-    
+
+    # Get grading config for this subject's session (not necessarily active)
     try:
         grading_config = GradingConfiguration.objects.get(
             academic_year=class_session.academic_year,
-            term=class_session.term,
-            is_active=True
+            term=class_session.term
         )
     except GradingConfiguration.DoesNotExist:
+        # Check if any grading configurations exist at all
+        all_configs = GradingConfiguration.objects.all().count()
         return Response(
-            {"detail": "No grading configuration found for this session. Please set up grading configuration first."},
+            {
+                "detail": f"No grading configuration found for {class_session.academic_year} - {class_session.term}. Please set up grading configuration first.",
+                "academic_year": class_session.academic_year,
+                "term": class_session.term,
+                "total_configs_in_system": all_configs,
+                "help": "Go to Grading Configuration in Settings to create a configuration for this session."
+            },
             status=status.HTTP_404_NOT_FOUND
         )
     
     student_sessions = StudentSession.objects.filter(
         class_session=class_session,
-        is_active=True
     ).select_related('student')
     
     should_filter_by_department = False
@@ -1215,15 +1385,14 @@ def sync_attendance_to_grades(request):
         )
     
     try:
-        # Get grading configuration for this session
+        # Get grading configuration for this session (allow historical access)
         grading_config = GradingConfiguration.objects.get(
             academic_year=academic_year,
-            term=term,
-            is_active=True
+            term=term
         )
     except GradingConfiguration.DoesNotExist:
         return Response(
-            {"detail": "No grading configuration found for this session. Please set up grading configuration first."},
+            {"detail": f"No grading configuration found for {academic_year} - {term}. Please set up grading configuration first."},
             status=status.HTTP_404_NOT_FOUND
         )
     
@@ -1269,7 +1438,6 @@ def sync_attendance_to_grades(request):
         # Get all students in this class session
         student_sessions = StudentSession.objects.filter(
             class_session=class_session,
-            is_active=True
         ).select_related('student')
         
         print(f"DEBUG: Found {student_sessions.count()} students in this class session")
@@ -1400,16 +1568,15 @@ def sync_class_attendance_to_grades(request):
             status=status.HTTP_404_NOT_FOUND
         )
     
-    # Get grading configuration
+    # Get grading configuration (allow historical access)
     try:
         grading_config = GradingConfiguration.objects.get(
             academic_year=class_session.academic_year,
-            term=class_session.term,
-            is_active=True
+            term=class_session.term
         )
     except GradingConfiguration.DoesNotExist:
         return Response(
-            {"detail": "No grading configuration found for this session"},
+            {"detail": f"No grading configuration found for {class_session.academic_year} - {class_session.term}"},
             status=status.HTTP_404_NOT_FOUND
         )
     
@@ -1419,7 +1586,6 @@ def sync_class_attendance_to_grades(request):
     # Get all students
     student_sessions = StudentSession.objects.filter(
         class_session=class_session,
-        is_active=True
     ).select_related('student')
     
     updated_count = 0
@@ -1930,6 +2096,12 @@ def get_student_grades_view(request):
             'test_percentage': grading_config.test_percentage,
             'exam_percentage': grading_config.exam_percentage,
         },
+        'grading_scale': {
+            'a_min': grading_config.grading_scale.a_min_score,
+            'b_min': grading_config.grading_scale.b_min_score,
+            'c_min': grading_config.grading_scale.c_min_score,
+            'd_min': grading_config.grading_scale.d_min_score,
+        },
         'subjects': subjects_data,
         'total_subjects': len(subjects_data)
     })
@@ -2039,23 +2211,21 @@ def get_students_for_manual_grading(request, subject_id):
 
     class_session = subject.class_session
 
-    # Get grading configuration
+    # Get grading configuration (allow historical access)
     try:
         grading_config = GradingConfiguration.objects.get(
             academic_year=class_session.academic_year,
-            term=class_session.term,
-            is_active=True
+            term=class_session.term
         )
     except GradingConfiguration.DoesNotExist:
         return Response(
-            {"detail": "No grading configuration found for this session"},
+            {"detail": f"No grading configuration found for {class_session.academic_year} - {class_session.term}"},
             status=status.HTTP_404_NOT_FOUND
         )
 
     # Get all students in the class
     student_sessions = StudentSession.objects.filter(
         class_session=class_session,
-        is_active=True
     ).select_related('student')
 
     students_data = []
@@ -2165,16 +2335,15 @@ def save_manual_grades(request, subject_id):
 
     class_session = subject.class_session
 
-    # Get grading configuration
+    # Get grading configuration (allow historical access)
     try:
         grading_config = GradingConfiguration.objects.get(
             academic_year=class_session.academic_year,
-            term=class_session.term,
-            is_active=True
+            term=class_session.term
         )
     except GradingConfiguration.DoesNotExist:
         return Response(
-            {"detail": "No grading configuration found for this session"},
+            {"detail": f"No grading configuration found for {class_session.academic_year} - {class_session.term}"},
             status=status.HTTP_404_NOT_FOUND
         )
 
@@ -2283,7 +2452,6 @@ def get_test_completion_stats(request):
                 # Get all active students in this class
                 student_sessions = StudentSession.objects.filter(
                     class_session=class_session,
-                    is_active=True
                 ).select_related('student')
 
                 total_students = student_sessions.count()
@@ -2491,7 +2659,6 @@ def get_class_subjects_for_tests(request, class_session_id):
         # Get total students in this class
         total_students = StudentSession.objects.filter(
             class_session=class_session,
-            is_active=True
         ).count()
 
         # Get grading config for checking manual entries
@@ -2608,10 +2775,9 @@ def get_subject_test_scores(request, subject_id):
             assessment_type__in=['test_1', 'test_2', 'mid_term']
         ).order_by('assessment_type')
 
-        # Get all students in this class
+        # Get all students in this class (including historic data)
         student_sessions = StudentSession.objects.filter(
-            class_session=subject.class_session,
-            is_active=True
+            class_session=subject.class_session
         ).select_related('student').order_by('student__last_name', 'student__first_name')
 
         students_data = []
@@ -3149,9 +3315,9 @@ def get_students_for_report(request):
                 )
 
             # Get all students in this specific class session
+            # DO NOT filter by is_active - we need historical students too!
             student_sessions = StudentSession.objects.filter(
                 class_session=class_session,
-                is_active=True
             ).select_related('student').order_by('student__last_name', 'student__first_name')
 
             class_name = classroom.name
@@ -3162,9 +3328,9 @@ def get_students_for_report(request):
                 term=term
             )
 
+            # DO NOT filter by is_active - we need to access historical student data!
             student_sessions = StudentSession.objects.filter(
                 class_session__in=all_class_sessions,
-                is_active=True
             ).select_related('student').order_by('student__last_name', 'student__first_name')
 
             class_name = 'All Classes'
@@ -3195,6 +3361,28 @@ def get_students_for_report(request):
             {"detail": f"Error fetching students: {str(e)}"},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
+
+
+def get_report_grade(score):
+    """Return grade based on custom report sheet scale"""
+    if score >= 75:
+        return 'A1'
+    elif score >= 70:
+        return 'B2'
+    elif score >= 65:
+        return 'B3'
+    elif score >= 60:
+        return 'C4'
+    elif score >= 55:
+        return 'C5'
+    elif score >= 50:
+        return 'C6'
+    elif score >= 45:
+        return 'D7'
+    elif score >= 40:
+        return 'E8'
+    else:
+        return 'F9'
 
 
 @api_view(['GET'])
@@ -3233,38 +3421,16 @@ def get_report_sheet(request, student_id):
             status=status.HTTP_400_BAD_REQUEST
         )
 
-    # Custom grading scale for report sheet
-    def get_report_grade(score):
-        """Return grade based on custom report sheet scale"""
-        if score >= 75:
-            return 'A1'
-        elif score >= 70:
-            return 'B2'
-        elif score >= 65:
-            return 'B3'
-        elif score >= 60:
-            return 'C4'
-        elif score >= 55:
-            return 'C5'
-        elif score >= 50:
-            return 'C6'
-        elif score >= 45:
-            return 'D7'
-        elif score >= 40:
-            return 'E8'
-        else:
-            return 'F9'
-
     try:
         # Get student
         student = User.objects.get(id=student_id, role='student')
 
         # Get student's class session for this academic year and term
+        # DO NOT filter by is_active - we need to access historical reports!
         student_session = StudentSession.objects.filter(
             student=student,
             class_session__academic_year=academic_year,
-            class_session__term=term,
-            is_active=True
+            class_session__term=term
         ).select_related('class_session__classroom').first()
 
         if not student_session:
@@ -3305,11 +3471,11 @@ def get_report_sheet(request, student_id):
                 )
 
         # Get grading configuration
+        # DO NOT filter by is_active - we need to access historical grading configs!
         try:
             grading_config = GradingConfiguration.objects.get(
                 academic_year=academic_year,
-                term=term,
-                is_active=True
+                term=term
             )
         except GradingConfiguration.DoesNotExist:
             return Response(
@@ -3383,7 +3549,6 @@ def get_report_sheet(request, student_id):
         # Get all students in this class and calculate their averages
         all_students = StudentSession.objects.filter(
             class_session=class_session,
-            is_active=True
         ).select_related('student')
 
         student_averages = []
@@ -3469,6 +3634,272 @@ def get_report_sheet(request, student_id):
         )
 
 
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def download_report_sheet(request, student_id):
+    """
+    Download report sheet as PDF without preview
+    Uses Playwright to convert HTML to PDF with exact web design
+    """
+    from django.template.loader import render_to_string
+    from django.http import HttpResponse
+    from django.contrib.auth import get_user_model
+    from playwright.sync_api import sync_playwright
+    from datetime import datetime
+    import tempfile
+    import os
+
+    User = get_user_model()
+
+    # Get query parameters
+    academic_year = request.query_params.get('academic_year')
+    term = request.query_params.get('term')
+
+    if not academic_year or not term:
+        return Response(
+            {"detail": "academic_year and term are required"},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    # Reuse get_report_sheet logic to get all the data
+    try:
+        student = User.objects.get(id=student_id, role='student')
+    except User.DoesNotExist:
+        return Response(
+            {"detail": "Student not found"},
+            status=status.HTTP_404_NOT_FOUND
+        )
+
+    # Get grading configuration (historical access allowed)
+    try:
+        grading_config = GradingConfiguration.objects.get(
+            academic_year=academic_year,
+            term=term
+        )
+    except GradingConfiguration.DoesNotExist:
+        return Response(
+            {"detail": "No grading configuration found for this session"},
+            status=status.HTTP_404_NOT_FOUND
+        )
+
+    # Get student's class session (historical access allowed)
+    student_session = StudentSession.objects.filter(
+        student=student,
+        class_session__academic_year=academic_year,
+        class_session__term=term
+    ).select_related('class_session', 'class_session__classroom').first()
+
+    if not student_session:
+        return Response(
+            {"detail": "Student not enrolled in any class for this period"},
+            status=status.HTTP_404_NOT_FOUND
+        )
+
+    class_session = student_session.class_session
+
+    # Get all subjects for this student
+    from academics.models import Subject
+    subjects = Subject.objects.filter(
+        class_session=class_session
+    ).select_related('teacher')
+
+    # Filter by department if student has one
+    if student_session.student.department:
+        subjects = subjects.filter(
+            Q(department=student_session.student.department) |
+            Q(department='General')
+        )
+
+    subjects_data = []
+
+    for subject in subjects:
+        # Get GradeSummary for this student and subject
+        try:
+            grade_summary = GradeSummary.objects.get(
+                student=student,
+                subject=subject,
+                grading_config=grading_config
+            )
+
+            # 1st Test = Attendance + Assignment
+            first_test_score = float(grade_summary.attendance_score) + float(grade_summary.assignment_score)
+            second_test_score = float(grade_summary.test_score)
+            exam_score = float(grade_summary.exam_score)
+            total_score = float(grade_summary.total_score)
+            letter_grade = get_report_grade(total_score)
+
+            subjects_data.append({
+                'subject_name': subject.name,
+                'first_test_score': round(first_test_score, 2),
+                'second_test_score': round(second_test_score, 2),
+                'exam_score': round(exam_score, 2),
+                'total_score': round(total_score, 2),
+                'letter_grade': letter_grade
+            })
+
+        except GradeSummary.DoesNotExist:
+            subjects_data.append({
+                'subject_name': subject.name,
+                'first_test_score': 0,
+                'second_test_score': 0,
+                'exam_score': 0,
+                'total_score': 0,
+                'letter_grade': 'F9'
+            })
+
+    # Calculate grand total and average
+    grand_total = sum(s['total_score'] for s in subjects_data)
+    average = round(grand_total / len(subjects_data), 2) if subjects_data else 0
+
+    # Calculate class position
+    all_students = StudentSession.objects.filter(
+        class_session=class_session,
+    ).select_related('student')
+
+    student_averages = []
+    for ss in all_students:
+        student_subjects = Subject.objects.filter(class_session=class_session)
+        if ss.student.department:
+            student_subjects = student_subjects.filter(
+                Q(department=ss.student.department) |
+                Q(department='General')
+            )
+
+        total = 0
+        count = 0
+        for subj in student_subjects:
+            try:
+                grade_summary = GradeSummary.objects.get(
+                    student=ss.student,
+                    subject=subj,
+                    grading_config=grading_config
+                )
+                total += float(grade_summary.total_score)
+                count += 1
+            except GradeSummary.DoesNotExist:
+                pass
+
+        student_avg = total / count if count > 0 else 0
+        student_averages.append({
+            'student_id': ss.student.id,
+            'average': student_avg
+        })
+
+    # Sort by average descending and find position
+    student_averages.sort(key=lambda x: x['average'], reverse=True)
+    position = next((i + 1 for i, s in enumerate(student_averages) if s['student_id'] == student_id), None)
+
+    # Student photo URL - convert to base64 for PDF embedding
+    photo_url = None
+    if hasattr(student, 'profile_picture') and student.profile_picture:
+        try:
+            import base64
+            from django.conf import settings
+            # Read the image file and convert to base64
+            photo_path = student.profile_picture.path
+            with open(photo_path, 'rb') as image_file:
+                encoded_string = base64.b64encode(image_file.read()).decode()
+                # Determine the image format
+                ext = photo_path.split('.')[-1].lower()
+                mime_type = f'image/{ext}' if ext in ['png', 'jpg', 'jpeg', 'gif'] else 'image/jpeg'
+                photo_url = f'data:{mime_type};base64,{encoded_string}'
+        except Exception as e:
+            print(f"Error encoding student photo: {e}")
+            photo_url = None
+
+    # Logo URL - convert to base64 for PDF embedding
+    logo_url = None
+    try:
+        import base64
+        from django.conf import settings
+        import os
+        # Try to find the logo in the frontend public directory
+        logo_path = os.path.join(settings.BASE_DIR, '..', 'frontend', 'public', 'logo.png')
+        if os.path.exists(logo_path):
+            with open(logo_path, 'rb') as image_file:
+                encoded_string = base64.b64encode(image_file.read()).decode()
+                logo_url = f'data:image/png;base64,{encoded_string}'
+    except Exception as e:
+        print(f"Error encoding logo: {e}")
+        logo_url = None
+
+    # Determine term text
+    term_text = "ONE" if term == "First Term" else "TWO" if term == "Second Term" else "THREE"
+
+    # Prepare context for template
+    context = {
+        'student': {
+            'id': student.id,
+            'student_id': student.username,
+            'name': student.get_full_name(),
+            'class': class_session.classroom.name,
+            'department': student_session.student.department or '',
+            'photo_url': photo_url
+        },
+        'session': {
+            'academic_year': academic_year,
+            'term': term
+        },
+        'term_text': term_text,
+        'grading_config': {
+            'first_test_max': 20,
+            'second_test_max': 20,
+            'exam_max': 60,
+            'total_max': 100
+        },
+        'subjects': subjects_data,
+        'summary': {
+            'grand_total': round(grand_total, 2),
+            'average': average,
+            'position': position,
+            'total_students': len(student_averages)
+        },
+        'logo_url': logo_url,
+        'generated_date': datetime.now().strftime('%m/%d/%Y, %H:%M:%S')
+    }
+
+    # Render HTML template
+    html_content = render_to_string('report_sheet.html', context)
+
+    # Use Playwright to convert HTML to PDF
+    try:
+        with sync_playwright() as p:
+            browser = p.chromium.launch()
+            page = browser.new_page()
+
+            # Set content and wait for it to load
+            page.set_content(html_content, wait_until='networkidle')
+
+            # Generate PDF with minimal margins to fit on one page
+            pdf_bytes = page.pdf(
+                format='A4',
+                print_background=True,
+                margin={
+                    'top': '0.3in',
+                    'bottom': '0.3in',
+                    'left': '0.3in',
+                    'right': '0.3in'
+                },
+                scale=0.9
+            )
+
+            browser.close()
+
+        # Return PDF response
+        response = HttpResponse(pdf_bytes, content_type='application/pdf')
+        response['Content-Disposition'] = f'attachment; filename="report_{student.username}_{academic_year}_{term}.pdf"'
+        return response
+
+    except Exception as e:
+        print(f"Error generating PDF: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return Response(
+            {"detail": f"Error generating PDF: {str(e)}"},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
 # ============================================================================
 # EXAM COMPLETION ANALYTICS
 # ============================================================================
@@ -3519,7 +3950,6 @@ def get_exam_completion_stats(request):
                 # Get all active students in this class
                 student_sessions = StudentSession.objects.filter(
                     class_session=class_session,
-                    is_active=True
                 ).select_related('student')
 
                 total_students = student_sessions.count()
@@ -3711,7 +4141,6 @@ def get_class_subjects_for_exams(request, class_session_id):
         # Get all active students in this class
         student_sessions = StudentSession.objects.filter(
             class_session=class_session,
-            is_active=True
         ).select_related('student')
 
         total_students = student_sessions.count()
@@ -3833,10 +4262,9 @@ def get_subject_exam_scores(request, subject_id):
         except GradingConfiguration.DoesNotExist:
             max_exam_marks = 60.0  # Default exam marks
 
-        # Get all active students in this class
+        # Get all students in this class (including historic data)
         student_sessions = StudentSession.objects.filter(
-            class_session=subject.class_session,
-            is_active=True
+            class_session=subject.class_session
         ).select_related('student').order_by('student__last_name', 'student__first_name')
 
         # Get all exam assessments for this subject
@@ -4226,14 +4654,22 @@ def get_report_access_stats(request):
     # Get grading configuration to determine which session to check
     if academic_year and term:
         try:
+            # Allow historical grading configs
             grading_config = GradingConfiguration.objects.get(
                 academic_year=academic_year,
-                term=term,
-                is_active=True
+                term=term
             )
         except GradingConfiguration.DoesNotExist:
+            # Debug: Show what configs actually exist
+            all_configs = GradingConfiguration.objects.all().values_list('academic_year', 'term', 'is_active')
+            print(f"DEBUG: Looking for config {academic_year} - {term}")
+            print(f"DEBUG: Available configs: {list(all_configs)}")
             return Response(
-                {"detail": "No grading configuration found for selected session"},
+                {
+                    "detail": f"No grading configuration found for {academic_year} - {term}",
+                    "searched_for": {"academic_year": academic_year, "term": term},
+                    "available_configs": [{"academic_year": c[0], "term": c[1], "is_active": c[2]} for c in all_configs]
+                },
                 status=status.HTTP_404_NOT_FOUND
             )
     else:
@@ -4246,12 +4682,11 @@ def get_report_access_stats(request):
             )
         academic_year = grading_config.academic_year
         term = grading_config.term
-    
-    # Get all active student sessions for this academic year and term
+
+    # Get all student sessions for this academic year and term (include inactive for historical data)
     student_sessions = StudentSession.objects.filter(
         class_session__academic_year=academic_year,
-        class_session__term=term,
-        is_active=True
+        class_session__term=term
     ).select_related('student', 'class_session__classroom')
     
     # Initialize counters
@@ -4424,17 +4859,16 @@ def send_report_sheets(request):
     academic_year = request.data.get('academic_year')
     term = request.data.get('term')
 
-    # Get grading configuration
+    # Get grading configuration (allow historical access)
     if academic_year and term:
         try:
             grading_config = GradingConfiguration.objects.get(
                 academic_year=academic_year,
-                term=term,
-                is_active=True
+                term=term
             )
         except GradingConfiguration.DoesNotExist:
             return Response(
-                {"detail": "No grading configuration found for selected session"},
+                {"detail": f"No grading configuration found for {academic_year} - {term}"},
                 status=status.HTTP_404_NOT_FOUND
             )
     else:
@@ -4448,12 +4882,11 @@ def send_report_sheets(request):
         academic_year = grading_config.academic_year
         term = grading_config.term
 
-    # Get all active student sessions for this academic year and term
+    # Get all student sessions for this academic year and term (include inactive for historical data)
     # Filter to only get students who haven't received their reports yet
     student_sessions = StudentSession.objects.filter(
         class_session__academic_year=academic_year,
         class_session__term=term,
-        is_active=True,
         report_sent=False  # Only get students who haven't received reports
     ).select_related('student', 'class_session__classroom')
 
@@ -4712,7 +5145,6 @@ def get_eligible_students_in_class(request, class_session_id):
     # Get all student sessions for this class that haven't received reports
     student_sessions = StudentSession.objects.filter(
         class_session=class_session,
-        is_active=True,
         report_sent=False
     ).select_related('student')
 
@@ -4917,7 +5349,6 @@ def get_incomplete_grades_students(request, class_session_id):
     # Get all student sessions for this class
     student_sessions = StudentSession.objects.filter(
         class_session=class_session,
-        is_active=True
     ).select_related('student')
 
     affected_students = []
@@ -5231,7 +5662,7 @@ def send_incomplete_grade_notification(request):
     message += '\n'.join(subject_list)
     message += f"\n\nPlease ensure you complete these assessments as soon as possible for {grading_config.term}, {grading_config.academic_year}."
 
-    # Create notification
+    # Create notification for student
     Notification.objects.create(
         recipient=student,
         title="Incomplete Grades Reminder",
@@ -5245,10 +5676,33 @@ def send_incomplete_grade_notification(request):
         }
     )
 
+    # Create notifications for parents
+    parent_message = f"Your child {student.get_full_name()} has incomplete grades for the following subjects:\n\n"
+    parent_message += '\n'.join(subject_list)
+    parent_message += f"\n\nPlease encourage them to complete these assessments for {grading_config.term}, {grading_config.academic_year}."
+
+    parents = student.parents.all()
+    for parent in parents:
+        Notification.objects.create(
+            recipient=parent,
+            title=f"Incomplete Grades - {student.get_full_name()}",
+            message=parent_message,
+            notification_type="incomplete_grades",
+            priority="high",
+            extra_data={
+                'student_name': student.get_full_name(),
+                'student_id': student.id,
+                'incomplete_subjects': incomplete_subjects,
+                'academic_year': grading_config.academic_year,
+                'term': grading_config.term
+            }
+        )
+
     return Response({
-        "message": f"Notification sent successfully to {student.get_full_name()}",
+        "message": f"Notification sent successfully to {student.get_full_name()} and parent(s)",
         "student_name": student.get_full_name(),
-        "incomplete_count": len(incomplete_subjects)
+        "incomplete_count": len(incomplete_subjects),
+        "parents_notified": parents.count()
     }, status=status.HTTP_200_OK)
 
 
@@ -5358,7 +5812,7 @@ def send_bulk_incomplete_grade_notifications(request):
             message += '\n'.join(subject_list)
             message += f"\n\nPlease ensure you complete these assessments as soon as possible for {term}, {academic_year}."
 
-            # Create notification
+            # Create notification for student
             Notification.objects.create(
                 recipient=student,
                 title="Incomplete Grades Reminder",
@@ -5371,6 +5825,29 @@ def send_bulk_incomplete_grade_notifications(request):
                     'term': term
                 }
             )
+
+            # Create notifications for parents
+            parent_message = f"Your child {student.get_full_name()} has incomplete grades for the following subjects:\n\n"
+            parent_message += '\n'.join(subject_list)
+            parent_message += f"\n\nPlease encourage them to complete these assessments for {term}, {academic_year}."
+
+            parents = student.parents.all()
+            for parent in parents:
+                Notification.objects.create(
+                    recipient=parent,
+                    title=f"Incomplete Grades - {student.get_full_name()}",
+                    message=parent_message,
+                    notification_type="incomplete_grades",
+                    priority="high",
+                    extra_data={
+                        'student_name': student.get_full_name(),
+                        'student_id': student.id,
+                        'incomplete_subjects': incomplete_subjects,
+                        'academic_year': academic_year,
+                        'term': term
+                    }
+                )
+
             notifications_sent += 1
 
     if notifications_sent == 0:
@@ -5428,7 +5905,6 @@ def get_unpaid_fees_classes(request):
         # Get students in this class
         student_sessions = StudentSession.objects.filter(
             class_session=class_session,
-            is_active=True
         ).select_related('student')
 
         affected_students = 0
@@ -5536,7 +6012,6 @@ def get_unpaid_fees_students(request, class_session_id):
     # Get students in this class
     student_sessions = StudentSession.objects.filter(
         class_session=class_session,
-        is_active=True
     ).select_related('student')
 
     students_data = []
@@ -5798,13 +6273,13 @@ def send_unpaid_fee_notification(request):
             status=status.HTTP_400_BAD_REQUEST
         )
 
-    # Build notification message
+    # Build notification message for student
     message = f"You have an outstanding balance of ₦{total_balance:,.2f} that needs to be paid.\n\n"
     message += "Please ensure your fees are fully paid to avoid any disruption to your academic activities.\n\n"
     message += f"Academic Year: {academic_year}\nTerm: {term}\n\n"
     message += "Kindly visit the school's bursary department or make payment through the approved channels."
 
-    # Create notification
+    # Create notification for student
     Notification.objects.create(
         recipient=student,
         title="Fee Payment Reminder",
@@ -5819,10 +6294,35 @@ def send_unpaid_fee_notification(request):
         }
     )
 
+    # Create notifications for parents
+    parent_message = f"Your child {student.get_full_name()} has an outstanding fee balance of ₦{total_balance:,.2f}.\n\n"
+    parent_message += "Please ensure the fees are fully paid to avoid any disruption to their academic activities.\n\n"
+    parent_message += f"Academic Year: {academic_year}\nTerm: {term}\n\n"
+    parent_message += "Kindly visit the school's bursary department or make payment through the approved channels."
+
+    parents = student.parents.all()
+    for parent in parents:
+        Notification.objects.create(
+            recipient=parent,
+            title=f"Fee Payment Reminder - {student.get_full_name()}",
+            message=parent_message,
+            notification_type="fee_reminder",
+            priority="high",
+            extra_data={
+                'student_name': student.get_full_name(),
+                'student_id': student.id,
+                'balance': total_balance,
+                'fee_details': fee_details,
+                'academic_year': academic_year,
+                'term': term
+            }
+        )
+
     return Response({
-        "message": f"Notification sent successfully to {student.get_full_name()}",
+        "message": f"Notification sent successfully to {student.get_full_name()} and parent(s)",
         "student_name": student.get_full_name(),
-        "balance": total_balance
+        "balance": total_balance,
+        "parents_notified": parents.count()
     }, status=status.HTTP_200_OK)
 
 
@@ -5922,13 +6422,13 @@ def send_bulk_unpaid_fee_notifications(request):
 
         # Only notify students with unpaid fees AND complete grades
         if grades_complete and total_balance > 0:
-            # Build notification message
+            # Build notification message for student
             message = f"You have an outstanding balance of ₦{total_balance:,.2f} that needs to be paid.\n\n"
             message += "Please ensure your fees are fully paid to avoid any disruption to your academic activities.\n\n"
             message += f"Academic Year: {academic_year}\nTerm: {term}\n\n"
             message += "Kindly visit the school's bursary department or make payment through the approved channels."
 
-            # Create notification
+            # Create notification for student
             Notification.objects.create(
                 recipient=student,
                 title="Fee Payment Reminder",
@@ -5942,6 +6442,31 @@ def send_bulk_unpaid_fee_notifications(request):
                     'term': term
                 }
             )
+
+            # Create notifications for parents
+            parent_message = f"Your child {student.get_full_name()} has an outstanding fee balance of ₦{total_balance:,.2f}.\n\n"
+            parent_message += "Please ensure the fees are fully paid to avoid any disruption to their academic activities.\n\n"
+            parent_message += f"Academic Year: {academic_year}\nTerm: {term}\n\n"
+            parent_message += "Kindly visit the school's bursary department or make payment through the approved channels."
+
+            parents = student.parents.all()
+            for parent in parents:
+                Notification.objects.create(
+                    recipient=parent,
+                    title=f"Fee Payment Reminder - {student.get_full_name()}",
+                    message=parent_message,
+                    notification_type="fee_reminder",
+                    priority="high",
+                    extra_data={
+                        'student_name': student.get_full_name(),
+                        'student_id': student.id,
+                        'balance': total_balance,
+                        'fee_details': fee_details,
+                        'academic_year': academic_year,
+                        'term': term
+                    }
+                )
+
             notifications_sent += 1
 
     if notifications_sent == 0:
@@ -6082,7 +6607,6 @@ def get_both_issues_classes(request):
         # Get students in this class
         student_sessions = StudentSession.objects.filter(
             class_session=class_session,
-            is_active=True
         ).select_related('student')
 
         students_with_both_issues = 0
@@ -6194,7 +6718,6 @@ def get_both_issues_students(request, class_session_id):
     # Get students in this class
     student_sessions = StudentSession.objects.filter(
         class_session=class_session,
-        is_active=True
     ).select_related('student')
 
     students_data = []
@@ -6561,7 +7084,6 @@ def get_reports_sent_stats(request):
         # Get students in this class
         student_sessions = StudentSession.objects.filter(
             class_session=class_session,
-            is_active=True
         )
 
         sent_count = student_sessions.filter(report_sent=True).count()
@@ -6638,7 +7160,6 @@ def get_class_report_sent_students(request, class_session_id):
     # Get students in this class
     student_sessions = StudentSession.objects.filter(
         class_session=class_session,
-        is_active=True
     ).select_related('student').order_by('student__last_name', 'student__first_name')
 
     students_data = []
@@ -6746,24 +7267,34 @@ def get_subject_grading_stats(request):
     academic_year = request.GET.get('academic_year')
     term = request.GET.get('term')
 
+    # If parameters not provided, default to active session
     if not academic_year or not term:
-        return Response(
-            {"detail": "academic_year and term are required"},
-            status=status.HTTP_400_BAD_REQUEST
-        )
+        grading_config = GradingConfiguration.objects.filter(is_active=True).first()
+        if not grading_config:
+            return Response(
+                {"detail": "No active grading configuration found"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        academic_year = grading_config.academic_year
+        term = grading_config.term
+    else:
+        # Parameters provided - allow historical access
+        grading_config = GradingConfiguration.objects.filter(
+            academic_year=academic_year,
+            term=term
+        ).first()
 
-    # Get grading configuration
-    grading_config = GradingConfiguration.objects.filter(
-        academic_year=academic_year,
-        term=term,
-        is_active=True
-    ).first()
-
-    if not grading_config:
-        return Response(
-            {"detail": "No active grading configuration found for this period"},
-            status=status.HTTP_404_NOT_FOUND
-        )
+        if not grading_config:
+            # Debug info
+            all_configs = GradingConfiguration.objects.all().values_list('academic_year', 'term', 'is_active')
+            return Response(
+                {
+                    "detail": f"No grading configuration found for {academic_year} - {term}",
+                    "searched_for": {"academic_year": academic_year, "term": term},
+                    "available_configs": [{"academic_year": c[0], "term": c[1], "is_active": c[2]} for c in all_configs]
+                },
+                status=status.HTTP_404_NOT_FOUND
+            )
 
     # Get all class sessions for this academic year and term
     class_sessions = ClassSession.objects.filter(
@@ -6779,10 +7310,9 @@ def get_subject_grading_stats(request):
     subject_stats = []
 
     for subject in subjects:
-        # Get students in this class session
+        # Get students in this class session (include inactive for historical data)
         student_sessions = StudentSession.objects.filter(
-            class_session=subject.class_session,
-            is_active=True
+            class_session=subject.class_session
         )
 
         # Filter by department if subject has a department
@@ -6874,23 +7404,21 @@ def get_subject_incomplete_students(request, subject_id):
     academic_year = subject.class_session.academic_year
     term = subject.class_session.term
 
-    # Get grading configuration
+    # Get grading configuration (allow historical access)
     grading_config = GradingConfiguration.objects.filter(
         academic_year=academic_year,
-        term=term,
-        is_active=True
+        term=term
     ).first()
 
     if not grading_config:
         return Response(
-            {"detail": "No active grading configuration found"},
+            {"detail": f"No grading configuration found for {academic_year} - {term}"},
             status=status.HTTP_404_NOT_FOUND
         )
 
-    # Get students in this class
+    # Get students in this class (include inactive for historical data)
     student_sessions = StudentSession.objects.filter(
-        class_session=subject.class_session,
-        is_active=True
+        class_session=subject.class_session
     ).select_related('student')
 
     # Filter by department if subject has a department
@@ -7148,7 +7676,6 @@ def get_class_attendance_ranking(request):
         # Get all students in the same class session
         class_students = StudentSession.objects.filter(
             class_session=class_session,
-            is_active=True
         ).select_related('student')
 
         # Get attendance scores from GradeSummary for each student
@@ -7242,11 +7769,12 @@ def get_subject_grade_rankings(request):
 
         # Filter by department if student has one (for senior classes)
         if user.department:
-            # Include subjects that match department OR have no department restriction
+            # Include subjects that match department OR have no department restriction OR General
             subjects = subjects.filter(
-                models.Q(department=user.department) |
-                models.Q(department__isnull=True) |
-                models.Q(department='')
+                Q(department=user.department) |
+                Q(department__isnull=True) |
+                Q(department='') |
+                Q(department='General')
             )
 
         subjects = subjects.order_by('name')
@@ -7345,5 +7873,2696 @@ def get_subject_top_students(request, subject_id):
     except Exception as e:
         return Response(
             {"detail": f"Error fetching rankings: {str(e)}"},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_student_subject_grades(request):
+    """
+    Get the current student's grades for all subjects, sorted by total score.
+    Returns both highest and lowest grades.
+    """
+    user = request.user
+
+    if user.role != 'student':
+        return Response(
+            {"detail": "This endpoint is only for students"},
+            status=status.HTTP_403_FORBIDDEN
+        )
+
+    try:
+        # Get student's current session
+        student_session = StudentSession.objects.filter(
+            student=user,
+            is_active=True
+        ).select_related('class_session').first()
+
+        if not student_session:
+            return Response(
+                {"detail": "No active session found for student"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        class_session = student_session.class_session
+
+        # Get all grade summaries for this student in current session
+        grade_summaries = GradeSummary.objects.filter(
+            student=user,
+            subject__class_session=class_session
+        ).select_related('subject').order_by('-total_score')
+
+        grades_data = []
+        for gs in grade_summaries:
+            grades_data.append({
+                'subject_id': gs.subject.id,
+                'subject_name': gs.subject.name,
+                'total_score': float(gs.total_score),
+                'letter_grade': gs.letter_grade or '',
+                'attendance_score': float(gs.attendance_score),
+                'assignment_score': float(gs.assignment_score),
+                'test_score': float(gs.test_score),
+                'exam_score': float(gs.exam_score)
+            })
+
+        return Response({
+            'class_name': class_session.classroom.name,
+            'academic_year': class_session.academic_year,
+            'term': class_session.term,
+            'total_subjects': len(grades_data),
+            'grades': grades_data  # Already sorted highest to lowest
+        }, status=status.HTTP_200_OK)
+
+    except Exception as e:
+        return Response(
+            {"detail": f"Error fetching grades: {str(e)}"},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_student_fee_status(request):
+    """
+    Get the current student's fee payment status.
+    """
+    user = request.user
+
+    if user.role != 'student':
+        return Response(
+            {"detail": "This endpoint is only for students"},
+            status=status.HTTP_403_FORBIDDEN
+        )
+
+    try:
+        # Get student's current session to determine current term
+        student_session = StudentSession.objects.filter(
+            student=user,
+            is_active=True
+        ).select_related('class_session').first()
+
+        if not student_session:
+            return Response(
+                {"detail": "No active session found for student"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        class_session = student_session.class_session
+
+        # Get fee records for current academic year and term
+        fee_records = StudentFeeRecord.objects.filter(
+            student=user,
+            fee_structure__academic_year=class_session.academic_year,
+            fee_structure__term=class_session.term
+        ).select_related('fee_structure')
+
+        if not fee_records.exists():
+            return Response({
+                'has_fees': False,
+                'message': 'No fees assigned for current term'
+            }, status=status.HTTP_200_OK)
+
+        # Calculate totals
+        total_fees = sum(float(record.fee_structure.amount) for record in fee_records)
+        total_paid = sum(float(record.amount_paid) for record in fee_records)
+        balance = total_fees - total_paid
+        percentage_paid = (total_paid / total_fees * 100) if total_fees > 0 else 0
+
+        # Determine overall status
+        if total_paid >= total_fees:
+            overall_status = 'PAID'
+        elif total_paid > 0:
+            overall_status = 'PARTIAL'
+        else:
+            overall_status = 'UNPAID'
+
+        # Get individual fee breakdowns
+        fees_breakdown = []
+        for record in fee_records:
+            fees_breakdown.append({
+                'fee_name': record.fee_structure.name,
+                'total_amount': float(record.fee_structure.amount),
+                'amount_paid': float(record.amount_paid),
+                'balance': float(record.fee_structure.amount) - float(record.amount_paid),
+                'status': record.payment_status
+            })
+
+        return Response({
+            'has_fees': True,
+            'academic_year': class_session.academic_year,
+            'term': class_session.term,
+            'total_fees': total_fees,
+            'total_paid': total_paid,
+            'balance': balance,
+            'percentage_paid': round(percentage_paid, 1),
+            'overall_status': overall_status,
+            'fees_breakdown': fees_breakdown
+        }, status=status.HTTP_200_OK)
+
+    except Exception as e:
+        return Response(
+            {"detail": f"Error fetching fee status: {str(e)}"},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+# ============================================================================
+# PARENT DASHBOARD VIEWS
+# ============================================================================
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_parent_children(request):
+    """
+    Get all children linked to the parent account
+    """
+    user = request.user
+
+    if user.role != 'parent':
+        return Response(
+            {"detail": "Only parents can access this endpoint"},
+            status=status.HTTP_403_FORBIDDEN
+        )
+
+    try:
+        from academics.models import StudentSession
+
+        children_data = []
+
+        for child in user.children.all():
+            # Get current class for this child
+            current_session = StudentSession.objects.filter(
+                student=child
+            ).select_related('class_session__classroom').order_by(
+                '-class_session__academic_year', '-class_session__term'
+            ).first()
+
+            class_name = "Not Enrolled"
+            if current_session:
+                class_name = current_session.class_session.classroom.name
+
+            # Check for photo (could be profile_picture or photo field)
+            photo_url = None
+            if hasattr(child, 'profile_picture') and child.profile_picture:
+                photo_url = child.profile_picture.url
+            elif hasattr(child, 'photo') and child.photo:
+                photo_url = child.photo.url
+
+            children_data.append({
+                'id': child.id,
+                'first_name': child.first_name,
+                'last_name': child.last_name,
+                'username': child.username,
+                'class_name': class_name,
+                'photo_url': photo_url
+            })
+
+        return Response({
+            'children': children_data,
+            'total_children': len(children_data)
+        })
+
+    except Exception as e:
+        import traceback
+        print(f"Error in get_parent_children: {str(e)}")
+        print(traceback.format_exc())
+        return Response(
+            {"detail": f"Error fetching children: {str(e)}"},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_child_fee_status(request, child_id):
+    """
+    Get fee status for a specific child
+    """
+    from users.models import CustomUser
+    from academics.models import StudentSession
+
+    user = request.user
+
+    if user.role != 'parent':
+        return Response(
+            {"detail": "Only parents can access this endpoint"},
+            status=status.HTTP_403_FORBIDDEN
+        )
+
+    # Verify this child belongs to this parent
+    if not user.children.filter(id=child_id).exists():
+        return Response(
+            {"detail": "You do not have access to this child's information"},
+            status=status.HTTP_403_FORBIDDEN
+        )
+
+    try:
+        child = CustomUser.objects.get(id=child_id, role='student')
+
+        # Get current class session
+        current_session = StudentSession.objects.filter(
+            student=child
+        ).select_related('class_session').order_by(
+            '-class_session__academic_year', '-class_session__term'
+        ).first()
+
+        if not current_session:
+            return Response({
+                'total_fees': 0,
+                'amount_paid': 0,
+                'balance': 0,
+                'status': 'No fees assigned',
+                'message': 'Child is not currently enrolled'
+            })
+
+        class_session = current_session.class_session
+
+        # Get fee records for this child
+        fee_records = StudentFeeRecord.objects.filter(
+            student=child,
+            fee_structure__academic_year=class_session.academic_year,
+            fee_structure__term=class_session.term
+        ).select_related('fee_structure')
+
+        if not fee_records.exists():
+            return Response({
+                'total_fees': 0,
+                'amount_paid': 0,
+                'balance': 0,
+                'status': 'No fees assigned',
+                'academic_year': class_session.academic_year,
+                'term': class_session.term
+            })
+
+        # Calculate totals
+        total_fees = sum(float(record.fee_structure.amount) for record in fee_records)
+        amount_paid = sum(float(record.amount_paid) for record in fee_records)
+        balance = total_fees - amount_paid
+
+        # Get last payment date
+        last_payment = fee_records.filter(
+            amount_paid__gt=0
+        ).order_by('-date_paid').first()
+
+        last_payment_date = None
+        if last_payment and last_payment.date_paid:
+            last_payment_date = last_payment.date_paid.isoformat()
+
+        return Response({
+            'child_name': f"{child.first_name} {child.last_name}",
+            'academic_year': class_session.academic_year,
+            'term': class_session.term,
+            'total_fees': total_fees,
+            'amount_paid': amount_paid,
+            'balance': balance,
+            'last_payment_date': last_payment_date,
+            'status': 'Fully Paid' if balance == 0 else 'Outstanding'
+        })
+
+    except CustomUser.DoesNotExist:
+        return Response(
+            {"detail": "Child not found"},
+            status=status.HTTP_404_NOT_FOUND
+        )
+    except Exception as e:
+        import traceback
+        print(f"Error in get_child_fee_status: {str(e)}")
+        print(traceback.format_exc())
+        return Response(
+            {"detail": f"Error fetching fee status: {str(e)}"},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_child_academic_position(request, child_id):
+    """
+    Get academic position and percentage for a specific child
+    """
+    from users.models import CustomUser
+    from academics.models import StudentSession
+
+    user = request.user
+
+    if user.role != 'parent':
+        return Response(
+            {"detail": "Only parents can access this endpoint"},
+            status=status.HTTP_403_FORBIDDEN
+        )
+
+    # Verify this child belongs to this parent
+    if not user.children.filter(id=child_id).exists():
+        return Response(
+            {"detail": "You do not have access to this child's information"},
+            status=status.HTTP_403_FORBIDDEN
+        )
+
+    try:
+        child = CustomUser.objects.get(id=child_id, role='student')
+
+        # Get current class session
+        current_session = StudentSession.objects.filter(
+            student=child
+        ).select_related('class_session').order_by(
+            '-class_session__academic_year', '-class_session__term'
+        ).first()
+
+        if not current_session:
+            return Response({
+                'position': 0,
+                'total_students': 0,
+                'average_percentage': 0,
+                'grade_letter': 'N/A',
+                'message': 'Child is not currently enrolled'
+            })
+
+        class_session = current_session.class_session
+
+        # Get grading configuration for this term
+        grading_config = GradingConfiguration.objects.filter(
+            academic_year=class_session.academic_year,
+            term=class_session.term,
+            is_active=True
+        ).first()
+
+        if not grading_config:
+            return Response({
+                'position': 0,
+                'total_students': 0,
+                'average_percentage': 0,
+                'grade_letter': 'N/A',
+                'message': 'No grading configuration found'
+            })
+
+        # Get all students in the same class
+        class_students = StudentSession.objects.filter(
+            class_session=class_session
+        ).values_list('student_id', flat=True)
+
+        # Get grade summaries for all students in the class
+        grade_summaries = GradeSummary.objects.filter(
+            student_id__in=class_students,
+            grading_config=grading_config
+        ).values('student_id').annotate(
+            avg_total=Avg('total_score')
+        ).order_by('-avg_total')
+
+        # Find child's position
+        position = 0
+        child_average = 0
+        total_students = len(grade_summaries)
+
+        for idx, summary in enumerate(grade_summaries, 1):
+            if summary['student_id'] == child_id:
+                position = idx
+                child_average = float(summary['avg_total']) if summary['avg_total'] else 0
+                break
+
+        # Determine grade letter based on grading scale
+        grade_letter = 'F'
+        if grading_config.grading_scale:
+            scale = grading_config.grading_scale
+            if child_average >= scale.a_min_score:
+                grade_letter = 'A'
+            elif child_average >= scale.b_min_score:
+                grade_letter = 'B'
+            elif child_average >= scale.c_min_score:
+                grade_letter = 'C'
+            elif child_average >= scale.d_min_score:
+                grade_letter = 'D'
+
+        return Response({
+            'position': position,
+            'total_students': total_students,
+            'average_percentage': round(child_average, 1),
+            'grade_letter': grade_letter,
+            'academic_year': class_session.academic_year,
+            'term': class_session.term
+        })
+
+    except CustomUser.DoesNotExist:
+        return Response(
+            {"detail": "Child not found"},
+            status=status.HTTP_404_NOT_FOUND
+        )
+    except Exception as e:
+        import traceback
+        print(f"Error in get_child_academic_position: {str(e)}")
+        print(traceback.format_exc())
+        return Response(
+            {"detail": f"Error fetching academic position: {str(e)}"},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_child_subject_grades(request, child_id):
+    """
+    Get subject grades for a specific child, focusing on lowest 3 subjects needing improvement
+    """
+    from users.models import CustomUser
+    from academics.models import StudentSession
+
+    user = request.user
+
+    if user.role != 'parent':
+        return Response(
+            {"detail": "Only parents can access this endpoint"},
+            status=status.HTTP_403_FORBIDDEN
+        )
+
+    # Verify this child belongs to this parent
+    if not user.children.filter(id=child_id).exists():
+        return Response(
+            {"detail": "You do not have access to this child's information"},
+            status=status.HTTP_403_FORBIDDEN
+        )
+
+    try:
+        child = CustomUser.objects.get(id=child_id, role='student')
+
+        # Get current class session
+        current_session = StudentSession.objects.filter(
+            student=child
+        ).select_related('class_session').order_by(
+            '-class_session__academic_year', '-class_session__term'
+        ).first()
+
+        if not current_session:
+            return Response({
+                'lowest_subjects': [],
+                'message': 'Child is not currently enrolled'
+            })
+
+        class_session = current_session.class_session
+
+        # Get grading configuration for this term
+        grading_config = GradingConfiguration.objects.filter(
+            academic_year=class_session.academic_year,
+            term=class_session.term,
+            is_active=True
+        ).first()
+
+        if not grading_config:
+            return Response({
+                'lowest_subjects': [],
+                'message': 'No grading configuration found'
+            })
+
+        # Get all grade summaries for this child
+        try:
+            grade_summaries = GradeSummary.objects.filter(
+                student=child,
+                grading_config=grading_config
+            ).select_related('subject').order_by('total_score')[:3]
+        except Exception as e:
+            print(f"Error fetching grade summaries: {str(e)}")
+            import traceback
+            print(traceback.format_exc())
+            return Response({
+                'lowest_subjects': [],
+                'message': f'Error fetching grades: {str(e)}'
+            })
+
+        # Format the lowest 3 subjects
+        lowest_subjects = []
+        for summary in grade_summaries:
+            try:
+                teacher_name = "Not Assigned"
+                if summary.subject.teacher:
+                    teacher_name = f"{summary.subject.teacher.first_name} {summary.subject.teacher.last_name}"
+
+                lowest_subjects.append({
+                    'subject_id': summary.subject.id,
+                    'subject_name': summary.subject.name,
+                    'teacher_name': teacher_name,
+                    'total_score': float(summary.total_score)
+                })
+            except Exception as e:
+                print(f"Error processing subject {summary.subject.id}: {str(e)}")
+                continue
+
+        return Response({
+            'lowest_subjects': lowest_subjects,
+            'academic_year': class_session.academic_year,
+            'term': class_session.term
+        })
+
+    except CustomUser.DoesNotExist:
+        return Response(
+            {"detail": "Child not found"},
+            status=status.HTTP_404_NOT_FOUND
+        )
+    except Exception as e:
+        import traceback
+        print(f"Error in get_child_subject_grades: {str(e)}")
+        print(traceback.format_exc())
+        return Response(
+            {"detail": f"Error fetching subject grades: {str(e)}"},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_child_assignments(request, child_id):
+    """
+    Get overdue and unsubmitted assignments for a specific child
+    """
+    from users.models import CustomUser
+    from academics.models import StudentSession, SubjectContent, AssignmentSubmission
+    from django.utils import timezone
+
+    user = request.user
+
+    if user.role != 'parent':
+        return Response(
+            {"detail": "Only parents can access this endpoint"},
+            status=status.HTTP_403_FORBIDDEN
+        )
+
+    # Verify this child belongs to this parent
+    if not user.children.filter(id=child_id).exists():
+        return Response(
+            {"detail": "You do not have access to this child's information"},
+            status=status.HTTP_403_FORBIDDEN
+        )
+
+    try:
+        child = CustomUser.objects.get(id=child_id, role='student')
+
+        # Get current class session
+        current_session = StudentSession.objects.filter(
+            student=child,
+            is_active=True
+        ).select_related('class_session').order_by(
+            '-class_session__academic_year', '-class_session__term'
+        ).first()
+
+        if not current_session:
+            return Response({
+                'assignments': [],
+                'total_overdue': 0,
+                'total_pending': 0,
+                'message': 'Child is not currently enrolled'
+            })
+
+        class_session = current_session.class_session
+
+        # Get all subjects for this class session
+        subjects = class_session.subjects.all()
+
+        # Get all assignments for these subjects
+        assignments = SubjectContent.objects.filter(
+            subject__in=subjects,
+            content_type='assignment',
+            is_active=True
+        ).select_related('subject', 'subject__teacher').order_by('due_date')
+
+        assignment_data = []
+        overdue_count = 0
+        pending_count = 0
+        now = timezone.now()
+
+        for assignment in assignments:
+            # Check if student has submitted this assignment
+            submission = AssignmentSubmission.objects.filter(
+                student=child,
+                assignment=assignment
+            ).first()
+
+            # Only include if not submitted or pending
+            if not submission or submission.status == 'pending':
+                is_overdue = assignment.due_date and now > assignment.due_date
+
+                if is_overdue:
+                    overdue_count += 1
+                else:
+                    pending_count += 1
+
+                assignment_data.append({
+                    'id': assignment.id,
+                    'title': assignment.title,
+                    'subject_name': assignment.subject.name,
+                    'teacher_name': assignment.subject.teacher.get_full_name() if assignment.subject.teacher else 'No teacher assigned',
+                    'due_date': assignment.due_date.isoformat() if assignment.due_date else None,
+                    'is_overdue': is_overdue,
+                    'max_score': assignment.max_score,
+                    'days_overdue': (now - assignment.due_date).days if is_overdue else 0,
+                    'status': 'overdue' if is_overdue else 'pending'
+                })
+
+        # Sort by overdue first, then by due date
+        assignment_data.sort(key=lambda x: (not x['is_overdue'], x['due_date'] or ''))
+
+        return Response({
+            'child_name': f"{child.first_name} {child.last_name}",
+            'assignments': assignment_data,
+            'total_overdue': overdue_count,
+            'total_pending': pending_count,
+            'total_count': len(assignment_data),
+            'academic_year': class_session.academic_year,
+            'term': class_session.term
+        })
+
+    except CustomUser.DoesNotExist:
+        return Response(
+            {"detail": "Child not found"},
+            status=status.HTTP_404_NOT_FOUND
+        )
+    except Exception as e:
+        import traceback
+        print(f"Error in get_child_assignments: {str(e)}")
+        print(traceback.format_exc())
+        return Response(
+            {"detail": f"Error fetching assignments: {str(e)}"},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_parent_announcements(request):
+    """
+    Get all announcements/notifications for the logged-in parent
+    Includes:
+    - Direct notifications (report releases, fee reminders, incomplete grades)
+    - Activity notifications from their children's classes (assignments, notes, announcements)
+    """
+    from logs.models import Notification, ActivityLog, NotificationStatus
+
+    user = request.user
+
+    if user.role != 'parent':
+        return Response(
+            {"detail": "Only parents can access this endpoint"},
+            status=status.HTTP_403_FORBIDDEN
+        )
+
+    try:
+        # Get direct notifications (Notification model)
+        direct_notifications = Notification.objects.filter(
+            recipient=user
+        ).order_by('-created_at')[:50]  # Limit to last 50
+
+        # Get activity-based notifications (ActivityLog with NotificationStatus)
+        activity_notifications = NotificationStatus.objects.filter(
+            user=user
+        ).select_related('activity_log', 'activity_log__subject').order_by('-activity_log__timestamp')[:50]
+
+        # Format direct notifications
+        notifications_list = []
+
+        for notif in direct_notifications:
+            # Determine which child this notification is about
+            child_name = None
+            if notif.extra_data and 'student_name' in notif.extra_data:
+                child_name = notif.extra_data['student_name']
+
+            notifications_list.append({
+                'id': notif.id,
+                'type': 'direct',
+                'notification_type': notif.notification_type,
+                'title': notif.title,
+                'message': notif.message,
+                'priority': notif.priority,
+                'is_read': notif.is_read,
+                'created_at': notif.created_at.isoformat(),
+                'child_name': child_name,
+                'extra_data': notif.extra_data
+            })
+
+        # Format activity notifications
+        for notif_status in activity_notifications:
+            activity = notif_status.activity_log
+
+            # Get student name from the activity context
+            child_name = None
+            if activity.extra_data and 'class_session_id' in activity.extra_data:
+                # This is about a class, find which of parent's children is in this class
+                from academics.models import StudentSession
+                children_in_class = user.children.filter(
+                    student_sessions__class_session_id=activity.extra_data['class_session_id'],
+                    student_sessions__is_active=True
+                )
+                if children_in_class.exists():
+                    child_name = children_in_class.first().get_full_name()
+
+            notifications_list.append({
+                'id': f"activity_{notif_status.id}",
+                'type': 'activity',
+                'notification_type': activity.content_type or 'general',
+                'title': activity.content_title or 'New Activity',
+                'message': f"{activity.action} - Check the {activity.content_type} for {child_name or 'your child'}",
+                'priority': 'medium',
+                'is_read': notif_status.is_read,
+                'created_at': activity.timestamp.isoformat(),
+                'child_name': child_name,
+                'extra_data': {
+                    'subject_name': activity.subject.name if activity.subject else None,
+                    'classroom': activity.extra_data.get('classroom') if activity.extra_data else None,
+                    'teacher_name': activity.extra_data.get('teacher_name') if activity.extra_data else None
+                }
+            })
+
+        # Combine and sort by date
+        notifications_list.sort(key=lambda x: x['created_at'], reverse=True)
+
+        # Count unread
+        unread_count = sum(1 for n in notifications_list if not n['is_read'])
+
+        return Response({
+            'notifications': notifications_list[:50],  # Return max 50
+            'total_count': len(notifications_list),
+            'unread_count': unread_count
+        })
+
+    except Exception as e:
+        import traceback
+        print(f"Error in get_parent_announcements: {str(e)}")
+        print(traceback.format_exc())
+        return Response(
+            {"detail": f"Error fetching announcements: {str(e)}"},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def download_fee_receipt(request, receipt_id):
+    """
+    Download fee receipt as PDF
+    """
+    from schooladmin.models import FeeReceipt, FeePaymentHistory
+    from schooladmin.pdf_generator import generate_fee_receipt_pdf
+    from django.http import HttpResponse
+
+    user = request.user
+
+    if user.role != 'parent':
+        return Response(
+            {"detail": "Only parents can access this endpoint"},
+            status=status.HTTP_403_FORBIDDEN
+        )
+
+    try:
+        # Get the receipt and verify parent has access
+        receipt = FeeReceipt.objects.select_related(
+            'student', 'student__classroom', 'issued_by'
+        ).get(id=receipt_id)
+
+        # Check if the parent has access to this student
+        if not receipt.student.parents.filter(id=user.id).exists():
+            return Response(
+                {"detail": "You don't have access to this receipt"},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        # Get the student's fee record to fetch payment history
+        from schooladmin.models import StudentFeeRecord
+        try:
+            fee_record = StudentFeeRecord.objects.get(
+                student=receipt.student,
+                fee_structure__academic_year=receipt.academic_year,
+                fee_structure__term=receipt.term
+            )
+            # Get payment history
+            payment_history = FeePaymentHistory.objects.filter(
+                fee_record=fee_record
+            ).select_related('recorded_by').order_by('transaction_date')
+        except StudentFeeRecord.DoesNotExist:
+            payment_history = []
+
+        # Generate PDF
+        pdf = generate_fee_receipt_pdf(receipt, payment_history)
+
+        # Create HTTP response with PDF
+        response = HttpResponse(pdf, content_type='application/pdf')
+        response['Content-Disposition'] = f'attachment; filename="receipt_{receipt.receipt_number}.pdf"'
+
+        return response
+
+    except FeeReceipt.DoesNotExist:
+        return Response(
+            {"detail": "Receipt not found"},
+            status=status.HTTP_404_NOT_FOUND
+        )
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated, IsAdminRole])
+def get_admin_fee_receipts(request):
+    """
+    Get all fee receipts for admin with filters
+    Filters: academic_year, term, class_id
+    """
+    from schooladmin.models import FeeReceipt
+    from academics.models import ClassSession, Class
+
+    try:
+        # Get filters from query params
+        academic_year = request.query_params.get('academic_year', None)
+        term = request.query_params.get('term', None)
+        class_id = request.query_params.get('class_id', None)
+
+        # Build query
+        receipts_query = FeeReceipt.objects.select_related(
+            'student', 'student__classroom', 'issued_by'
+        ).all()
+
+        if academic_year:
+            receipts_query = receipts_query.filter(academic_year=academic_year)
+        if term:
+            receipts_query = receipts_query.filter(term=term)
+        if class_id:
+            receipts_query = receipts_query.filter(student__classroom_id=class_id)
+
+        receipts = receipts_query.order_by('-date_issued')
+
+        # Format receipts
+        receipts_list = []
+        for receipt in receipts:
+            receipts_list.append({
+                'id': receipt.id,
+                'receipt_number': receipt.receipt_number,
+                'student_name': f"{receipt.student.first_name} {receipt.student.last_name}",
+                'student_username': receipt.student.username,
+                'student_id': receipt.student.id,
+                'class_name': receipt.student.classroom.name if receipt.student.classroom else 'N/A',
+                'academic_year': receipt.academic_year,
+                'term': receipt.term,
+                'total_fees': float(receipt.total_fees),
+                'amount_paid': float(receipt.amount_paid),
+                'balance': float(receipt.balance),
+                'status': receipt.status,
+                'date_issued': receipt.date_issued.isoformat(),
+                'issued_by': f"{receipt.issued_by.first_name} {receipt.issued_by.last_name}" if receipt.issued_by else 'System'
+            })
+
+        # Get available academic sessions
+        available_sessions = ClassSession.objects.values(
+            'academic_year', 'term'
+        ).distinct().order_by('-academic_year', 'term')
+
+        sessions_list = [
+            {
+                'academic_year': session['academic_year'],
+                'term': session['term']
+            }
+            for session in available_sessions
+        ]
+
+        # Get all classes
+        classes = Class.objects.all().order_by('name')
+        classes_list = [
+            {
+                'id': cls.id,
+                'name': cls.name
+            }
+            for cls in classes
+        ]
+
+        return Response({
+            'receipts': receipts_list,
+            'available_sessions': sessions_list,
+            'classes': classes_list
+        })
+
+    except Exception as e:
+        import traceback
+        print(f"Error in get_admin_fee_receipts: {str(e)}")
+        print(traceback.format_exc())
+        return Response(
+            {"detail": f"Error fetching receipts: {str(e)}"},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated, IsAdminRole])
+def download_admin_fee_receipt(request, receipt_id):
+    """
+    Download fee receipt as PDF for admin
+    """
+    from schooladmin.models import FeeReceipt, FeePaymentHistory, StudentFeeRecord
+    from schooladmin.pdf_generator import generate_fee_receipt_pdf
+    from django.http import HttpResponse
+
+    try:
+        # Get the receipt
+        receipt = FeeReceipt.objects.select_related(
+            'student', 'student__classroom', 'issued_by'
+        ).get(id=receipt_id)
+
+        # Get the student's fee record to fetch payment history
+        try:
+            fee_record = StudentFeeRecord.objects.get(
+                student=receipt.student,
+                fee_structure__academic_year=receipt.academic_year,
+                fee_structure__term=receipt.term
+            )
+            # Get payment history
+            payment_history = FeePaymentHistory.objects.filter(
+                fee_record=fee_record
+            ).select_related('recorded_by').order_by('transaction_date')
+        except StudentFeeRecord.DoesNotExist:
+            payment_history = []
+
+        # Generate PDF
+        pdf = generate_fee_receipt_pdf(receipt, payment_history)
+
+        # Create HTTP response with PDF
+        response = HttpResponse(pdf, content_type='application/pdf')
+        response['Content-Disposition'] = f'attachment; filename="receipt_{receipt.receipt_number}.pdf"'
+
+        return response
+
+    except FeeReceipt.DoesNotExist:
+        return Response(
+            {"detail": "Receipt not found"},
+            status=status.HTTP_404_NOT_FOUND
+        )
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_parent_fee_receipts(request):
+    """
+    Get fee receipts for the logged-in parent's children with filters
+    Filters: child_id, academic_year, term
+    """
+    from schooladmin.models import FeeReceipt
+    from academics.models import ClassSession
+
+    user = request.user
+
+    if user.role != 'parent':
+        return Response(
+            {"detail": "Only parents can access this endpoint"},
+            status=status.HTTP_403_FORBIDDEN
+        )
+
+    try:
+        # Get parent's children
+        children = user.children.filter(role='student')
+
+        if not children.exists():
+            return Response({
+                'receipts': [],
+                'children': [],
+                'available_sessions': []
+            })
+
+        # Get filters from query params
+        child_id = request.query_params.get('child_id', None)
+        academic_year = request.query_params.get('academic_year', None)
+        term = request.query_params.get('term', None)
+
+        # Build query
+        receipts_query = FeeReceipt.objects.filter(student__in=children)
+
+        if child_id:
+            receipts_query = receipts_query.filter(student_id=child_id)
+        if academic_year:
+            receipts_query = receipts_query.filter(academic_year=academic_year)
+        if term:
+            receipts_query = receipts_query.filter(term=term)
+
+        receipts = receipts_query.select_related('student', 'issued_by').order_by('-date_issued')
+
+        # Format receipts
+        receipts_list = []
+        for receipt in receipts:
+            receipts_list.append({
+                'id': receipt.id,
+                'receipt_number': receipt.receipt_number,
+                'student_name': f"{receipt.student.first_name} {receipt.student.last_name}",
+                'student_id': receipt.student.id,
+                'academic_year': receipt.academic_year,
+                'term': receipt.term,
+                'total_fees': float(receipt.total_fees),
+                'amount_paid': float(receipt.amount_paid),
+                'balance': float(receipt.balance),
+                'status': receipt.status,
+                'date_issued': receipt.date_issued.isoformat(),
+                'payment_method': receipt.payment_method,
+                'transaction_reference': receipt.transaction_reference,
+                'remarks': receipt.remarks
+            })
+
+        # Get children list for filter
+        children_list = []
+        for child in children:
+            try:
+                # Get the child's current class
+                student_session = child.student_sessions.filter(
+                    class_session__is_active=True
+                ).select_related('class_session', 'class_session__class_obj').first()
+
+                class_name = student_session.class_session.class_obj.name if student_session else 'N/A'
+            except:
+                class_name = 'N/A'
+
+            children_list.append({
+                'id': child.id,
+                'first_name': child.first_name,
+                'last_name': child.last_name,
+                'class_name': class_name
+            })
+
+        # Get available academic sessions (all sessions, not just active)
+        available_sessions = ClassSession.objects.values(
+            'academic_year', 'term'
+        ).distinct().order_by('-academic_year', 'term')
+
+        sessions_list = [
+            {
+                'academic_year': session['academic_year'],
+                'term': session['term']
+            }
+            for session in available_sessions
+        ]
+
+        return Response({
+            'receipts': receipts_list,
+            'children': children_list,
+            'available_sessions': sessions_list
+        })
+
+    except Exception as e:
+        import traceback
+        print(f"Error in get_parent_fee_receipts: {str(e)}")
+        print(traceback.format_exc())
+        return Response(
+            {"detail": f"Error fetching receipts: {str(e)}"},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_teacher_grading_stats(request):
+    """
+    Get grading statistics for teacher dashboard showing:
+    - Test: students who completed but not scored, students who haven't completed
+    - Exam: students who completed but not scored, students who haven't completed
+    For the current active academic session
+    """
+    from academics.models import Subject, ClassSession, Assessment, StudentSession, AssessmentSubmission
+    from schooladmin.models import GradeSummary, GradingConfiguration
+    from django.db.models import Q, Count
+    
+    user = request.user
+    
+    if user.role not in ['teacher', 'admin']:
+        return Response(
+            {"detail": "Only teachers and admins can access this endpoint"},
+            status=status.HTTP_403_FORBIDDEN
+        )
+    
+    # Get current active grading configuration
+    grading_config = GradingConfiguration.objects.filter(is_active=True).first()
+    
+    if not grading_config:
+        return Response({
+            'current_session': 'No active session',
+            'test': {
+                'completed_not_scored': 0,
+                'not_completed': 0,
+                'total_students': 0
+            },
+            'exam': {
+                'completed_not_scored': 0,
+                'not_completed': 0,
+                'total_students': 0
+            }
+        })
+    
+    current_session = f"{grading_config.academic_year} - {grading_config.term}"
+    
+    # Get all subjects taught by this teacher for the current session
+    subjects = Subject.objects.filter(
+        teacher=user,
+        class_session__academic_year=grading_config.academic_year,
+        class_session__term=grading_config.term
+    ).select_related('class_session')
+
+    # Build subject-level statistics
+    subjects_data = []
+
+    for subject in subjects:
+        # Get students in this class session
+        student_sessions = StudentSession.objects.filter(
+            class_session=subject.class_session,
+            is_active=True
+        ).select_related('student')
+
+        # Filter by department if subject has a department
+        if subject.department and subject.department != 'General':
+            student_sessions = student_sessions.filter(
+                student__department=subject.department
+            )
+
+        # Initialize counters for this subject
+        test_graded = 0
+        test_awaiting_or_not_done = 0
+        exam_graded = 0
+        exam_awaiting_or_not_done = 0
+        total_students = student_sessions.count()
+
+        for student_session in student_sessions:
+            student = student_session.student
+
+            # Check test and exam status in one query
+            try:
+                grade_summary = GradeSummary.objects.get(
+                    student=student,
+                    subject=subject,
+                    grading_config=grading_config
+                )
+
+                # Test: if score > 0, it's graded. Otherwise, awaiting/not done
+                test_score = float(grade_summary.test_score) if grade_summary.test_score else 0
+                if test_score > 0:
+                    test_graded += 1
+                else:
+                    test_awaiting_or_not_done += 1
+
+                # Exam: if score > 0, it's graded. Otherwise, awaiting/not done
+                exam_score = float(grade_summary.exam_score) if grade_summary.exam_score else 0
+                if exam_score > 0:
+                    exam_graded += 1
+                else:
+                    exam_awaiting_or_not_done += 1
+
+            except GradeSummary.DoesNotExist:
+                # No GradeSummary = not graded
+                test_awaiting_or_not_done += 1
+                exam_awaiting_or_not_done += 1
+
+        # Get top 3 and bottom 3 students for test and exam
+        # Get all graded students for this subject
+        graded_summaries = GradeSummary.objects.filter(
+            subject=subject,
+            grading_config=grading_config
+        ).select_related('student').order_by('-total_score')
+
+        # Filter only students who have test scores
+        test_graded_students = [
+            gs for gs in graded_summaries
+            if gs.test_score and float(gs.test_score) > 0
+        ]
+
+        # Filter only students who have exam scores
+        exam_graded_students = [
+            gs for gs in graded_summaries
+            if gs.exam_score and float(gs.exam_score) > 0
+        ]
+
+        # Sort by test score
+        test_sorted = sorted(
+            test_graded_students,
+            key=lambda x: float(x.test_score) if x.test_score else 0,
+            reverse=True
+        )
+
+        # Sort by exam score
+        exam_sorted = sorted(
+            exam_graded_students,
+            key=lambda x: float(x.exam_score) if x.exam_score else 0,
+            reverse=True
+        )
+
+        # Top 3 and Bottom 3 for Test
+        test_top_3 = [
+            {
+                'id': gs.student.id,
+                'full_name': gs.student.get_full_name(),
+                'username': gs.student.username
+            }
+            for gs in test_sorted[:3]
+        ]
+
+        test_bottom_3 = [
+            {
+                'id': gs.student.id,
+                'full_name': gs.student.get_full_name(),
+                'username': gs.student.username
+            }
+            for gs in test_sorted[-3:][::-1] if len(test_sorted) > 0
+        ]
+
+        # Top 3 and Bottom 3 for Exam
+        exam_top_3 = [
+            {
+                'id': gs.student.id,
+                'full_name': gs.student.get_full_name(),
+                'username': gs.student.username
+            }
+            for gs in exam_sorted[:3]
+        ]
+
+        exam_bottom_3 = [
+            {
+                'id': gs.student.id,
+                'full_name': gs.student.get_full_name(),
+                'username': gs.student.username
+            }
+            for gs in exam_sorted[-3:][::-1] if len(exam_sorted) > 0
+        ]
+
+        subjects_data.append({
+            'id': subject.id,
+            'name': subject.name,
+            'class_name': subject.class_session.classroom.name,
+            'department': subject.department or 'General',
+            'test': {
+                'graded': test_graded,
+                'awaiting_or_not_done': test_awaiting_or_not_done,
+                'total_students': total_students,
+                'top_3': test_top_3,
+                'bottom_3': test_bottom_3
+            },
+            'exam': {
+                'graded': exam_graded,
+                'awaiting_or_not_done': exam_awaiting_or_not_done,
+                'total_students': total_students,
+                'top_3': exam_top_3,
+                'bottom_3': exam_bottom_3
+            }
+        })
+
+    return Response({
+        'current_session': current_session,
+        'subjects': subjects_data
+    })
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_incomplete_assessment_students(request):
+    """
+    Get list of students who haven't completed a specific assessment type for a subject
+    Query params: subject_id, assessment_type (test or exam)
+    """
+    from academics.models import Subject, Assessment, StudentSession, AssessmentSubmission
+    from schooladmin.models import GradingConfiguration
+
+    user = request.user
+    subject_id = request.query_params.get('subject_id')
+    assessment_type = request.query_params.get('assessment_type')  # 'test' or 'exam'
+
+    if not subject_id or not assessment_type:
+        return Response(
+            {"detail": "subject_id and assessment_type are required"},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    if assessment_type not in ['test', 'exam']:
+        return Response(
+            {"detail": "assessment_type must be 'test' or 'exam'"},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    try:
+        subject = Subject.objects.select_related('class_session__classroom').get(id=subject_id)
+    except Subject.DoesNotExist:
+        return Response(
+            {"detail": "Subject not found"},
+            status=status.HTTP_404_NOT_FOUND
+        )
+
+    # Check if user has permission to view this subject
+    if user.role == 'teacher' and subject.teacher != user:
+        return Response(
+            {"detail": "You don't have permission to view this subject"},
+            status=status.HTTP_403_FORBIDDEN
+        )
+
+    # Get students in this class session
+    student_sessions = StudentSession.objects.filter(
+        class_session=subject.class_session,
+        is_active=True
+    ).select_related('student')
+
+    # Filter by department if subject has a department
+    if subject.department and subject.department != 'General':
+        student_sessions = student_sessions.filter(
+            student__department=subject.department
+        )
+
+    # Get active grading configuration
+    grading_config = GradingConfiguration.objects.filter(is_active=True).first()
+
+    # Find students who don't have a score (awaiting grading or not done)
+    awaiting_students = []
+
+    for student_session in student_sessions:
+        student = student_session.student
+
+        # Check GradeSummary for score
+        try:
+            grade_summary = GradeSummary.objects.get(
+                student=student,
+                subject=subject,
+                grading_config=grading_config
+            )
+
+            # Get score based on assessment type
+            if assessment_type == 'test':
+                score = float(grade_summary.test_score) if grade_summary.test_score else 0
+            else:  # exam
+                score = float(grade_summary.exam_score) if grade_summary.exam_score else 0
+
+            # If score is 0, they're awaiting grading
+            if score == 0:
+                awaiting_students.append({
+                    'id': student.id,
+                    'username': student.username,
+                    'full_name': student.get_full_name(),
+                    'email': student.email,
+                    'status': 'Awaiting Grading'
+                })
+
+        except GradeSummary.DoesNotExist:
+            # No GradeSummary = not done
+            awaiting_students.append({
+                'id': student.id,
+                'username': student.username,
+                'full_name': student.get_full_name(),
+                'email': student.email,
+                'status': 'Not Done'
+            })
+
+    return Response({
+        'subject': {
+            'id': subject.id,
+            'name': subject.name,
+            'class_name': subject.class_session.classroom.name
+        },
+        'assessment_type': assessment_type,
+        'students': awaiting_students,
+        'total_count': len(awaiting_students)
+    })
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_graded_assessment_students(request):
+    """
+    Get list of students who have been graded for a specific assessment type
+    Query params: subject_id, assessment_type (test or exam)
+    """
+    from academics.models import Subject, StudentSession
+    from schooladmin.models import GradingConfiguration
+
+    user = request.user
+    subject_id = request.query_params.get('subject_id')
+    assessment_type = request.query_params.get('assessment_type')  # 'test' or 'exam'
+
+    if not subject_id or not assessment_type:
+        return Response(
+            {"detail": "subject_id and assessment_type are required"},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    if assessment_type not in ['test', 'exam']:
+        return Response(
+            {"detail": "assessment_type must be 'test' or 'exam'"},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    try:
+        subject = Subject.objects.select_related('class_session__classroom').get(id=subject_id)
+    except Subject.DoesNotExist:
+        return Response(
+            {"detail": "Subject not found"},
+            status=status.HTTP_404_NOT_FOUND
+        )
+
+    # Check if user has permission to view this subject
+    if user.role == 'teacher' and subject.teacher != user:
+        return Response(
+            {"detail": "You don't have permission to view this subject"},
+            status=status.HTTP_403_FORBIDDEN
+        )
+
+    # Get students in this class session
+    student_sessions = StudentSession.objects.filter(
+        class_session=subject.class_session,
+        is_active=True
+    ).select_related('student')
+
+    # Filter by department if subject has a department
+    if subject.department and subject.department != 'General':
+        student_sessions = student_sessions.filter(
+            student__department=subject.department
+        )
+
+    # Get active grading configuration
+    grading_config = GradingConfiguration.objects.filter(is_active=True).first()
+
+    # Find students who have been graded (score > 0)
+    graded_students = []
+
+    for student_session in student_sessions:
+        student = student_session.student
+
+        # Check GradeSummary for score
+        try:
+            grade_summary = GradeSummary.objects.get(
+                student=student,
+                subject=subject,
+                grading_config=grading_config
+            )
+
+            # Get score based on assessment type
+            if assessment_type == 'test':
+                score = float(grade_summary.test_score) if grade_summary.test_score else 0
+            else:  # exam
+                score = float(grade_summary.exam_score) if grade_summary.exam_score else 0
+
+            # If score > 0, they're graded
+            if score > 0:
+                graded_students.append({
+                    'id': student.id,
+                    'username': student.username,
+                    'full_name': student.get_full_name(),
+                    'email': student.email,
+                    'score': score
+                })
+
+        except GradeSummary.DoesNotExist:
+            # No GradeSummary = not graded
+            pass
+
+    return Response({
+        'subject': {
+            'id': subject.id,
+            'name': subject.name,
+            'class_name': subject.class_session.classroom.name
+        },
+        'assessment_type': assessment_type,
+        'students': graded_students,
+        'total_count': len(graded_students)
+    })
+
+
+# ============================================================================
+# ANNOUNCEMENT VIEWS
+# ============================================================================
+
+@api_view(['GET', 'POST'])
+@permission_classes([IsAuthenticated, IsAdminRole])
+def manage_announcements(request):
+    """
+    GET: List all announcements with filters
+    POST: Create a new announcement
+    """
+    from schooladmin.models import Announcement
+    from users.models import CustomUser
+    from academics.models import Class
+
+    if request.method == 'GET':
+        # Get query parameters for filters
+        audience = request.query_params.get('audience', None)
+        priority = request.query_params.get('priority', None)
+        is_active = request.query_params.get('is_active', None)
+
+        announcements = Announcement.objects.select_related('created_by').prefetch_related(
+            'specific_users', 'specific_classes', 'read_by'
+        ).all()
+
+        # Apply filters
+        if audience:
+            announcements = announcements.filter(audience=audience)
+        if priority:
+            announcements = announcements.filter(priority=priority)
+        if is_active is not None:
+            is_active_bool = is_active.lower() == 'true'
+            announcements = announcements.filter(is_active=is_active_bool)
+
+        announcements_data = []
+        for announcement in announcements:
+            announcements_data.append({
+                'id': announcement.id,
+                'title': announcement.title,
+                'message': announcement.message,
+                'audience': announcement.audience,
+                'audience_display': announcement.get_audience_display(),
+                'priority': announcement.priority,
+                'priority_display': announcement.get_priority_display(),
+                'send_type': announcement.send_type,
+                'send_status': announcement.send_status,
+                'scheduled_date': announcement.scheduled_date,
+                'scheduled_time': announcement.scheduled_time,
+                'sent_at': announcement.sent_at,
+                'parent_filter': announcement.parent_filter,
+                'student_filter': announcement.student_filter,
+                'teacher_filter': announcement.teacher_filter,
+                'grading_deadline': announcement.grading_deadline,
+                'is_recurring': announcement.is_recurring,
+                'recurrence_days': announcement.recurrence_days,
+                'last_sent_date': announcement.last_sent_date,
+                'next_send_date': announcement.next_send_date,
+                'created_by': announcement.created_by.get_full_name(),
+                'created_at': announcement.created_at,
+                'updated_at': announcement.updated_at,
+                'is_active': announcement.is_active,
+                'recipients_count': announcement.get_recipients_count(),
+                'read_count': announcement.read_by.count(),
+                'specific_users': [
+                    {'id': user.id, 'username': user.username, 'full_name': user.get_full_name()}
+                    for user in announcement.specific_users.all()
+                ],
+                'specific_classes': [
+                    {'id': cls.id, 'name': cls.name}
+                    for cls in announcement.specific_classes.all()
+                ]
+            })
+
+        return Response({
+            'announcements': announcements_data,
+            'total': len(announcements_data)
+        })
+
+    elif request.method == 'POST':
+        data = request.data
+        title = data.get('title')
+        message = data.get('message')
+        audience = data.get('audience', 'everyone')
+        priority = data.get('priority', 'medium')
+        send_type = data.get('send_type', 'manual')
+
+        # Handle date/time fields - convert empty strings to None
+        scheduled_date = data.get('scheduled_date')
+        scheduled_date = None if scheduled_date == '' else scheduled_date
+
+        scheduled_time = data.get('scheduled_time')
+        scheduled_time = None if scheduled_time == '' else scheduled_time
+
+        specific_user_ids = data.get('specific_users', [])
+        specific_class_ids = data.get('specific_classes', [])
+
+        # New targeting filters
+        parent_filter = data.get('parent_filter', 'all')
+        student_filter = data.get('student_filter', 'all')
+        teacher_filter = data.get('teacher_filter', 'all')
+
+        grading_deadline = data.get('grading_deadline', None)
+        grading_deadline = None if grading_deadline == '' else grading_deadline
+
+        # Recurrence settings
+        is_recurring = data.get('is_recurring', False)
+        recurrence_days = data.get('recurrence_days', None)
+        recurrence_days = None if recurrence_days == '' else recurrence_days
+
+        if not title or not message:
+            return Response(
+                {'detail': 'Title and message are required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Validate scheduling fields if send_type is 'scheduled'
+        if send_type == 'scheduled':
+            if not scheduled_date or not scheduled_time:
+                return Response(
+                    {'detail': 'Scheduled date and time are required for scheduled announcements'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+        # Validate recurrence settings
+        if is_recurring and not recurrence_days:
+            return Response(
+                {'detail': 'Recurrence days are required for recurring announcements'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Validate teacher filter settings
+        if audience == 'teachers' and teacher_filter == 'incomplete_grading' and not grading_deadline:
+            return Response(
+                {'detail': 'Grading deadline is required when targeting teachers with incomplete grading'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Determine initial send_status
+        if send_type == 'manual':
+            send_status = 'draft'
+        else:
+            send_status = 'scheduled'
+
+        # Calculate next_send_date for recurring announcements
+        next_send_date = None
+        if is_recurring and recurrence_days and scheduled_date:
+            from datetime import datetime, timedelta
+            base_date = datetime.strptime(scheduled_date, '%Y-%m-%d').date()
+            next_send_date = base_date
+
+        # Create announcement
+        announcement = Announcement.objects.create(
+            title=title,
+            message=message,
+            audience=audience,
+            priority=priority,
+            send_type=send_type,
+            scheduled_date=scheduled_date if send_type == 'scheduled' else None,
+            scheduled_time=scheduled_time if send_type == 'scheduled' else None,
+            send_status=send_status,
+            parent_filter=parent_filter,
+            student_filter=student_filter,
+            teacher_filter=teacher_filter,
+            grading_deadline=grading_deadline if teacher_filter == 'incomplete_grading' else None,
+            is_recurring=is_recurring,
+            recurrence_days=recurrence_days if is_recurring else None,
+            next_send_date=next_send_date,
+            created_by=request.user,
+            is_active=False
+        )
+
+        # Add specific users if audience is 'specific'
+        if audience == 'specific' and specific_user_ids:
+            users = CustomUser.objects.filter(id__in=specific_user_ids)
+            announcement.specific_users.set(users)
+
+        # Add specific classes if provided
+        if specific_class_ids:
+            classes = Class.objects.filter(id__in=specific_class_ids)
+            announcement.specific_classes.set(classes)
+
+        # If manual send, immediately send the announcement
+        if send_type == 'manual':
+            try:
+                notifications_sent = announcement.send_announcement()
+                message_text = f'Announcement sent successfully to {notifications_sent} recipient(s)'
+            except Exception as e:
+                import traceback
+                print(f"Error sending announcement: {str(e)}")
+                print(traceback.format_exc())
+                message_text = f'Announcement created but failed to send: {str(e)}'
+        else:
+            message_text = f'Announcement scheduled for {scheduled_date} at {scheduled_time}'
+
+        return Response({
+            'message': message_text,
+            'announcement': {
+                'id': announcement.id,
+                'title': announcement.title,
+                'message': announcement.message,
+                'audience': announcement.audience,
+                'priority': announcement.priority,
+                'send_type': announcement.send_type,
+                'send_status': announcement.send_status,
+                'scheduled_date': announcement.scheduled_date,
+                'scheduled_time': announcement.scheduled_time,
+                'parent_filter': announcement.parent_filter,
+                'student_filter': announcement.student_filter,
+                'teacher_filter': announcement.teacher_filter,
+                'grading_deadline': announcement.grading_deadline,
+                'is_recurring': announcement.is_recurring,
+                'recurrence_days': announcement.recurrence_days,
+                'next_send_date': announcement.next_send_date,
+                'recipients_count': announcement.get_recipients_count()
+            }
+        }, status=status.HTTP_201_CREATED)
+
+
+@api_view(['GET', 'PUT', 'DELETE'])
+@permission_classes([IsAuthenticated, IsAdminRole])
+def announcement_detail(request, announcement_id):
+    """
+    GET: Get announcement details
+    PUT: Update announcement
+    DELETE: Delete announcement
+    """
+    from schooladmin.models import Announcement
+    from users.models import CustomUser
+    from academics.models import Class
+
+    try:
+        announcement = Announcement.objects.select_related('created_by').prefetch_related(
+            'specific_users', 'specific_classes', 'read_by'
+        ).get(id=announcement_id)
+    except Announcement.DoesNotExist:
+        return Response(
+            {'detail': 'Announcement not found'},
+            status=status.HTTP_404_NOT_FOUND
+        )
+
+    if request.method == 'GET':
+        return Response({
+            'id': announcement.id,
+            'title': announcement.title,
+            'message': announcement.message,
+            'audience': announcement.audience,
+            'audience_display': announcement.get_audience_display(),
+            'priority': announcement.priority,
+            'priority_display': announcement.get_priority_display(),
+            'send_type': announcement.send_type,
+            'send_status': announcement.send_status,
+            'scheduled_date': announcement.scheduled_date,
+            'scheduled_time': announcement.scheduled_time,
+            'sent_at': announcement.sent_at,
+            'parent_filter': announcement.parent_filter,
+            'student_filter': announcement.student_filter,
+            'teacher_filter': announcement.teacher_filter,
+            'grading_deadline': announcement.grading_deadline,
+            'is_recurring': announcement.is_recurring,
+            'recurrence_days': announcement.recurrence_days,
+            'last_sent_date': announcement.last_sent_date,
+            'next_send_date': announcement.next_send_date,
+            'created_by': announcement.created_by.get_full_name(),
+            'created_at': announcement.created_at,
+            'updated_at': announcement.updated_at,
+            'is_active': announcement.is_active,
+            'recipients_count': announcement.get_recipients_count(),
+            'read_count': announcement.read_by.count(),
+            'specific_users': [
+                {'id': user.id, 'username': user.username, 'full_name': user.get_full_name()}
+                for user in announcement.specific_users.all()
+            ],
+            'specific_classes': [
+                {'id': cls.id, 'name': cls.name}
+                for cls in announcement.specific_classes.all()
+            ]
+        })
+
+    elif request.method == 'PUT':
+        data = request.data
+        announcement.title = data.get('title', announcement.title)
+        announcement.message = data.get('message', announcement.message)
+        announcement.audience = data.get('audience', announcement.audience)
+        announcement.priority = data.get('priority', announcement.priority)
+        announcement.is_active = data.get('is_active', announcement.is_active)
+        announcement.send_type = data.get('send_type', announcement.send_type)
+
+        # Handle date fields - convert empty strings to None
+        scheduled_date = data.get('scheduled_date', announcement.scheduled_date)
+        announcement.scheduled_date = None if scheduled_date == '' else scheduled_date
+
+        scheduled_time = data.get('scheduled_time', announcement.scheduled_time)
+        announcement.scheduled_time = None if scheduled_time == '' else scheduled_time
+
+        announcement.parent_filter = data.get('parent_filter', announcement.parent_filter)
+        announcement.student_filter = data.get('student_filter', announcement.student_filter)
+        announcement.teacher_filter = data.get('teacher_filter', announcement.teacher_filter)
+
+        grading_deadline = data.get('grading_deadline', announcement.grading_deadline)
+        announcement.grading_deadline = None if grading_deadline == '' else grading_deadline
+
+        announcement.is_recurring = data.get('is_recurring', announcement.is_recurring)
+
+        recurrence_days = data.get('recurrence_days', announcement.recurrence_days)
+        announcement.recurrence_days = None if recurrence_days == '' else recurrence_days
+
+        announcement.save()
+
+        # Update specific users if provided
+        if 'specific_users' in data:
+            user_ids = data.get('specific_users', [])
+            users = CustomUser.objects.filter(id__in=user_ids)
+            announcement.specific_users.set(users)
+
+        # Update specific classes if provided
+        if 'specific_classes' in data:
+            class_ids = data.get('specific_classes', [])
+            classes = Class.objects.filter(id__in=class_ids)
+            announcement.specific_classes.set(classes)
+
+        # If manual send and not yet sent, send the announcement
+        message_text = 'Announcement updated successfully'
+        if announcement.send_type == 'manual' and announcement.send_status == 'draft':
+            try:
+                notifications_sent = announcement.send_announcement()
+                message_text = f'Announcement sent successfully to {notifications_sent} recipient(s)'
+            except Exception as e:
+                import traceback
+                print(f"Error sending announcement: {str(e)}")
+                print(traceback.format_exc())
+                message_text = f'Announcement updated but failed to send: {str(e)}'
+
+        return Response({
+            'message': message_text,
+            'announcement': {
+                'id': announcement.id,
+                'title': announcement.title,
+                'message': announcement.message,
+                'audience': announcement.audience,
+                'priority': announcement.priority,
+                'is_active': announcement.is_active,
+                'send_type': announcement.send_type,
+                'send_status': announcement.send_status,
+                'scheduled_date': announcement.scheduled_date,
+                'scheduled_time': announcement.scheduled_time
+            }
+        })
+
+    elif request.method == 'DELETE':
+        announcement.delete()
+        return Response(
+            {'message': 'Announcement deleted successfully'},
+            status=status.HTTP_204_NO_CONTENT
+        )
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated, IsAdminRole])
+def get_users_and_classes_for_announcements(request):
+    """
+    Get list of users and classes for announcement audience selection
+    Supports search query parameter for filtering users
+    """
+    from users.models import CustomUser
+    from academics.models import Class
+
+    # Get search query parameter
+    search_query = request.query_params.get('search', '').strip()
+
+    # Base queryset
+    users_queryset = CustomUser.objects.filter(is_active=True)
+
+    # Apply search filter if provided
+    if search_query:
+        users_queryset = users_queryset.filter(
+            Q(username__icontains=search_query) |
+            Q(first_name__icontains=search_query) |
+            Q(last_name__icontains=search_query) |
+            Q(email__icontains=search_query)
+        )
+
+    users = users_queryset.values('id', 'username', 'first_name', 'last_name', 'role', 'email')
+    classes = Class.objects.all().values('id', 'name')
+
+    users_data = [
+        {
+            'id': user['id'],
+            'username': user['username'],
+            'full_name': f"{user['first_name']} {user['last_name']}".strip(),
+            'role': user['role'],
+            'email': user['email']
+        }
+        for user in users
+    ]
+
+    return Response({
+        'users': users_data,
+        'classes': list(classes)
+    })
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_my_announcements(request):
+    """
+    Get announcements for the current logged-in user
+    Returns both announcements and notifications
+    - For teachers: includes admin announcements + direct notifications (like grading reminders)
+    - For students/parents: includes admin announcements + direct notifications
+    """
+    from schooladmin.models import Announcement
+    from logs.models import Notification
+    from django.db.models import Q
+
+    user = request.user
+
+    try:
+        # Get admin-created announcements that target this user based on their role
+        announcements = Announcement.objects.filter(
+            is_active=True,
+            send_status='sent'
+        ).filter(
+            Q(audience='everyone') |
+            Q(audience='specific', specific_users=user) |
+            Q(audience='students' if user.role == 'student' else 'none') |
+            Q(audience='teachers' if user.role == 'teacher' else 'none') |
+            Q(audience='parents' if user.role == 'parent' else 'none')
+        ).distinct().order_by('-sent_at')[:20]
+
+        # Get direct notifications (system-generated)
+        notifications = Notification.objects.filter(
+            recipient=user
+        ).order_by('-created_at')[:20]
+
+        # Combine both into a single list
+        combined_list = []
+
+        # Add announcements
+        for announcement in announcements:
+            combined_list.append({
+                'id': f"announcement_{announcement.id}",
+                'type': 'announcement',
+                'title': announcement.title,
+                'message': announcement.message,
+                'priority': announcement.priority,
+                'priority_display': announcement.get_priority_display(),
+                'created_at': announcement.sent_at or announcement.created_at,
+                'is_read': announcement.is_read_by(user),
+                'created_by': announcement.created_by.get_full_name() if announcement.created_by else 'Admin',
+                'notification_type': 'announcement'
+            })
+
+        # Add notifications
+        for notification in notifications:
+            combined_list.append({
+                'id': f"notification_{notification.id}",
+                'type': 'notification',
+                'title': notification.title,
+                'message': notification.message,
+                'priority': notification.priority,
+                'priority_display': notification.get_priority_display(),
+                'created_at': notification.created_at,
+                'is_read': notification.is_read,
+                'created_by': 'System',
+                'notification_type': notification.notification_type
+            })
+
+        # Sort by created_at, most recent first
+        combined_list.sort(key=lambda x: x['created_at'], reverse=True)
+
+        # Count unread
+        unread_count = sum(1 for item in combined_list if not item['is_read'])
+
+        return Response({
+            'announcements': combined_list[:50],  # Return max 50
+            'unread_count': unread_count
+        })
+
+    except Exception as e:
+        print(f"Error in get_my_announcements: {str(e)}")
+        import traceback
+        print(traceback.format_exc())
+        return Response(
+            {"detail": f"Error fetching announcements: {str(e)}"},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def mark_announcement_as_read(request, announcement_id):
+    """
+    Mark an announcement as read by the current user
+    """
+    from schooladmin.models import Announcement
+
+    user = request.user
+
+    try:
+        announcement = Announcement.objects.get(id=announcement_id)
+        announcement.mark_as_read(user)
+
+        return Response({
+            'message': 'Announcement marked as read',
+            'announcement_id': announcement_id
+        })
+
+    except Announcement.DoesNotExist:
+        return Response(
+            {'detail': 'Announcement not found'},
+            status=status.HTTP_404_NOT_FOUND
+        )
+    except Exception as e:
+        print(f"Error in mark_announcement_as_read: {str(e)}")
+        return Response(
+            {"detail": f"Error marking announcement as read: {str(e)}"},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+# ============================================================================
+# SESSION MANAGEMENT - MOVE TO NEW TERM/SESSION
+# ============================================================================
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated, IsAdminRole])
+def move_to_next_term(request):
+    """
+    Move to the next term in the same academic year.
+    Copies selected data (students, teachers, subjects, fees) to the new term.
+    Does NOT copy: grades, results, attendance, calendar events.
+    """
+    from django.contrib.auth import get_user_model
+    User = get_user_model()
+
+    # Get options from request
+    copy_students = request.data.get('copy_students', True)
+    copy_teachers = request.data.get('copy_teachers', True)
+    copy_subjects = request.data.get('copy_subjects', True)
+    copy_fees = request.data.get('copy_fees', True)
+    copy_grading_config = request.data.get('copy_grading_config', True)
+
+    try:
+        with transaction.atomic():
+            # Get current active grading configuration
+            current_config = GradingConfiguration.objects.filter(is_active=True).first()
+
+            if not current_config:
+                return Response(
+                    {"detail": "No active grading configuration found"},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+
+            current_term = current_config.term
+            current_year = current_config.academic_year
+
+            # Determine next term
+            term_order = ["First Term", "Second Term", "Third Term"]
+            current_term_index = term_order.index(current_term)
+
+            if current_term_index >= 2:  # Third Term
+                return Response(
+                    {"detail": "Cannot move to next term from Third Term. Use 'Move to New Session' instead."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            next_term = term_order[current_term_index + 1]
+
+            # Check if next term config already exists
+            existing_config = GradingConfiguration.objects.filter(
+                academic_year=current_year,
+                term=next_term
+            ).first()
+
+            if existing_config:
+                return Response(
+                    {"detail": f"Configuration for {next_term} {current_year} already exists"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            # Create new grading configuration for next term
+            # Copy percentage values from current config
+            new_config = GradingConfiguration.objects.create(
+                academic_year=current_year,
+                term=next_term,
+                attendance_percentage=current_config.attendance_percentage,
+                assignment_percentage=current_config.assignment_percentage,
+                test_percentage=current_config.test_percentage,
+                exam_percentage=current_config.exam_percentage,
+                grading_scale=current_config.grading_scale,
+                created_by=request.user,
+                is_active=False  # Will activate after copying
+            )
+
+            # Copy grade components from current config if requested
+            if copy_grading_config:
+                current_components = GradeComponent.objects.filter(grading_config=current_config)
+                for component in current_components:
+                    GradeComponent.objects.create(
+                        grading_config=new_config,
+                        component_type=component.component_type,
+                        percentage_weight=component.percentage_weight,
+                        max_score=component.max_score,
+                        description=component.description
+                    )
+
+            # Get all current class sessions
+            current_class_sessions = ClassSession.objects.filter(
+                academic_year=current_year,
+                term=current_term
+            )
+
+            class_mapping = {}  # Map old class session to new class session
+
+            # Copy class sessions
+            for old_class_session in current_class_sessions:
+                new_class_session = ClassSession.objects.create(
+                    classroom=old_class_session.classroom,
+                    academic_year=current_year,
+                    term=next_term
+                )
+                class_mapping[old_class_session.id] = new_class_session
+
+                # Copy subjects if requested
+                if copy_subjects:
+                    old_subjects = Subject.objects.filter(class_session=old_class_session)
+                    for old_subject in old_subjects:
+                        Subject.objects.create(
+                            name=old_subject.name,
+                            class_session=new_class_session,
+                            teacher=old_subject.teacher if copy_teachers else None,
+                            department=old_subject.department
+                        )
+
+            # Copy student sessions if requested
+            if copy_students:
+                current_student_sessions = StudentSession.objects.filter(
+                    class_session__academic_year=current_year,
+                    class_session__term=current_term,
+                    is_active=True
+                )
+
+                for old_student_session in current_student_sessions:
+                    new_class_session = class_mapping.get(old_student_session.class_session.id)
+                    if new_class_session:
+                        StudentSession.objects.create(
+                            student=old_student_session.student,
+                            class_session=new_class_session,
+                            is_active=True
+                        )
+
+            # Copy fee structure if requested
+            if copy_fees:
+                current_fees = FeeStructure.objects.filter(
+                    academic_year=current_year,
+                    term=current_term
+                )
+
+                for old_fee in current_fees:
+                    # Create new fee structure for next term
+                    new_fee = FeeStructure.objects.create(
+                        name=old_fee.name,
+                        amount=old_fee.amount,
+                        academic_year=current_year,
+                        term=next_term
+                    )
+                    # Copy the many-to-many classes relationship
+                    new_fee.classes.set(old_fee.classes.all())
+
+            # Deactivate current configuration and activate new one
+            current_config.is_active = False
+            current_config.save()
+
+            new_config.is_active = True
+            new_config.save()
+
+            # Deactivate old student sessions
+            StudentSession.objects.filter(
+                class_session__academic_year=current_year,
+                class_session__term=current_term
+            ).update(is_active=False)
+
+            return Response({
+                "message": f"Successfully moved to {next_term} {current_year}",
+                "new_term": next_term,
+                "academic_year": current_year,
+                "config_id": new_config.id
+            }, status=status.HTTP_200_OK)
+
+    except Exception as e:
+        print(f"Error moving to next term: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return Response(
+            {"detail": f"Error moving to next term: {str(e)}"},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated, IsAdminRole])
+def move_to_next_session(request):
+    """
+    Move to the next academic year's first term.
+    Only available when current term is Third Term.
+    Promotes students to the next class (JSS1->JSS2, etc.) and graduates SSS3 students.
+    """
+    from django.contrib.auth import get_user_model
+    from logs.models import Notification
+    User = get_user_model()
+
+    # Get options from request
+    copy_students = request.data.get('copy_students', True)
+    copy_teachers = request.data.get('copy_teachers', True)
+    copy_subjects = request.data.get('copy_subjects', True)
+    copy_fees = request.data.get('copy_fees', True)
+    copy_grading_config = request.data.get('copy_grading_config', True)
+
+    # Class progression mapping (JSS1 -> JSS2, etc.)
+    CLASS_PROGRESSION = {
+        'J.S.S.1': 'J.S.S.2',
+        'J.S.S.2': 'J.S.S.3',
+        'J.S.S.3': 'S.S.S.1',
+        'S.S.S.1': 'S.S.S.2',
+        'S.S.S.2': 'S.S.S.3',
+        'S.S.S.3': 'GRADUATED'  # Special marker for graduating students
+    }
+
+    try:
+        with transaction.atomic():
+            # Get current active grading configuration
+            current_config = GradingConfiguration.objects.filter(is_active=True).first()
+
+            if not current_config:
+                return Response(
+                    {"detail": "No active grading configuration found"},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+
+            current_term = current_config.term
+            current_year = current_config.academic_year
+
+            # Verify current term is Third Term
+            if current_term != "Third Term":
+                return Response(
+                    {"detail": "Can only move to new session from Third Term"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            # Calculate next academic year (e.g., 2027/2028 -> 2028/2029)
+            years = current_year.split('/')
+            if len(years) != 2:
+                return Response(
+                    {"detail": "Invalid academic year format. Expected format: YYYY/YYYY"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            start_year = int(years[0]) + 1
+            end_year = int(years[1]) + 1
+            next_year = f"{start_year}/{end_year}"
+            next_term = "First Term"
+
+            # Check if next session config already exists
+            existing_config = GradingConfiguration.objects.filter(
+                academic_year=next_year,
+                term=next_term
+            ).first()
+
+            if existing_config:
+                return Response(
+                    {"detail": f"Configuration for {next_term} {next_year} already exists"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            # Use copy_to_session method to create new grading configuration with all required fields
+            if copy_grading_config:
+                new_config = current_config.copy_to_session(next_year, next_term, request.user)
+            else:
+                # If not copying config, still need to create one with required fields
+                # Use the current config values as defaults
+                new_config = GradingConfiguration.objects.create(
+                    academic_year=next_year,
+                    term=next_term,
+                    attendance_percentage=current_config.attendance_percentage,
+                    assignment_percentage=current_config.assignment_percentage,
+                    test_percentage=current_config.test_percentage,
+                    exam_percentage=current_config.exam_percentage,
+                    grading_scale=current_config.grading_scale,
+                    created_by=request.user,
+                    is_active=False
+                )
+
+            # Copy grade components from current config if requested
+            if copy_grading_config:
+                current_components = GradeComponent.objects.filter(grading_config=current_config)
+                for component in current_components:
+                    # Check if component already exists (might be created by copy_to_session)
+                    if not GradeComponent.objects.filter(
+                        grading_config=new_config,
+                        component_type=component.component_type
+                    ).exists():
+                        GradeComponent.objects.create(
+                            grading_config=new_config,
+                            component_type=component.component_type,
+                            percentage_weight=component.percentage_weight,
+                            max_score=component.max_score,
+                            description=component.description
+                        )
+
+            # Get all current class sessions
+            current_class_sessions = ClassSession.objects.filter(
+                academic_year=current_year,
+                term=current_term
+            )
+
+            class_mapping = {}  # Map old class to promoted class session
+            graduated_students = []  # Track graduating students
+
+            # Copy class sessions and prepare for student promotion
+            for old_class_session in current_class_sessions:
+                # Create session for the SAME class (we'll promote students separately)
+                new_class_session = ClassSession.objects.create(
+                    classroom=old_class_session.classroom,
+                    academic_year=next_year,
+                    term=next_term
+                )
+                class_mapping[old_class_session.classroom.name] = new_class_session
+
+                # Copy subjects if requested
+                if copy_subjects:
+                    old_subjects = Subject.objects.filter(class_session=old_class_session)
+                    for old_subject in old_subjects:
+                        Subject.objects.create(
+                            name=old_subject.name,
+                            class_session=new_class_session,
+                            teacher=old_subject.teacher if copy_teachers else None,
+                            department=old_subject.department
+                        )
+
+            # Promote students to next class if requested
+            if copy_students:
+                current_student_sessions = StudentSession.objects.filter(
+                    class_session__academic_year=current_year,
+                    class_session__term=current_term,
+                    is_active=True
+                )
+
+                for old_student_session in current_student_sessions:
+                    current_class_name = old_student_session.class_session.classroom.name
+                    next_class_name = CLASS_PROGRESSION.get(current_class_name)
+
+                    if next_class_name == 'GRADUATED':
+                        # Mark SSS3 students as graduated
+                        graduated_students.append(old_student_session.student)
+                        # Deactivate their student session
+                        old_student_session.is_active = False
+                        old_student_session.save()
+                    elif next_class_name and next_class_name in class_mapping:
+                        # Promote to next class
+                        promoted_class_session = class_mapping[next_class_name]
+                        StudentSession.objects.create(
+                            student=old_student_session.student,
+                            class_session=promoted_class_session,
+                            is_active=True
+                        )
+                        # Deactivate old session
+                        old_student_session.is_active = False
+                        old_student_session.save()
+                    else:
+                        # Class not in progression map or next class doesn't exist
+                        # Keep student in same class (edge case)
+                        if current_class_name in class_mapping:
+                            same_class_session = class_mapping[current_class_name]
+                            StudentSession.objects.create(
+                                student=old_student_session.student,
+                                class_session=same_class_session,
+                                is_active=True
+                            )
+                            old_student_session.is_active = False
+                            old_student_session.save()
+
+            # Send graduation notifications to SSS3 students and their parents
+            for student in graduated_students:
+                # Create notification for student
+                Notification.objects.create(
+                    recipient=student,
+                    notification_type='graduation',
+                    priority='high',
+                    title='Congratulations on Your Graduation!',
+                    message=f'Dear {student.first_name} {student.last_name}, '
+                            f'Congratulations on successfully completing your secondary education! '
+                            f'You have graduated from {current_year}. We wish you all the best in your future endeavors. '
+                            f'Your academic records will remain available for your reference.',
+                    is_read=False,
+                    is_popup_shown=False
+                )
+
+                # Create notification for parent(s) if they exist
+                if hasattr(student, 'parents'):
+                    parents = student.parents.all()
+                    for parent in parents:
+                        Notification.objects.create(
+                            recipient=parent,
+                            notification_type='graduation',
+                            priority='high',
+                            title=f'{student.first_name} {student.last_name} Has Graduated!',
+                            message=f'Dear Parent, we are pleased to inform you that your child, '
+                                    f'{student.first_name} {student.last_name}, has successfully graduated '
+                                    f'from our institution in the {current_year} academic year. '
+                                    f'Congratulations on this achievement! Their academic records remain accessible.',
+                            is_read=False,
+                            is_popup_shown=False
+                        )
+
+            # Copy fee structure if requested
+            if copy_fees:
+                current_fees = FeeStructure.objects.filter(
+                    academic_year=current_year,
+                    term=current_term
+                )
+
+                for old_fee in current_fees:
+                    # Create new fee structure
+                    new_fee = FeeStructure.objects.create(
+                        name=old_fee.name,
+                        amount=old_fee.amount,
+                        academic_year=next_year,
+                        term=next_term
+                    )
+                    # Copy the ManyToMany relationship with classes
+                    new_fee.classes.set(old_fee.classes.all())
+
+            # Deactivate current configuration and activate new one
+            current_config.is_active = False
+            current_config.save()
+
+            new_config.is_active = True
+            new_config.save()
+
+            # Deactivate remaining old student sessions
+            StudentSession.objects.filter(
+                class_session__academic_year=current_year,
+                class_session__term=current_term,
+                is_active=True
+            ).update(is_active=False)
+
+            return Response({
+                "message": f"Successfully moved to {next_term} {next_year}",
+                "new_term": next_term,
+                "academic_year": next_year,
+                "config_id": new_config.id,
+                "graduated_students_count": len(graduated_students),
+                "graduated_students": [f"{s.first_name} {s.last_name}" for s in graduated_students]
+            }, status=status.HTTP_200_OK)
+
+    except Exception as e:
+        print(f"Error moving to next session: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return Response(
+            {"detail": f"Error moving to next session: {str(e)}"},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated, IsAdminRole])
+def revert_to_previous_session(request):
+    """
+    Revert to the previous term/session by deleting the current one.
+    This will delete all data created in the current session.
+    """
+    try:
+        with transaction.atomic():
+            # Get current active grading configuration
+            current_config = GradingConfiguration.objects.filter(is_active=True).first()
+
+            if not current_config:
+                return Response(
+                    {"detail": "No active grading configuration found"},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+
+            current_term = current_config.term
+            current_year = current_config.academic_year
+
+            # Find previous configuration
+            term_order = ["First Term", "Second Term", "Third Term"]
+            current_term_index = term_order.index(current_term)
+
+            previous_config = None
+            previous_year = current_year
+
+            if current_term_index > 0:
+                # Previous term in same year
+                previous_term = term_order[current_term_index - 1]
+                previous_config = GradingConfiguration.objects.filter(
+                    academic_year=current_year,
+                    term=previous_term
+                ).first()
+            else:
+                # First term - go to previous year's third term
+                years = current_year.split('/')
+                if len(years) == 2:
+                    start_year = int(years[0]) - 1
+                    end_year = int(years[1]) - 1
+                    previous_year = f"{start_year}/{end_year}"
+                    previous_config = GradingConfiguration.objects.filter(
+                        academic_year=previous_year,
+                        term="Third Term"
+                    ).first()
+
+            if not previous_config:
+                return Response(
+                    {"detail": "No previous configuration found to revert to"},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+
+            # Delete current session data
+            # Delete class sessions (cascades to subjects)
+            ClassSession.objects.filter(
+                academic_year=current_year,
+                term=current_term
+            ).delete()
+
+            # Delete student sessions
+            StudentSession.objects.filter(
+                class_session__academic_year=current_year,
+                class_session__term=current_term
+            ).delete()
+
+            # Delete fee structures
+            FeeStructure.objects.filter(
+                academic_year=current_year,
+                term=current_term
+            ).delete()
+
+            # Delete grade components for current config
+            GradeComponent.objects.filter(grading_config=current_config).delete()
+
+            # Delete current grading configuration
+            current_config.delete()
+
+            # Activate previous configuration
+            previous_config.is_active = True
+            previous_config.save()
+
+            # Reactivate previous student sessions
+            StudentSession.objects.filter(
+                class_session__academic_year=previous_config.academic_year,
+                class_session__term=previous_config.term
+            ).update(is_active=True)
+
+            return Response({
+                "message": f"Successfully reverted to {previous_config.term} {previous_config.academic_year}",
+                "term": previous_config.term,
+                "academic_year": previous_config.academic_year,
+                "config_id": previous_config.id
+            }, status=status.HTTP_200_OK)
+
+    except Exception as e:
+        print(f"Error reverting to previous session: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return Response(
+            {"detail": f"Error reverting to previous session: {str(e)}"},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated, IsAdminRole])
+def get_current_session_info(request):
+    """
+    Get information about the current active session.
+    Returns term, academic year, and whether next session button should be enabled.
+    """
+    try:
+        current_config = GradingConfiguration.objects.filter(is_active=True).first()
+
+        if not current_config:
+            return Response(
+                {"detail": "No active grading configuration found"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        # Check if there's a previous session to revert to
+        term_order = ["First Term", "Second Term", "Third Term"]
+        current_term_index = term_order.index(current_config.term)
+
+        can_revert = False
+        if current_term_index > 0:
+            # Check for previous term in same year
+            previous_term = term_order[current_term_index - 1]
+            can_revert = GradingConfiguration.objects.filter(
+                academic_year=current_config.academic_year,
+                term=previous_term
+            ).exists()
+        else:
+            # Check for previous year's third term
+            years = current_config.academic_year.split('/')
+            if len(years) == 2:
+                start_year = int(years[0]) - 1
+                end_year = int(years[1]) - 1
+                previous_year = f"{start_year}/{end_year}"
+                can_revert = GradingConfiguration.objects.filter(
+                    academic_year=previous_year,
+                    term="Third Term"
+                ).exists()
+
+        return Response({
+            "current_term": current_config.term,
+            "academic_year": current_config.academic_year,
+            "is_third_term": current_config.term == "Third Term",
+            "can_move_to_next_term": current_config.term != "Third Term",
+            "can_move_to_next_session": current_config.term == "Third Term",
+            "can_revert": can_revert
+        }, status=status.HTTP_200_OK)
+
+    except Exception as e:
+        print(f"Error getting session info: {str(e)}")
+        return Response(
+            {"detail": f"Error getting session info: {str(e)}"},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_all_available_sessions(request):
+    """
+    Get all available academic sessions (year/term combinations) for historical filtering.
+    Returns both active and inactive sessions to allow filtering by previous terms.
+    """
+    try:
+        # Get all unique academic year and term combinations from ClassSession
+        class_sessions = ClassSession.objects.values(
+            'academic_year', 'term'
+        ).distinct().order_by('-academic_year', 'term')
+
+        # Get all grading configurations to include their is_active status
+        grading_configs = GradingConfiguration.objects.all()
+        config_map = {}
+        for config in grading_configs:
+            key = f"{config.academic_year}_{config.term}"
+            config_map[key] = {
+                'is_active': config.is_active,
+                'config_id': config.id
+            }
+
+        sessions = []
+        term_order = {"First Term": 1, "Second Term": 2, "Third Term": 3}
+
+        for session in class_sessions:
+            year = session['academic_year']
+            term = session['term']
+            key = f"{year}_{term}"
+            config_info = config_map.get(key, {'is_active': False, 'config_id': None})
+
+            sessions.append({
+                'academic_year': year,
+                'term': term,
+                'term_order': term_order.get(term, 0),
+                'display_name': f"{year} - {term}",
+                'is_active': config_info['is_active'],
+                'has_config': key in config_map,
+                'config_id': config_info['config_id']
+            })
+
+        # Sort by academic year (descending) then by term order (ascending)
+        sessions.sort(key=lambda x: (x['academic_year'], x['term_order']), reverse=True)
+
+        # Get current active session
+        active_config = GradingConfiguration.objects.filter(is_active=True).first()
+        current_session = None
+        if active_config:
+            current_session = {
+                'academic_year': active_config.academic_year,
+                'term': active_config.term
+            }
+
+        return Response({
+            'sessions': sessions,
+            'current_session': current_session,
+            'total_count': len(sessions)
+        }, status=status.HTTP_200_OK)
+
+    except Exception as e:
+        print(f"Error getting available sessions: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return Response(
+            {"detail": f"Error getting available sessions: {str(e)}"},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )

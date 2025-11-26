@@ -3,7 +3,8 @@ from .views import (
     # Fee Structure Views
     CreateFeeStructureView, ListFeeStructuresView, UpdateFeeStructureView,
     DeleteFeeStructureView, ListStudentFeeRecordsView, FeeStudentsView,
-    update_fee_payment, fee_dashboard_view,
+    update_fee_payment, fee_dashboard_view, get_fee_payment_history, generate_fee_receipt,
+    get_admin_fee_receipts, download_admin_fee_receipt,
     
     # Grading Scale Views
     GradingScaleListCreateView, GradingScaleDetailView,
@@ -36,6 +37,7 @@ from .views import (
 
     # Teacher Manual Grading Views
     get_teacher_subjects_for_grading, get_students_for_manual_grading, save_manual_grades,
+    get_teacher_grading_stats, get_incomplete_assessment_students, get_graded_assessment_students,
 
     # Analytics Views
     get_test_completion_stats, get_class_subjects_for_tests, get_subject_test_scores,
@@ -45,7 +47,7 @@ from .views import (
     get_exam_completion_stats, get_class_subjects_for_exams, get_subject_exam_scores, update_exam_score,
 
     # Report Sheet Views
-    get_students_for_report, get_report_sheet,
+    get_students_for_report, get_report_sheet, download_report_sheet,
 
     # Report Access Analytics Views
     get_report_access_stats, send_report_sheets, get_eligible_classes_for_reports,
@@ -70,7 +72,35 @@ from .views import (
     get_subject_grading_stats, get_subject_incomplete_students, notify_teachers_incomplete_grades,
 
     # Student Dashboard Views
-    get_class_attendance_ranking
+    get_class_attendance_ranking,
+    get_subject_grade_rankings,
+    get_subject_top_students,
+    get_student_subject_grades,
+    get_student_fee_status,
+
+    # Parent Dashboard Views
+    get_parent_children,
+    get_child_fee_status,
+    get_child_academic_position,
+    get_child_subject_grades,
+    get_child_assignments,
+    get_parent_announcements,
+    get_parent_fee_receipts,
+    download_fee_receipt,
+
+    # Announcement Views
+    manage_announcements,
+    announcement_detail,
+    get_users_and_classes_for_announcements,
+    get_my_announcements,
+    mark_announcement_as_read,
+
+    # Session Management Views
+    move_to_next_term,
+    move_to_next_session,
+    revert_to_previous_session,
+    get_current_session_info,
+    get_all_available_sessions
 )
 
 urlpatterns = [
@@ -84,7 +114,11 @@ urlpatterns = [
     path('fees/records/', ListStudentFeeRecordsView.as_view(), name='list-student-fee-records'),
     path('fees/<int:fee_id>/students/', FeeStudentsView.as_view(), name='fee-students'),
     path('fee-records/<int:record_id>/update/', update_fee_payment, name='update-fee-payment'),
+    path('fee-records/<int:record_id>/payment-history/', get_fee_payment_history, name='fee-payment-history'),
+    path('fee-records/<int:record_id>/generate-receipt/', generate_fee_receipt, name='generate-fee-receipt'),
     path('fees/dashboard/', fee_dashboard_view, name='fee-dashboard'),
+    path('admin/fee-receipts/', get_admin_fee_receipts, name='admin-fee-receipts'),
+    path('admin/fee-receipts/<int:receipt_id>/download/', download_admin_fee_receipt, name='admin-download-fee-receipt'),
     
     # ============================================================================
     # GRADING SCALE URLS
@@ -151,6 +185,9 @@ urlpatterns = [
     path('teacher/grading/subjects/', get_teacher_subjects_for_grading, name='teacher-grading-subjects'),
     path('teacher/grading/subjects/<int:subject_id>/students/', get_students_for_manual_grading, name='students-for-manual-grading'),
     path('teacher/grading/subjects/<int:subject_id>/save/', save_manual_grades, name='save-manual-grades'),
+    path('teacher/grading-stats/', get_teacher_grading_stats, name='teacher-grading-stats'),
+    path('teacher/incomplete-students/', get_incomplete_assessment_students, name='incomplete-assessment-students'),
+    path('teacher/graded-students/', get_graded_assessment_students, name='graded-assessment-students'),
 
     # ============================================================================
     # ANALYTICS URLS
@@ -212,9 +249,44 @@ urlpatterns = [
     # ============================================================================
     path('reports/students/', get_students_for_report, name='get-students-for-report'),
     path('reports/student/<int:student_id>/', get_report_sheet, name='get-report-sheet'),
+    path('reports/student/<int:student_id>/download/', download_report_sheet, name='download-report-sheet'),
 
     # ============================================================================
     # STUDENT DASHBOARD URLS
     # ============================================================================
     path('student/dashboard/attendance-ranking/', get_class_attendance_ranking, name='student-attendance-ranking'),
+    path('student/dashboard/subject-rankings/', get_subject_grade_rankings, name='student-subject-rankings'),
+    path('student/dashboard/subject/<int:subject_id>/top-students/', get_subject_top_students, name='student-subject-top-students'),
+    path('student/dashboard/my-grades/', get_student_subject_grades, name='student-my-grades'),
+    path('student/dashboard/fee-status/', get_student_fee_status, name='student-fee-status'),
+
+    # ============================================================================
+    # PARENT DASHBOARD URLS
+    # ============================================================================
+    path('parent/children/', get_parent_children, name='parent-children'),
+    path('parent/child/<int:child_id>/fees/', get_child_fee_status, name='parent-child-fees'),
+    path('parent/child/<int:child_id>/academic/', get_child_academic_position, name='parent-child-academic'),
+    path('parent/child/<int:child_id>/subjects/', get_child_subject_grades, name='parent-child-subjects'),
+    path('parent/child/<int:child_id>/assignments/', get_child_assignments, name='parent-child-assignments'),
+    path('parent/announcements/', get_parent_announcements, name='parent-announcements'),
+    path('parent/fee-receipts/', get_parent_fee_receipts, name='parent-fee-receipts'),
+    path('parent/fee-receipts/<int:receipt_id>/download/', download_fee_receipt, name='download-fee-receipt'),
+
+    # ============================================================================
+    # ANNOUNCEMENT URLS
+    # ============================================================================
+    path('announcements/', manage_announcements, name='manage-announcements'),
+    path('announcements/<int:announcement_id>/', announcement_detail, name='announcement-detail'),
+    path('announcements/users-and-classes/', get_users_and_classes_for_announcements, name='users-and-classes'),
+    path('my-announcements/', get_my_announcements, name='my-announcements'),
+    path('announcements/<int:announcement_id>/mark-read/', mark_announcement_as_read, name='mark-announcement-read'),
+
+    # ============================================================================
+    # SESSION MANAGEMENT URLS
+    # ============================================================================
+    path('session/move-to-next-term/', move_to_next_term, name='move-to-next-term'),
+    path('session/move-to-next-session/', move_to_next_session, name='move-to-next-session'),
+    path('session/revert/', revert_to_previous_session, name='revert-to-previous-session'),
+    path('session/info/', get_current_session_info, name='get-current-session-info'),
+    path('session/all/', get_all_available_sessions, name='get-all-available-sessions'),
 ]

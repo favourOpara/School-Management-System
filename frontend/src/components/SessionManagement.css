@@ -1,0 +1,255 @@
+.session-management {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: transparent;
+  border: none;
+  padding: 0;
+  margin: 0;
+}
+
+.session-info {
+  display: flex;
+  align-items: center;
+  background: transparent;
+  border: none;
+  padding: 0;
+  margin: 0;
+}
+
+.session-info-text {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #333;
+  background: #e0e0e0;
+  white-space: nowrap;
+}
+
+.session-buttons {
+  display: flex;
+  gap: 10px;
+}
+
+.session-btn {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.session-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.session-btn-primary {
+  background: #2196f3;
+  color: white;
+}
+
+.session-btn-primary:hover:not(:disabled) {
+  background: #1976d2;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(33, 150, 243, 0.3);
+}
+
+.session-btn-success {
+  background: #4caf50;
+  color: white;
+}
+
+.session-btn-success:hover:not(:disabled) {
+  background: #388e3c;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(76, 175, 80, 0.3);
+}
+
+.session-btn-danger {
+  background: #f44336;
+  color: white;
+}
+
+.session-btn-danger:hover:not(:disabled) {
+  background: #d32f2f;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(244, 67, 54, 0.3);
+}
+
+.session-btn-disabled {
+  background: #bdbdbd !important;
+  cursor: not-allowed !important;
+}
+
+.session-management-loading {
+  font-size: 0.9rem;
+  color: #666;
+  padding: 10px;
+}
+
+/* Modal Styles */
+.session-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+.session-modal {
+  background: white;
+  border-radius: 12px;
+  padding: 30px;
+  max-width: 500px;
+  width: 90%;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+}
+
+.session-modal-title {
+  font-size: 1.5rem;
+  color: #333;
+  margin: 0 0 15px 0;
+  font-weight: 700;
+}
+
+.session-modal-description {
+  font-size: 1rem;
+  color: #666;
+  margin: 0 0 20px 0;
+}
+
+.session-options {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  margin-bottom: 20px;
+}
+
+.session-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  padding: 10px;
+  border-radius: 6px;
+  transition: background 0.2s ease;
+}
+
+.session-option:hover {
+  background: #f5f5f5;
+}
+
+.session-option input[type="checkbox"] {
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
+}
+
+.session-option span {
+  font-size: 1rem;
+  color: #333;
+  font-weight: 500;
+}
+
+.session-modal-warning {
+  background: #fff3cd;
+  border: 2px solid #ffc107;
+  border-radius: 8px;
+  padding: 12px;
+  margin: 20px 0;
+  font-size: 0.9rem;
+  color: #856404;
+  font-weight: 500;
+}
+
+.session-modal-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-top: 25px;
+}
+
+.session-modal-btn {
+  padding: 10px 24px;
+  border: none;
+  border-radius: 6px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.session-modal-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.session-modal-btn-cancel {
+  background: #e0e0e0;
+  color: #333;
+}
+
+.session-modal-btn-cancel:hover:not(:disabled) {
+  background: #bdbdbd;
+}
+
+.session-modal-btn-confirm {
+  background: #2196f3;
+  color: white;
+}
+
+.session-modal-btn-confirm:hover:not(:disabled) {
+  background: #1976d2;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(33, 150, 243, 0.3);
+}
+
+.session-modal-btn-danger {
+  background: #f44336;
+  color: white;
+}
+
+.session-modal-btn-danger:hover:not(:disabled) {
+  background: #d32f2f;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(244, 67, 54, 0.3);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .session-management {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 15px;
+  }
+
+  .session-buttons {
+    flex-wrap: wrap;
+    width: 100%;
+  }
+
+  .session-btn {
+    flex: 1;
+    min-width: 140px;
+  }
+
+  .session-modal {
+    padding: 20px;
+    width: 95%;
+  }
+
+  .session-modal-title {
+    font-size: 1.25rem;
+  }
+}

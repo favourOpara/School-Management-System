@@ -44,14 +44,49 @@
 .filter-export-row {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-end;
   gap: 1rem;
+}
+
+.search-filter-container {
+  display: flex;
+  gap: 1rem;
+  flex: 1;
+  align-items: flex-end;
+}
+
+.search-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  flex: 1;
+  max-width: 300px;
+}
+
+.search-input {
+  padding: 0.75rem;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  transition: all 0.3s ease;
+  width: 100%;
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: #1976d2;
+  box-shadow: 0 0 0 3px rgba(25, 118, 210, 0.1);
+}
+
+.search-input::placeholder {
+  color: #999;
 }
 
 .status-filter {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+  min-width: 200px;
 }
 
 .status-filter label {
@@ -271,6 +306,30 @@
   }
 }
 
+@media (max-width: 768px) {
+  .filter-export-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .search-filter-container {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .search-bar {
+    max-width: 100%;
+  }
+
+  .status-filter {
+    min-width: auto;
+  }
+
+  .export-btn {
+    width: 100%;
+  }
+}
+
 @media (max-width: 480px) {
   .fee-student-modal {
     max-height: 98vh;
@@ -293,4 +352,28 @@
     padding: 0.4rem;
     font-size: 0.8rem;
   }
+}
+
+/* Generate Receipt Button */
+.generate-receipt-btn {
+  background: linear-gradient(135deg, #1976d2 0%, #42a5f5 100%);
+  color: white;
+  border: none;
+  padding: 0.5rem 0.75rem;
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s;
+  width: 100%;
+}
+
+.generate-receipt-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(25, 118, 210, 0.3);
+}
+
+.generate-receipt-btn svg {
+  flex-shrink: 0;
 }

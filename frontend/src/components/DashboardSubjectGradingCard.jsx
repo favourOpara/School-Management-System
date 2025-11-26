@@ -75,6 +75,22 @@ const DashboardSubjectGradingCard = () => {
   const fetchAcademicYears = async () => {
     try {
       const token = localStorage.getItem('accessToken');
+
+      // First, get the current active session
+      const sessionInfoRes = await fetch('http://127.0.0.1:8000/api/schooladmin/session/info/', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      let currentYear = null;
+      let currentTerm = null;
+
+      if (sessionInfoRes.ok) {
+        const sessionInfo = await sessionInfoRes.json();
+        currentYear = sessionInfo.academic_year;
+        currentTerm = sessionInfo.current_term;
+      }
+
+      // Then get all available sessions
       const response = await fetch('http://127.0.0.1:8000/api/academics/sessions/', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -85,7 +101,22 @@ const DashboardSubjectGradingCard = () => {
           const years = [...new Set(data.map(s => s.academic_year))].sort();
           const options = years.map(y => ({ value: y, label: y }));
           setAcademicYears(options);
-          if (options.length > 0) {
+
+          // Set the current active session as default
+          if (currentYear) {
+            const currentYearOption = options.find(opt => opt.value === currentYear);
+            if (currentYearOption) {
+              setSelectedYear(currentYearOption);
+              const currentTermOption = termOptions.find(opt => opt.value === currentTerm);
+              if (currentTermOption) {
+                setSelectedTerm(currentTermOption);
+              }
+            } else if (options.length > 0) {
+              // Fallback to the last year if current year is not found
+              setSelectedYear(options[options.length - 1]);
+            }
+          } else if (options.length > 0) {
+            // Fallback if no current session info
             setSelectedYear(options[options.length - 1]);
           }
         }

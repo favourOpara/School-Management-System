@@ -80,8 +80,39 @@ const StudentGradeReport = () => {
     }
   };
 
-  const handlePrint = () => {
-    window.print();
+  const handleDownload = async () => {
+    if (!reportData || !reportData.student || !selectedYear || !selectedTerm) {
+      alert('Please wait for report to load and ensure filters are set');
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem('accessToken');
+      const response = await fetch(
+        `http://127.0.0.1:8000/api/schooladmin/reports/student/${reportData.student.id}/download/?academic_year=${selectedYear}&term=${selectedTerm}`,
+        {
+          headers: { 'Authorization': `Bearer ${token}` }
+        }
+      );
+
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `report_${reportData.student.username}_${selectedYear}_${selectedTerm}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+      } else {
+        const errorData = await response.json();
+        alert(errorData.detail || 'Failed to download report');
+      }
+    } catch (error) {
+      console.error('Error downloading report:', error);
+      alert('Failed to download report');
+    }
   };
 
   const { student, session, grading_config, subjects, summary, available_sessions } = reportData || {};
@@ -163,7 +194,7 @@ const StudentGradeReport = () => {
       {/* Download Button - Only show when report data is available */}
       {!loading && !error && reportData && (
         <div className="download-section">
-          <button className="download-report-btn" onClick={handlePrint}>
+          <button className="download-report-btn" onClick={handleDownload}>
             <Printer size={20} />
             Download Report
           </button>

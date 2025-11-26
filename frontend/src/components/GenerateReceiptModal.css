@@ -1,0 +1,376 @@
+/* src/components/GenerateReceiptModal.css */
+.generate-receipt-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  padding: 1rem;
+}
+
+.generate-receipt-modal {
+  background: white;
+  border-radius: 12px;
+  width: 100%;
+  max-width: 900px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+}
+
+.receipt-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.5rem;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.header-left svg {
+  color: #1976d2;
+  flex-shrink: 0;
+}
+
+.receipt-modal-header h2 {
+  margin: 0;
+  font-size: 1.5rem;
+  color: #1a1a1a;
+}
+
+.receipt-modal-header p {
+  margin: 0.25rem 0 0;
+  color: #666;
+  font-size: 0.9rem;
+}
+
+.close-receipt-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.5rem;
+  color: #666;
+  border-radius: 6px;
+  transition: all 0.2s;
+}
+
+.close-receipt-btn:hover {
+  background: #f5f5f5;
+  color: #1a1a1a;
+}
+
+.receipt-modal-body {
+  padding: 1.5rem;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.receipt-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem;
+  gap: 1rem;
+}
+
+.receipt-loading svg.spin {
+  animation: spin 1s linear infinite;
+  color: #1976d2;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* Receipt Summary */
+.receipt-summary {
+  background: #f8f9fa;
+  padding: 1.5rem;
+  border-radius: 8px;
+  margin-bottom: 1.5rem;
+}
+
+.receipt-summary h3 {
+  margin: 0 0 1rem;
+  font-size: 1.1rem;
+  color: #1a1a1a;
+}
+
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
+.summary-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.summary-label {
+  font-size: 0.85rem;
+  color: #666;
+  font-weight: 500;
+}
+
+.summary-value {
+  font-size: 1rem;
+  color: #1a1a1a;
+  font-weight: 600;
+}
+
+.summary-value.paid {
+  color: #2e7d32;
+}
+
+.summary-value.outstanding {
+  color: #d32f2f;
+}
+
+.summary-value.cleared {
+  color: #2e7d32;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 0.35rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  width: fit-content;
+}
+
+.status-badge.paid {
+  background: #e8f5e9;
+  color: #2e7d32;
+}
+
+.status-badge.partial {
+  background: #fff3e0;
+  color: #f57c00;
+}
+
+.status-badge.unpaid {
+  background: #fce4ec;
+  color: #c2185b;
+}
+
+/* Payment History */
+.payment-history-section {
+  margin-bottom: 1.5rem;
+}
+
+.payment-history-section h3 {
+  margin: 0 0 1rem;
+  font-size: 1.1rem;
+  color: #1a1a1a;
+}
+
+.no-history {
+  text-align: center;
+  padding: 2rem;
+  color: #999;
+  background: #f8f9fa;
+  border-radius: 8px;
+}
+
+.history-table-container {
+  overflow-x: auto;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+}
+
+.history-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.history-table thead {
+  background: #f8f9fa;
+}
+
+.history-table th {
+  padding: 0.75rem;
+  text-align: left;
+  font-weight: 600;
+  color: #333;
+  border-bottom: 2px solid #e0e0e0;
+}
+
+.history-table td {
+  padding: 0.75rem;
+  border-bottom: 1px solid #f0f0f0;
+  color: #555;
+}
+
+.history-table tbody tr:hover {
+  background: #f8f9fa;
+}
+
+.transaction-type {
+  display: inline-block;
+  padding: 0.25rem 0.6rem;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.transaction-type.payment {
+  background: #e8f5e9;
+  color: #2e7d32;
+}
+
+.transaction-type.adjustment {
+  background: #fff3e0;
+  color: #f57c00;
+}
+
+.transaction-type.refund {
+  background: #fce4ec;
+  color: #c2185b;
+}
+
+.history-table .amount {
+  font-weight: 600;
+  color: #1a1a1a;
+}
+
+/* Remarks Section */
+.receipt-remarks-section {
+  margin-bottom: 1rem;
+}
+
+.receipt-remarks-section label {
+  display: block;
+  font-weight: 500;
+  color: #333;
+  margin-bottom: 0.5rem;
+  font-size: 0.95rem;
+}
+
+.remarks-input {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-family: inherit;
+  font-size: 0.95rem;
+  resize: vertical;
+  transition: border-color 0.2s;
+}
+
+.remarks-input:focus {
+  outline: none;
+  border-color: #1976d2;
+  box-shadow: 0 0 0 3px rgba(25, 118, 210, 0.1);
+}
+
+/* Footer */
+.receipt-modal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 1rem;
+  padding: 1.5rem;
+  border-top: 1px solid #e0e0e0;
+}
+
+.cancel-receipt-btn,
+.generate-send-btn {
+  padding: 0.75rem 1.5rem;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s;
+  border: none;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.cancel-receipt-btn {
+  background: #f5f5f5;
+  color: #333;
+}
+
+.cancel-receipt-btn:hover {
+  background: #e0e0e0;
+}
+
+.generate-send-btn {
+  background: linear-gradient(135deg, #1976d2 0%, #42a5f5 100%);
+  color: white;
+}
+
+.generate-send-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(25, 118, 210, 0.3);
+}
+
+.generate-send-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.generate-send-btn svg.spin {
+  animation: spin 1s linear infinite;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .generate-receipt-modal {
+    max-width: 100%;
+    max-height: 100vh;
+    border-radius: 0;
+  }
+
+  .receipt-modal-header {
+    padding: 1rem;
+  }
+
+  .receipt-modal-header h2 {
+    font-size: 1.25rem;
+  }
+
+  .summary-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .history-table {
+    font-size: 0.85rem;
+  }
+
+  .history-table th,
+  .history-table td {
+    padding: 0.5rem;
+  }
+
+  .receipt-modal-footer {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .cancel-receipt-btn,
+  .generate-send-btn {
+    width: 100%;
+    justify-content: center;
+  }
+}

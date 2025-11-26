@@ -1,0 +1,362 @@
+.department-management-page {
+  padding: 2rem;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.page-header {
+  margin-bottom: 2rem;
+}
+
+.page-header h1 {
+  font-size: 2rem;
+  font-weight: 600;
+  color: #1a1a1a;
+  margin-bottom: 0.5rem;
+}
+
+.page-subtitle {
+  color: #666;
+  font-size: 0.95rem;
+}
+
+.alert {
+  padding: 1rem;
+  border-radius: 8px;
+  margin-bottom: 1.5rem;
+  font-size: 0.95rem;
+}
+
+.alert-success {
+  background-color: #d4edda;
+  color: #155724;
+  border: 1px solid #c3e6cb;
+}
+
+.alert-error {
+  background-color: #f8d7da;
+  color: #721c24;
+  border: 1px solid #f5c6cb;
+}
+
+.department-content {
+  display: grid;
+  grid-template-columns: 350px 1fr;
+  gap: 2rem;
+  align-items: start;
+}
+
+/* Left panel - Departments */
+.department-panel {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+
+.panel-header {
+  padding: 1.5rem;
+  border-bottom: 1px solid #e5e5e5;
+}
+
+.panel-header h2 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #1a1a1a;
+  margin-bottom: 0.5rem;
+}
+
+.panel-subtitle {
+  color: #666;
+  font-size: 0.875rem;
+  margin: 0;
+}
+
+.department-list {
+  padding: 1rem;
+  max-height: 600px;
+  overflow-y: auto;
+}
+
+.department-card {
+  padding: 1rem;
+  border-radius: 8px;
+  border: 2px solid #e5e5e5;
+  margin-bottom: 0.75rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.department-card:hover {
+  border-color: #007bff;
+  background-color: #f8f9fa;
+}
+
+.department-card.selected {
+  border-color: #007bff;
+  background-color: #e7f3ff;
+}
+
+.dept-name {
+  font-weight: 600;
+  font-size: 1rem;
+  color: #1a1a1a;
+  margin-bottom: 0.5rem;
+}
+
+.dept-info {
+  font-size: 0.875rem;
+  color: #666;
+}
+
+/* Right panel - Classes */
+.classes-panel {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  padding: 1.5rem;
+  min-height: 400px;
+}
+
+.classes-section {
+  margin-bottom: 2rem;
+}
+
+.classes-section h3 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #1a1a1a;
+  margin-bottom: 1rem;
+}
+
+.classes-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 0.75rem;
+}
+
+.department-checkboxes {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.department-checkbox-item {
+  display: flex;
+  align-items: flex-start;
+  padding: 1rem;
+  border: 2px solid #e5e5e5;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  background-color: white;
+}
+
+.department-checkbox-item:hover {
+  border-color: #007bff;
+  background-color: #f8f9fa;
+}
+
+.department-checkbox-item input[type="checkbox"] {
+  margin-right: 1rem;
+  margin-top: 0.25rem;
+  cursor: pointer;
+  width: 20px;
+  height: 20px;
+}
+
+.department-checkbox-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  flex: 1;
+}
+
+.department-checkbox-name {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #1a1a1a;
+}
+
+.department-checkbox-desc {
+  font-size: 0.875rem;
+  color: #666;
+}
+
+.info-box {
+  margin-top: 2rem;
+  padding: 1.5rem;
+  background-color: #e7f3ff;
+  border-left: 4px solid #007bff;
+  border-radius: 6px;
+}
+
+.info-box h4 {
+  margin-top: 0;
+  margin-bottom: 1rem;
+  color: #0056b3;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.info-box ul {
+  margin: 0;
+  padding-left: 1.5rem;
+  color: #333;
+}
+
+.info-box li {
+  margin-bottom: 0.5rem;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.class-checkbox {
+  display: flex;
+  align-items: center;
+  padding: 0.75rem;
+  border: 1px solid #e5e5e5;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+  background-color: white;
+}
+
+.class-checkbox:hover {
+  border-color: #007bff;
+  background-color: #f8f9fa;
+}
+
+.class-checkbox input[type="checkbox"] {
+  margin-right: 0.75rem;
+  cursor: pointer;
+  width: 18px;
+  height: 18px;
+}
+
+.class-name {
+  font-size: 0.95rem;
+  color: #1a1a1a;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex: 1;
+}
+
+.class-dept-badge {
+  font-size: 0.75rem;
+  padding: 0.25rem 0.5rem;
+  background-color: #ffc107;
+  color: #000;
+  border-radius: 4px;
+  font-weight: 500;
+}
+
+.assignment-summary {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.5rem;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  margin-bottom: 2rem;
+}
+
+.summary-info {
+  font-size: 0.95rem;
+  color: #666;
+}
+
+.summary-info strong {
+  color: #1a1a1a;
+  font-size: 1.1rem;
+}
+
+.btn-primary {
+  padding: 0.75rem 2rem;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background-color: #0056b3;
+}
+
+.btn-primary:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+}
+
+.current-assignments {
+  border-top: 1px solid #e5e5e5;
+  padding-top: 1.5rem;
+}
+
+.current-assignments h3 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #1a1a1a;
+  margin-bottom: 1rem;
+}
+
+.assigned-classes-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 0.5rem;
+}
+
+.assigned-class-item {
+  padding: 0.5rem 0.75rem;
+  background-color: #e7f3ff;
+  border: 1px solid #007bff;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  color: #0056b3;
+  text-align: center;
+}
+
+.empty-state {
+  padding: 3rem;
+  text-align: center;
+  color: #999;
+}
+
+.empty-state p {
+  margin-bottom: 0.5rem;
+}
+
+.empty-hint {
+  font-size: 0.875rem;
+  color: #bbb;
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .department-content {
+    grid-template-columns: 1fr;
+  }
+
+  .department-panel {
+    max-height: 300px;
+  }
+}
+
+@media (max-width: 768px) {
+  .department-management-page {
+    padding: 1rem;
+  }
+
+  .classes-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .assigned-classes-list {
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  }
+}

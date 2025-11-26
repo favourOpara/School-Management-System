@@ -132,8 +132,39 @@ const ReportSheet = () => {
     fetchReportSheet(student.id);
   };
 
-  const handlePrint = () => {
-    window.print();
+  const handleDownload = async () => {
+    if (!selectedStudent || !selectedYear || !selectedTerm) {
+      alert('Please select a student and ensure filters are set');
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem('accessToken');
+      const response = await fetch(
+        `http://127.0.0.1:8000/api/schooladmin/reports/student/${selectedStudent.id}/download/?academic_year=${selectedYear}&term=${selectedTerm}`,
+        {
+          headers: { 'Authorization': `Bearer ${token}` }
+        }
+      );
+
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `report_${selectedStudent.username}_${selectedYear}_${selectedTerm}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+      } else {
+        const errorData = await response.json();
+        alert(errorData.detail || 'Failed to download report');
+      }
+    } catch (error) {
+      console.error('Error downloading report:', error);
+      alert('Failed to download report');
+    }
   };
 
   const filteredStudents = students.filter(student =>
@@ -288,9 +319,9 @@ const ReportSheet = () => {
             >
               ← Back to Students List
             </button>
-            <button className="print-btn" onClick={handlePrint}>
+            <button className="print-btn" onClick={handleDownload}>
               <Printer size={18} />
-              Print Report
+              Download Report
             </button>
           </div>
 

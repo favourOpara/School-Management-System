@@ -1,0 +1,260 @@
+/* Fee Status - Compact Card Style */
+
+.fee-status-card {
+  background: #fff;
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  border: 1px solid #e0e0e0;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.fee-status-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.fee-status-title-section h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.fee-status-title-section p {
+  margin: 0.25rem 0 0 0;
+  font-size: 0.85rem;
+  color: #6b7280;
+}
+
+.fee-status-toggle-btn {
+  width: 100%;
+  padding: 0.6rem 1rem;
+  border: none;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.fee-status-toggle-btn.open {
+  background-color: #8b5cf6;
+  color: white;
+}
+
+.fee-status-toggle-btn.open:hover {
+  background-color: #7c3aed;
+}
+
+.fee-status-toggle-btn.close {
+  background-color: #6b7280;
+  color: white;
+}
+
+.fee-status-toggle-btn.close:hover {
+  background-color: #4b5563;
+}
+
+.fee-status-content {
+  margin-top: 1rem;
+  animation: slideDown 0.3s ease;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.fee-summary {
+  background: #f9fafb;
+  border-radius: 8px;
+  padding: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.fee-info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.4rem 0;
+}
+
+.fee-info-row:not(:last-child) {
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.fee-label {
+  font-size: 0.85rem;
+  color: #6b7280;
+  font-weight: 500;
+}
+
+.fee-value {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #1f2937;
+}
+
+.fee-value.paid {
+  color: #10b981;
+}
+
+.fee-value.balance {
+  color: #ef4444;
+}
+
+.fee-progress {
+  margin-bottom: 1rem;
+}
+
+.progress-bar {
+  width: 100%;
+  height: 10px;
+  background: #e5e7eb;
+  border-radius: 5px;
+  overflow: hidden;
+  margin-bottom: 0.5rem;
+}
+
+.progress-fill {
+  height: 100%;
+  border-radius: 5px;
+  transition: width 0.5s ease;
+}
+
+.progress-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.percentage {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #6b7280;
+}
+
+.status-badge {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: white;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  text-transform: uppercase;
+}
+
+.show-breakdown-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
+  width: 100%;
+  padding: 0.5rem;
+  background: transparent;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  color: #6b7280;
+  font-weight: 600;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.show-breakdown-btn:hover {
+  background: #f9fafb;
+  border-color: #d1d5db;
+}
+
+.fees-breakdown {
+  margin-top: 0.75rem;
+  background: #fef3c7;
+  border-radius: 6px;
+  padding: 0.5rem;
+}
+
+.breakdown-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.4rem 0;
+  font-size: 0.8rem;
+}
+
+.breakdown-item:not(:last-child) {
+  border-bottom: 1px solid #fde68a;
+}
+
+.breakdown-name {
+  font-weight: 500;
+  color: #92400e;
+}
+
+.breakdown-details {
+  color: #78350f;
+  font-weight: 600;
+}
+
+.fee-status-loading {
+  display: flex;
+  justify-content: center;
+  padding: 2rem;
+}
+
+.loading-spinner-fs {
+  width: 30px;
+  height: 30px;
+  border: 3px solid #e5e7eb;
+  border-top: 3px solid #8b5cf6;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.fee-status-error,
+.fee-status-empty {
+  text-align: center;
+  padding: 1rem;
+  color: #6b7280;
+}
+
+/* Mobile adjustments */
+@media (max-width: 480px) {
+  .fee-status-card {
+    padding: 1rem;
+  }
+
+  .fee-status-title-section h3 {
+    font-size: 1rem;
+  }
+
+  .fee-status-toggle-btn {
+    padding: 0.5rem;
+    font-size: 0.85rem;
+  }
+
+  .fee-info-row {
+    padding: 0.3rem 0;
+  }
+
+  .fee-label {
+    font-size: 0.8rem;
+  }
+
+  .fee-value {
+    font-size: 0.85rem;
+  }
+}

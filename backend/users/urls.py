@@ -18,7 +18,10 @@ from .views import (
     student_grade_report,
     upload_avatar,
     remove_avatar,
-    get_current_user_profile
+    get_current_user_profile,
+    change_admin_username,
+    change_admin_password,
+    change_password
 )
 from rest_framework_simplejwt.views import TokenRefreshView
 
@@ -44,4 +47,7 @@ urlpatterns = [
     path('profile/', get_current_user_profile, name='user_profile'),
     path('avatar/upload/', upload_avatar, name='upload_avatar'),
     path('avatar/remove/', remove_avatar, name='remove_avatar'),
+    path('admin/change-username/', change_admin_username, name='change_admin_username'),
+    path('admin/change-password/', change_admin_password, name='change_admin_password'),
+    path('change-password/', change_password, name='change_password'),
 ]

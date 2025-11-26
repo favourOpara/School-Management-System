@@ -63,12 +63,12 @@
 
 .filter-group select:focus {
   outline: none;
-  border-color: #6366f1;
+  border-color: #1e21f7;
 }
 
 /* Info Card */
 .attendance-info-card {
-  background: linear-gradient(135deg, #467daa, #1013c9);
+  background: linear-gradient(135deg, #467daa, #a7f3b3);
   color: white;
   padding: 24px;
   border-radius: 12px;

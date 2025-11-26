@@ -26,10 +26,21 @@ from .views import (
     ToggleAssessmentReleaseView,
     UnlockAllAssessmentsView,
     StudentAvailableAssessmentsView,
-    StudentSubmitAssessmentView
+    StudentSubmitAssessmentView,
+    get_student_class_info,
+    DepartmentListCreateView,
+    DepartmentDetailView,
+    assign_classes_to_department,
+    remove_class_from_department
 )
 
 urlpatterns = [
+    # Departments
+    path('departments/', DepartmentListCreateView.as_view(), name='department-list-create'),
+    path('departments/<int:id>/', DepartmentDetailView.as_view(), name='department-detail'),
+    path('departments/<int:department_id>/assign-classes/', assign_classes_to_department, name='assign-classes-to-department'),
+    path('classes/<int:class_id>/remove-from-department/', remove_class_from_department, name='remove-class-from-department'),
+
     # Base class (e.g., "J.S.S.1")
     path('classes/', ClassListCreateView.as_view(), name='class-list-create'),
     path('classes/<int:id>/', ClassDetailView.as_view(), name='class-detail'),
@@ -95,4 +106,7 @@ urlpatterns = [
     # Student assessment endpoints
     path('student/assessments/', StudentAvailableAssessmentsView.as_view(), name='student-assessments'),
     path('student/assessments/<int:pk>/submit/', StudentSubmitAssessmentView.as_view(), name='student-assessment-submit'),
+
+    # Student class info endpoint
+    path('student/my-classes/', get_student_class_info, name='student-my-classes'),
 ]
