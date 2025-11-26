@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import './SubjectModal.css';
 import axios from 'axios';
 
+import API_BASE_URL from '../config';
+
 const SubjectModal = ({ subjects, onClose, onUpdate, onDelete }) => {
   const [editingId, setEditingId] = useState(null);
   const [editedData, setEditedData] = useState({});
@@ -11,7 +13,7 @@ const SubjectModal = ({ subjects, onClose, onUpdate, onDelete }) => {
   useEffect(() => {
     const fetchTeachers = async () => {
       try {
-        const res = await axios.get('http://127.0.0.1:8000/api/users/teachers/', {
+        const res = await axios.get(`${API_BASE_URL}/api/users/teachers/`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         setTeachers(res.data);

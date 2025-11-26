@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useLoading } from '../context/LoadingContext';
+import API_BASE_URL from '../config';
+
 import './ClassForm.css';
 
 const ClassManagementForm = () => {
@@ -32,7 +34,7 @@ const ClassManagementForm = () => {
 
   const fetchClasses = async () => {
     try {
-      const res = await axios.get('http://127.0.0.1:8000/api/academics/classes/', {
+      const res = await axios.get(`${API_BASE_URL}/api/academics/classes/`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setClasses(res.data);
@@ -43,7 +45,7 @@ const ClassManagementForm = () => {
 
   const fetchSessions = async () => {
     try {
-      const res = await axios.get('http://127.0.0.1:8000/api/academics/sessions/', {
+      const res = await axios.get(`${API_BASE_URL}/api/academics/sessions/`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setSessions(res.data);
@@ -103,7 +105,7 @@ const ClassManagementForm = () => {
 
     try {
       const promises = stagedClassNames.map(name =>
-        axios.post('http://127.0.0.1:8000/api/academics/classes/', {
+        axios.post(`${API_BASE_URL}/api/academics/classes/`, {
           name,
           has_departments: stagedClassesWithDept[name] || false
         }, {
@@ -160,7 +162,7 @@ const ClassManagementForm = () => {
       }));
 
       const responses = await Promise.all(payloads.map(payload =>
-        axios.post('http://127.0.0.1:8000/api/academics/sessions/', payload, {
+        axios.post(`${API_BASE_URL}/api/academics/sessions/`, payload, {
           headers: { Authorization: `Bearer ${token}` }
         })
       ));
@@ -205,7 +207,7 @@ const ClassManagementForm = () => {
     showLoader();
 
     try {
-      const response = await axios.post('http://127.0.0.1:8000/api/academics/sessions/inherit/', inheritanceData, {
+      const response = await axios.post(`${API_BASE_URL}/api/academics/sessions/inherit/`, inheritanceData, {
         headers: { Authorization: `Bearer ${token}` }
       });
 

@@ -4,6 +4,8 @@ import axios from 'axios';
 import './EditUserModal.css';
 import { useDialog } from '../contexts/DialogContext';
 
+import API_BASE_URL from '../config';
+
 const EditTeacherModal = ({ user, onClose, onUpdated }) => {
   const { showAlert } = useDialog();
   const [formData, setFormData] = useState({
@@ -41,7 +43,7 @@ const EditTeacherModal = ({ user, onClose, onUpdated }) => {
       }
 
       const response = await axios.put(
-        `http://127.0.0.1:8000/api/users/${user.id}/`,
+        `${API_BASE_URL}/api/users/${user.id}/`,
         dataToSend,
         {
           headers: { Authorization: `Bearer ${token}` }

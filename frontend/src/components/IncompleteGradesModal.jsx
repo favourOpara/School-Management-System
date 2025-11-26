@@ -1,6 +1,8 @@
 // src/components/IncompleteGradesModal.jsx
 import React, { useState, useEffect } from 'react';
 import { X, Users, ArrowLeft, Loader, Search, AlertTriangle, BookOpen, Bell, CheckCircle } from 'lucide-react';
+import API_BASE_URL from '../config';
+
 import './IncompleteGradesModal.css';
 
 const IncompleteGradesModal = ({ isOpen, onClose }) => {
@@ -35,7 +37,7 @@ const IncompleteGradesModal = ({ isOpen, onClose }) => {
       setError(null);
       const token = localStorage.getItem('accessToken');
 
-      const response = await fetch('http://127.0.0.1:8000/api/schooladmin/analytics/incomplete-grades/classes/', {
+      const response = await fetch(`${API_BASE_URL}/api/schooladmin/analytics/incomplete-grades/classes/`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
 
@@ -61,7 +63,7 @@ const IncompleteGradesModal = ({ isOpen, onClose }) => {
       const token = localStorage.getItem('accessToken');
 
       const response = await fetch(
-        `http://127.0.0.1:8000/api/schooladmin/analytics/incomplete-grades/class/${classSessionId}/students/`,
+        `${API_BASE_URL}/api/schooladmin/analytics/incomplete-grades/class/${classSessionId}/students/`,
         {
           headers: { 'Authorization': `Bearer ${token}` }
         }
@@ -98,7 +100,7 @@ const IncompleteGradesModal = ({ isOpen, onClose }) => {
       const token = localStorage.getItem('accessToken');
 
       const response = await fetch(
-        `http://127.0.0.1:8000/api/schooladmin/analytics/incomplete-grades/search/?q=${encodeURIComponent(query)}`,
+        `${API_BASE_URL}/api/schooladmin/analytics/incomplete-grades/search/?q=${encodeURIComponent(query)}`,
         {
           headers: { 'Authorization': `Bearer ${token}` }
         }
@@ -139,7 +141,7 @@ const IncompleteGradesModal = ({ isOpen, onClose }) => {
       setNotifyingStudent(studentId);
       const token = localStorage.getItem('accessToken');
 
-      const response = await fetch('http://127.0.0.1:8000/api/schooladmin/analytics/incomplete-grades/notify/', {
+      const response = await fetch(`${API_BASE_URL}/api/schooladmin/analytics/incomplete-grades/notify/`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,

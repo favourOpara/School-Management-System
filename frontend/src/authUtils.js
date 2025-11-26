@@ -1,3 +1,5 @@
+import API_BASE_URL from './config';
+
 export function parseJwt(token) {
     try {
       const base64Url = token.split('.')[1];
@@ -25,7 +27,7 @@ export function parseJwt(token) {
     if (!refresh) return null;
   
     try {
-      const res = await axios.post('http://127.0.0.1:8000/api/token/refresh/', {
+      const res = await axios.post(`${API_BASE_URL}/api/token/refresh/`, {
         refresh: refresh,
       });
       localStorage.setItem('accessToken', res.data.access);

@@ -5,6 +5,8 @@ import 'react-calendar/dist/Calendar.css';
 import './attendance.css';
 import axios from 'axios';
 
+import API_BASE_URL from '../config';
+
 const EditAttendanceCalendar = ({ academicYear, term, onClose, onUpdate }) => {
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
@@ -40,7 +42,7 @@ const EditAttendanceCalendar = ({ academicYear, term, onClose, onUpdate }) => {
       setLoading(true);
       console.log('Fetching calendar for:', academicYear, term);
       
-      const res = await axios.get('http://127.0.0.1:8000/api/attendance/calendar/', {
+      const res = await axios.get(`${API_BASE_URL}/api/attendance/calendar/`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -168,7 +170,7 @@ const EditAttendanceCalendar = ({ academicYear, term, onClose, onUpdate }) => {
 
     setLoading(true);
     try {
-      const response = await axios.put(`http://127.0.0.1:8000/api/attendance/calendar/update/`, payload, {
+      const response = await axios.put(`${API_BASE_URL}/api/attendance/calendar/update/`, payload, {
         headers: { 
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -229,7 +231,7 @@ const EditAttendanceCalendar = ({ academicYear, term, onClose, onUpdate }) => {
 
       console.log('Delete payload:', JSON.stringify(payload, null, 2));
 
-      const response = await axios.delete(`http://127.0.0.1:8000/api/attendance/calendar/delete/`, {
+      const response = await axios.delete(`${API_BASE_URL}/api/attendance/calendar/delete/`, {
         headers: { 
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json'

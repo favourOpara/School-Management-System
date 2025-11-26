@@ -6,6 +6,8 @@ import './ViewSubjects.css';
 import SubjectModal from './SubjectModal';
 import { useDialog } from '../contexts/DialogContext';
 
+import API_BASE_URL from '../config';
+
 const ViewSubjects = () => {
   const { showConfirm, showAlert } = useDialog();
   const token = localStorage.getItem('accessToken');
@@ -22,10 +24,10 @@ const ViewSubjects = () => {
     const fetchData = async () => {
       try {
         const [classSessionRes, classRes] = await Promise.all([
-          axios.get('http://127.0.0.1:8000/api/academics/sessions/', {
+          axios.get(`${API_BASE_URL}/api/academics/sessions/`, {
             headers: { Authorization: `Bearer ${token}` },
           }),
-          axios.get('http://127.0.0.1:8000/api/academics/classes/', {
+          axios.get(`${API_BASE_URL}/api/academics/classes/`, {
             headers: { Authorization: `Bearer ${token}` },
           }),
         ]);
@@ -43,7 +45,7 @@ const ViewSubjects = () => {
 
   const handleFilter = async () => {
     try {
-      const res = await axios.get('http://127.0.0.1:8000/api/academics/sessions/', {
+      const res = await axios.get(`${API_BASE_URL}/api/academics/sessions/`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -63,7 +65,7 @@ const ViewSubjects = () => {
     const classId = classObj.id;
 
     try {
-      const res = await axios.get('http://127.0.0.1:8000/api/academics/subjects/', {
+      const res = await axios.get(`${API_BASE_URL}/api/academics/subjects/`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -101,7 +103,7 @@ const ViewSubjects = () => {
     }
 
     try {
-      await axios.delete(`http://127.0.0.1:8000/api/academics/subjects/${subjectId}/`, {
+      await axios.delete(`${API_BASE_URL}/api/academics/subjects/${subjectId}/`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setModalSubjects(prev => prev.filter(sub => sub.id !== subjectId));
@@ -116,7 +118,7 @@ const ViewSubjects = () => {
 
   const handleSubjectEdit = async (subjectId, updatedData) => {
     try {
-      await axios.put(`http://127.0.0.1:8000/api/academics/subjects/${subjectId}/`, updatedData, {
+      await axios.put(`${API_BASE_URL}/api/academics/subjects/${subjectId}/`, updatedData, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setModalSubjects(prev => prev.map(sub =>

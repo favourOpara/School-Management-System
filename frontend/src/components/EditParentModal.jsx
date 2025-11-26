@@ -5,6 +5,8 @@ import Select from 'react-select';
 import './EditUserModal.css';
 import { useDialog } from '../contexts/DialogContext';
 
+import API_BASE_URL from '../config';
+
 const EditParentModal = ({ user, onClose, onUpdated }) => {
   const { showAlert } = useDialog();
   const [allStudents, setAllStudents] = useState([]);
@@ -39,7 +41,7 @@ const EditParentModal = ({ user, onClose, onUpdated }) => {
   useEffect(() => {
     const fetchStudents = async () => {
       try {
-        const res = await axios.get('http://127.0.0.1:8000/api/users/list-students/', {
+        const res = await axios.get(`${API_BASE_URL}/api/users/list-students/`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         setAllStudents(res.data);
@@ -75,7 +77,7 @@ const EditParentModal = ({ user, onClose, onUpdated }) => {
         delete payload.confirm_password;
       }
 
-      const res = await axios.put(`http://127.0.0.1:8000/api/users/${user.id}/`, payload, {
+      const res = await axios.put(`${API_BASE_URL}/api/users/${user.id}/`, payload, {
         headers: { Authorization: `Bearer ${token}` }
       });
 

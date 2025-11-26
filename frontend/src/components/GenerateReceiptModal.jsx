@@ -2,6 +2,8 @@
 import React, { useState, useEffect } from 'react';
 import { X, FileText, Download, Send, Loader } from 'lucide-react';
 import axios from 'axios';
+import API_BASE_URL from '../config';
+
 import './GenerateReceiptModal.css';
 
 const GenerateReceiptModal = ({ student, onClose, onGenerated }) => {
@@ -23,7 +25,7 @@ const GenerateReceiptModal = ({ student, onClose, onGenerated }) => {
     try {
       setLoading(true);
       const response = await axios.get(
-        `http://127.0.0.1:8000/api/schooladmin/fee-records/${student.record_id}/payment-history/`,
+        `${API_BASE_URL}/api/schooladmin/fee-records/${student.record_id}/payment-history/`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
       setPaymentHistory(response.data.history || []);
@@ -39,7 +41,7 @@ const GenerateReceiptModal = ({ student, onClose, onGenerated }) => {
     try {
       setGenerating(true);
       const response = await axios.post(
-        `http://127.0.0.1:8000/api/schooladmin/fee-records/${student.record_id}/generate-receipt/`,
+        `${API_BASE_URL}/api/schooladmin/fee-records/${student.record_id}/generate-receipt/`,
         { remarks },
         { headers: { Authorization: `Bearer ${token}` } }
       );

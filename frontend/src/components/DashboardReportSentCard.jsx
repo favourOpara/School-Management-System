@@ -5,6 +5,8 @@ import Select from 'react-select';
 import './DashboardReportSentCard.css';
 import ReportSentModal from './ReportSentModal';
 
+import API_BASE_URL from '../config';
+
 const termOptions = [
   { value: 'First Term', label: 'First Term' },
   { value: 'Second Term', label: 'Second Term' },
@@ -72,7 +74,7 @@ const DashboardReportSentCard = () => {
       const token = localStorage.getItem('accessToken');
 
       // First, get the current active session
-      const sessionInfoRes = await fetch('http://127.0.0.1:8000/api/schooladmin/session/info/', {
+      const sessionInfoRes = await fetch(`${API_BASE_URL}/api/schooladmin/session/info/`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
 
@@ -86,7 +88,7 @@ const DashboardReportSentCard = () => {
       }
 
       // Then get all available sessions
-      const response = await fetch('http://127.0.0.1:8000/api/academics/sessions/', {
+      const response = await fetch(`${API_BASE_URL}/api/academics/sessions/`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
 
@@ -131,7 +133,7 @@ const DashboardReportSentCard = () => {
       if (selectedYear) params.append('academic_year', selectedYear.value);
       if (selectedTerm) params.append('term', selectedTerm.value);
 
-      const response = await fetch(`http://127.0.0.1:8000/api/schooladmin/analytics/reports-sent/?${params.toString()}`, {
+      const response = await fetch(`${API_BASE_URL}/api/schooladmin/analytics/reports-sent/?${params.toString()}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
 

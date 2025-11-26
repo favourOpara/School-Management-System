@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
+import API_BASE_URL from '../config';
+
 import './attendancesubjectmodal.css'; // Make sure this file is imported
 
 const AttendanceSubjectModal = ({ classInfo, academicYear, term, onClose, onSubjectSelect }) => {
@@ -11,7 +13,7 @@ const AttendanceSubjectModal = ({ classInfo, academicYear, term, onClose, onSubj
   useEffect(() => {
     const fetchSubjects = async () => {
       try {
-        const res = await axios.get('http://127.0.0.1:8000/api/academics/subjects/', {
+        const res = await axios.get(`${API_BASE_URL}/api/academics/subjects/`, {
           headers: { Authorization: `Bearer ${token}` },
         });
 

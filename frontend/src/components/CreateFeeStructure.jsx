@@ -7,6 +7,8 @@ import './viewfees.css';
 import './createfees.css';
 import { useDialog } from '../contexts/DialogContext';
 
+import API_BASE_URL from '../config';
+
 const termOptions = [
   { value: 'First Term', label: 'First Term' },
   { value: 'Second Term', label: 'Second Term' },
@@ -71,13 +73,13 @@ const CreateFeeStructure = () => {
     const fetchData = async () => {
       try {
         const [classRes, sessionRes, feeRes] = await Promise.all([
-          axios.get('http://127.0.0.1:8000/api/academics/classes/', {
+          axios.get(`${API_BASE_URL}/api/academics/classes/`, {
             headers: { Authorization: `Bearer ${token}` },
           }),
-          axios.get('http://127.0.0.1:8000/api/academics/sessions/', {
+          axios.get(`${API_BASE_URL}/api/academics/sessions/`, {
             headers: { Authorization: `Bearer ${token}` },
           }),
-          axios.get('http://127.0.0.1:8000/api/schooladmin/fees/', {
+          axios.get(`${API_BASE_URL}/api/schooladmin/fees/`, {
             headers: { Authorization: `Bearer ${token}` },
           }),
         ]);
@@ -116,7 +118,7 @@ const CreateFeeStructure = () => {
     }
     try {
       await axios.post(
-        'http://127.0.0.1:8000/api/schooladmin/fees/create/',
+        `${API_BASE_URL}/api/schooladmin/fees/create/`,
         {
           name,
           amount,
@@ -134,7 +136,7 @@ const CreateFeeStructure = () => {
       setTerm(termOptions[0]);
       setSelectedClasses([]);
       // refresh list
-      const res = await axios.get('http://127.0.0.1:8000/api/schooladmin/fees/', {
+      const res = await axios.get(`${API_BASE_URL}/api/schooladmin/fees/`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setFees(res.data || []);
@@ -155,7 +157,7 @@ const CreateFeeStructure = () => {
     if (!confirmed) return;
 
     try {
-      await axios.delete(`http://127.0.0.1:8000/api/schooladmin/fees/${feeId}/delete/`, {
+      await axios.delete(`${API_BASE_URL}/api/schooladmin/fees/${feeId}/delete/`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setFees(f => f.filter(x => x.id !== feeId));
@@ -183,7 +185,7 @@ const CreateFeeStructure = () => {
       setSelectedClassInfo(null);
       try {
         const res = await axios.get(
-          `http://127.0.0.1:8000/api/schooladmin/fees/${fee.id}/students/`,
+          `${API_BASE_URL}/api/schooladmin/fees/${fee.id}/students/`,
           { headers: { Authorization: `Bearer ${token}` } }
         );
         // ensure array

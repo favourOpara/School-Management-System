@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { Trophy, ChevronDown, ChevronUp, User } from 'lucide-react';
+import API_BASE_URL from '../config';
+
 import './AttendanceLeaderboard.css';
 
 const AttendanceLeaderboard = () => {
@@ -14,7 +16,7 @@ const AttendanceLeaderboard = () => {
     setLoading(true);
     try {
       const token = localStorage.getItem('accessToken');
-      const response = await fetch('http://127.0.0.1:8000/api/schooladmin/student/dashboard/attendance-ranking/', {
+      const response = await fetch(`${API_BASE_URL}/api/schooladmin/student/dashboard/attendance-ranking/`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'

@@ -1,6 +1,8 @@
 // src/components/BothIssuesModal.jsx
 import React, { useState, useEffect } from 'react';
 import { X, Users, ArrowLeft, Loader, AlertTriangle, BookOpen, Bell, CheckCircle, DollarSign } from 'lucide-react';
+import API_BASE_URL from '../config';
+
 import './BothIssuesModal.css';
 
 const BothIssuesModal = ({ isOpen, onClose }) => {
@@ -33,7 +35,7 @@ const BothIssuesModal = ({ isOpen, onClose }) => {
       setError(null);
       const token = localStorage.getItem('accessToken');
 
-      const response = await fetch('http://127.0.0.1:8000/api/schooladmin/analytics/both-issues/classes/', {
+      const response = await fetch(`${API_BASE_URL}/api/schooladmin/analytics/both-issues/classes/`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
 
@@ -59,7 +61,7 @@ const BothIssuesModal = ({ isOpen, onClose }) => {
       const token = localStorage.getItem('accessToken');
 
       const response = await fetch(
-        `http://127.0.0.1:8000/api/schooladmin/analytics/both-issues/class/${classSessionId}/students/`,
+        `${API_BASE_URL}/api/schooladmin/analytics/both-issues/class/${classSessionId}/students/`,
         {
           headers: { 'Authorization': `Bearer ${token}` }
         }
@@ -107,7 +109,7 @@ const BothIssuesModal = ({ isOpen, onClose }) => {
       setNotifyingStudent(studentId);
       const token = localStorage.getItem('accessToken');
 
-      const response = await fetch('http://127.0.0.1:8000/api/schooladmin/analytics/both-issues/notify/', {
+      const response = await fetch(`${API_BASE_URL}/api/schooladmin/analytics/both-issues/notify/`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -136,7 +138,7 @@ const BothIssuesModal = ({ isOpen, onClose }) => {
       setBulkResult(null);
       const token = localStorage.getItem('accessToken');
 
-      const response = await fetch('http://127.0.0.1:8000/api/schooladmin/analytics/both-issues/notify-all/', {
+      const response = await fetch(`${API_BASE_URL}/api/schooladmin/analytics/both-issues/notify-all/`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,

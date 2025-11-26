@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Clock, BookOpen, FileText, AlertCircle } from 'lucide-react';
+import API_BASE_URL from '../config';
+
 import './AvailableAssessments.css';
 
 const AvailableAssessments = () => {
@@ -18,7 +20,7 @@ const AvailableAssessments = () => {
       setLoading(true);
       const token = localStorage.getItem('accessToken');
 
-      const response = await fetch('http://127.0.0.1:8000/api/academics/student/assessments/', {
+      const response = await fetch(`${API_BASE_URL}/api/academics/student/assessments/`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'

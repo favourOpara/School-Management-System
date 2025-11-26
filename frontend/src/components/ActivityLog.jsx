@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import API_BASE_URL from '../config';
+
 import './ActivityLog.css';
 
 const ActivityLog = () => {
@@ -51,9 +53,9 @@ const ActivityLog = () => {
     try {
       let endpoint;
       if (user.role === 'admin') {
-        endpoint = 'http://127.0.0.1:8000/api/logs/admin/notifications/';
+        endpoint = `${API_BASE_URL}/api/logs/admin/notifications/`;
       } else if (user.role === 'student') {
-        endpoint = 'http://127.0.0.1:8000/api/logs/student/notifications/';
+        endpoint = `${API_BASE_URL}/api/logs/student/notifications/`;
       } else {
         setError('Notifications not available for your role');
         setLoading(false);
@@ -85,7 +87,7 @@ const ActivityLog = () => {
   const fetchDirectNotifications = async () => {
     try {
       const response = await axios.get(
-        'http://127.0.0.1:8000/api/logs/notifications/direct/',
+        `${API_BASE_URL}/api/logs/notifications/direct/`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -103,7 +105,7 @@ const ActivityLog = () => {
   const markDirectAsRead = async (notificationId) => {
     try {
       await axios.post(
-        `http://127.0.0.1:8000/api/logs/notifications/${notificationId}/read-direct/`,
+        `${API_BASE_URL}/api/logs/notifications/${notificationId}/read-direct/`,
         {},
         {
           headers: {
@@ -127,7 +129,7 @@ const ActivityLog = () => {
     setModalLoading(true);
     try {
       const response = await axios.get(
-        `http://127.0.0.1:8000/api/logs/notifications/${notificationId}/detail/`,
+        `${API_BASE_URL}/api/logs/notifications/${notificationId}/detail/`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -159,7 +161,7 @@ const ActivityLog = () => {
 
     try {
       await axios.post(
-        `http://127.0.0.1:8000/api/logs/notifications/${notificationId}/read/`,
+        `${API_BASE_URL}/api/logs/notifications/${notificationId}/read/`,
         {},
         {
           headers: {
@@ -189,7 +191,7 @@ const ActivityLog = () => {
 
     try {
       await axios.post(
-        'http://127.0.0.1:8000/api/logs/notifications/read-all/',
+        `${API_BASE_URL}/api/logs/notifications/read-all/`,
         {},
         {
           headers: {

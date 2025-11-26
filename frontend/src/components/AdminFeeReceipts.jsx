@@ -2,6 +2,8 @@
 import React, { useState, useEffect } from 'react';
 import { FileText, Search, Download, Calendar, Users, BookOpen, Loader, AlertCircle } from 'lucide-react';
 import axios from 'axios';
+import API_BASE_URL from '../config';
+
 import './AdminFeeReceipts.css';
 
 const AdminFeeReceipts = () => {
@@ -29,7 +31,7 @@ const AdminFeeReceipts = () => {
       if (selectedTerm) params.append('term', selectedTerm);
       if (selectedClass) params.append('class_id', selectedClass);
 
-      const url = `http://127.0.0.1:8000/api/schooladmin/admin/fee-receipts/?${params.toString()}`;
+      const url = `${API_BASE_URL}/api/schooladmin/admin/fee-receipts/?${params.toString()}`;
       const response = await axios.get(url, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -57,7 +59,7 @@ const AdminFeeReceipts = () => {
   const handleDownloadReceipt = async (receiptId) => {
     try {
       const response = await fetch(
-        `http://127.0.0.1:8000/api/schooladmin/admin/fee-receipts/${receiptId}/download/`,
+        `${API_BASE_URL}/api/schooladmin/admin/fee-receipts/${receiptId}/download/`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
 

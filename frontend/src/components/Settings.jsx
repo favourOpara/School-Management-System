@@ -1,6 +1,8 @@
 // src/components/Settings.jsx
 import React, { useState, useEffect } from 'react';
 import { Save, AlertCircle, CheckCircle, Settings as SettingsIcon, Trash2, X } from 'lucide-react';
+import API_BASE_URL from '../config';
+
 import './Settings.css';
 
 const Settings = () => {
@@ -51,7 +53,7 @@ const Settings = () => {
       const token = localStorage.getItem('accessToken');
       
       // Fetch sessions to get academic years and terms
-      const sessionResponse = await fetch('http://127.0.0.1:8000/api/academics/sessions/', {
+      const sessionResponse = await fetch(`${API_BASE_URL}/api/academics/sessions/`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (sessionResponse.ok) {
@@ -65,7 +67,7 @@ const Settings = () => {
       }
 
       // Fetch grading configurations
-      const configResponse = await fetch('http://127.0.0.1:8000/api/schooladmin/grading/configurations/', {
+      const configResponse = await fetch(`${API_BASE_URL}/api/schooladmin/grading/configurations/`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (configResponse.ok) {
@@ -74,7 +76,7 @@ const Settings = () => {
       }
 
       // Fetch grading scales
-      const scaleResponse = await fetch('http://127.0.0.1:8000/api/schooladmin/grading/scales/', {
+      const scaleResponse = await fetch(`${API_BASE_URL}/api/schooladmin/grading/scales/`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (scaleResponse.ok) {
@@ -113,7 +115,7 @@ const Settings = () => {
       setLoading(true);
       const token = localStorage.getItem('accessToken');
       
-      const response = await fetch(`http://127.0.0.1:8000/api/schooladmin/grading/configurations/${id}/`, {
+      const response = await fetch(`${API_BASE_URL}/api/schooladmin/grading/configurations/${id}/`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -142,7 +144,7 @@ const Settings = () => {
       setLoading(true);
       const token = localStorage.getItem('accessToken');
       
-      const response = await fetch(`http://127.0.0.1:8000/api/schooladmin/grading/scales/${id}/`, {
+      const response = await fetch(`${API_BASE_URL}/api/schooladmin/grading/scales/${id}/`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -210,7 +212,7 @@ const Settings = () => {
       setLoading(true);
       const token = localStorage.getItem('accessToken');
       
-      const response = await fetch('http://127.0.0.1:8000/api/schooladmin/grading/configurations/', {
+      const response = await fetch(`${API_BASE_URL}/api/schooladmin/grading/configurations/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -255,7 +257,7 @@ const Settings = () => {
       setLoading(true);
       const token = localStorage.getItem('accessToken');
       
-      const response = await fetch('http://127.0.0.1:8000/api/schooladmin/grading/scales/', {
+      const response = await fetch(`${API_BASE_URL}/api/schooladmin/grading/scales/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

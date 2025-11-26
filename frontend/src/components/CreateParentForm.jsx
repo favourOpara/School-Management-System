@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import Select from 'react-select';
+import API_BASE_URL from '../config';
+
 import './CreateParentForm.css';
 
 const CreateParentForm = () => {
@@ -21,7 +23,7 @@ const CreateParentForm = () => {
   useEffect(() => {
     const fetchStudents = async () => {
       try {
-        const res = await axios.get('http://127.0.0.1:8000/api/users/list-students/', {
+        const res = await axios.get(`${API_BASE_URL}/api/users/list-students/`, {
           headers: { Authorization: `Bearer ${token}` },
         });
 
@@ -56,7 +58,7 @@ const CreateParentForm = () => {
     setMessage('');
 
     try {
-      const res = await axios.post('http://127.0.0.1:8000/api/users/parent-signup/', formData, {
+      const res = await axios.post(`${API_BASE_URL}/api/users/parent-signup/`, formData, {
         headers: { Authorization: `Bearer ${token}` },
       });
 

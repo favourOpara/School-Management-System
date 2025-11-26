@@ -1,6 +1,8 @@
 // src/components/GradesModal.jsx
 import React, { useState, useEffect } from 'react';
 import { X, Save, AlertCircle, CheckCircle, Edit2, Lock } from 'lucide-react';
+import API_BASE_URL from '../config';
+
 import './GradesModal.css';
 
 const GradesModal = ({ subject, onClose, onUpdate }) => {
@@ -27,7 +29,7 @@ const GradesModal = ({ subject, onClose, onUpdate }) => {
       const token = localStorage.getItem('accessToken');
       
       const response = await fetch(
-        `http://127.0.0.1:8000/api/schooladmin/results/subjects/${subject.id}/grades/`,
+        `${API_BASE_URL}/api/schooladmin/results/subjects/${subject.id}/grades/`,
         {
           headers: { 'Authorization': `Bearer ${token}` }
         }
@@ -90,7 +92,7 @@ const GradesModal = ({ subject, onClose, onUpdate }) => {
       const token = localStorage.getItem('accessToken');
       
       const response = await fetch(
-        `http://127.0.0.1:8000/api/schooladmin/results/grade-summary/${student.grade_summary_id}/`,
+        `${API_BASE_URL}/api/schooladmin/results/grade-summary/${student.grade_summary_id}/`,
         {
           method: 'PATCH',
           headers: {

@@ -3,6 +3,8 @@ import axios from 'axios';
 import './TestStudentScoresModal.css';
 import { useDialog } from '../contexts/DialogContext';
 
+import API_BASE_URL from '../config';
+
 const TestStudentScoresModal = ({ subjectData, onClose }) => {
   const { showConfirm, showAlert } = useDialog();
   const [data, setData] = useState(null);
@@ -21,7 +23,7 @@ const TestStudentScoresModal = ({ subjectData, onClose }) => {
       setError('');
 
       const response = await axios.get(
-        `http://127.0.0.1:8000/api/schooladmin/analytics/tests/subject/${subjectData.subject_id}/scores/`,
+        `${API_BASE_URL}/api/schooladmin/analytics/tests/subject/${subjectData.subject_id}/scores/`,
         { headers }
       );
 
@@ -134,7 +136,7 @@ const TestStudentScoresModal = ({ subjectData, onClose }) => {
       console.log('Request data:', requestData);
 
       const response = await axios.post(
-        'http://127.0.0.1:8000/api/schooladmin/analytics/tests/scores/update/',
+        `${API_BASE_URL}/api/schooladmin/analytics/tests/scores/update/`,
         requestData,
         { headers }
       );
@@ -172,7 +174,7 @@ const TestStudentScoresModal = ({ subjectData, onClose }) => {
       setUnlocking(true);
 
       await axios.post(
-        'http://127.0.0.1:8000/api/schooladmin/analytics/tests/scores/unlock/',
+        `${API_BASE_URL}/api/schooladmin/analytics/tests/scores/unlock/`,
         {
           subject_id: subjectData.subject_id
         },

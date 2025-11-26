@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { BookOpen, Award, CheckCircle, Clock, RefreshCw } from 'lucide-react';
+import API_BASE_URL from '../config';
+
 import './MyGrades.css';
 
 const MyGrades = () => {
@@ -21,7 +23,7 @@ const MyGrades = () => {
       const token = localStorage.getItem('accessToken');
       
       // Build URL with optional filters
-      let url = 'http://127.0.0.1:8000/api/schooladmin/student/grades/';
+      let url = `${API_BASE_URL}/api/schooladmin/student/grades/`;
       const params = new URLSearchParams();
       if (year) params.append('academic_year', year);
       if (term) params.append('term', term);

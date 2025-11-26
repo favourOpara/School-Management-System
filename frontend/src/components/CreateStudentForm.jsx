@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
+import API_BASE_URL from '../config';
+
 import './CreateStudentForm.css';
 
 const CreateStudentForm = ({ onSuccess }) => {
@@ -36,10 +38,10 @@ const CreateStudentForm = ({ onSuccess }) => {
     const fetchData = async () => {
       try {
         const [classRes, sessionRes] = await Promise.all([
-          axios.get('http://127.0.0.1:8000/api/academics/classes/', {
+          axios.get(`${API_BASE_URL}/api/academics/classes/`, {
             headers: { Authorization: `Bearer ${token}` }
           }),
-          axios.get('http://127.0.0.1:8000/api/academics/sessions/', {
+          axios.get(`${API_BASE_URL}/api/academics/sessions/`, {
             headers: { Authorization: `Bearer ${token}` }
           })
         ]);
@@ -181,7 +183,7 @@ const CreateStudentForm = ({ onSuccess }) => {
 
     try {
       await axios.post(
-        'http://127.0.0.1:8000/api/users/create-user/',
+        `${API_BASE_URL}/api/users/create-user/`,
         payload,
         {
           headers: {

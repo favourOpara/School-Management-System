@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import axios from 'axios';
+import API_BASE_URL from '../config';
+
 import './PasswordChange.css';
 
 const PasswordChange = ({ onClose }) => {
@@ -23,7 +25,7 @@ const PasswordChange = ({ onClose }) => {
     try {
       const token = localStorage.getItem('accessToken');
       const response = await axios.post(
-        'http://127.0.0.1:8000/api/users/change-password/',
+        `${API_BASE_URL}/api/users/change-password/`,
         passwordData,
         {
           headers: {

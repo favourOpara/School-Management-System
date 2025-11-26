@@ -4,6 +4,8 @@ import axios from 'axios';
 import './ViewClasses.css';
 import { useDialog } from '../contexts/DialogContext';
 
+import API_BASE_URL from '../config';
+
 const ViewClasses = () => {
   const { showConfirm } = useDialog();
   const token = localStorage.getItem('accessToken');
@@ -23,10 +25,10 @@ const ViewClasses = () => {
     const fetchData = async () => {
       try {
         const [classRes, sessionRes] = await Promise.all([
-          axios.get('http://127.0.0.1:8000/api/academics/classes/', {
+          axios.get(`${API_BASE_URL}/api/academics/classes/`, {
             headers: { Authorization: `Bearer ${token}` },
           }),
-          axios.get('http://127.0.0.1:8000/api/academics/sessions/', {
+          axios.get(`${API_BASE_URL}/api/academics/sessions/`, {
             headers: { Authorization: `Bearer ${token}` },
           }),
         ]);
@@ -174,7 +176,7 @@ const ViewClasses = () => {
     try {
       // Delete all selected sessions
       const deletePromises = sessionsToDelete.map(sess =>
-        axios.delete(`http://127.0.0.1:8000/api/academics/sessions/${sess.id}/`, {
+        axios.delete(`${API_BASE_URL}/api/academics/sessions/${sess.id}/`, {
           headers: { Authorization: `Bearer ${token}` },
         })
       );
@@ -208,7 +210,7 @@ const ViewClasses = () => {
     if (!confirmed) return;
 
     try {
-      await axios.delete(`http://127.0.0.1:8000/api/academics/classes/${match.id}/`, {
+      await axios.delete(`${API_BASE_URL}/api/academics/classes/${match.id}/`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setPermanentClasses(prev => prev.filter(cls => cls.id !== match.id));

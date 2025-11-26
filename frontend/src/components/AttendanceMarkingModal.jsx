@@ -6,6 +6,8 @@ import 'react-calendar/dist/Calendar.css';
 import './attendance.css';
 import axios from 'axios';
 
+import API_BASE_URL from '../config';
+
 const AttendanceMarkingModal = ({ classInfo, academicYear, term, schoolDays, holidayDays, onClose }) => {
   const [selectedDate, setSelectedDate] = useState(null);
   const [students, setStudents] = useState([]);
@@ -28,7 +30,7 @@ const AttendanceMarkingModal = ({ classInfo, academicYear, term, schoolDays, hol
         setLoading(true);
 
         // Get the class session for this class, academic year, and term
-        const sessionsRes = await axios.get('http://127.0.0.1:8000/api/academics/sessions/', {
+        const sessionsRes = await axios.get(`${API_BASE_URL}/api/academics/sessions/`, {
           headers: { Authorization: `Bearer ${token}` },
         });
 
@@ -47,7 +49,7 @@ const AttendanceMarkingModal = ({ classInfo, academicYear, term, schoolDays, hol
 
         // Fetch students in this class session
         const studentsRes = await axios.get(
-          `http://127.0.0.1:8000/api/academics/session-students/${session.id}/`,
+          `${API_BASE_URL}/api/academics/session-students/${session.id}/`,
           { headers: { Authorization: `Bearer ${token}` } }
         );
 
@@ -56,7 +58,7 @@ const AttendanceMarkingModal = ({ classInfo, academicYear, term, schoolDays, hol
 
         // Fetch existing attendance records for this session
         const attendanceRes = await axios.get(
-          `http://127.0.0.1:8000/api/schooladmin/attendance/?class_session=${session.id}`,
+          `${API_BASE_URL}/api/schooladmin/attendance/?class_session=${session.id}`,
           { headers: { Authorization: `Bearer ${token}` } }
         );
 
@@ -213,7 +215,7 @@ const AttendanceMarkingModal = ({ classInfo, academicYear, term, schoolDays, hol
 
     try {
       const response = await axios.post(
-        'http://127.0.0.1:8000/api/schooladmin/attendance/',
+        `${API_BASE_URL}/api/schooladmin/attendance/`,
         { attendance_records: attendanceRecords },
         { headers: { Authorization: `Bearer ${token}` } }
       );

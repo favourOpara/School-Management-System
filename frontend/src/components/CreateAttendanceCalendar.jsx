@@ -4,6 +4,8 @@ import 'react-calendar/dist/Calendar.css';
 import './attendance.css';
 import axios from 'axios';
 
+import API_BASE_URL from '../config';
+
 const CreateAttendanceCalendar = ({ selectedYear, selectedTerm }) => {
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
@@ -94,7 +96,7 @@ const CreateAttendanceCalendar = ({ selectedYear, selectedTerm }) => {
     };
 
     try {
-      await axios.post('http://127.0.0.1:8000/api/attendance/calendar/create/', payload, {
+      await axios.post(`${API_BASE_URL}/api/attendance/calendar/create/`, payload, {
         headers: { Authorization: `Bearer ${token}` },
       });
 

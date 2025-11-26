@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import axios from 'axios';
+import API_BASE_URL from '../config';
+
 import './CreateTeacherForm.css';
 
 const CreateTeacherForm = ({ onSuccess }) => {
@@ -22,7 +24,7 @@ const CreateTeacherForm = ({ onSuccess }) => {
     setMessage('');
 
     try {
-      await axios.post('http://127.0.0.1:8000/api/users/teacher-signup/', formData, {
+      await axios.post(`${API_BASE_URL}/api/users/teacher-signup/`, formData, {
         headers: { Authorization: `Bearer ${token}` }
       });
 

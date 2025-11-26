@@ -1,6 +1,8 @@
 // src/components/ReportSheet.jsx
 import React, { useState, useEffect } from 'react';
 import { FileText, Filter, Search, Printer, Download, Loader } from 'lucide-react';
+import API_BASE_URL from '../config';
+
 import './ReportSheet.css';
 
 const ReportSheet = () => {
@@ -40,7 +42,7 @@ const ReportSheet = () => {
       const token = localStorage.getItem('accessToken');
 
       // Fetch sessions for academic years and terms
-      const sessionResponse = await fetch('http://127.0.0.1:8000/api/academics/sessions/', {
+      const sessionResponse = await fetch(`${API_BASE_URL}/api/academics/sessions/`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
 
@@ -53,7 +55,7 @@ const ReportSheet = () => {
       }
 
       // Fetch classes
-      const classResponse = await fetch('http://127.0.0.1:8000/api/academics/classes/', {
+      const classResponse = await fetch(`${API_BASE_URL}/api/academics/classes/`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
 
@@ -74,7 +76,7 @@ const ReportSheet = () => {
       const token = localStorage.getItem('accessToken');
 
       // Build query params - class_id is optional
-      let url = `http://127.0.0.1:8000/api/schooladmin/reports/students/?academic_year=${selectedYear}&term=${selectedTerm}`;
+      let url = `${API_BASE_URL}/api/schooladmin/reports/students/?academic_year=${selectedYear}&term=${selectedTerm}`;
       if (selectedClass) {
         url += `&class_id=${selectedClass}`;
       }
@@ -105,7 +107,7 @@ const ReportSheet = () => {
       const token = localStorage.getItem('accessToken');
 
       const response = await fetch(
-        `http://127.0.0.1:8000/api/schooladmin/reports/student/${studentId}/?academic_year=${selectedYear}&term=${selectedTerm}`,
+        `${API_BASE_URL}/api/schooladmin/reports/student/${studentId}/?academic_year=${selectedYear}&term=${selectedTerm}`,
         { headers: { 'Authorization': `Bearer ${token}` } }
       );
 
@@ -141,7 +143,7 @@ const ReportSheet = () => {
     try {
       const token = localStorage.getItem('accessToken');
       const response = await fetch(
-        `http://127.0.0.1:8000/api/schooladmin/reports/student/${selectedStudent.id}/download/?academic_year=${selectedYear}&term=${selectedTerm}`,
+        `${API_BASE_URL}/api/schooladmin/reports/student/${selectedStudent.id}/download/?academic_year=${selectedYear}&term=${selectedTerm}`,
         {
           headers: { 'Authorization': `Bearer ${token}` }
         }

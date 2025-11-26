@@ -3,6 +3,8 @@ import axios from 'axios';
 import Select from 'react-select';
 import { CalendarCheck } from 'lucide-react';
 import AttendanceStudentModal from './AttendanceStudentModal';
+import API_BASE_URL from '../config';
+
 import './DashboardAttendanceCard.css';
 
 const termOptions = [
@@ -58,12 +60,12 @@ const DashboardAttendanceCard = () => {
     const fetchYears = async () => {
       try {
         // First, get the current active session
-        const sessionInfoRes = await axios.get('http://127.0.0.1:8000/api/schooladmin/session/info/', { headers });
+        const sessionInfoRes = await axios.get(`${API_BASE_URL}/api/schooladmin/session/info/`, { headers });
         const currentYear = sessionInfoRes.data.academic_year;
         const currentTerm = sessionInfoRes.data.current_term;
 
         // Then get all available sessions
-        const res = await axios.get('http://127.0.0.1:8000/api/academics/sessions/', { headers });
+        const res = await axios.get(`${API_BASE_URL}/api/academics/sessions/`, { headers });
         if (Array.isArray(res.data)) {
           const years = [...new Set(res.data.map(s => s.academic_year))].sort();
           const options = years.map(y => ({ value: y, label: y }));
@@ -99,7 +101,7 @@ const DashboardAttendanceCard = () => {
       
       try {
         // First, check if an attendance calendar exists for this academic year and term
-        const calendarsRes = await axios.get('http://127.0.0.1:8000/api/attendance/calendar/', { headers });
+        const calendarsRes = await axios.get(`${API_BASE_URL}/api/attendance/calendar/`, { headers });
         const attendanceCalendar = calendarsRes.data.find(
           cal => cal.academic_year === selectedYear.value && cal.term === selectedTerm.value
         );
@@ -114,7 +116,7 @@ const DashboardAttendanceCard = () => {
         console.log('Found attendance calendar:', attendanceCalendar);
 
         // Get all sessions for the selected year and term
-        const sessionsRes = await axios.get('http://127.0.0.1:8000/api/academics/sessions/', { headers });
+        const sessionsRes = await axios.get(`${API_BASE_URL}/api/academics/sessions/`, { headers });
         const sessions = sessionsRes.data.filter(s => 
           s.academic_year === selectedYear.value && s.term === selectedTerm.value
         );
@@ -132,7 +134,7 @@ const DashboardAttendanceCard = () => {
           try {
             // Get students for this session
             const studentsRes = await axios.get(
-              `http://127.0.0.1:8000/api/academics/session-students/${session.id}/`, 
+              `${API_BASE_URL}/api/academics/session-students/${session.id}/`, 
               { headers }
             );
             const students = studentsRes.data;
@@ -153,7 +155,7 @@ const DashboardAttendanceCard = () => {
 
             // Get attendance records for this session
             const attendanceRes = await axios.get(
-              `http://127.0.0.1:8000/api/schooladmin/attendance/?class_session=${session.id}`,
+              `${API_BASE_URL}/api/schooladmin/attendance/?class_session=${session.id}`,
               { headers }
             );
             const attendanceRecords = attendanceRes.data;

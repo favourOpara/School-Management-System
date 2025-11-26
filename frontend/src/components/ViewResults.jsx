@@ -5,6 +5,8 @@ import GradesModal from './GradesModal';
 import './ViewResults.css';
 import { useDialog } from '../contexts/DialogContext';
 
+import API_BASE_URL from '../config';
+
 const ViewResults = () => {
   const { showConfirm } = useDialog();
   const [loading, setLoading] = useState(false);
@@ -56,7 +58,7 @@ const ViewResults = () => {
       const token = localStorage.getItem('accessToken');
       
       // Fetch sessions for academic years and terms
-      const sessionResponse = await fetch('http://127.0.0.1:8000/api/academics/sessions/', {
+      const sessionResponse = await fetch(`${API_BASE_URL}/api/academics/sessions/`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       
@@ -69,7 +71,7 @@ const ViewResults = () => {
       }
       
       // Fetch classes
-      const classResponse = await fetch('http://127.0.0.1:8000/api/academics/classes/', {
+      const classResponse = await fetch(`${API_BASE_URL}/api/academics/classes/`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       
@@ -109,7 +111,7 @@ const ViewResults = () => {
       setLoading(true);
       const token = localStorage.getItem('accessToken');
       
-      let url = `http://127.0.0.1:8000/api/schooladmin/results/subjects/?academic_year=${selectedYear}&term=${selectedTerm}&class_id=${selectedClass}`;
+      let url = `${API_BASE_URL}/api/schooladmin/results/subjects/?academic_year=${selectedYear}&term=${selectedTerm}&class_id=${selectedClass}`;
       
       if (selectedDepartment) {
         url += `&department=${selectedDepartment}`;
@@ -168,7 +170,7 @@ const ViewResults = () => {
       setSyncing(true);
       const token = localStorage.getItem('accessToken');
 
-      const response = await fetch('http://127.0.0.1:8000/api/schooladmin/results/sync-attendance/', {
+      const response = await fetch(`${API_BASE_URL}/api/schooladmin/results/sync-attendance/`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,

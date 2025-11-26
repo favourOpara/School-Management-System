@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import Select from 'react-select';
+import API_BASE_URL from '../config';
+
 import './CreateSubjectForm.css';
 
 const CreateSubjectForm = () => {
@@ -30,10 +32,10 @@ const CreateSubjectForm = () => {
     const fetchData = async () => {
       try {
         const [classRes, sessionRes, teacherRes, subjectRes] = await Promise.all([
-          axios.get('http://127.0.0.1:8000/api/academics/classes/', { headers: { Authorization: `Bearer ${token}` } }),
-          axios.get('http://127.0.0.1:8000/api/academics/sessions/', { headers: { Authorization: `Bearer ${token}` } }),
-          axios.get('http://127.0.0.1:8000/api/users/teachers/', { headers: { Authorization: `Bearer ${token}` } }),
-          axios.get('http://127.0.0.1:8000/api/academics/subjects/', { headers: { Authorization: `Bearer ${token}` } }),
+          axios.get(`${API_BASE_URL}/api/academics/classes/`, { headers: { Authorization: `Bearer ${token}` } }),
+          axios.get(`${API_BASE_URL}/api/academics/sessions/`, { headers: { Authorization: `Bearer ${token}` } }),
+          axios.get(`${API_BASE_URL}/api/users/teachers/`, { headers: { Authorization: `Bearer ${token}` } }),
+          axios.get(`${API_BASE_URL}/api/academics/subjects/`, { headers: { Authorization: `Bearer ${token}` } }),
         ]);
 
         setPermanentClasses(classRes.data);
@@ -169,7 +171,7 @@ const CreateSubjectForm = () => {
     });
 
     try {
-      await axios.post('http://127.0.0.1:8000/api/academics/subjects/', payload, {
+      await axios.post(`${API_BASE_URL}/api/academics/subjects/`, payload, {
         headers: { Authorization: `Bearer ${token}` },
       });
 

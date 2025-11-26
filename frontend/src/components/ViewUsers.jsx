@@ -7,6 +7,8 @@ import EditTeacherModal from './EditTeacherModal';
 import './ViewUsers.css';
 import { useDialog } from '../contexts/DialogContext';
 
+import API_BASE_URL from '../config';
+
 const ViewUsers = () => {
   const { showConfirm, showAlert } = useDialog();
   const [userType, setUserType] = useState('');
@@ -30,7 +32,7 @@ const ViewUsers = () => {
   const token = localStorage.getItem('accessToken');
 
   useEffect(() => {
-    axios.get('http://127.0.0.1:8000/api/academics/sessions/', {
+    axios.get(`${API_BASE_URL}/api/academics/sessions/`, {
       headers: { Authorization: `Bearer ${token}` }
     })
     .then(res => {
@@ -42,7 +44,7 @@ const ViewUsers = () => {
 
   const fetchStudentHistory = async () => {
     try {
-      const res = await axios.get('http://127.0.0.1:8000/api/users/student-history/', {
+      const res = await axios.get(`${API_BASE_URL}/api/users/student-history/`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setStudentHistory(res.data);
@@ -69,18 +71,18 @@ const ViewUsers = () => {
         if (academicYear) query += `academic_year=${academicYear}`;
         if (term) query += `${query ? '&' : ''}term=${term}`;
 
-        const res = await axios.get(`http://127.0.0.1:8000/api/users/students-with-subjects/?${query}`, {
+        const res = await axios.get(`${API_BASE_URL}/api/users/students-with-subjects/?${query}`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         setUsers(res.data);
       } else if (userType === 'teacher') {
         // Fetch teachers
-        const res = await axios.get('http://127.0.0.1:8000/api/users/list-teachers/', {
+        const res = await axios.get(`${API_BASE_URL}/api/users/list-teachers/`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         setUsers(res.data);
       } else if (userType === 'parent') {
-        const res = await axios.get('http://127.0.0.1:8000/api/users/list-parents/', {
+        const res = await axios.get(`${API_BASE_URL}/api/users/list-parents/`, {
           headers: { Authorization: `Bearer ${token}` }
         });
 
@@ -138,7 +140,7 @@ const ViewUsers = () => {
 
   const viewStudentHistory = async (studentId) => {
     try {
-      const res = await axios.get(`http://127.0.0.1:8000/api/users/student-history/${studentId}/`, {
+      const res = await axios.get(`${API_BASE_URL}/api/users/student-history/${studentId}/`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setSelectedStudentHistory(res.data);
@@ -168,7 +170,7 @@ const ViewUsers = () => {
     if (!confirmed) return;
 
     try {
-      await axios.delete(`http://127.0.0.1:8000/api/users/${userId}/`, {
+      await axios.delete(`${API_BASE_URL}/api/users/${userId}/`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setUsers(prev => prev.filter(u => u.id !== userId));

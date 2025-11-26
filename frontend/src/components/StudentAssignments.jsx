@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import API_BASE_URL from '../config';
+
 import { 
   FileText, Calendar, Clock, CheckCircle, AlertCircle, 
   Upload, X, Eye, Download, Trash2 
@@ -29,8 +31,8 @@ const StudentAssignments = () => {
     try {
       setLoading(true);
       const url = filter === 'all' 
-        ? 'http://127.0.0.1:8000/api/academics/student/assignments/'
-        : `http://127.0.0.1:8000/api/academics/student/assignments/?status=${filter}`;
+        ? `${API_BASE_URL}/api/academics/student/assignments/`
+        : `${API_BASE_URL}/api/academics/student/assignments/?status=${filter}`;
       
       const response = await fetch(url, {
         headers: {
@@ -139,7 +141,7 @@ const StudentAssignments = () => {
         formData.append('files', file);
       });
 
-      const response = await fetch('http://127.0.0.1:8000/api/academics/student/assignments/submit/', {
+      const response = await fetch(`${API_BASE_URL}/api/academics/student/assignments/submit/`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -166,7 +168,7 @@ const StudentAssignments = () => {
   const viewSubmissionDetails = async (assignmentId) => {
     try {
       const response = await fetch(
-        `http://127.0.0.1:8000/api/academics/student/assignments/${assignmentId}/`,
+        `${API_BASE_URL}/api/academics/student/assignments/${assignmentId}/`,
         {
           headers: {
             'Authorization': `Bearer ${token}`

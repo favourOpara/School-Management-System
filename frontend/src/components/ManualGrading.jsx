@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { AlertCircle, CheckCircle, Lock, Save } from 'lucide-react';
+import API_BASE_URL from '../config';
+
 import './ManualGrading.css';
 
 const ManualGrading = () => {
@@ -21,7 +23,7 @@ const ManualGrading = () => {
     try {
       setLoading(true);
       const token = localStorage.getItem('accessToken');
-      const response = await fetch('http://127.0.0.1:8000/api/schooladmin/teacher/grading/subjects/', {
+      const response = await fetch(`${API_BASE_URL}/api/schooladmin/teacher/grading/subjects/`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
 
@@ -43,7 +45,7 @@ const ManualGrading = () => {
       setLoading(true);
       const token = localStorage.getItem('accessToken');
       const response = await fetch(
-        `http://127.0.0.1:8000/api/schooladmin/teacher/grading/subjects/${subjectId}/students/`,
+        `${API_BASE_URL}/api/schooladmin/teacher/grading/subjects/${subjectId}/students/`,
         {
           headers: { 'Authorization': `Bearer ${token}` }
         }
@@ -109,7 +111,7 @@ const ManualGrading = () => {
       setLoading(true);
       const token = localStorage.getItem('accessToken');
       const response = await fetch(
-        `http://127.0.0.1:8000/api/schooladmin/teacher/grading/subjects/${selectedSubject.id}/save/`,
+        `${API_BASE_URL}/api/schooladmin/teacher/grading/subjects/${selectedSubject.id}/save/`,
         {
           method: 'POST',
           headers: {

@@ -1,6 +1,8 @@
 // src/components/NotificationPopup.jsx
 import React, { useState, useEffect } from 'react';
 import { X, Bell, AlertTriangle, FileCheck, ChevronDown, ChevronUp } from 'lucide-react';
+import API_BASE_URL from '../config';
+
 import './NotificationPopup.css';
 
 const NotificationPopup = () => {
@@ -16,7 +18,7 @@ const NotificationPopup = () => {
   const fetchPendingNotifications = async () => {
     try {
       const token = localStorage.getItem('accessToken');
-      const response = await fetch('http://127.0.0.1:8000/api/logs/notifications/pending-popups/', {
+      const response = await fetch(`${API_BASE_URL}/api/logs/notifications/pending-popups/`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
 
@@ -40,7 +42,7 @@ const NotificationPopup = () => {
     // Mark popup as shown
     try {
       const token = localStorage.getItem('accessToken');
-      await fetch(`http://127.0.0.1:8000/api/logs/notifications/${currentNotification.id}/popup-shown/`, {
+      await fetch(`${API_BASE_URL}/api/logs/notifications/${currentNotification.id}/popup-shown/`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}` }
       });

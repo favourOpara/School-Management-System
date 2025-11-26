@@ -3,6 +3,8 @@ import { Search, Edit2, Eye, Lock, Unlock, Trash2 } from 'lucide-react';
 import './ReviewQuestions.css';
 import { useDialog } from '../contexts/DialogContext';
 
+import API_BASE_URL from '../config';
+
 const ReviewQuestions = () => {
   const { showConfirm, showAlert } = useDialog();
   const [sessions, setSessions] = useState([]);
@@ -41,7 +43,7 @@ const ReviewQuestions = () => {
       const token = localStorage.getItem('accessToken');
 
       // Fetch all class sessions
-      const sessionsResponse = await fetch('http://127.0.0.1:8000/api/academics/sessions/', {
+      const sessionsResponse = await fetch(`${API_BASE_URL}/api/academics/sessions/`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -74,7 +76,7 @@ const ReviewQuestions = () => {
       setSessions(uniqueSessions);
 
       // Fetch all classes
-      const classesResponse = await fetch('http://127.0.0.1:8000/api/academics/classes/', {
+      const classesResponse = await fetch(`${API_BASE_URL}/api/academics/classes/`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -89,7 +91,7 @@ const ReviewQuestions = () => {
       setClasses(classesData || []);
 
       // Fetch all subjects
-      const subjectsResponse = await fetch('http://127.0.0.1:8000/api/academics/subjects/list/', {
+      const subjectsResponse = await fetch(`${API_BASE_URL}/api/academics/subjects/list/`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -130,7 +132,7 @@ const ReviewQuestions = () => {
         params.append('subject_id', selectedSubject);
       }
 
-      const response = await fetch(`http://127.0.0.1:8000/api/academics/admin/assessments/?${params}`, {
+      const response = await fetch(`${API_BASE_URL}/api/academics/admin/assessments/?${params}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -174,7 +176,7 @@ const ReviewQuestions = () => {
     try {
       const token = localStorage.getItem('accessToken');
 
-      const response = await fetch(`http://127.0.0.1:8000/api/academics/admin/assessments/${assessmentId}/toggle-release/`, {
+      const response = await fetch(`${API_BASE_URL}/api/academics/admin/assessments/${assessmentId}/toggle-release/`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -208,7 +210,7 @@ const ReviewQuestions = () => {
     try {
       const token = localStorage.getItem('accessToken');
 
-      const response = await fetch(`http://127.0.0.1:8000/api/academics/admin/assessments/${assessment.id}/delete/`, {
+      const response = await fetch(`${API_BASE_URL}/api/academics/admin/assessments/${assessment.id}/delete/`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -272,7 +274,7 @@ const ReviewQuestions = () => {
       if (selectedTerm) requestBody.term = selectedTerm;
       if (selectedSubject) requestBody.subject_id = selectedSubject;
 
-      const response = await fetch('http://127.0.0.1:8000/api/academics/admin/assessments/unlock-all/', {
+      const response = await fetch(`${API_BASE_URL}/api/academics/admin/assessments/unlock-all/`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -313,7 +315,7 @@ const ReviewQuestions = () => {
     if (question.image_url) {
       const fullImageUrl = question.image_url.startsWith('http')
         ? question.image_url
-        : `http://127.0.0.1:8000${question.image_url}`;
+        : `${API_BASE_URL}${question.image_url}`;
       setImagePreview(fullImageUrl);
     } else {
       setImagePreview(null);
@@ -370,7 +372,7 @@ const ReviewQuestions = () => {
         body = JSON.stringify(updateData);
       }
 
-      const response = await fetch(`http://127.0.0.1:8000/api/academics/questions/${editingQuestion.id}/`, {
+      const response = await fetch(`${API_BASE_URL}/api/academics/questions/${editingQuestion.id}/`, {
         method: 'PATCH',
         headers: headers,
         body: body
@@ -459,7 +461,7 @@ const ReviewQuestions = () => {
     if (editingQuestion.image_url) {
       const fullImageUrl = editingQuestion.image_url.startsWith('http')
         ? editingQuestion.image_url
-        : `http://127.0.0.1:8000${editingQuestion.image_url}`;
+        : `${API_BASE_URL}${editingQuestion.image_url}`;
       setImagePreview(fullImageUrl);
       setDeleteImage(false);
     } else {
@@ -694,7 +696,7 @@ const ReviewQuestions = () => {
                                     <img
                                       src={question.image_url.startsWith('http')
                                         ? question.image_url
-                                        : `http://127.0.0.1:8000${question.image_url}`
+                                        : `${API_BASE_URL}${question.image_url}`
                                       }
                                       alt={`Question ${index + 1}`}
                                     />

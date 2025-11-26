@@ -1,6 +1,8 @@
 // src/components/StudentGradeReport.jsx
 import React, { useState, useEffect } from 'react';
 import { FileText, BookOpen, Calendar, Printer, Loader } from 'lucide-react';
+import API_BASE_URL from '../config';
+
 import './ParentGradeReport.css';
 
 const StudentGradeReport = () => {
@@ -29,7 +31,7 @@ const StudentGradeReport = () => {
       const token = localStorage.getItem('accessToken');
 
       // Build query params
-      let url = 'http://127.0.0.1:8000/api/users/student/grade-report/';
+      let url = `${API_BASE_URL}/api/users/student/grade-report/`;
       const params = new URLSearchParams();
       if (selectedYear) params.append('academic_year', selectedYear);
       if (selectedTerm) params.append('term', selectedTerm);
@@ -89,7 +91,7 @@ const StudentGradeReport = () => {
     try {
       const token = localStorage.getItem('accessToken');
       const response = await fetch(
-        `http://127.0.0.1:8000/api/schooladmin/reports/student/${reportData.student.id}/download/?academic_year=${selectedYear}&term=${selectedTerm}`,
+        `${API_BASE_URL}/api/schooladmin/reports/student/${reportData.student.id}/download/?academic_year=${selectedYear}&term=${selectedTerm}`,
         {
           headers: { 'Authorization': `Bearer ${token}` }
         }

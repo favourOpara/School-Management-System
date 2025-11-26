@@ -10,6 +10,8 @@ import FeesReceipt from '../components/FeesReceipt';
 import NotificationPopup from '../components/NotificationPopup';
 import TopHeader from '../components/TopHeader';
 import PasswordChange from '../components/PasswordChange';
+import API_BASE_URL from '../config';
+
 import './ParentDashboard.css';
 
 const getGreeting = () => {
@@ -65,7 +67,7 @@ const ParentDashboard = () => {
     try {
       setLoadingChildren(true);
       const token = localStorage.getItem('accessToken');
-      const response = await fetch('http://127.0.0.1:8000/api/schooladmin/parent/children/', {
+      const response = await fetch(`${API_BASE_URL}/api/schooladmin/parent/children/`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -90,7 +92,7 @@ const ParentDashboard = () => {
     try {
       setLoadingFees(true);
       const token = localStorage.getItem('accessToken');
-      const response = await fetch(`http://127.0.0.1:8000/api/schooladmin/parent/child/${childId}/fees/`, {
+      const response = await fetch(`${API_BASE_URL}/api/schooladmin/parent/child/${childId}/fees/`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -112,7 +114,7 @@ const ParentDashboard = () => {
     try {
       setLoadingAcademic(true);
       const token = localStorage.getItem('accessToken');
-      const response = await fetch(`http://127.0.0.1:8000/api/schooladmin/parent/child/${childId}/academic/`, {
+      const response = await fetch(`${API_BASE_URL}/api/schooladmin/parent/child/${childId}/academic/`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -134,7 +136,7 @@ const ParentDashboard = () => {
     try {
       setLoadingSubjects(true);
       const token = localStorage.getItem('accessToken');
-      const response = await fetch(`http://127.0.0.1:8000/api/schooladmin/parent/child/${childId}/subjects/`, {
+      const response = await fetch(`${API_BASE_URL}/api/schooladmin/parent/child/${childId}/subjects/`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -156,7 +158,7 @@ const ParentDashboard = () => {
     try {
       setLoadingAssignments(true);
       const token = localStorage.getItem('accessToken');
-      const response = await fetch(`http://127.0.0.1:8000/api/schooladmin/parent/child/${childId}/assignments/`, {
+      const response = await fetch(`${API_BASE_URL}/api/schooladmin/parent/child/${childId}/assignments/`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'

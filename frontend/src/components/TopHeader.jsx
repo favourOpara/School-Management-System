@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { LogOut, Menu, User, Camera, ChevronDown, X, Settings, Lock } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import API_BASE_URL from '../config';
+
 import './TopHeader.css';
 
 const TopHeader = ({ onMenuClick, onSettingsClick, onPasswordChangeClick }) => {
@@ -30,7 +32,7 @@ const TopHeader = ({ onMenuClick, onSettingsClick, onPasswordChangeClick }) => {
   const fetchUserProfile = async () => {
     try {
       const token = localStorage.getItem('accessToken');
-      const response = await fetch('http://127.0.0.1:8000/api/users/profile/', {
+      const response = await fetch(`${API_BASE_URL}/api/users/profile/`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -76,7 +78,7 @@ const TopHeader = ({ onMenuClick, onSettingsClick, onPasswordChangeClick }) => {
 
     try {
       const token = localStorage.getItem('accessToken');
-      const response = await fetch('http://127.0.0.1:8000/api/users/avatar/upload/', {
+      const response = await fetch(`${API_BASE_URL}/api/users/avatar/upload/`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -105,7 +107,7 @@ const TopHeader = ({ onMenuClick, onSettingsClick, onPasswordChangeClick }) => {
 
     try {
       const token = localStorage.getItem('accessToken');
-      const response = await fetch('http://127.0.0.1:8000/api/users/avatar/remove/', {
+      const response = await fetch(`${API_BASE_URL}/api/users/avatar/remove/`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`

@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import Select from 'react-select';
+import API_BASE_URL from '../config';
+
 import './EditUserModal.css';
 
 const EditUserModal = ({ user, onClose, onUpdated }) => {
@@ -67,12 +69,12 @@ const EditUserModal = ({ user, onClose, onUpdated }) => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const classRes = await axios.get('http://127.0.0.1:8000/api/academics/classes/', {
+        const classRes = await axios.get(`${API_BASE_URL}/api/academics/classes/`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         setClassrooms(classRes.data);
 
-        const sessionRes = await axios.get('http://127.0.0.1:8000/api/academics/sessions/', {
+        const sessionRes = await axios.get(`${API_BASE_URL}/api/academics/sessions/`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         const years = [...new Set(sessionRes.data.map(s => s.academic_year))];
@@ -223,7 +225,7 @@ const EditUserModal = ({ user, onClose, onUpdated }) => {
         payload.append('profile_picture', profilePicture);
       }
 
-      const res = await axios.put(`http://127.0.0.1:8000/api/users/${user.id}/`, payload, {
+      const res = await axios.put(`${API_BASE_URL}/api/users/${user.id}/`, payload, {
         headers: {
           Authorization: `Bearer ${token}`,
           'Content-Type': 'multipart/form-data'

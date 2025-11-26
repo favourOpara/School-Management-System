@@ -3,6 +3,8 @@ import axios from 'axios';
 import Select from 'react-select';
 import { DollarSign } from 'lucide-react';
 import FeeStudentModal from './FeeStudentModal';
+import API_BASE_URL from '../config';
+
 import './DashboardCards.css';
 
 const termOptions = [
@@ -56,12 +58,12 @@ const DashboardFeesCard = () => {
     const fetchYears = async () => {
       try {
         // First, get the current active session
-        const sessionInfoRes = await axios.get('http://127.0.0.1:8000/api/schooladmin/session/info/', { headers });
+        const sessionInfoRes = await axios.get(`${API_BASE_URL}/api/schooladmin/session/info/`, { headers });
         const currentYear = sessionInfoRes.data.academic_year;
         const currentTerm = sessionInfoRes.data.current_term;
 
         // Then get all available sessions
-        const res = await axios.get('http://127.0.0.1:8000/api/academics/sessions/', { headers });
+        const res = await axios.get(`${API_BASE_URL}/api/academics/sessions/`, { headers });
         if (Array.isArray(res.data)) {
           const years = [...new Set(res.data.map(s => s.academic_year))].sort();
           const options = years.map(y => ({ value: y, label: y }));
@@ -93,7 +95,7 @@ const DashboardFeesCard = () => {
       
       try {
         const res = await axios.get(
-          `http://127.0.0.1:8000/api/schooladmin/fees/dashboard/?academic_year=${selectedYear.value}&term=${selectedTerm.value}`,
+          `${API_BASE_URL}/api/schooladmin/fees/dashboard/?academic_year=${selectedYear.value}&term=${selectedTerm.value}`,
           { headers }
         );
         if (Array.isArray(res.data)) {

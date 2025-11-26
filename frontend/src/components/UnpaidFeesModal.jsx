@@ -1,6 +1,8 @@
 // src/components/UnpaidFeesModal.jsx
 import React, { useState, useEffect } from 'react';
 import { X, Users, ArrowLeft, Loader, Search, DollarSign, Bell, CheckCircle } from 'lucide-react';
+import API_BASE_URL from '../config';
+
 import './UnpaidFeesModal.css';
 
 const UnpaidFeesModal = ({ isOpen, onClose }) => {
@@ -33,7 +35,7 @@ const UnpaidFeesModal = ({ isOpen, onClose }) => {
       setError(null);
       const token = localStorage.getItem('accessToken');
 
-      const response = await fetch('http://127.0.0.1:8000/api/schooladmin/analytics/unpaid-fees/classes/', {
+      const response = await fetch(`${API_BASE_URL}/api/schooladmin/analytics/unpaid-fees/classes/`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
 
@@ -59,7 +61,7 @@ const UnpaidFeesModal = ({ isOpen, onClose }) => {
       const token = localStorage.getItem('accessToken');
 
       const response = await fetch(
-        `http://127.0.0.1:8000/api/schooladmin/analytics/unpaid-fees/class/${classSessionId}/students/`,
+        `${API_BASE_URL}/api/schooladmin/analytics/unpaid-fees/class/${classSessionId}/students/`,
         {
           headers: { 'Authorization': `Bearer ${token}` }
         }
@@ -95,7 +97,7 @@ const UnpaidFeesModal = ({ isOpen, onClose }) => {
       const token = localStorage.getItem('accessToken');
 
       const response = await fetch(
-        `http://127.0.0.1:8000/api/schooladmin/analytics/unpaid-fees/search/?q=${encodeURIComponent(query)}`,
+        `${API_BASE_URL}/api/schooladmin/analytics/unpaid-fees/search/?q=${encodeURIComponent(query)}`,
         {
           headers: { 'Authorization': `Bearer ${token}` }
         }
@@ -123,7 +125,7 @@ const UnpaidFeesModal = ({ isOpen, onClose }) => {
       setNotifyingStudent(studentId);
       const token = localStorage.getItem('accessToken');
 
-      const response = await fetch('http://127.0.0.1:8000/api/schooladmin/analytics/unpaid-fees/notify/', {
+      const response = await fetch(`${API_BASE_URL}/api/schooladmin/analytics/unpaid-fees/notify/`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,

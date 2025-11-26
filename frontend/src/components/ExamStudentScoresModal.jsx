@@ -3,6 +3,8 @@ import axios from 'axios';
 import './ExamStudentScoresModal.css';
 import { useDialog } from '../contexts/DialogContext';
 
+import API_BASE_URL from '../config';
+
 const ExamStudentScoresModal = ({ subjectData, onClose }) => {
   const { showAlert } = useDialog();
   const [data, setData] = useState(null);
@@ -20,7 +22,7 @@ const ExamStudentScoresModal = ({ subjectData, onClose }) => {
       setError('');
 
       const response = await axios.get(
-        `http://127.0.0.1:8000/api/schooladmin/analytics/exams/subject/${subjectData.subject_id}/scores/`,
+        `${API_BASE_URL}/api/schooladmin/analytics/exams/subject/${subjectData.subject_id}/scores/`,
         { headers }
       );
 
@@ -90,7 +92,7 @@ const ExamStudentScoresModal = ({ subjectData, onClose }) => {
       console.log('Request data:', requestData);
 
       const response = await axios.post(
-        'http://127.0.0.1:8000/api/schooladmin/analytics/exams/scores/update/',
+        `${API_BASE_URL}/api/schooladmin/analytics/exams/scores/update/`,
         requestData,
         { headers }
       );

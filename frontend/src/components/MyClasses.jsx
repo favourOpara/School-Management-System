@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import API_BASE_URL from '../config';
+
 import {
   BookOpen,
   FileText,
@@ -41,7 +43,7 @@ const MyClasses = () => {
     try {
       setLoading(true);
       const token = localStorage.getItem('accessToken');
-      const response = await fetch('http://127.0.0.1:8000/api/academics/student/my-classes/', {
+      const response = await fetch(`${API_BASE_URL}/api/academics/student/my-classes/`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'

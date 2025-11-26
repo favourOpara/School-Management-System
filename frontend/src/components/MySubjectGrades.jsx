@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { TrendingUp, TrendingDown, ChevronDown, ChevronUp } from 'lucide-react';
+import API_BASE_URL from '../config';
+
 import './MySubjectGrades.css';
 
 const MySubjectGrades = ({ type = 'highest' }) => {
@@ -13,7 +15,7 @@ const MySubjectGrades = ({ type = 'highest' }) => {
     setLoading(true);
     try {
       const token = localStorage.getItem('accessToken');
-      const response = await fetch('http://127.0.0.1:8000/api/schooladmin/student/dashboard/my-grades/', {
+      const response = await fetch(`${API_BASE_URL}/api/schooladmin/student/dashboard/my-grades/`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'

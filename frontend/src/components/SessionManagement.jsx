@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import API_BASE_URL from '../config';
+
 import './SessionManagement.css';
 
 const SessionManagement = () => {
@@ -24,7 +26,7 @@ const SessionManagement = () => {
       const token = localStorage.getItem('accessToken');
       console.log('Fetching session info with token:', token ? 'exists' : 'missing');
 
-      const response = await fetch('http://127.0.0.1:8000/api/schooladmin/session/info/', {
+      const response = await fetch(`${API_BASE_URL}/api/schooladmin/session/info/`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -66,7 +68,7 @@ const SessionManagement = () => {
     setLoading(true);
     try {
       const token = localStorage.getItem('accessToken');
-      const response = await fetch('http://127.0.0.1:8000/api/schooladmin/session/move-to-next-term/', {
+      const response = await fetch(`${API_BASE_URL}/api/schooladmin/session/move-to-next-term/`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -98,7 +100,7 @@ const SessionManagement = () => {
     setLoading(true);
     try {
       const token = localStorage.getItem('accessToken');
-      const response = await fetch('http://127.0.0.1:8000/api/schooladmin/session/move-to-next-session/', {
+      const response = await fetch(`${API_BASE_URL}/api/schooladmin/session/move-to-next-session/`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -136,7 +138,7 @@ const SessionManagement = () => {
     setLoading(true);
     try {
       const token = localStorage.getItem('accessToken');
-      const response = await fetch('http://127.0.0.1:8000/api/schooladmin/session/revert/', {
+      const response = await fetch(`${API_BASE_URL}/api/schooladmin/session/revert/`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,

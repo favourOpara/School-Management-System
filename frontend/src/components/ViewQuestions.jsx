@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Edit2, Eye } from 'lucide-react';
+import API_BASE_URL from '../config';
+
 import './ViewQuestions.css';
 
 const ViewQuestions = () => {
@@ -36,7 +38,7 @@ const ViewQuestions = () => {
       setLoading(true);
       const token = localStorage.getItem('accessToken');
 
-      const response = await fetch('http://127.0.0.1:8000/api/academics/teacher/assigned-subjects/', {
+      const response = await fetch(`${API_BASE_URL}/api/academics/teacher/assigned-subjects/`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -100,7 +102,7 @@ const ViewQuestions = () => {
       setError(null);
       const token = localStorage.getItem('accessToken');
 
-      const response = await fetch('http://127.0.0.1:8000/api/academics/teacher/assessments/', {
+      const response = await fetch(`${API_BASE_URL}/api/academics/teacher/assessments/`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -177,7 +179,7 @@ const ViewQuestions = () => {
     if (question.image_url) {
       const fullImageUrl = question.image_url.startsWith('http')
         ? question.image_url
-        : `http://127.0.0.1:8000${question.image_url}`;
+        : `${API_BASE_URL}${question.image_url}`;
       setImagePreview(fullImageUrl);
     } else {
       setImagePreview(null);
@@ -238,7 +240,7 @@ const ViewQuestions = () => {
         body = JSON.stringify(updateData);
       }
 
-      const response = await fetch(`http://127.0.0.1:8000/api/academics/questions/${editingQuestion.id}/`, {
+      const response = await fetch(`${API_BASE_URL}/api/academics/questions/${editingQuestion.id}/`, {
         method: 'PATCH',
         headers: headers,
         body: body
@@ -334,7 +336,7 @@ const ViewQuestions = () => {
     if (editingQuestion.image_url) {
       const fullImageUrl = editingQuestion.image_url.startsWith('http')
         ? editingQuestion.image_url
-        : `http://127.0.0.1:8000${editingQuestion.image_url}`;
+        : `${API_BASE_URL}${editingQuestion.image_url}`;
       setImagePreview(fullImageUrl);
       setDeleteImage(false);
     } else {
@@ -540,7 +542,7 @@ const ViewQuestions = () => {
                                 <img
                                   src={question.image_url.startsWith('http')
                                     ? question.image_url
-                                    : `http://127.0.0.1:8000${question.image_url}`
+                                    : `${API_BASE_URL}${question.image_url}`
                                   }
                                   alt={`Question ${index + 1}`}
                                 />

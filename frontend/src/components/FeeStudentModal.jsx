@@ -7,6 +7,8 @@ import './feestudentmodal.css';
 import { useDialog } from '../contexts/DialogContext';
 import GenerateReceiptModal from './GenerateReceiptModal';
 
+import API_BASE_URL from '../config';
+
 const paymentStatusOptions = [
   { value: 'ALL', label: 'All' },
   { value: 'PAID', label: 'Paid' },
@@ -106,7 +108,7 @@ const FeeStudentModal = ({ data = {}, onClose }) => {
       // batch PATCH
       await Promise.all(toUpdate.map(([rid, amount_paid]) =>
         axios.patch(
-          `http://127.0.0.1:8000/api/schooladmin/fee-records/${rid}/update/`,
+          `${API_BASE_URL}/api/schooladmin/fee-records/${rid}/update/`,
           { amount_paid },
           { headers: { Authorization: `Bearer ${token}` } }
         )

@@ -1,6 +1,8 @@
 // src/components/ParentAnnouncements.jsx
 import React, { useState, useEffect } from 'react';
 import { Bell, AlertCircle, Info, CheckCircle, Clock, FileText, DollarSign, BookOpen } from 'lucide-react';
+import API_BASE_URL from '../config';
+
 import './ParentAnnouncements.css';
 
 const ParentAnnouncements = () => {
@@ -17,7 +19,7 @@ const ParentAnnouncements = () => {
     try {
       setLoading(true);
       const token = localStorage.getItem('accessToken');
-      const response = await fetch('http://127.0.0.1:8000/api/schooladmin/parent/announcements/', {
+      const response = await fetch(`${API_BASE_URL}/api/schooladmin/parent/announcements/`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'

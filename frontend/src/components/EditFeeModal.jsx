@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import Select from 'react-select';
 import axios from 'axios';
+import API_BASE_URL from '../config';
+
 import './editfeemodal.css';
 
 const termOptions = [
@@ -45,10 +47,10 @@ const EditFeeModal = ({ fee, onClose, onUpdated }) => {
     const fetchInitialData = async () => {
       try {
         const [classRes, sessionRes] = await Promise.all([
-          axios.get('http://127.0.0.1:8000/api/academics/classes/', {
+          axios.get(`${API_BASE_URL}/api/academics/classes/`, {
             headers: { Authorization: `Bearer ${token}` }
           }),
-          axios.get('http://127.0.0.1:8000/api/academics/sessions/', {
+          axios.get(`${API_BASE_URL}/api/academics/sessions/`, {
             headers: { Authorization: `Bearer ${token}` }
           }),
         ]);
@@ -77,7 +79,7 @@ const EditFeeModal = ({ fee, onClose, onUpdated }) => {
 
     try {
       const response = await axios.put(
-        `http://127.0.0.1:8000/api/schooladmin/fees/${fee.id}/edit/`,
+        `${API_BASE_URL}/api/schooladmin/fees/${fee.id}/edit/`,
         {
           name,
           amount,

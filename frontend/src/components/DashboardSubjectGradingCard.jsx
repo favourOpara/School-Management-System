@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { BookOpen, Bell, Search, ChevronDown, ChevronUp, AlertCircle } from 'lucide-react';
 import Select from 'react-select';
 import SubjectIncompleteStudentsModal from './SubjectIncompleteStudentsModal';
+import API_BASE_URL from '../config';
+
 import './DashboardSubjectGradingCard.css';
 
 const termOptions = [
@@ -77,7 +79,7 @@ const DashboardSubjectGradingCard = () => {
       const token = localStorage.getItem('accessToken');
 
       // First, get the current active session
-      const sessionInfoRes = await fetch('http://127.0.0.1:8000/api/schooladmin/session/info/', {
+      const sessionInfoRes = await fetch(`${API_BASE_URL}/api/schooladmin/session/info/`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
 
@@ -91,7 +93,7 @@ const DashboardSubjectGradingCard = () => {
       }
 
       // Then get all available sessions
-      const response = await fetch('http://127.0.0.1:8000/api/academics/sessions/', {
+      const response = await fetch(`${API_BASE_URL}/api/academics/sessions/`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
 
@@ -136,7 +138,7 @@ const DashboardSubjectGradingCard = () => {
       if (selectedYear) params.append('academic_year', selectedYear.value);
       if (selectedTerm) params.append('term', selectedTerm.value);
 
-      const response = await fetch(`http://127.0.0.1:8000/api/schooladmin/analytics/subject-grading/?${params.toString()}`, {
+      const response = await fetch(`${API_BASE_URL}/api/schooladmin/analytics/subject-grading/?${params.toString()}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
 
@@ -167,7 +169,7 @@ const DashboardSubjectGradingCard = () => {
       setNotificationResult(null);
       const token = localStorage.getItem('accessToken');
 
-      const response = await fetch('http://127.0.0.1:8000/api/schooladmin/analytics/subject-grading/notify-teachers/', {
+      const response = await fetch(`${API_BASE_URL}/api/schooladmin/analytics/subject-grading/notify-teachers/`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,

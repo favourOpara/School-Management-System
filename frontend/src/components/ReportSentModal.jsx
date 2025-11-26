@@ -1,6 +1,8 @@
 // src/components/ReportSentModal.jsx
 import React, { useState, useEffect } from 'react';
 import { X, Loader, CheckCircle, XCircle, AlertTriangle, DollarSign, BookOpen, HelpCircle } from 'lucide-react';
+import API_BASE_URL from '../config';
+
 import './ReportSentModal.css';
 
 const ReportSentModal = ({ classData, onClose }) => {
@@ -22,7 +24,7 @@ const ReportSentModal = ({ classData, onClose }) => {
       const token = localStorage.getItem('accessToken');
 
       const response = await fetch(
-        `http://127.0.0.1:8000/api/schooladmin/analytics/reports-sent/class/${classData.class_session_id}/students/`,
+        `${API_BASE_URL}/api/schooladmin/analytics/reports-sent/class/${classData.class_session_id}/students/`,
         {
           headers: { 'Authorization': `Bearer ${token}` }
         }

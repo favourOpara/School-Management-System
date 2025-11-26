@@ -1,6 +1,8 @@
 // src/components/ReportAccessModal.jsx
 import React, { useState, useEffect } from 'react';
 import { X, Users, Send, ArrowLeft, Loader, CheckCircle } from 'lucide-react';
+import API_BASE_URL from '../config';
+
 import './ReportAccessModal.css';
 
 const ReportAccessModal = ({ isOpen, onClose, onRefreshStats }) => {
@@ -28,7 +30,7 @@ const ReportAccessModal = ({ isOpen, onClose, onRefreshStats }) => {
       setError(null);
       const token = localStorage.getItem('accessToken');
 
-      const response = await fetch('http://127.0.0.1:8000/api/schooladmin/analytics/report-access/classes/', {
+      const response = await fetch(`${API_BASE_URL}/api/schooladmin/analytics/report-access/classes/`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
 
@@ -54,7 +56,7 @@ const ReportAccessModal = ({ isOpen, onClose, onRefreshStats }) => {
       const token = localStorage.getItem('accessToken');
 
       const response = await fetch(
-        `http://127.0.0.1:8000/api/schooladmin/analytics/report-access/class/${classSessionId}/students/`,
+        `${API_BASE_URL}/api/schooladmin/analytics/report-access/class/${classSessionId}/students/`,
         {
           headers: { 'Authorization': `Bearer ${token}` }
         }
@@ -82,7 +84,7 @@ const ReportAccessModal = ({ isOpen, onClose, onRefreshStats }) => {
       setSendingStudent(studentSessionId);
       const token = localStorage.getItem('accessToken');
 
-      const response = await fetch('http://127.0.0.1:8000/api/schooladmin/analytics/report-access/send-individual/', {
+      const response = await fetch(`${API_BASE_URL}/api/schooladmin/analytics/report-access/send-individual/`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,

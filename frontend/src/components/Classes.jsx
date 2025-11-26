@@ -4,6 +4,8 @@ import ClassList from '../components/ClassList';
 import axios from 'axios';
 import { useLoading } from '../context/LoadingContext';
 
+import API_BASE_URL from '../config';
+
 const Classes = () => {
   const [classes, setClasses] = useState([]);
   const [message, setMessage] = useState('');
@@ -13,7 +15,7 @@ const Classes = () => {
     showLoader();
     try {
       const token = localStorage.getItem('accessToken');
-      const res = await axios.get('http://127.0.0.1:8000/api/admin/classes/', {
+      const res = await axios.get(`${API_BASE_URL}/api/admin/classes/`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setClasses(res.data);

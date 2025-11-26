@@ -1,6 +1,8 @@
 // src/components/TeacherAnnouncements.jsx
 import React, { useState, useEffect } from 'react';
 import { Bell, AlertCircle, Info, CheckCircle, Clock, AlertTriangle } from 'lucide-react';
+import API_BASE_URL from '../config';
+
 import './TeacherAnnouncements.css';
 
 const TeacherAnnouncements = () => {
@@ -17,7 +19,7 @@ const TeacherAnnouncements = () => {
     try {
       setLoading(true);
       const token = localStorage.getItem('accessToken');
-      const response = await fetch('http://127.0.0.1:8000/api/schooladmin/my-announcements/', {
+      const response = await fetch(`${API_BASE_URL}/api/schooladmin/my-announcements/`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'

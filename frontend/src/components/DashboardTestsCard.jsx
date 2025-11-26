@@ -7,6 +7,8 @@ import TestStudentScoresModal from './TestStudentScoresModal';
 import './DashboardTestsCard.css';
 import { useDialog } from '../contexts/DialogContext';
 
+import API_BASE_URL from '../config';
+
 const termOptions = [
   { value: 'First Term', label: 'First Term' },
   { value: 'Second Term', label: 'Second Term' },
@@ -63,12 +65,12 @@ const DashboardTestsCard = () => {
     const fetchYears = async () => {
       try {
         // First, get the current active session
-        const sessionInfoRes = await axios.get('http://127.0.0.1:8000/api/schooladmin/session/info/', { headers });
+        const sessionInfoRes = await axios.get(`${API_BASE_URL}/api/schooladmin/session/info/`, { headers });
         const currentYear = sessionInfoRes.data.academic_year;
         const currentTerm = sessionInfoRes.data.current_term;
 
         // Then get all available sessions
-        const res = await axios.get('http://127.0.0.1:8000/api/academics/sessions/', { headers });
+        const res = await axios.get(`${API_BASE_URL}/api/academics/sessions/`, { headers });
         if (Array.isArray(res.data)) {
           const years = [...new Set(res.data.map(s => s.academic_year))].sort();
           const options = years.map(y => ({ value: y, label: y }));
@@ -103,7 +105,7 @@ const DashboardTestsCard = () => {
       setError('');
 
       try {
-        const response = await axios.get('http://127.0.0.1:8000/api/schooladmin/analytics/tests/', {
+        const response = await axios.get(`${API_BASE_URL}/api/schooladmin/analytics/tests/`, {
           params: {
             academic_year: selectedYear.value,
             term: selectedTerm.value
@@ -185,7 +187,7 @@ const DashboardTestsCard = () => {
       setUnlocking(true);
 
       await axios.post(
-        'http://127.0.0.1:8000/api/schooladmin/analytics/tests/scores/unlock/',
+        `${API_BASE_URL}/api/schooladmin/analytics/tests/scores/unlock/`,
         {
           academic_year: selectedYear.value,
           term: selectedTerm.value

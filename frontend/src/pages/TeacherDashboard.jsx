@@ -11,6 +11,8 @@ import TeacherAnnouncements from '../components/TeacherAnnouncements';
 import NotificationPopup from '../components/NotificationPopup';
 import TopHeader from '../components/TopHeader';
 import PasswordChange from '../components/PasswordChange';
+import API_BASE_URL from '../config';
+
 import './TeacherDashboard.css';
 
 const getGreeting = () => {
@@ -57,7 +59,7 @@ const TeacherDashboard = () => {
     try {
       setLoading(true);
       const token = localStorage.getItem('accessToken');
-      const response = await fetch('http://127.0.0.1:8000/api/schooladmin/teacher/grading-stats/', {
+      const response = await fetch(`${API_BASE_URL}/api/schooladmin/teacher/grading-stats/`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
 
@@ -93,7 +95,7 @@ const TeacherDashboard = () => {
       const token = localStorage.getItem('accessToken');
       const endpoint = isGraded ? 'graded-students' : 'incomplete-students';
       const response = await fetch(
-        `http://127.0.0.1:8000/api/schooladmin/teacher/${endpoint}/?subject_id=${subjectId}&assessment_type=${assessmentType}`,
+        `${API_BASE_URL}/api/schooladmin/teacher/${endpoint}/?subject_id=${subjectId}&assessment_type=${assessmentType}`,
         {
           headers: { 'Authorization': `Bearer ${token}` }
         }

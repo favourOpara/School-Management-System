@@ -3,6 +3,8 @@ import React, { useState, useEffect } from 'react';
 import Select from 'react-select';
 import axios from 'axios';
 import CreateAttendanceCalendar from './CreateAttendanceCalendar';
+import API_BASE_URL from '../config';
+
 import ViewAttendance from './ViewAttendance'; // Placeholder for the upcoming view attendance section
 import './attendance.css';
 
@@ -32,7 +34,7 @@ const CreateAttendance = () => {
   useEffect(() => {
     const fetchSessions = async () => {
       try {
-        const res = await axios.get('http://127.0.0.1:8000/api/academics/sessions/', {
+        const res = await axios.get(`${API_BASE_URL}/api/academics/sessions/`, {
           headers: { Authorization: `Bearer ${token}` },
         });
 
@@ -54,7 +56,7 @@ const CreateAttendance = () => {
     const verifySession = async () => {
       if (!selectedYear || !selectedTerm) return;
       try {
-        const res = await axios.get('http://127.0.0.1:8000/api/academics/sessions/', {
+        const res = await axios.get(`${API_BASE_URL}/api/academics/sessions/`, {
           headers: { Authorization: `Bearer ${token}` },
         });
 

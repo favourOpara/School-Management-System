@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import SubjectContentManager from './SubjectContentManager';
 import StudentSubmissionsModal from './StudentSubmissionsModal';
+import API_BASE_URL from '../config';
+
 import './AssignedClasses.css';
 
 const AssignedClasses = () => {
@@ -25,7 +27,7 @@ const AssignedClasses = () => {
       setLoading(true);
       const token = localStorage.getItem('accessToken');
       
-      const response = await fetch('http://127.0.0.1:8000/api/academics/teacher/assigned-subjects/', {
+      const response = await fetch(`${API_BASE_URL}/api/academics/teacher/assigned-subjects/`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -54,7 +56,7 @@ const AssignedClasses = () => {
     try {
       setStudentsLoading(true);
       const token = localStorage.getItem('accessToken');
-      const response = await fetch(`http://127.0.0.1:8000/api/academics/teacher/subjects/${subjectId}/students/`, {
+      const response = await fetch(`${API_BASE_URL}/api/academics/teacher/subjects/${subjectId}/students/`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'

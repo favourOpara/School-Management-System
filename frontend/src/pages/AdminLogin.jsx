@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import axios from 'axios';
 
+import API_BASE_URL from '../config';
+
 const AdminLogin = ({ onLogin }) => {
   const [formData, setFormData] = useState({ username: '', password: '' });
   const [error, setError] = useState('');
@@ -17,7 +19,7 @@ const AdminLogin = ({ onLogin }) => {
     setError('');
 
     try {
-      const res = await axios.post('http://127.0.0.1:8000/api/token/', formData);
+      const res = await axios.post(`${API_BASE_URL}/api/token/`, formData);
       const { access, refresh } = res.data;
       localStorage.setItem('accessToken', access);
       localStorage.setItem('refreshToken', refresh);

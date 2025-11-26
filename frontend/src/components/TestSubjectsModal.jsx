@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import API_BASE_URL from '../config';
+
 import './TestSubjectsModal.css';
 
 const TestSubjectsModal = ({ classData, onClose, onSubjectClick }) => {
@@ -17,7 +19,7 @@ const TestSubjectsModal = ({ classData, onClose, onSubjectClick }) => {
         setError('');
 
         const response = await axios.get(
-          `http://127.0.0.1:8000/api/schooladmin/analytics/tests/class/${classData.session_id}/subjects/`,
+          `${API_BASE_URL}/api/schooladmin/analytics/tests/class/${classData.session_id}/subjects/`,
           { headers }
         );
 

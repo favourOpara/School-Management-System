@@ -6,6 +6,8 @@ import { Edit3 } from 'lucide-react';
 import AttendanceSubjectModal from './AttendanceSubjectModal';
 import AttendanceStudentTable from './AttendanceStudentTable';
 import EditAttendanceCalendar from './EditAttendanceCalendar';
+import API_BASE_URL from '../config';
+
 import './attendance.css';
 
 const selectStyles = {
@@ -45,7 +47,7 @@ const ViewAttendance = () => {
   useEffect(() => {
     const fetchSessionOptions = async () => {
       try {
-        const res = await axios.get('http://127.0.0.1:8000/api/academics/sessions/', {
+        const res = await axios.get(`${API_BASE_URL}/api/academics/sessions/`, {
           headers: { Authorization: `Bearer ${token}` },
         });
 
@@ -69,7 +71,7 @@ const ViewAttendance = () => {
     setLoading(true);
 
     try {
-      const res = await axios.get('http://127.0.0.1:8000/api/attendance/calendar/', {
+      const res = await axios.get(`${API_BASE_URL}/api/attendance/calendar/`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -103,7 +105,7 @@ const ViewAttendance = () => {
       setHolidayDays(holidays);
       setSchoolDays(academicDays);
 
-      const classesRes = await axios.get('http://127.0.0.1:8000/api/academics/classes/', {
+      const classesRes = await axios.get(`${API_BASE_URL}/api/academics/classes/`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -136,7 +138,7 @@ const ViewAttendance = () => {
 
     try {
       const res = await axios.get(
-        `http://127.0.0.1:8000/api/attendance/records/?class_id=${selectedClass.id}&subject_id=${subject.id}&academic_year=${selectedYear.value}&term=${selectedTerm.value}`,
+        `${API_BASE_URL}/api/attendance/records/?class_id=${selectedClass.id}&subject_id=${subject.id}&academic_year=${selectedYear.value}&term=${selectedTerm.value}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
       setStudents(res.data);
@@ -149,7 +151,7 @@ const ViewAttendance = () => {
   const handleUpdateAttendance = async (studentId, updatedDays) => {
     try {
       const res = await axios.patch(
-        `http://127.0.0.1:8000/api/attendance/records/${studentId}/`,
+        `${API_BASE_URL}/api/attendance/records/${studentId}/`,
         { attended_days: updatedDays },
         { headers: { Authorization: `Bearer ${token}` } }
       );

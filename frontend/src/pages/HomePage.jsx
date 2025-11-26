@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import API_BASE_URL from '../config';
+
 import './HomePage.css';
 
 const HomePage = () => {
@@ -21,7 +23,7 @@ const HomePage = () => {
     try {
       // Use the new CustomTokenObtainPairView endpoint
       const { data } = await axios.post(
-        'http://127.0.0.1:8000/api/users/login/',
+        `${API_BASE_URL}/api/users/login/`,
         formData
       );
       

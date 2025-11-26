@@ -3,6 +3,8 @@ import React, { useState, useEffect } from 'react';
 import Select from 'react-select';
 import axios from 'axios';
 import AttendanceMarkingModal from './AttendanceMarkingModal';
+import API_BASE_URL from '../config';
+
 import './attendance.css';
 
 const selectStyles = {
@@ -40,7 +42,7 @@ const AttendanceMarking = () => {
   useEffect(() => {
     const fetchSessionOptions = async () => {
       try {
-        const res = await axios.get('http://127.0.0.1:8000/api/academics/sessions/', {
+        const res = await axios.get(`${API_BASE_URL}/api/academics/sessions/`, {
           headers: { Authorization: `Bearer ${token}` },
         });
 
@@ -67,7 +69,7 @@ const AttendanceMarking = () => {
 
     try {
       // Fetch from the attendance calendar system
-      const res = await axios.get('http://127.0.0.1:8000/api/attendance/calendar/', {
+      const res = await axios.get(`${API_BASE_URL}/api/attendance/calendar/`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -104,12 +106,12 @@ const AttendanceMarking = () => {
       setSchoolDays(academicDays);
 
       // Fetch classes associated with this calendar
-      const classesRes = await axios.get('http://127.0.0.1:8000/api/academics/classes/', {
+      const classesRes = await axios.get(`${API_BASE_URL}/api/academics/classes/`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
       // Filter classes that have sessions for this academic year and term
-      const sessionsRes = await axios.get('http://127.0.0.1:8000/api/academics/sessions/', {
+      const sessionsRes = await axios.get(`${API_BASE_URL}/api/academics/sessions/`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 

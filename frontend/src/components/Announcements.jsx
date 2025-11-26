@@ -5,6 +5,8 @@ import {
   Eye, EyeOff, Loader, Search, Filter
 } from 'lucide-react';
 import axios from 'axios';
+import API_BASE_URL from '../config';
+
 import './Announcements.css';
 
 const Announcements = () => {
@@ -60,7 +62,7 @@ const Announcements = () => {
       if (filterActive) params.append('is_active', filterActive);
 
       const response = await axios.get(
-        `http://127.0.0.1:8000/api/schooladmin/announcements/?${params.toString()}`,
+        `${API_BASE_URL}/api/schooladmin/announcements/?${params.toString()}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
       setAnnouncements(response.data.announcements || []);
@@ -77,7 +79,7 @@ const Announcements = () => {
       if (search) params.append('search', search);
 
       const response = await axios.get(
-        `http://127.0.0.1:8000/api/schooladmin/announcements/users-and-classes/?${params.toString()}`,
+        `${API_BASE_URL}/api/schooladmin/announcements/users-and-classes/?${params.toString()}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
       const fetchedUsers = response.data.users || [];
@@ -195,7 +197,7 @@ const Announcements = () => {
       if (editingAnnouncement) {
         // Update
         await axios.put(
-          `http://127.0.0.1:8000/api/schooladmin/announcements/${editingAnnouncement.id}/`,
+          `${API_BASE_URL}/api/schooladmin/announcements/${editingAnnouncement.id}/`,
           sanitizedData,
           { headers: { Authorization: `Bearer ${token}` } }
         );
@@ -203,7 +205,7 @@ const Announcements = () => {
       } else {
         // Create
         const response = await axios.post(
-          'http://127.0.0.1:8000/api/schooladmin/announcements/',
+          `${API_BASE_URL}/api/schooladmin/announcements/`,
           sanitizedData,
           { headers: { Authorization: `Bearer ${token}` } }
         );
@@ -222,7 +224,7 @@ const Announcements = () => {
 
     try {
       await axios.delete(
-        `http://127.0.0.1:8000/api/schooladmin/announcements/${id}/`,
+        `${API_BASE_URL}/api/schooladmin/announcements/${id}/`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
       alert('Announcement deleted successfully!');
@@ -236,7 +238,7 @@ const Announcements = () => {
   const handleToggleActive = async (announcement) => {
     try {
       await axios.put(
-        `http://127.0.0.1:8000/api/schooladmin/announcements/${announcement.id}/`,
+        `${API_BASE_URL}/api/schooladmin/announcements/${announcement.id}/`,
         { ...announcement, is_active: !announcement.is_active },
         { headers: { Authorization: `Bearer ${token}` } }
       );

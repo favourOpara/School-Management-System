@@ -4,6 +4,8 @@ import { Clock, AlertCircle, CheckCircle, ArrowLeft } from 'lucide-react';
 import './TakeAssessment.css';
 import { useDialog } from '../contexts/DialogContext';
 
+import API_BASE_URL from '../config';
+
 const TakeAssessment = () => {
   const { showConfirm } = useDialog();
   const { assessmentId } = useParams();
@@ -46,7 +48,7 @@ const TakeAssessment = () => {
   const fetchAssessment = async () => {
     try {
       const token = localStorage.getItem('accessToken');
-      const response = await fetch(`http://127.0.0.1:8000/api/academics/student/assessments/`, {
+      const response = await fetch(`${API_BASE_URL}/api/academics/student/assessments/`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -105,7 +107,7 @@ const TakeAssessment = () => {
       setIsSubmitting(true);
       const token = localStorage.getItem('accessToken');
 
-      const response = await fetch(`http://127.0.0.1:8000/api/academics/student/assessments/${assessmentId}/submit/`, {
+      const response = await fetch(`${API_BASE_URL}/api/academics/student/assessments/${assessmentId}/submit/`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -274,7 +276,7 @@ const TakeAssessment = () => {
                 <img
                   src={question.image_url.startsWith('http')
                     ? question.image_url
-                    : `http://127.0.0.1:8000${question.image_url}`
+                    : `${API_BASE_URL}${question.image_url}`
                   }
                   alt={`Question ${index + 1}`}
                 />

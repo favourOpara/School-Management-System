@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, FileText, Download, Calendar, CheckCircle, Clock, AlertCircle } from 'lucide-react';
+import API_BASE_URL from '../config';
+
 import './StudentSubmissionsModal.css';
 
 const StudentSubmissionsModal = ({ student, onClose }) => {
@@ -24,7 +26,7 @@ const StudentSubmissionsModal = ({ student, onClose }) => {
       const token = localStorage.getItem('accessToken');
       
       const response = await fetch(
-        `http://127.0.0.1:8000/api/academics/student/${student.id}/submissions/`,
+        `${API_BASE_URL}/api/academics/student/${student.id}/submissions/`,
         {
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -57,7 +59,7 @@ const StudentSubmissionsModal = ({ student, onClose }) => {
       const token = localStorage.getItem('accessToken');
       
       const response = await fetch(
-        `http://127.0.0.1:8000/api/academics/submission/${submissionId}/grade/`,
+        `${API_BASE_URL}/api/academics/submission/${submissionId}/grade/`,
         {
           method: 'PATCH',
           headers: {
@@ -199,7 +201,7 @@ const StudentSubmissionsModal = ({ student, onClose }) => {
                           <span className="file-size">{file.file_size}</span>
                         </div>
                         <a 
-                          href={`http://127.0.0.1:8000${file.file_url}`}
+                          href={`${API_BASE_URL}${file.file_url}`}
                           download={file.original_name}
                           target="_blank" 
                           rel="noopener noreferrer"
