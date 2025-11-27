@@ -14,6 +14,7 @@ const Announcements = () => {
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingAnnouncement, setEditingAnnouncement] = useState(null);
+  const [submitting, setSubmitting] = useState(false);
 
   // Filters
   const [filterAudience, setFilterAudience] = useState('');
@@ -186,6 +187,7 @@ const Announcements = () => {
       return;
     }
 
+    setSubmitting(true);
     try {
       // Sanitize data to ensure IDs are numbers, not objects
       const sanitizedData = {
@@ -216,6 +218,8 @@ const Announcements = () => {
     } catch (error) {
       console.error('Error saving announcement:', error);
       alert(error.response?.data?.detail || 'Failed to save announcement');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -409,11 +413,20 @@ const Announcements = () => {
 
       {/* Create/Edit Modal */}
       {showModal && (
-        <div className="modal-overlay" onClick={() => setShowModal(false)}>
+        <div className="modal-overlay" onClick={() => !submitting && setShowModal(false)}>
           <div className="announcement-modal" onClick={(e) => e.stopPropagation()}>
+            {submitting && (
+              <div className="modal-loading-overlay">
+                <div className="loading-content">
+                  <Loader size={48} className="spin" />
+                  <p>Sending announcement...</p>
+                  <small>This may take a moment depending on the number of recipients</small>
+                </div>
+              </div>
+            )}
             <div className="modal-header">
               <h3>{editingAnnouncement ? 'Edit Announcement' : 'Create Announcement'}</h3>
-              <button className="close-modal-btn" onClick={() => setShowModal(false)}>×</button>
+              <button className="close-modal-btn" onClick={() => setShowModal(false)} disabled={submitting}>×</button>
             </div>
 
             <form onSubmit={handleSubmit} className="announcement-form">
@@ -654,11 +667,18 @@ const Announcements = () => {
               )}
 
               <div className="modal-actions">
-                <button type="button" className="cancel-btn" onClick={() => setShowModal(false)}>
+                <button type="button" className="cancel-btn" onClick={() => setShowModal(false)} disabled={submitting}>
                   Cancel
                 </button>
-                <button type="submit" className="submit-btn">
-                  {editingAnnouncement ? 'Update Announcement' : 'Create Announcement'}
+                <button type="submit" className="submit-btn" disabled={submitting}>
+                  {submitting ? (
+                    <>
+                      <Loader size={16} className="spin" style={{ marginRight: '8px' }} />
+                      Sending...
+                    </>
+                  ) : (
+                    editingAnnouncement ? 'Update Announcement' : 'Create Announcement'
+                  )}
                 </button>
               </div>
             </form>
