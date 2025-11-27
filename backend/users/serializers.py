@@ -208,7 +208,7 @@ class StudentDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model = CustomUser
         fields = [
-            'id', 'username', 'full_name', 'middle_name', 'gender',
+            'id', 'username', 'email', 'full_name', 'middle_name', 'gender',
             'academic_year', 'term', 'age', 'classroom', 'parent',
             'password', 'department', 'profile_picture'
         ]
