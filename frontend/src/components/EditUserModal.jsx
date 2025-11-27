@@ -14,6 +14,7 @@ const EditUserModal = ({ user, onClose, onUpdated }) => {
     middle_name: '',
     gender: '',
     username: '',
+    email: '',
     password: '',
     confirm_password: '',
     classroom: '',
@@ -42,6 +43,7 @@ const EditUserModal = ({ user, onClose, onUpdated }) => {
       middle_name: user.middle_name || '',
       gender: user.gender || '',
       username: user.username || '',
+      email: user.email || '',
       classroom: user.classroom || '',
       academic_year: user.academic_year || '',
       term: user.term || '',
@@ -259,6 +261,7 @@ const EditUserModal = ({ user, onClose, onUpdated }) => {
           <input type="text" name="middle_name" value={formData.middle_name} onChange={handleChange} placeholder="Middle Name (Optional)" />
           <input type="text" name="last_name" value={formData.last_name} onChange={handleChange} placeholder="Last Name" required />
           <input type="text" name="username" value={formData.username} onChange={handleChange} placeholder="Username" required />
+          <input type="email" name="email" value={formData.email} onChange={handleChange} placeholder="Email (Optional)" />
 
           {/* Gender Select */}
           <Select
