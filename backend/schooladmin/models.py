@@ -1128,6 +1128,7 @@ class Announcement(models.Model):
         Send the announcement to recipients
         This is called either manually or by the cron job
         Uses conditional filters for students and parents
+        OPTIMIZED: Uses bulk_create for performance with large recipient lists
         """
         from logs.models import Notification
         from users.models import CustomUser
@@ -1151,21 +1152,30 @@ class Announcement(models.Model):
             # Use filtered teachers based on teacher_filter
             recipients = list(self.get_filtered_teachers())
 
-        # Create notifications for each recipient
-        notifications_created = 0
+        # ============================================================================
+        # OPTIMIZED: Create notifications in BULK for performance
+        # This fixes the WORKER TIMEOUT issue when sending to 100+ users
+        # ============================================================================
+        notifications_to_create = []
         for recipient in recipients:
-            Notification.objects.create(
-                recipient=recipient,
-                title=f"New Announcement: {self.title}",
-                message=self.message,
-                notification_type='announcement',
-                priority=self.priority if self.priority in ['low', 'medium', 'high'] else 'medium',
-                extra_data={
-                    'announcement_id': self.id,
-                    'announcement_title': self.title
-                }
+            notifications_to_create.append(
+                Notification(
+                    recipient=recipient,
+                    title=f"New Announcement: {self.title}",
+                    message=self.message,
+                    notification_type='announcement',
+                    priority=self.priority if self.priority in ['low', 'medium', 'high'] else 'medium',
+                    extra_data={
+                        'announcement_id': self.id,
+                        'announcement_title': self.title
+                    }
+                )
             )
-            notifications_created += 1
+
+        # Bulk create all notifications at once (MUCH faster than individual creates)
+        # batch_size=500 means it will process 500 notifications per database transaction
+        Notification.objects.bulk_create(notifications_to_create, batch_size=500)
+        notifications_created = len(notifications_to_create)
 
         # Update send status and timing
         self.send_status = 'sent'
