@@ -229,13 +229,23 @@ const Announcements = () => {
     try {
       await axios.delete(
         `${API_BASE_URL}/api/schooladmin/announcements/${id}/`,
-        { headers: { Authorization: `Bearer ${token}` } }
+        {
+          headers: { Authorization: `Bearer ${token}` },
+          timeout: 30000 // 30 second timeout for deletion
+        }
       );
       alert('Announcement deleted successfully!');
       fetchAnnouncements();
     } catch (error) {
       console.error('Error deleting announcement:', error);
-      alert('Failed to delete announcement');
+
+      // If it's a timeout error, the deletion might still have succeeded
+      if (error.code === 'ECONNABORTED' || error.message.includes('timeout')) {
+        alert('Delete request timed out. Please refresh the page to check if deletion was successful.');
+        fetchAnnouncements(); // Refresh to check if it was deleted
+      } else {
+        alert(error.response?.data?.detail || 'Failed to delete announcement');
+      }
     }
   };
 

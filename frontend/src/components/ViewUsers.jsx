@@ -454,9 +454,9 @@ const ViewUsers = () => {
                       <th>Age</th>
                       <th>Class</th>
                       <th>Academic Year</th>
+                      <th>Email</th>
                       <th>Parent</th>
                       <th>Phone</th>
-                      <th>Email</th>
                       <th>Department</th>
                       <th>Actions</th>
                     </tr>
@@ -471,9 +471,9 @@ const ViewUsers = () => {
                         <td>{user.age || '—'}</td>
                         <td>{user.classroom || '—'}</td>
                         <td>{user.academic_year}</td>
+                        <td>{user.email || '—'}</td>
                         <td>{user.parent?.full_name || '—'}</td>
                         <td>{user.parent?.phone_number || '—'}</td>
-                        <td>{user.parent?.email || '—'}</td>
                         <td>
                           {user.classroom?.startsWith('S.S.S.')
                             ? [...new Set(user.subjects?.map(sub => sub.department))].join(', ')
