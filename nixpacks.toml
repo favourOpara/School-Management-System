@@ -2,7 +2,10 @@
 nixPkgs = ["python39", "gcc"]
 
 [phases.install]
-cmds = ["pip install -r backend/requirements.txt"]
+cmds = [
+  "pip install -r backend/requirements.txt",
+  "playwright install --with-deps chromium"
+]
 
 [phases.build]
 cmds = ["cd backend && python manage.py collectstatic --noinput"]
