@@ -3646,66 +3646,6 @@ def get_report_sheet(request, student_id):
 
 
 @api_view(['GET'])
-@permission_classes([IsAdminRole])
-def check_chromium_status(request):
-    """
-    Diagnostic endpoint to check if Chromium is available for PDF generation
-    """
-    import os
-    import glob
-    import subprocess
-
-    result = {
-        "chromium_found": False,
-        "chromium_path": None,
-        "environment_variable": os.environ.get('CHROMIUM_EXECUTABLE_PATH'),
-        "searched_paths": []
-    }
-
-    # Check all possible locations
-    nix_chromiums = glob.glob('/nix/store/*/bin/chromium')
-    if nix_chromiums:
-        result["searched_paths"].append(f"Nix store chromium: {', '.join(nix_chromiums[:3])}")
-        if os.path.exists(nix_chromiums[0]):
-            result["chromium_found"] = True
-            result["chromium_path"] = nix_chromiums[0]
-
-    # Also check for chromium-unwrapped in nix store
-    if not result["chromium_found"]:
-        nix_chromiums_unwrapped = glob.glob('/nix/store/*/bin/chromium-unwrapped')
-        if nix_chromiums_unwrapped:
-            result["searched_paths"].append(f"Nix store chromium-unwrapped: {', '.join(nix_chromiums_unwrapped[:3])}")
-            if os.path.exists(nix_chromiums_unwrapped[0]):
-                result["chromium_found"] = True
-                result["chromium_path"] = nix_chromiums_unwrapped[0]
-
-    possible_paths = [
-        '/usr/bin/chromium',
-        '/usr/bin/chromium-browser',
-        '/usr/bin/google-chrome',
-        '/usr/bin/chromium-unwrapped',
-    ]
-    for path in possible_paths:
-        result["searched_paths"].append(f"Checked: {path} - {'EXISTS' if os.path.exists(path) else 'NOT FOUND'}")
-        if not result["chromium_found"] and os.path.exists(path):
-            result["chromium_found"] = True
-            result["chromium_path"] = path
-
-    # Try 'which' command for multiple variants
-    for cmd in ['chromium', 'chromium-unwrapped', 'chromium-browser']:
-        try:
-            which_result = subprocess.run(['which', cmd], capture_output=True, text=True, timeout=5)
-            result["searched_paths"].append(f"'which {cmd}': {which_result.stdout.strip() if which_result.returncode == 0 else 'NOT FOUND'}")
-            if not result["chromium_found"] and which_result.returncode == 0 and which_result.stdout.strip():
-                result["chromium_found"] = True
-                result["chromium_path"] = which_result.stdout.strip()
-        except Exception as e:
-            result["searched_paths"].append(f"'which {cmd}': ERROR - {str(e)}")
-
-    return Response(result)
-
-
-@api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def download_report_sheet(request, student_id):
     """

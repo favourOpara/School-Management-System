@@ -47,7 +47,7 @@ from .views import (
     get_exam_completion_stats, get_class_subjects_for_exams, get_subject_exam_scores, update_exam_score,
 
     # Report Sheet Views
-    get_students_for_report, get_report_sheet, download_report_sheet, check_chromium_status,
+    get_students_for_report, get_report_sheet, download_report_sheet,
 
     # Report Access Analytics Views
     get_report_access_stats, send_report_sheets, get_eligible_classes_for_reports,
@@ -250,7 +250,6 @@ urlpatterns = [
     path('reports/students/', get_students_for_report, name='get-students-for-report'),
     path('reports/student/<int:student_id>/', get_report_sheet, name='get-report-sheet'),
     path('reports/student/<int:student_id>/download/', download_report_sheet, name='download-report-sheet'),
-    path('reports/chromium-status/', check_chromium_status, name='check-chromium-status'),
 
     # ============================================================================
     # STUDENT DASHBOARD URLS
