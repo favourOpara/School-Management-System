@@ -59,7 +59,9 @@
       "Bash(sudo npm install:*)",
       "Bash(brew install:*)",
       "Bash(git add:*)",
-      "Bash(git rev-parse:*)"
+      "Bash(git rev-parse:*)",
+      "Bash(playwright install:*)",
+      "Bash(pip3 install:*)"
     ],
     "deny": [],
     "ask": []
