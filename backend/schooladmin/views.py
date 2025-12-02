@@ -3709,16 +3709,13 @@ def check_chromium_status(request):
 @permission_classes([IsAuthenticated])
 def download_report_sheet(request, student_id):
     """
-    Download report sheet as PDF without preview
-    Uses Playwright to convert HTML to PDF with exact web design
+    Download report sheet as PDF
+    Uses ReportLab to generate PDF matching exact design
     """
-    from django.template.loader import render_to_string
     from django.http import HttpResponse
     from django.contrib.auth import get_user_model
-    from playwright.sync_api import sync_playwright
     from datetime import datetime
-    import tempfile
-    import os
+    from .pdf_generator import generate_report_sheet_pdf
 
     User = get_user_model()
 
@@ -3953,92 +3950,9 @@ def download_report_sheet(request, student_id):
         'generated_date': datetime.now().strftime('%m/%d/%Y, %H:%M:%S')
     }
 
-    # Render HTML template
-    html_content = render_to_string('report_sheet.html', context)
-
-    # Use Playwright to convert HTML to PDF
+    # Generate PDF using ReportLab
     try:
-        with sync_playwright() as p:
-            import os
-            import subprocess
-            import glob
-
-            # Try to find chromium executable
-            chromium_path = None
-
-            # Method 1: Check environment variable (can be set in Railway)
-            chromium_path = os.environ.get('CHROMIUM_EXECUTABLE_PATH')
-
-            # Method 2: Try glob pattern for nix store
-            if not chromium_path:
-                nix_chromiums = glob.glob('/nix/store/*/bin/chromium')
-                if nix_chromiums:
-                    chromium_path = nix_chromiums[0]
-
-            # Method 2b: Try chromium-unwrapped in nix store
-            if not chromium_path:
-                nix_chromiums_unwrapped = glob.glob('/nix/store/*/bin/chromium-unwrapped')
-                if nix_chromiums_unwrapped:
-                    chromium_path = nix_chromiums_unwrapped[0]
-
-            # Method 3: Check common locations
-            if not chromium_path:
-                possible_paths = [
-                    '/usr/bin/chromium',
-                    '/usr/bin/chromium-browser',
-                    '/usr/bin/google-chrome',
-                    '/usr/bin/google-chrome-stable',
-                    '/usr/bin/chromium-unwrapped',
-                ]
-                for path in possible_paths:
-                    if os.path.exists(path):
-                        chromium_path = path
-                        break
-
-            # Method 4: Try to find using 'which' command
-            if not chromium_path:
-                try:
-                    result = subprocess.run(['which', 'chromium'], capture_output=True, text=True, timeout=5)
-                    if result.returncode == 0 and result.stdout.strip():
-                        chromium_path = result.stdout.strip()
-                except:
-                    pass
-
-            # Launch browser - ALWAYS use a specific executable path or fail gracefully
-            if chromium_path and os.path.exists(chromium_path):
-                print(f"✓ Using chromium at: {chromium_path}")
-                browser = p.chromium.launch(
-                    executable_path=chromium_path,
-                    args=['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
-                )
-            else:
-                # No chromium found - return error message instead of crashing
-                error_msg = f"Chromium browser not found. Searched paths: {', '.join(['/nix/store/*/bin/chromium', '/usr/bin/chromium'])}"
-                print(f"✗ {error_msg}")
-                return Response(
-                    {"detail": "PDF generation unavailable. Chromium browser not installed on server."},
-                    status=status.HTTP_503_SERVICE_UNAVAILABLE
-                )
-
-            page = browser.new_page()
-
-            # Set content and wait for it to load
-            page.set_content(html_content, wait_until='networkidle')
-
-            # Generate PDF with minimal margins to fit on one page
-            pdf_bytes = page.pdf(
-                format='A4',
-                print_background=True,
-                margin={
-                    'top': '0.3in',
-                    'bottom': '0.3in',
-                    'left': '0.3in',
-                    'right': '0.3in'
-                },
-                scale=0.9
-            )
-
-            browser.close()
+        pdf_bytes = generate_report_sheet_pdf(context)
 
         # Return PDF response
         response = HttpResponse(pdf_bytes, content_type='application/pdf')
