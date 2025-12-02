@@ -3868,15 +3868,22 @@ def download_report_sheet(request, student_id):
     if hasattr(student, 'profile_picture') and student.profile_picture:
         try:
             import base64
+            import requests
             from django.conf import settings
-            # Read the image file and convert to base64
-            photo_path = student.profile_picture.path
-            with open(photo_path, 'rb') as image_file:
-                encoded_string = base64.b64encode(image_file.read()).decode()
-                # Determine the image format
-                ext = photo_path.split('.')[-1].lower()
-                mime_type = f'image/{ext}' if ext in ['png', 'jpg', 'jpeg', 'gif'] else 'image/jpeg'
-                photo_url = f'data:{mime_type};base64,{encoded_string}'
+
+            # Fetch image from Cloudinary URL and convert to base64
+            photo_url_raw = student.profile_picture.url
+
+            # Download image from Cloudinary
+            response = requests.get(photo_url_raw, timeout=10)
+            response.raise_for_status()
+
+            # Convert to base64
+            encoded_string = base64.b64encode(response.content).decode()
+
+            # Determine the image format from URL or content-type
+            content_type = response.headers.get('Content-Type', 'image/jpeg')
+            photo_url = f'data:{content_type};base64,{encoded_string}'
         except Exception as e:
             print(f"Error encoding student photo: {e}")
             photo_url = None

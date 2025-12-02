@@ -78,8 +78,7 @@ def generate_fee_receipt_pdf(receipt, payment_history):
         # Try multiple possible logo locations
         logo_paths = [
             os.path.join(settings.BASE_DIR, '..', 'frontend', 'public', 'logo.png'),
-            os.path.join(settings.MEDIA_ROOT, 'logo.png'),
-            os.path.join(settings.BASE_DIR, 'media', 'logo.png'),
+            os.path.join(settings.BASE_DIR, 'static', 'logo.png'),
         ]
 
         logo_found = False

@@ -76,14 +76,15 @@ class UserCreateSerializer(serializers.ModelSerializer):
                 # Save optimized image
                 output = BytesIO()
                 img.save(output, format='JPEG', quality=85, optimize=True)
+                output_size = output.tell()  # Get size before seeking
                 output.seek(0)
 
-                # Create new InMemoryUploadedFile
+                # Create new InMemoryUploadedFile with proper size
                 return InMemoryUploadedFile(
                     output, 'ImageField',
                     f"{value.name.split('.')[0]}.jpg",
                     'image/jpeg',
-                    sys.getsizeof(output), None
+                    output_size, None
                 )
             except Exception as e:
                 raise serializers.ValidationError(f"Invalid image file: {str(e)}")
