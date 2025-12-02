@@ -3506,16 +3506,27 @@ def get_report_sheet(request, student_id):
                     grading_config=grading_config
                 )
 
-                # 1st Test = Attendance + Assignment
-                first_test_score = float(grade_summary.attendance_score) + float(grade_summary.assignment_score)
+                # Get the grading configuration percentages
+                attendance_percent = grading_config.attendance_percentage
+                assignment_percent = grading_config.assignment_percentage
+                test_percent = grading_config.test_percentage
+                exam_percent = grading_config.exam_percentage
 
-                # 2nd Test = Test score
-                second_test_score = float(grade_summary.test_score)
+                # The scores in GradeSummary are already weighted percentages
+                # Scale them to report sheet format:
+                # TEST 1 (20 marks) = Attendance + Assignment scaled to 20
+                # TEST 2 (20 marks) = Test score scaled to 20
+                # EXAM (60 marks) = Exam score scaled to 60
 
-                # Exam = Exam score
-                exam_score = float(grade_summary.exam_score)
+                # Calculate what TEST 1 should be out of (attendance_percent + assignment_percent)
+                test1_max = attendance_percent + assignment_percent
 
-                # Total (should equal grade_summary.total_score)
+                # Scale scores to report sheet format (Test1=20, Test2=20, Exam=60)
+                first_test_score = (float(grade_summary.attendance_score) + float(grade_summary.assignment_score)) * (20 / test1_max) if test1_max > 0 else 0
+                second_test_score = float(grade_summary.test_score) * (20 / test_percent) if test_percent > 0 else 0
+                exam_score = float(grade_summary.exam_score) * (60 / exam_percent) if exam_percent > 0 else 0
+
+                # Total is still out of 100
                 total_score = float(grade_summary.total_score)
 
                 # Get report sheet grade
@@ -3523,9 +3534,9 @@ def get_report_sheet(request, student_id):
 
                 subjects_data.append({
                     'subject_name': subject.name,
-                    'first_test_score': round(first_test_score, 2),  # Attendance + Assignment
-                    'second_test_score': round(second_test_score, 2),  # Test
-                    'exam_score': round(exam_score, 2),  # Exam
+                    'first_test_score': round(first_test_score, 2),  # Attendance + Assignment scaled to 20
+                    'second_test_score': round(second_test_score, 2),  # Test scaled to 20
+                    'exam_score': round(exam_score, 2),  # Exam scaled to 60
                     'total_score': round(total_score, 2),  # Total
                     'letter_grade': letter_grade
                 })
@@ -3767,10 +3778,27 @@ def download_report_sheet(request, student_id):
                 grading_config=grading_config
             )
 
-            # 1st Test = Attendance + Assignment
-            first_test_score = float(grade_summary.attendance_score) + float(grade_summary.assignment_score)
-            second_test_score = float(grade_summary.test_score)
-            exam_score = float(grade_summary.exam_score)
+            # Get the grading configuration percentages
+            attendance_percent = grading_config.attendance_percentage
+            assignment_percent = grading_config.assignment_percentage
+            test_percent = grading_config.test_percentage
+            exam_percent = grading_config.exam_percentage
+
+            # The scores in GradeSummary are already weighted percentages
+            # Scale them to report sheet format:
+            # TEST 1 (20 marks) = Attendance + Assignment scaled to 20
+            # TEST 2 (20 marks) = Test score scaled to 20
+            # EXAM (60 marks) = Exam score scaled to 60
+
+            # Calculate what TEST 1 should be out of (attendance_percent + assignment_percent)
+            test1_max = attendance_percent + assignment_percent
+
+            # Scale scores to report sheet format (Test1=20, Test2=20, Exam=60)
+            first_test_score = (float(grade_summary.attendance_score) + float(grade_summary.assignment_score)) * (20 / test1_max) if test1_max > 0 else 0
+            second_test_score = float(grade_summary.test_score) * (20 / test_percent) if test_percent > 0 else 0
+            exam_score = float(grade_summary.exam_score) * (60 / exam_percent) if exam_percent > 0 else 0
+
+            # Total is still out of 100
             total_score = float(grade_summary.total_score)
             letter_grade = get_report_grade(total_score)
 
