@@ -1220,10 +1220,10 @@ def parent_grade_report(request):
     student_averages.sort(key=lambda x: x['average'], reverse=True)
     position = next((i + 1 for i, s in enumerate(student_averages) if s['student_id'] == child.id), None)
 
-    # Student photo URL
+    # Student photo URL - Cloudinary URL is already absolute
     photo_url = None
     if hasattr(child, 'profile_picture') and child.profile_picture:
-        photo_url = request.build_absolute_uri(child.profile_picture.url)
+        photo_url = child.profile_picture.url
 
     # Get all children for dropdown
     children_list = [{
@@ -1618,10 +1618,10 @@ def student_grade_report(request):
     student_averages.sort(key=lambda x: x['average'], reverse=True)
     position = next((i + 1 for i, s in enumerate(student_averages) if s['student_id'] == student.id), None)
 
-    # Student photo URL
+    # Student photo URL - Cloudinary URL is already absolute
     photo_url = None
     if hasattr(student, 'profile_picture') and student.profile_picture:
-        photo_url = request.build_absolute_uri(student.profile_picture.url)
+        photo_url = student.profile_picture.url
 
     # Get available sessions for this student
     available_sessions = StudentSession.objects.filter(
@@ -1706,8 +1706,8 @@ def upload_avatar(request):
     user.avatar = avatar_file
     user.save()
 
-    # Build absolute URL for the avatar
-    avatar_url = request.build_absolute_uri(user.avatar.url)
+    # Cloudinary URL is already absolute
+    avatar_url = user.avatar.url
 
     return Response({
         "detail": "Avatar uploaded successfully",
@@ -1734,13 +1734,9 @@ def get_current_user_profile(request):
     """Get current user's profile information including avatar"""
     user = request.user
 
-    avatar_url = None
-    if user.avatar:
-        avatar_url = request.build_absolute_uri(user.avatar.url)
-
-    profile_picture_url = None
-    if user.profile_picture:
-        profile_picture_url = request.build_absolute_uri(user.profile_picture.url)
+    # Cloudinary URLs are already absolute
+    avatar_url = user.avatar.url if user.avatar else None
+    profile_picture_url = user.profile_picture.url if user.profile_picture else None
 
     return Response({
         'id': user.id,

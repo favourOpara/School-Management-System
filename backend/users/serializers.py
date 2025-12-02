@@ -251,9 +251,8 @@ class StudentDetailSerializer(serializers.ModelSerializer):
 
     def get_profile_picture(self, obj):
         if obj.profile_picture:
-            request = self.context.get('request')
-            if request:
-                return request.build_absolute_uri(obj.profile_picture.url)
+            # Cloudinary URLs are already absolute, no need to build_absolute_uri
+            return obj.profile_picture.url
         return None
 
 
