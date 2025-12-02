@@ -3864,7 +3864,60 @@ def download_report_sheet(request, student_id):
     # Use Playwright to convert HTML to PDF
     try:
         with sync_playwright() as p:
-            browser = p.chromium.launch()
+            import os
+            import subprocess
+            import glob
+
+            # Try to find chromium executable
+            chromium_path = None
+
+            # Check common locations
+            possible_paths = [
+                '/usr/bin/chromium',
+                '/usr/bin/chromium-browser',
+                '/nix/store/*/bin/chromium',
+            ]
+
+            # Try glob pattern for nix store
+            nix_chromiums = glob.glob('/nix/store/*/bin/chromium')
+            if nix_chromiums:
+                chromium_path = nix_chromiums[0]
+            else:
+                # Check other paths
+                for path in possible_paths:
+                    if os.path.exists(path):
+                        chromium_path = path
+                        break
+
+            # Try to find using 'which' command
+            if not chromium_path:
+                try:
+                    result = subprocess.run(['which', 'chromium'], capture_output=True, text=True)
+                    if result.returncode == 0:
+                        chromium_path = result.stdout.strip()
+                except:
+                    pass
+
+            # Launch browser
+            try:
+                if chromium_path and os.path.exists(chromium_path):
+                    print(f"Using chromium at: {chromium_path}")
+                    browser = p.chromium.launch(
+                        executable_path=chromium_path,
+                        args=['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
+                    )
+                else:
+                    print("Using default playwright chromium")
+                    browser = p.chromium.launch(
+                        args=['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
+                    )
+            except Exception as e:
+                print(f"Error launching with chromium_path: {e}")
+                # Last resort: try default playwright chromium
+                browser = p.chromium.launch(
+                    args=['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
+                )
+
             page = browser.new_page()
 
             # Set content and wait for it to load

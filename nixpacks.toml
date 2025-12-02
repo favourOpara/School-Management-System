@@ -1,10 +1,14 @@
 [phases.setup]
-nixPkgs = ["python39", "gcc"]
+nixPkgs = [
+  "python39",
+  "gcc",
+  "chromium"
+]
 
 [phases.install]
 cmds = [
   "pip install -r backend/requirements.txt",
-  "playwright install --with-deps chromium"
+  "python -m playwright install chromium || echo 'Playwright install failed, will use system chromium'"
 ]
 
 [phases.build]
