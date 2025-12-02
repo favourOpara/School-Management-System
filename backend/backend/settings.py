@@ -18,9 +18,55 @@ from datetime import timedelta
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+# ============================================================================
+# CLOUDINARY CONFIGURATION - Must come before SECRET_KEY and other settings
+# ============================================================================
+import cloudinary
+import cloudinary.uploader
+import cloudinary.api
 
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
+CLOUDINARY_STORAGE = {
+    'CLOUD_NAME': config('CLOUDINARY_CLOUD_NAME'),
+    'API_KEY': config('CLOUDINARY_API_KEY'),
+    'API_SECRET': config('CLOUDINARY_API_SECRET'),
+}
+
+# Configure cloudinary library
+cloudinary.config(
+    cloud_name=config('CLOUDINARY_CLOUD_NAME'),
+    api_key=config('CLOUDINARY_API_KEY'),
+    api_secret=config('CLOUDINARY_API_SECRET'),
+    secure=True
+)
+
+# Storage configuration - Using Cloudinary for media files
+STORAGES = {
+    'default': {
+        'BACKEND': 'cloudinary_storage.storage.MediaCloudinaryStorage',
+    },
+    'staticfiles': {
+        'BACKEND': 'whitenoise.storage.CompressedManifestStaticFilesStorage',
+    },
+}
+
+# Backwards compatibility for Django < 4.2
+DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
+
+# Force reload default storage to pick up our settings
+from django.core.files.storage import storages
+from django.core.files import storage
+
+# Clear the cached default storage and force reload
+if hasattr(storage, '_default_storage'):
+    storage._default_storage = None
+
+# Explicitly set the default storage
+from cloudinary_storage.storage import MediaCloudinaryStorage
+storage.default_storage = MediaCloudinaryStorage()
+
+# ============================================================================
+# DJANGO SECURITY SETTINGS
+# ============================================================================
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = config('SECRET_KEY')
@@ -36,35 +82,29 @@ RAILWAY_STATIC_URL = config('RAILWAY_STATIC_URL', default='')
 if RAILWAY_STATIC_URL:
     ALLOWED_HOSTS.append(RAILWAY_STATIC_URL.replace('https://', '').replace('http://', ''))
 
-# Cloudinary Configuration
-CLOUDINARY_STORAGE = {
-    'CLOUD_NAME': config('CLOUDINARY_CLOUD_NAME'),
-    'API_KEY': config('CLOUDINARY_API_KEY'),
-    'API_SECRET': config('CLOUDINARY_API_SECRET'),
-}
-
-# Media files configuration - Using Cloudinary
-DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
-
 # Application definition
 
 INSTALLED_APPS = [
+    # Cloudinary MUST come first to override default storage
+    'cloudinary_storage',
+    'cloudinary',
+    # Django core apps
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'cloudinary_storage',  # Must be before cloudinary
-    'cloudinary',          # Django Cloudinary
+    # Third-party apps
     'rest_framework',
     'corsheaders',
+    'django_apscheduler',
+    # Project apps
     'users',
     'schooladmin',
     'academics',
     'logs',
-    "attendance",
-    'django_apscheduler',
+    'attendance',
 ]
 
 MIDDLEWARE = [
@@ -150,8 +190,8 @@ USE_TZ = True
 STATIC_URL = 'static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
-# WhiteNoise configuration for serving static files
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+# Note: STATICFILES_STORAGE is deprecated in Django 4.2+
+# Static files storage is now configured in STORAGES above
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
