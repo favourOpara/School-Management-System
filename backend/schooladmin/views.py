@@ -3526,8 +3526,8 @@ def get_report_sheet(request, student_id):
                 second_test_score = float(grade_summary.test_score) * (20 / test_percent) if test_percent > 0 else 0
                 exam_score = float(grade_summary.exam_score) * (60 / exam_percent) if exam_percent > 0 else 0
 
-                # Total is still out of 100
-                total_score = float(grade_summary.total_score)
+                # Calculate total from scaled scores (should equal 100)
+                total_score = first_test_score + second_test_score + exam_score
 
                 # Get report sheet grade
                 letter_grade = get_report_grade(total_score)
@@ -3537,7 +3537,7 @@ def get_report_sheet(request, student_id):
                     'first_test_score': round(first_test_score, 2),  # Attendance + Assignment scaled to 20
                     'second_test_score': round(second_test_score, 2),  # Test scaled to 20
                     'exam_score': round(exam_score, 2),  # Exam scaled to 60
-                    'total_score': round(total_score, 2),  # Total
+                    'total_score': round(total_score, 2),  # Sum of scaled scores
                     'letter_grade': letter_grade
                 })
 
@@ -3798,8 +3798,8 @@ def download_report_sheet(request, student_id):
             second_test_score = float(grade_summary.test_score) * (20 / test_percent) if test_percent > 0 else 0
             exam_score = float(grade_summary.exam_score) * (60 / exam_percent) if exam_percent > 0 else 0
 
-            # Total is still out of 100
-            total_score = float(grade_summary.total_score)
+            # Calculate total from scaled scores (should equal 100)
+            total_score = first_test_score + second_test_score + exam_score
             letter_grade = get_report_grade(total_score)
 
             subjects_data.append({
