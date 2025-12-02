@@ -3665,15 +3665,25 @@ def check_chromium_status(request):
     # Check all possible locations
     nix_chromiums = glob.glob('/nix/store/*/bin/chromium')
     if nix_chromiums:
-        result["searched_paths"].append(f"Nix store: {', '.join(nix_chromiums[:3])}")
+        result["searched_paths"].append(f"Nix store chromium: {', '.join(nix_chromiums[:3])}")
         if os.path.exists(nix_chromiums[0]):
             result["chromium_found"] = True
             result["chromium_path"] = nix_chromiums[0]
+
+    # Also check for chromium-unwrapped in nix store
+    if not result["chromium_found"]:
+        nix_chromiums_unwrapped = glob.glob('/nix/store/*/bin/chromium-unwrapped')
+        if nix_chromiums_unwrapped:
+            result["searched_paths"].append(f"Nix store chromium-unwrapped: {', '.join(nix_chromiums_unwrapped[:3])}")
+            if os.path.exists(nix_chromiums_unwrapped[0]):
+                result["chromium_found"] = True
+                result["chromium_path"] = nix_chromiums_unwrapped[0]
 
     possible_paths = [
         '/usr/bin/chromium',
         '/usr/bin/chromium-browser',
         '/usr/bin/google-chrome',
+        '/usr/bin/chromium-unwrapped',
     ]
     for path in possible_paths:
         result["searched_paths"].append(f"Checked: {path} - {'EXISTS' if os.path.exists(path) else 'NOT FOUND'}")
@@ -3681,12 +3691,16 @@ def check_chromium_status(request):
             result["chromium_found"] = True
             result["chromium_path"] = path
 
-    # Try 'which' command
-    try:
-        which_result = subprocess.run(['which', 'chromium'], capture_output=True, text=True, timeout=5)
-        result["searched_paths"].append(f"'which chromium': {which_result.stdout.strip() if which_result.returncode == 0 else 'NOT FOUND'}")
-    except Exception as e:
-        result["searched_paths"].append(f"'which chromium': ERROR - {str(e)}")
+    # Try 'which' command for multiple variants
+    for cmd in ['chromium', 'chromium-unwrapped', 'chromium-browser']:
+        try:
+            which_result = subprocess.run(['which', cmd], capture_output=True, text=True, timeout=5)
+            result["searched_paths"].append(f"'which {cmd}': {which_result.stdout.strip() if which_result.returncode == 0 else 'NOT FOUND'}")
+            if not result["chromium_found"] and which_result.returncode == 0 and which_result.stdout.strip():
+                result["chromium_found"] = True
+                result["chromium_path"] = which_result.stdout.strip()
+        except Exception as e:
+            result["searched_paths"].append(f"'which {cmd}': ERROR - {str(e)}")
 
     return Response(result)
 
@@ -3961,6 +3975,12 @@ def download_report_sheet(request, student_id):
                 if nix_chromiums:
                     chromium_path = nix_chromiums[0]
 
+            # Method 2b: Try chromium-unwrapped in nix store
+            if not chromium_path:
+                nix_chromiums_unwrapped = glob.glob('/nix/store/*/bin/chromium-unwrapped')
+                if nix_chromiums_unwrapped:
+                    chromium_path = nix_chromiums_unwrapped[0]
+
             # Method 3: Check common locations
             if not chromium_path:
                 possible_paths = [
@@ -3968,6 +3988,7 @@ def download_report_sheet(request, student_id):
                     '/usr/bin/chromium-browser',
                     '/usr/bin/google-chrome',
                     '/usr/bin/google-chrome-stable',
+                    '/usr/bin/chromium-unwrapped',
                 ]
                 for path in possible_paths:
                     if os.path.exists(path):

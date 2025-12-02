@@ -2,13 +2,13 @@
 nixPkgs = [
   "python39",
   "gcc",
-  "chromium"
+  "chromium",
+  "chromium-unwrapped"
 ]
 
 [phases.install]
 cmds = [
-  "pip install -r backend/requirements.txt",
-  "python -m playwright install chromium --with-deps || echo 'Playwright install failed, will use system chromium'"
+  "pip install -r backend/requirements.txt"
 ]
 
 [phases.build]
