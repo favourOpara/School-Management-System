@@ -16,7 +16,7 @@ from .serializers import (
     GradeSummarySerializer, ConfigurationTemplateSerializer, CopyConfigurationSerializer,
     ApplyTemplateSerializer, AttendanceRecordSerializer
 )
-from users.views import IsAdminRole
+from users.views import IsAdminRole, IsPrincipalOrAdmin
 from users.models import CustomUser
 from academics.models import Subject, ClassSession, StudentSession, Class, Assessment, AssessmentSubmission
 
@@ -134,7 +134,7 @@ class FeeStudentsView(APIView):
 
 
 @api_view(['PATCH'])
-@permission_classes([IsAuthenticated, IsAdminRole])
+@permission_classes([IsAuthenticated, IsPrincipalOrAdmin])
 def update_fee_payment(request, record_id):
     from schooladmin.models import FeePaymentHistory
     from decimal import Decimal
@@ -239,7 +239,7 @@ def get_fee_payment_history(request, record_id):
 
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated, IsAdminRole])
+@permission_classes([IsAuthenticated, IsPrincipalOrAdmin])
 def generate_fee_receipt(request, record_id):
     """
     Generate and send fee receipt to parent
@@ -781,7 +781,7 @@ def get_subjects_by_session(request):
 # Fix in schooladmin/views.py - Replace the get_subject_grades function
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated, IsAdminRole])
+@permission_classes([IsAuthenticated, IsPrincipalOrAdmin])
 def get_subject_grades(request, subject_id):
     """
     Get all students and their grades for a specific subject
@@ -3210,7 +3210,7 @@ def update_test_score(request):
 
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated, IsAdminRole])
+@permission_classes([IsAuthenticated, IsPrincipalOrAdmin])
 def unlock_test_scores(request):
     """
     Unlock test scores (release assessments) with filters.
@@ -3914,7 +3914,7 @@ def download_report_sheet(request, student_id):
 # ============================================================================
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated, IsAdminRole])
+@permission_classes([IsAuthenticated, IsPrincipalOrAdmin])
 def get_exam_completion_stats(request):
     """
     Calculate exam completion statistics for all classes in a given academic year and term.
@@ -4642,7 +4642,7 @@ def update_exam_score(request):
 
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated, IsPrincipalOrAdmin])
 def get_report_access_stats(request):
     """
     Get report sheet access statistics based on fee payment and grade completion.
@@ -4842,7 +4842,7 @@ def get_report_access_stats(request):
 
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated, IsPrincipalOrAdmin])
 def send_report_sheets(request):
     """
     Send report sheets to students and parents who have complete fees and grades.
@@ -6493,7 +6493,7 @@ def send_bulk_unpaid_fee_notifications(request):
 
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated, IsPrincipalOrAdmin])
 def send_individual_report(request):
     """
     Send report sheet to a single student and their parent(s).
@@ -8660,7 +8660,7 @@ def get_parent_announcements(request):
 
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated, IsPrincipalOrAdmin])
 def download_fee_receipt(request, receipt_id):
     """
     Download fee receipt as PDF
@@ -8722,7 +8722,7 @@ def download_fee_receipt(request, receipt_id):
 
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated, IsAdminRole])
+@permission_classes([IsAuthenticated, IsPrincipalOrAdmin])
 def get_admin_fee_receipts(request):
     """
     Get all fee receipts for admin with filters
@@ -8811,7 +8811,7 @@ def get_admin_fee_receipts(request):
 
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated, IsAdminRole])
+@permission_classes([IsAuthenticated, IsPrincipalOrAdmin])
 def download_admin_fee_receipt(request, receipt_id):
     """
     Download fee receipt as PDF for admin

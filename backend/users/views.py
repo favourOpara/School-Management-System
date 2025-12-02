@@ -25,6 +25,20 @@ class IsAdminRole(permissions.BasePermission):
     def has_permission(self, request, view):
         return request.user.is_authenticated and request.user.role == 'admin'
 
+
+# Principal-only permission
+class IsPrincipalRole(permissions.BasePermission):
+    def has_permission(self, request, view):
+        return request.user.is_authenticated and request.user.role == 'principal'
+
+
+# Principal or Admin permission (for shared endpoints)
+class IsPrincipalOrAdmin(permissions.BasePermission):
+    """Permission for endpoints that both Principal and Admin can access"""
+    def has_permission(self, request, view):
+        return request.user.is_authenticated and request.user.role in ['admin', 'principal']
+
+
 # Custom JWT serializer to include user role and other info in token response
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     @classmethod
