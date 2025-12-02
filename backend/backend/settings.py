@@ -207,6 +207,10 @@ EMAIL_HOST_USER = config('EMAIL_HOST_USER')
 EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD')
 DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL')
 
+# Email timeout settings (IMPORTANT: prevents worker timeouts)
+EMAIL_TIMEOUT = 30  # 30 second timeout for SMTP connections
+EMAIL_USE_LOCALTIME = False  # Use UTC for email timestamps
+
 # Automated Backup Settings
 BACKUP_EMAIL = config('BACKUP_EMAIL', default='office@figilschools.com')
 BACKUP_INTERVAL_DAYS = config('BACKUP_INTERVAL_DAYS', default=5, cast=int)
