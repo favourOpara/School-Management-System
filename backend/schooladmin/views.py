@@ -3635,6 +3635,52 @@ def get_report_sheet(request, student_id):
 
 
 @api_view(['GET'])
+@permission_classes([IsAdminRole])
+def check_chromium_status(request):
+    """
+    Diagnostic endpoint to check if Chromium is available for PDF generation
+    """
+    import os
+    import glob
+    import subprocess
+
+    result = {
+        "chromium_found": False,
+        "chromium_path": None,
+        "environment_variable": os.environ.get('CHROMIUM_EXECUTABLE_PATH'),
+        "searched_paths": []
+    }
+
+    # Check all possible locations
+    nix_chromiums = glob.glob('/nix/store/*/bin/chromium')
+    if nix_chromiums:
+        result["searched_paths"].append(f"Nix store: {', '.join(nix_chromiums[:3])}")
+        if os.path.exists(nix_chromiums[0]):
+            result["chromium_found"] = True
+            result["chromium_path"] = nix_chromiums[0]
+
+    possible_paths = [
+        '/usr/bin/chromium',
+        '/usr/bin/chromium-browser',
+        '/usr/bin/google-chrome',
+    ]
+    for path in possible_paths:
+        result["searched_paths"].append(f"Checked: {path} - {'EXISTS' if os.path.exists(path) else 'NOT FOUND'}")
+        if not result["chromium_found"] and os.path.exists(path):
+            result["chromium_found"] = True
+            result["chromium_path"] = path
+
+    # Try 'which' command
+    try:
+        which_result = subprocess.run(['which', 'chromium'], capture_output=True, text=True, timeout=5)
+        result["searched_paths"].append(f"'which chromium': {which_result.stdout.strip() if which_result.returncode == 0 else 'NOT FOUND'}")
+    except Exception as e:
+        result["searched_paths"].append(f"'which chromium': ERROR - {str(e)}")
+
+    return Response(result)
+
+
+@api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def download_report_sheet(request, student_id):
     """
@@ -3871,51 +3917,51 @@ def download_report_sheet(request, student_id):
             # Try to find chromium executable
             chromium_path = None
 
-            # Check common locations
-            possible_paths = [
-                '/usr/bin/chromium',
-                '/usr/bin/chromium-browser',
-                '/nix/store/*/bin/chromium',
-            ]
+            # Method 1: Check environment variable (can be set in Railway)
+            chromium_path = os.environ.get('CHROMIUM_EXECUTABLE_PATH')
 
-            # Try glob pattern for nix store
-            nix_chromiums = glob.glob('/nix/store/*/bin/chromium')
-            if nix_chromiums:
-                chromium_path = nix_chromiums[0]
-            else:
-                # Check other paths
+            # Method 2: Try glob pattern for nix store
+            if not chromium_path:
+                nix_chromiums = glob.glob('/nix/store/*/bin/chromium')
+                if nix_chromiums:
+                    chromium_path = nix_chromiums[0]
+
+            # Method 3: Check common locations
+            if not chromium_path:
+                possible_paths = [
+                    '/usr/bin/chromium',
+                    '/usr/bin/chromium-browser',
+                    '/usr/bin/google-chrome',
+                    '/usr/bin/google-chrome-stable',
+                ]
                 for path in possible_paths:
                     if os.path.exists(path):
                         chromium_path = path
                         break
 
-            # Try to find using 'which' command
+            # Method 4: Try to find using 'which' command
             if not chromium_path:
                 try:
-                    result = subprocess.run(['which', 'chromium'], capture_output=True, text=True)
-                    if result.returncode == 0:
+                    result = subprocess.run(['which', 'chromium'], capture_output=True, text=True, timeout=5)
+                    if result.returncode == 0 and result.stdout.strip():
                         chromium_path = result.stdout.strip()
                 except:
                     pass
 
-            # Launch browser
-            try:
-                if chromium_path and os.path.exists(chromium_path):
-                    print(f"Using chromium at: {chromium_path}")
-                    browser = p.chromium.launch(
-                        executable_path=chromium_path,
-                        args=['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
-                    )
-                else:
-                    print("Using default playwright chromium")
-                    browser = p.chromium.launch(
-                        args=['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
-                    )
-            except Exception as e:
-                print(f"Error launching with chromium_path: {e}")
-                # Last resort: try default playwright chromium
+            # Launch browser - ALWAYS use a specific executable path or fail gracefully
+            if chromium_path and os.path.exists(chromium_path):
+                print(f"✓ Using chromium at: {chromium_path}")
                 browser = p.chromium.launch(
+                    executable_path=chromium_path,
                     args=['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
+                )
+            else:
+                # No chromium found - return error message instead of crashing
+                error_msg = f"Chromium browser not found. Searched paths: {', '.join(['/nix/store/*/bin/chromium', '/usr/bin/chromium'])}"
+                print(f"✗ {error_msg}")
+                return Response(
+                    {"detail": "PDF generation unavailable. Chromium browser not installed on server."},
+                    status=status.HTTP_503_SERVICE_UNAVAILABLE
                 )
 
             page = browser.new_page()

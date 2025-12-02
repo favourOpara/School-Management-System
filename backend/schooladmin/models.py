@@ -1123,102 +1123,91 @@ class Announcement(models.Model):
 
         return teachers
 
-    # CRITICAL FIX EXPLANATION
-# ============================================================================
-# 
-# THE PROBLEM:
-# bulk_create() does NOT trigger Django's post_save signals!
-# 
-# Your signals.py has:
-#   @receiver(post_save, sender=Notification)
-#   def send_notification_email_on_create(...)
-# 
-# But when you do:
-#   Notification.objects.bulk_create(notifications_to_create)
-# 
-# Django creates all notifications in ONE SQL INSERT statement for performance.
-# This means post_save signal NEVER FIRES, so no emails are sent!
-# 
-# THE SOLUTION:
-# After bulk_create, manually send emails for each created notification.
-# 
-# ============================================================================
-
-# Replace ONLY the send_announcement() method in your Announcement model
-# Location: backend/schooladmin/models.py (around line 1780)
-
-def send_announcement(self):
-    """
-    Send the announcement to recipients
-    FIXED: Manually sends emails after bulk_create
-    (bulk_create doesn't trigger post_save signals)
-    """
-    from logs.models import Notification
-    from users.models import CustomUser
-    from django.utils import timezone
-    from datetime import timedelta
-    import logging
-    
-    logger = logging.getLogger(__name__)
-    
-    # Get recipients based on audience
-    recipients = []
-
-    if self.audience == 'specific':
-        recipients = list(self.specific_users.all())
-    elif self.audience == 'everyone':
-        recipients = list(CustomUser.objects.filter(is_active=True))
-    elif self.audience == 'students':
-        recipients = list(self.get_filtered_students())
-    elif self.audience == 'parents':
-        recipients = list(self.get_filtered_parents())
-    elif self.audience == 'teachers':
-        recipients = list(self.get_filtered_teachers())
-
-    logger.info(f"📧 Creating announcement for {len(recipients)} recipients")
-
-    # Create notification objects (in memory, not in database yet)
-    notifications_to_create = []
-    for recipient in recipients:
-        notifications_to_create.append(
-            Notification(
-                recipient=recipient,
-                title=f"New Announcement: {self.title}",
-                message=self.message,
-                notification_type='announcement',
-                priority=self.priority if self.priority in ['low', 'medium', 'high'] else 'medium',
-                extra_data={
-                    'announcement_id': self.id,
-                    'announcement_title': self.title
-                }
-            )
-        )
-
-    # Bulk create in database (fast, but doesn't trigger signals!)
-    created_notifications = Notification.objects.bulk_create(notifications_to_create, batch_size=500)
-    notifications_created = len(created_notifications)
-    
-    logger.info(f"✅ Created {notifications_created} notifications in database")
-
-    # ============================================================================
-    # SEND EMAILS MANUALLY (since bulk_create skipped the post_save signal)
-    # ============================================================================
-    from django.db import transaction
-    
-    def send_emails_after_commit():
-        """Send emails after database transaction commits"""
-        from logs.email_service import send_notification_email
+    def send_announcement(self):
+        """
+        Send the announcement to recipients
+        FIXED: Manually sends emails immediately after bulk_create
+        (bulk_create doesn't trigger post_save signals!)
+        """
+        from logs.models import Notification
+        from users.models import CustomUser
+        from django.utils import timezone
+        from datetime import timedelta
+        import logging
         
-        logger.info(f"📧 Sending emails to {len(created_notifications)} recipients")
+        logger = logging.getLogger(__name__)
+
+        # Get recipients based on audience
+        recipients = []
+
+        if self.audience == 'specific':
+            recipients = list(self.specific_users.all())
+        elif self.audience == 'everyone':
+            recipients = list(CustomUser.objects.filter(is_active=True))
+        elif self.audience == 'students':
+            recipients = list(self.get_filtered_students())
+        elif self.audience == 'parents':
+            recipients = list(self.get_filtered_parents())
+        elif self.audience == 'teachers':
+            recipients = list(self.get_filtered_teachers())
+
+        logger.info(f"📧 Creating announcement for {len(recipients)} recipients")
+        print(f"📧 Creating announcement for {len(recipients)} recipients")
+
+        # Create notifications in bulk
+        notifications_to_create = []
+        for recipient in recipients:
+            notifications_to_create.append(
+                Notification(
+                    recipient=recipient,
+                    title=f"New Announcement: {self.title}",
+                    message=self.message,
+                    notification_type='announcement',
+                    priority=self.priority if self.priority in ['low', 'medium', 'high'] else 'medium',
+                    extra_data={
+                        'announcement_id': self.id,
+                        'announcement_title': self.title
+                    }
+                )
+            )
+
+        # Bulk create (fast, but doesn't trigger signals!)
+        created_notifications = Notification.objects.bulk_create(notifications_to_create, batch_size=500)
+        notifications_created = len(created_notifications)
+        
+        logger.info(f"✅ Created {notifications_created} notifications in database")
+        print(f"✅ Created {notifications_created} notifications in database")
+
+        # ============================================================================
+        # SEND EMAILS IMMEDIATELY (manually, since bulk_create doesn't trigger signals)
+        # ============================================================================
+        print(f"📧 Attempting to send emails to {len(created_notifications)} recipients...")
+        logger.info(f"📧 Attempting to send emails")
+        
+        try:
+            from logs.email_service import send_notification_email
+            print("✅ Email service imported successfully")
+            logger.info("✅ Email service imported")
+        except ImportError as e:
+            print(f"❌ FAILED to import email_service: {e}")
+            logger.error(f"❌ Failed to import email_service: {e}")
+            # Update status and return without emails
+            self.send_status = 'sent'
+            self.sent_at = timezone.now()
+            self.is_active = True
+            if self.is_recurring and self.recurrence_days:
+                self.last_sent_date = timezone.now().date()
+                self.next_send_date = self.last_sent_date + timedelta(days=self.recurrence_days)
+                self.send_status = 'scheduled'
+            self.save()
+            return notifications_created
         
         emails_sent = 0
         emails_failed = 0
         emails_skipped = 0
         
         for notification in created_notifications:
-            # Skip users without email addresses
             if not notification.recipient.email:
-                logger.debug(f"Skipping {notification.recipient.username} - no email")
                 emails_skipped += 1
                 continue
             
@@ -1233,33 +1222,28 @@ def send_announcement(self):
                 
                 if result:
                     emails_sent += 1
-                    logger.debug(f"✅ Email sent to {notification.recipient.email}")
                 else:
                     emails_failed += 1
-                    logger.warning(f"❌ Email failed for {notification.recipient.email}")
                     
             except Exception as e:
-                logger.error(f"❌ Exception sending email to {notification.recipient.email}: {str(e)}")
+                logger.error(f"❌ Failed to send email to {notification.recipient.email}: {str(e)}")
+                print(f"❌ Failed to send email to {notification.recipient.email}: {str(e)}")
                 emails_failed += 1
         
-        logger.info(f"📊 Email Summary: {emails_sent} sent, {emails_failed} failed, {emails_skipped} skipped (no email)")
-    
-    # Schedule emails to be sent after the database commit completes
-    # This prevents blocking the HTTP response while emails are being sent
-    transaction.on_commit(send_emails_after_commit)
-    logger.info(f"⏳ Emails queued for sending after transaction commit")
+        logger.info(f"📊 Email Summary: {emails_sent} sent, {emails_failed} failed, {emails_skipped} skipped")
+        print(f"📊 Email Summary: {emails_sent} sent, {emails_failed} failed, {emails_skipped} skipped")
 
-    # Update announcement status
-    self.send_status = 'sent'
-    self.sent_at = timezone.now()
-    self.is_active = True
+        # Update send status and timing
+        self.send_status = 'sent'
+        self.sent_at = timezone.now()
+        self.is_active = True
 
-    # Handle recurring announcements
-    if self.is_recurring and self.recurrence_days:
-        self.last_sent_date = timezone.now().date()
-        self.next_send_date = self.last_sent_date + timedelta(days=self.recurrence_days)
-        self.send_status = 'scheduled'
+        # Handle recurring announcements
+        if self.is_recurring and self.recurrence_days:
+            self.last_sent_date = timezone.now().date()
+            self.next_send_date = self.last_sent_date + timedelta(days=self.recurrence_days)
+            self.send_status = 'scheduled'
 
-    self.save()
+        self.save()
 
-    return notifications_created
+        return notifications_created
