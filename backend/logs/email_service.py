@@ -1,34 +1,44 @@
 # backend/logs/email_service.py
 """
-Email service for sending notification emails via Brevo SMTP
-FIXED: Properly uses Django's email backend with connection management
+Email service using Brevo Transactional Email API v3
+Official API documentation: https://developers.brevo.com/reference/sendtransacemail
 """
 
-from django.core.mail import get_connection, EmailMultiAlternatives
+import requests
 from django.conf import settings
 import logging
+import os
 
 logger = logging.getLogger(__name__)
+
+# Brevo API Configuration - ONLY from environment variables
+BREVO_API_KEY = os.environ.get('EMAIL_HOST_PASSWORD')
+BREVO_API_URL = 'https://api.brevo.com/v3/smtp/email'
+
+# Validate API key is set
+if not BREVO_API_KEY:
+    logger.error("❌ EMAIL_HOST_PASSWORD environment variable not set!")
+    print("❌ EMAIL_HOST_PASSWORD environment variable not set!")
 
 
 def send_notification_email(recipient_user, notification_title, notification_message, notification_type='general', priority='medium'):
     """
-    Send notification email to a user using Django's email backend
-    
-    Args:
-        recipient_user: User object to send email to
-        notification_title: Title of the notification
-        notification_message: Message content
-        notification_type: Type of notification (announcement, assignment, etc.)
-        priority: Priority level (low, medium, high)
+    Send notification email via Brevo Transactional Email API
     
     Returns:
         bool: True if email sent successfully, False otherwise
     """
     
+    # Check if API key is available
+    if not BREVO_API_KEY:
+        logger.error("❌ No Brevo API key configured")
+        print("❌ No Brevo API key configured")
+        return False
+    
     # Check if user has an email address
     if not recipient_user.email:
-        logger.warning(f"User {recipient_user.username} has no email address. Skipping email.")
+        logger.warning(f"User {recipient_user.username} has no email address")
+        print(f"⚠️ {recipient_user.username} has no email")
         return False
     
     try:
@@ -36,7 +46,7 @@ def send_notification_email(recipient_user, notification_title, notification_mes
         subject = f"[FIGIL Schools] {notification_title}"
         
         # Create HTML email body
-        html_message = f"""
+        html_content = f"""
         <!DOCTYPE html>
         <html>
         <head>
@@ -64,16 +74,8 @@ def send_notification_email(recipient_user, notification_title, notification_mes
                     padding: 30px;
                     border-radius: 0 0 5px 5px;
                 }}
-                .priority-high {{
-                    border-left: 4px solid #f44336;
-                    padding-left: 15px;
-                }}
-                .priority-medium {{
+                .priority-{priority} {{
                     border-left: 4px solid #ff9800;
-                    padding-left: 15px;
-                }}
-                .priority-low {{
-                    border-left: 4px solid #2196F3;
                     padding-left: 15px;
                 }}
                 .footer {{
@@ -113,115 +115,94 @@ def send_notification_email(recipient_user, notification_title, notification_mes
                 <div class="footer">
                     <p>This is an automated notification from FIGIL Schools.</p>
                     <p>Please do not reply to this email.</p>
-                    <p>For inquiries, contact: {settings.DEFAULT_FROM_EMAIL}</p>
+                    <p>For inquiries, contact: office@figilschools.com</p>
                 </div>
             </div>
         </body>
         </html>
         """
         
-        # Create plain text version
-        plain_message = f"""
-FIGIL Schools Notification
-
-{notification_title}
-
-{notification_message}
-
----
-View this notification in your dashboard: https://figilschools.com
-
-This is an automated notification from FIGIL Schools.
-For inquiries, contact: {settings.DEFAULT_FROM_EMAIL}
-        """
+        # Get recipient name
+        recipient_name = f"{recipient_user.first_name} {recipient_user.last_name}".strip()
+        if not recipient_name:
+            recipient_name = recipient_user.username
         
-        # Create email message
-        logger.info(f"Sending email to {recipient_user.email}: {subject}")
-        print(f"📧 Sending to {recipient_user.email}...")
+        # Brevo API payload (official structure)
+        payload = {
+            "sender": {
+                "name": "FIGIL Schools",
+                "email": "office@figilschools.com"
+            },
+            "to": [
+                {
+                    "email": recipient_user.email,
+                    "name": recipient_name
+                }
+            ],
+            "subject": subject,
+            "htmlContent": html_content
+        }
         
-        # Use EmailMultiAlternatives for HTML email
-        msg = EmailMultiAlternatives(
-            subject=subject,
-            body=plain_message,
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            to=[recipient_user.email]
+        # API headers (official format)
+        headers = {
+            "accept": "application/json",
+            "api-key": BREVO_API_KEY,
+            "content-type": "application/json"
+        }
+        
+        logger.info(f"Sending email to {recipient_user.email} via Brevo API")
+        print(f"📧 Sending to {recipient_user.email} via Brevo API...")
+        
+        # Send via Brevo API
+        response = requests.post(
+            BREVO_API_URL,
+            json=payload,
+            headers=headers,
+            timeout=15
         )
-        msg.attach_alternative(html_message, "text/html")
         
-        # Send with explicit connection (timeout is set in settings)
-        msg.send(fail_silently=False)
+        # Check response
+        if response.status_code == 201:  # Brevo returns 201 for success
+            logger.info(f"✅ Email sent to {recipient_user.email}")
+            print(f"✅ Email sent to {recipient_user.email}")
+            return True
+        else:
+            logger.error(f"❌ Brevo API error {response.status_code}: {response.text}")
+            print(f"❌ Brevo API error {response.status_code}: {response.text}")
+            return False
         
-        logger.info(f"✅ Email sent successfully to {recipient_user.email}")
-        print(f"✅ Email sent to {recipient_user.email}")
-        return True
+    except requests.Timeout:
+        logger.error(f"❌ Timeout sending to {recipient_user.email}")
+        print(f"❌ Timeout for {recipient_user.email}")
+        return False
         
     except Exception as e:
-        logger.error(f"❌ Failed to send email to {recipient_user.email}: {str(e)}")
-        print(f"❌ Email failed: {str(e)}")
+        logger.error(f"❌ Failed to send to {recipient_user.email}: {str(e)}")
+        print(f"❌ Failed: {str(e)}")
         import traceback
         traceback.print_exc()
         return False
 
 
-def send_bulk_emails_with_connection(notifications):
-    """
-    Send multiple emails efficiently using a single SMTP connection
-    This is MUCH faster for bulk emails
-    """
-    if not notifications:
-        return {'total': 0, 'sent': 0, 'failed': 0, 'skipped': 0}
-    
+def send_bulk_notification_emails(notifications):
+    """Send multiple notification emails"""
     stats = {'total': 0, 'sent': 0, 'failed': 0, 'skipped': 0}
     
-    # Open a single connection for all emails
-    try:
-        connection = get_connection()
-        connection.open()
+    for notification in notifications:
+        stats['total'] += 1
         
-        for notification in notifications:
-            stats['total'] += 1
-            
-            if not notification.recipient.email:
-                stats['skipped'] += 1
-                continue
-            
-            try:
-                # Prepare email
-                subject = f"[FIGIL Schools] {notification.title}"
-                
-                html_content = f"""
-                <html><body>
-                <h2>{notification.title}</h2>
-                <p>{notification.message.replace(chr(10), '<br>')}</p>
-                <p><a href="https://figilschools.com">View in Dashboard</a></p>
-                </body></html>
-                """
-                
-                plain_content = f"{notification.title}\n\n{notification.message}\n\nView at: https://figilschools.com"
-                
-                msg = EmailMultiAlternatives(
-                    subject=subject,
-                    body=plain_content,
-                    from_email=settings.DEFAULT_FROM_EMAIL,
-                    to=[notification.recipient.email],
-                    connection=connection  # Reuse the same connection
-                )
-                msg.attach_alternative(html_content, "text/html")
-                msg.send()
-                
-                stats['sent'] += 1
-                print(f"✅ Sent to {notification.recipient.email}")
-                
-            except Exception as e:
-                stats['failed'] += 1
-                print(f"❌ Failed to send to {notification.recipient.email}: {e}")
-                logger.error(f"Failed to send to {notification.recipient.email}: {e}")
+        result = send_notification_email(
+            recipient_user=notification.recipient,
+            notification_title=notification.title,
+            notification_message=notification.message,
+            notification_type=notification.notification_type,
+            priority=notification.priority
+        )
         
-        connection.close()
-        
-    except Exception as e:
-        logger.error(f"Failed to open email connection: {e}")
-        print(f"❌ Connection error: {e}")
+        if result:
+            stats['sent'] += 1
+        else:
+            stats['failed'] += 1
     
     logger.info(f"Bulk email complete: {stats}")
     print(f"📊 Summary: {stats['sent']} sent, {stats['failed']} failed, {stats['skipped']} skipped")
@@ -229,22 +210,37 @@ def send_bulk_emails_with_connection(notifications):
 
 
 def test_email_configuration():
-    """
-    Test email configuration by sending a test email
-    """
+    """Test email via Brevo API"""
     try:
-        from django.core.mail import send_mail
+        if not BREVO_API_KEY:
+            print("❌ No API key configured")
+            return False
+            
+        payload = {
+            "sender": {"name": "FIGIL Schools", "email": "office@figilschools.com"},
+            "to": [{"email": "office@figilschools.com", "name": "Test"}],
+            "subject": "Test Email - FIGIL Schools",
+            "htmlContent": "<html><body><h2>Test Email</h2><p>This is a test email sent via Brevo API.</p></body></html>"
+        }
         
-        send_mail(
-            subject='Test Email - FIGIL Schools',
-            message='This is a test email to verify SMTP configuration.',
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            recipient_list=[settings.DEFAULT_FROM_EMAIL],
-            fail_silently=False,
-        )
-        logger.info("✅ Test email sent successfully")
-        return True
+        headers = {
+            "accept": "application/json",
+            "api-key": BREVO_API_KEY,
+            "content-type": "application/json"
+        }
+        
+        response = requests.post(BREVO_API_URL, json=payload, headers=headers, timeout=15)
+        
+        if response.status_code == 201:
+            logger.info("✅ Test email sent successfully")
+            print("✅ Test email sent successfully")
+            return True
+        else:
+            logger.error(f"❌ Test failed: {response.status_code} - {response.text}")
+            print(f"❌ Test failed: {response.status_code}")
+            return False
+            
     except Exception as e:
-        logger.error(f"❌ Test email failed: {str(e)}")
-        logger.exception(e)
+        logger.error(f"❌ Test failed: {str(e)}")
+        print(f"❌ Test failed: {str(e)}")
         return False
