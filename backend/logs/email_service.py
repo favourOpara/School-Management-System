@@ -7,12 +7,12 @@ More reliable than SMTP, especially on cloud platforms like Railway
 import requests
 from django.conf import settings
 import logging
+import os
 
 logger = logging.getLogger(__name__)
 
-# Brevo API Configuration
-# Your SMTP password IS your API key (it starts with xsmtpsib-)
-BREVO_API_KEY = 'xsmtpsib-6dc52a5d5f085862b8a0e56034c2d8665ae60fc9c0acdac13fb61447fd826ce0-jx7EUcUD5eiKxO9O'
+# Brevo API Configuration - read from environment variables
+BREVO_API_KEY = os.environ.get('EMAIL_HOST_PASSWORD') or settings.EMAIL_HOST_PASSWORD
 BREVO_API_URL = 'https://api.brevo.com/v3/smtp/email'
 
 
@@ -119,7 +119,7 @@ def send_notification_email(recipient_user, notification_title, notification_mes
                 <div class="footer">
                     <p>This is an automated notification from FIGIL Schools.</p>
                     <p>Please do not reply to this email.</p>
-                    <p>For inquiries, contact: office@figilschools.com</p>
+                    <p>For inquiries, contact: {settings.DEFAULT_FROM_EMAIL}</p>
                 </div>
             </div>
         </body>
@@ -141,7 +141,7 @@ def send_notification_email(recipient_user, notification_title, notification_mes
         payload = {
             'sender': {
                 'name': 'FIGIL Schools',
-                'email': 'office@figilschools.com'
+                'email': settings.DEFAULT_FROM_EMAIL
             },
             'to': [
                 {
@@ -239,11 +239,11 @@ def test_email_configuration():
         payload = {
             'sender': {
                 'name': 'FIGIL Schools',
-                'email': 'office@figilschools.com'
+                'email': settings.DEFAULT_FROM_EMAIL
             },
             'to': [
                 {
-                    'email': 'office@figilschools.com',
+                    'email': settings.DEFAULT_FROM_EMAIL,
                     'name': 'Test'
                 }
             ],
