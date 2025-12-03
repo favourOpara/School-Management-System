@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import './Sidebar.css';
 
-const Sidebar = forwardRef(({ activeTab, setActiveTab }, ref) => {
+const Sidebar = forwardRef(({ activeTab, setActiveTab, userRole = 'admin' }, ref) => {
   const [isOpen, setIsOpen] = useState(false);
   const [openDropdown, setOpenDropdown] = useState(null);
 
@@ -75,6 +75,9 @@ const Sidebar = forwardRef(({ activeTab, setActiveTab }, ref) => {
               <ul className="sidebar-submenu">
                 <li onClick={() => handleTabClick('create-teacher')}>
                   <PlusCircle /><span>Create Teacher</span>
+                </li>
+                <li onClick={() => handleTabClick('create-principal')}>
+                  <PlusCircle /><span>Create Principal</span>
                 </li>
                 <li onClick={() => handleTabClick('create-student')}>
                   <PlusCircle /><span>Create Student</span>
@@ -148,11 +151,13 @@ const Sidebar = forwardRef(({ activeTab, setActiveTab }, ref) => {
               <span>Mark Attendance</span>
             </li>
 
-            {/* ANNOUNCEMENTS SECTION */}
-            <li onClick={() => handleTabClick('announcements')}>
-              <Megaphone />
-              <span>Announcements</span>
-            </li>
+            {/* ANNOUNCEMENTS SECTION - Admin only */}
+            {userRole === 'admin' && (
+              <li onClick={() => handleTabClick('announcements')}>
+                <Megaphone />
+                <span>Announcements</span>
+              </li>
+            )}
           </ul>
         </nav>
       </div>

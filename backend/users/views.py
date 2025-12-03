@@ -95,30 +95,32 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         elif self.user.role == 'parent':
             children = self.user.children.all()
             children_data = []
-            
+
             for child in children:
                 # Get child's current active session
                 active_session = StudentSession.objects.filter(
                     student=child,
                     is_active=True
                 ).select_related('class_session__classroom').first()
-                
+
                 if active_session:
                     classroom_name = active_session.class_session.classroom.name if active_session.class_session.classroom else None
                 else:
                     classroom_name = child.classroom.name if child.classroom else None
-                
+
                 children_data.append({
                     'id': child.id,
                     'name': f"{child.first_name} {child.last_name}",
                     'username': child.username,
                     'classroom': classroom_name
                 })
-            
+
             data.update({
                 'children': children_data
             })
-        
+        # Admin and Principal roles don't need extra data
+        # They already have role, username, user_id, etc. from lines 59-66
+
         return data
 
 # Custom login view for all user roles (students, teachers, parents, admins)

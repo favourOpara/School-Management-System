@@ -62,7 +62,12 @@
       "Bash(git rev-parse:*)",
       "Bash(playwright install:*)",
       "Bash(pip3 install:*)",
-      "Bash(pip3 list:*)"
+      "Bash(pip3 list:*)",
+      "Bash(env)",
+      "Bash(DEBUG=True ./venv/bin/python:*)",
+      "Bash(DJANGO_SETTINGS_MODULE=backend.settings ./venv/bin/python:*)",
+      "Bash(export DEBUG=True)",
+      "Bash(export ALLOWED_HOSTS=\"localhost,127.0.0.1\")"
     ],
     "deny": [],
     "ask": []

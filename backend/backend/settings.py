@@ -52,18 +52,6 @@ STORAGES = {
 # Backwards compatibility for Django < 4.2
 DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
 
-# Force reload default storage to pick up our settings
-from django.core.files.storage import storages
-from django.core.files import storage
-
-# Clear the cached default storage and force reload
-if hasattr(storage, '_default_storage'):
-    storage._default_storage = None
-
-# Explicitly set the default storage
-from cloudinary_storage.storage import MediaCloudinaryStorage
-storage.default_storage = MediaCloudinaryStorage()
-
 # ============================================================================
 # DJANGO SECURITY SETTINGS
 # ============================================================================

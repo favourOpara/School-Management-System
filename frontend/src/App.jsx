@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import AdminLogin from './pages/AdminLogin';
 import AdminDashboard from './pages/AdminDashboard';
+import PrincipalDashboard from './pages/PrincipalDashboard';
 import StudentDashboard from './pages/StudentDashboard';
 import TeacherDashboard from './pages/TeacherDashboard';
 import ParentDashboard from './pages/ParentDashboard';
@@ -40,6 +41,8 @@ function App() {
     switch (role) {
       case 'admin':
         return '/admin/dashboard';
+      case 'principal':
+        return '/principal/dashboard';
       case 'student':
         return '/student/dashboard';
       case 'teacher':
@@ -84,6 +87,16 @@ function App() {
           element={
             <ProtectedRoute requiredRole="admin">
               <AdminDashboard />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Principal Routes */}
+        <Route
+          path="/principal/dashboard"
+          element={
+            <ProtectedRoute requiredRole="principal">
+              <PrincipalDashboard />
             </ProtectedRoute>
           }
         />

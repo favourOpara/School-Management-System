@@ -41,6 +41,9 @@ const HomePage = () => {
         case 'admin':
           navigate('/admin/dashboard');
           break;
+        case 'principal':
+          navigate('/principal/dashboard');
+          break;
         case 'student':
           navigate('/student/dashboard');
           break;

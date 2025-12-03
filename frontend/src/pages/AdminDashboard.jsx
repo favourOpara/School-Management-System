@@ -7,6 +7,7 @@ import ViewClasses from '../components/ViewClasses';
 import CreateStudentForm from '../components/CreateStudentForm';
 import CreateSubjectForm from '../components/CreateSubjectForm';
 import CreateTeacherForm from '../components/CreateTeacherForm';
+import CreatePrincipalForm from '../components/CreatePrincipalForm';
 import CreateParentForm from '../components/CreateParentForm';
 import ViewSubjects from '../components/ViewSubjects';
 import ActivityLog from '../components/ActivityLog';
@@ -105,6 +106,8 @@ const AdminDashboard = () => {
         return <CreateSubjectForm />;
       case 'create-teacher':
         return <CreateTeacherForm />;
+      case 'create-principal':
+        return <CreatePrincipalForm />;
       case 'view-subjects':
         return <ViewSubjects />;
       case 'view-users':
