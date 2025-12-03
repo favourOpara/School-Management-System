@@ -10451,7 +10451,7 @@ def revert_to_previous_session(request):
 
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated, IsAdminRole])
+@permission_classes([IsAuthenticated, IsPrincipalOrAdmin])
 def get_current_session_info(request):
     """
     Get information about the current active session.
