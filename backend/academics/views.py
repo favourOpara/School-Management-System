@@ -9,6 +9,7 @@ from django.db.models import Q, Prefetch
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 import os
+from users.views import IsPrincipalOrAdmin
 
 from .models import (
     Class, ClassSession, Subject, Topic, StudentSession, SubjectContent,
@@ -152,7 +153,7 @@ class ClassDetailView(generics.RetrieveUpdateDestroyAPIView):
 class ClassSessionListCreateView(generics.ListCreateAPIView):
     queryset = ClassSession.objects.all()
     serializer_class = ClassSessionSerializer
-    permission_classes = [permissions.IsAdminUser]
+    permission_classes = [permissions.IsAuthenticated, IsPrincipalOrAdmin]
 
     def create(self, request, *args, **kwargs):
         classroom_id = request.data.get('classroom')
@@ -175,7 +176,7 @@ class ClassSessionListCreateView(generics.ListCreateAPIView):
 class ClassSessionDetailView(generics.RetrieveUpdateDestroyAPIView):
     queryset = ClassSession.objects.all()
     serializer_class = ClassSessionSerializer
-    permission_classes = [permissions.IsAdminUser]
+    permission_classes = [permissions.IsAuthenticated, IsPrincipalOrAdmin]
     lookup_field = 'id'
 
 
@@ -1158,7 +1159,7 @@ def release_grade(request, submission_id):
 # ========================
 
 class SessionInheritanceView(APIView):
-    permission_classes = [permissions.IsAdminUser]
+    permission_classes = [permissions.IsAuthenticated, IsPrincipalOrAdmin]
 
     @staticmethod
     def get_next_class(current_class_name):
@@ -1335,7 +1336,7 @@ class SessionInheritanceView(APIView):
 
 
 class SessionStudentsView(APIView):
-    permission_classes = [permissions.IsAdminUser]
+    permission_classes = [permissions.IsAuthenticated, IsPrincipalOrAdmin]
     
     def get(self, request, session_id):
         try:
