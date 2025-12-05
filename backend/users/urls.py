@@ -27,6 +27,11 @@ from .views import (
     initialize_admin_3,
     initialize_admin_4
 )
+from .verification_views import (
+    verify_email,
+    verify_and_change_password,
+    resend_verification_email
+)
 from rest_framework_simplejwt.views import TokenRefreshView
 
 urlpatterns = [
@@ -58,4 +63,9 @@ urlpatterns = [
     path('initialize-admin-2/', initialize_admin_2, name='initialize_admin_2'),
     path('initialize-admin-3/', initialize_admin_3, name='initialize_admin_3'),
     path('initialize-admin-4/', initialize_admin_4, name='initialize_admin_4'),
+
+    # Email verification endpoints
+    path('verify-email/<str:token>/', verify_email, name='verify_email'),
+    path('verify-and-change-password/<str:token>/', verify_and_change_password, name='verify_and_change_password'),
+    path('resend-verification/', resend_verification_email, name='resend_verification'),
 ]

@@ -109,6 +109,26 @@ class UserCreateSerializer(serializers.ModelSerializer):
         if user.role == 'parent' and children:
             user.children.set(children)
 
+        # Send verification email after user creation
+        from logs.email_service import send_verification_email
+        from django.conf import settings
+        from django.utils import timezone
+        import secrets
+
+        if user.email:
+            # Generate verification token
+            token = secrets.token_urlsafe(32)
+            user.email_verification_token = token
+            user.email_verification_sent_at = timezone.now()
+            user.save()
+
+            # Build verification URL
+            frontend_url = settings.CORS_ALLOWED_ORIGINS[0] if settings.CORS_ALLOWED_ORIGINS else 'http://localhost:5173'
+            verification_url = f"{frontend_url}/verify-email/{token}"
+
+            # Send verification email
+            send_verification_email(user, verification_url)
+
         return user
 
     def update(self, instance, validated_data):
@@ -141,7 +161,29 @@ class TeacherSignupSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         validated_data['role'] = 'teacher'
-        return CustomUser.objects.create_user(**validated_data)
+        user = CustomUser.objects.create_user(**validated_data)
+
+        # Send verification email after user creation
+        from logs.email_service import send_verification_email
+        from django.conf import settings
+        from django.utils import timezone
+        import secrets
+
+        if user.email:
+            # Generate verification token
+            token = secrets.token_urlsafe(32)
+            user.email_verification_token = token
+            user.email_verification_sent_at = timezone.now()
+            user.save()
+
+            # Build verification URL
+            frontend_url = settings.CORS_ALLOWED_ORIGINS[0] if settings.CORS_ALLOWED_ORIGINS else 'http://localhost:5173'
+            verification_url = f"{frontend_url}/verify-email/{token}"
+
+            # Send verification email
+            send_verification_email(user, verification_url)
+
+        return user
 
 
 # 🔹 Admin creates parent (WITH email, phone, and children)
@@ -170,6 +212,27 @@ class ParentSignupSerializer(serializers.ModelSerializer):
         parent = CustomUser.objects.create_user(**validated_data)
         if children:
             parent.children.set(children)
+
+        # Send verification email after user creation
+        from logs.email_service import send_verification_email
+        from django.conf import settings
+        from django.utils import timezone
+        import secrets
+
+        if parent.email:
+            # Generate verification token
+            token = secrets.token_urlsafe(32)
+            parent.email_verification_token = token
+            parent.email_verification_sent_at = timezone.now()
+            parent.save()
+
+            # Build verification URL
+            frontend_url = settings.CORS_ALLOWED_ORIGINS[0] if settings.CORS_ALLOWED_ORIGINS else 'http://localhost:5173'
+            verification_url = f"{frontend_url}/verify-email/{token}"
+
+            # Send verification email
+            send_verification_email(parent, verification_url)
+
         return parent
 
 

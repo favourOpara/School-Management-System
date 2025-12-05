@@ -78,6 +78,12 @@ class CustomUser(AbstractUser):
         related_name='parents'
     )
 
+    # Email verification fields
+    email_verified = models.BooleanField(default=False)
+    email_verification_token = models.CharField(max_length=100, null=True, blank=True)
+    email_verification_sent_at = models.DateTimeField(null=True, blank=True)
+    must_change_password = models.BooleanField(default=True)
+
     USERNAME_FIELD = 'username'
     REQUIRED_FIELDS = ['first_name', 'last_name']
 
