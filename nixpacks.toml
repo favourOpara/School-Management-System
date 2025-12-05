@@ -6,11 +6,11 @@ nixPkgs = [
 
 [phases.install]
 cmds = [
-  "pip install -r backend/requirements.txt"
+  "pip install -r requirements.txt"
 ]
 
 [phases.build]
-cmds = ["cd backend && python manage.py collectstatic --noinput"]
+cmds = ["python manage.py collectstatic --noinput"]
 
 [start]
-cmd = "cd backend && python manage.py migrate && gunicorn backend.wsgi:application --bind 0.0.0.0:$PORT"
+cmd = "python manage.py migrate && gunicorn backend.wsgi:application --bind 0.0.0.0:$PORT"
