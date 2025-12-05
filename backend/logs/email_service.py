@@ -347,26 +347,26 @@ def send_verification_email(user, verification_url):
 
         recipient_name = f"{user.first_name} {user.last_name}".strip() or user.username
 
-        payload = {{
-            "sender": {{
+        payload = {
+            "sender": {
                 "name": "FIGIL Schools",
                 "email": "office@figilschools.com"
-            }},
+            },
             "to": [
-                {{
+                {
                     "email": user.email,
                     "name": recipient_name
-                }}
+                }
             ],
             "subject": subject,
             "htmlContent": html_content
-        }}
+        }
 
-        headers = {{
+        headers = {
             "accept": "application/json",
             "api-key": BREVO_API_KEY,
             "content-type": "application/json"
-        }}
+        }
 
         logger.info(f"Sending verification email to {user.email}")
 
