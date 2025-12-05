@@ -68,7 +68,9 @@
       "Bash(DJANGO_SETTINGS_MODULE=backend.settings ./venv/bin/python:*)",
       "Bash(export DEBUG=True)",
       "Bash(export ALLOWED_HOSTS=\"localhost,127.0.0.1\")",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "Bash(git ls-tree:*)",
+      "Bash(git checkout:*)"
     ],
     "deny": [],
     "ask": []
