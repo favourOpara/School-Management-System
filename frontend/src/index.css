@@ -13,16 +13,10 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Smooth scrolling for all elements */
-* {
-  scroll-behavior: smooth;
-}
-
 /* Optimize touch scrolling for mobile devices */
 html {
   -webkit-overflow-scrolling: touch;
   overflow-scrolling: touch;
-  scroll-behavior: smooth;
 }
 
 a {
