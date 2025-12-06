@@ -13,12 +13,6 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Optimize touch scrolling for mobile devices */
-html {
-  -webkit-overflow-scrolling: touch;
-  overflow-scrolling: touch;
-}
-
 a {
   font-weight: 500;
   color: #646cff;
@@ -39,7 +33,6 @@ body {
   /* Removed display: flex and place-items: center */
   position: relative;
   overflow-x: hidden;
-  -webkit-overflow-scrolling: touch;
 }
 
 h1 {
@@ -81,20 +74,9 @@ button:focus-visible {
 
 /* Mobile-specific optimizations */
 @media (max-width: 768px) {
-  /* Improve scrolling performance on mobile */
-  body, html {
-    -webkit-overflow-scrolling: touch;
-    touch-action: manipulation;
-  }
-
-  /* Prevent momentum scrolling issues */
+  /* Prevent tap highlight on mobile */
   * {
     -webkit-tap-highlight-color: transparent;
-  }
-
-  /* Optimize touch performance */
-  button, a, input, select, textarea {
-    touch-action: manipulation;
   }
 }
 
