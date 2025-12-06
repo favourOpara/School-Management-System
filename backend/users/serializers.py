@@ -122,9 +122,8 @@ class UserCreateSerializer(serializers.ModelSerializer):
             user.email_verification_sent_at = timezone.now()
             user.save()
 
-            # Build verification URL
-            frontend_url = settings.CORS_ALLOWED_ORIGINS[0] if settings.CORS_ALLOWED_ORIGINS else 'http://localhost:5173'
-            verification_url = f"{frontend_url}/verify-email/{token}"
+            # Build verification URL using FRONTEND_URL setting
+            verification_url = f"{settings.FRONTEND_URL}/verify-email/{token}"
 
             # Send verification email
             send_verification_email(user, verification_url)
@@ -176,9 +175,8 @@ class TeacherSignupSerializer(serializers.ModelSerializer):
             user.email_verification_sent_at = timezone.now()
             user.save()
 
-            # Build verification URL
-            frontend_url = settings.CORS_ALLOWED_ORIGINS[0] if settings.CORS_ALLOWED_ORIGINS else 'http://localhost:5173'
-            verification_url = f"{frontend_url}/verify-email/{token}"
+            # Build verification URL using FRONTEND_URL setting
+            verification_url = f"{settings.FRONTEND_URL}/verify-email/{token}"
 
             # Send verification email
             send_verification_email(user, verification_url)

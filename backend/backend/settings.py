@@ -203,6 +203,9 @@ SIMPLE_JWT = {
     'AUTH_HEADER_TYPES': ('Bearer',),
 }
 
+# Frontend URL for email verification links
+FRONTEND_URL = config('FRONTEND_URL', default='https://figilschools.com')
+
 # CORS Configuration
 CORS_ALLOWED_ORIGINS = [
     'https://enchanting-luck-production.up.railway.app',

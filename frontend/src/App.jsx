@@ -7,6 +7,7 @@ import StudentDashboard from './pages/StudentDashboard';
 import TeacherDashboard from './pages/TeacherDashboard';
 import ParentDashboard from './pages/ParentDashboard';
 import HomePage from './pages/HomePage';
+import VerifyEmail from './pages/VerifyEmail';
 import TakeAssessment from './components/TakeAssessment';
 import { isTokenExpired } from './authUtils';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -69,6 +70,9 @@ function App() {
             )
           }
         />
+
+        {/* Email Verification Route - Public */}
+        <Route path="/verify-email/:token" element={<VerifyEmail />} />
 
         {/* Admin Routes */}
         <Route
