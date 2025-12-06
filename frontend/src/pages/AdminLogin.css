@@ -230,6 +230,18 @@
   margin: 0;
 }
 
+.forgot-password-link {
+  color: #1e293b;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.forgot-password-link:hover {
+  color: #0f172a;
+  text-decoration: underline;
+}
+
 /* Responsive Design */
 @media (max-width: 480px) {
   .login-card {

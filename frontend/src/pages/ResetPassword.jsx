@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { API_BASE_URL } from '../config';
 import './VerifyEmail.css';
 
-function VerifyEmail() {
+function ResetPassword() {
   const { token } = useParams();
   const navigate = useNavigate();
   const [newPassword, setNewPassword] = useState('');
@@ -15,10 +15,6 @@ function VerifyEmail() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
-
-    console.log('Form submitted');
-    console.log('Token:', token);
-    console.log('API_BASE_URL:', API_BASE_URL);
 
     // Validate passwords
     if (newPassword !== confirmPassword) {
@@ -44,8 +40,7 @@ function VerifyEmail() {
     setLoading(true);
 
     try {
-      const url = `${API_BASE_URL}/api/users/verify-and-change-password/${token}/`;
-      console.log('Sending request to:', url);
+      const url = `${API_BASE_URL}/api/users/reset-password/${token}/`;
 
       const response = await fetch(url, {
         method: 'POST',
@@ -58,23 +53,17 @@ function VerifyEmail() {
         }),
       });
 
-      console.log('Response status:', response.status);
-
       const data = await response.json();
-      console.log('Response data:', data);
 
       if (response.ok) {
-        console.log('Verification successful!');
         setSuccess(true);
         setTimeout(() => {
           navigate('/');
         }, 3000);
       } else {
-        console.error('Verification failed:', data);
-        setError(data.detail || data.message || JSON.stringify(data) || 'Verification failed. Please try again.');
+        setError(data.message || 'Password reset failed. Please try again or request a new reset link.');
       }
     } catch (err) {
-      console.error('Network error:', err);
       setError(`Network error: ${err.message}. Please check your connection and try again.`);
     } finally {
       setLoading(false);
@@ -91,9 +80,9 @@ function VerifyEmail() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
               </svg>
             </div>
-            <h2 className="success-title">Email Verified!</h2>
+            <h2 className="success-title">Password Reset!</h2>
             <p className="success-message">
-              Your email has been verified and your password has been set successfully.
+              Your password has been reset successfully. You can now login with your new password.
             </p>
             <p className="success-redirect">
               Redirecting to login page in 3 seconds...
@@ -113,11 +102,11 @@ function VerifyEmail() {
             src="https://figilschools.com/logo.png"
             alt="FIGIL Schools Logo"
           />
-          <h2 className="verify-title">Verify Your Email</h2>
-          <p className="verify-subtitle">Set your password to activate your account</p>
+          <h2 className="verify-title">Reset Your Password</h2>
+          <p className="verify-subtitle">Enter your new password below</p>
         </div>
 
-        {/* Verification Form */}
+        {/* Reset Form */}
         <form onSubmit={handleSubmit} className="verify-form">
           {error && (
             <div className="alert alert-error">
@@ -182,7 +171,7 @@ function VerifyEmail() {
               <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
             </svg>
             <div className="alert-content">
-              <strong>Important:</strong> This verification link will expire in 24 hours. After setting your password, you can login immediately.
+              <strong>Security Notice:</strong> This reset link expires in 1 hour. After resetting your password, you can login immediately.
             </div>
           </div>
 
@@ -194,10 +183,10 @@ function VerifyEmail() {
             {loading ? (
               <span className="button-content">
                 <div className="spinner"></div>
-                Verifying...
+                Resetting...
               </span>
             ) : (
-              'Verify Email & Set Password'
+              'Reset Password'
             )}
           </button>
         </form>
@@ -205,9 +194,9 @@ function VerifyEmail() {
         {/* Footer */}
         <div className="verify-footer">
           <p>
-            Having trouble? Contact{' '}
-            <a href="mailto:office@figilschools.com">
-              office@figilschools.com
+            Remember your password?{' '}
+            <a href="/">
+              Back to Login
             </a>
           </p>
         </div>
@@ -216,4 +205,4 @@ function VerifyEmail() {
   );
 }
 
-export default VerifyEmail;
+export default ResetPassword;

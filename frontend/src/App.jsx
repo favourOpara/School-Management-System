@@ -8,6 +8,8 @@ import TeacherDashboard from './pages/TeacherDashboard';
 import ParentDashboard from './pages/ParentDashboard';
 import HomePage from './pages/HomePage';
 import VerifyEmail from './pages/VerifyEmail';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
 import TakeAssessment from './components/TakeAssessment';
 import { isTokenExpired } from './authUtils';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -73,6 +75,10 @@ function App() {
 
         {/* Email Verification Route - Public */}
         <Route path="/verify-email/:token" element={<VerifyEmail />} />
+
+        {/* Password Reset Routes - Public */}
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password/:token" element={<ResetPassword />} />
 
         {/* Admin Routes */}
         <Route

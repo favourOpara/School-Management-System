@@ -30,7 +30,9 @@ from .views import (
 from .verification_views import (
     verify_email,
     verify_and_change_password,
-    resend_verification_email
+    resend_verification_email,
+    forgot_password,
+    reset_password
 )
 from rest_framework_simplejwt.views import TokenRefreshView
 
@@ -68,4 +70,8 @@ urlpatterns = [
     path('verify-email/<str:token>/', verify_email, name='verify_email'),
     path('verify-and-change-password/<str:token>/', verify_and_change_password, name='verify_and_change_password'),
     path('resend-verification/', resend_verification_email, name='resend_verification'),
+
+    # Password reset endpoints
+    path('forgot-password/', forgot_password, name='forgot_password'),
+    path('reset-password/<str:token>/', reset_password, name='reset_password'),
 ]

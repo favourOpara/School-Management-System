@@ -405,6 +405,191 @@ def send_verification_email(user, verification_url):
         return False
 
 
+def send_password_reset_email(user, reset_url):
+    """
+    Send password reset email with reset link
+
+    Args:
+        user: CustomUser object
+        reset_url: Full URL for password reset
+
+    Returns:
+        bool: True if email sent successfully, False otherwise
+    """
+
+    if not BREVO_API_KEY:
+        logger.error("No Brevo API key configured")
+        return False
+
+    if not user.email:
+        logger.warning(f"User {user.username} has no email address")
+        return False
+
+    try:
+        subject = "[FIGIL Schools] Password Reset Request"
+
+        html_content = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <style>
+                body {{
+                    font-family: Arial, sans-serif;
+                    line-height: 1.6;
+                    color: #333;
+                }}
+                .container {{
+                    max-width: 600px;
+                    margin: 0 auto;
+                    padding: 20px;
+                    background-color: #f9f9f9;
+                }}
+                .header {{
+                    background-color: #1e293b;
+                    color: white;
+                    padding: 30px 20px;
+                    text-align: center;
+                    border-radius: 5px 5px 0 0;
+                }}
+                .logo {{
+                    max-width: 120px;
+                    height: auto;
+                    margin-bottom: 10px;
+                }}
+                .content {{
+                    background-color: white;
+                    padding: 30px;
+                    border-radius: 0 0 5px 5px;
+                }}
+                .credentials-box {{
+                    background-color: #f5f5f5;
+                    border-left: 4px solid #1e293b;
+                    padding: 15px;
+                    margin: 20px 0;
+                }}
+                .button {{
+                    display: inline-block;
+                    padding: 15px 30px;
+                    background-color: #1e293b;
+                    color: white;
+                    text-decoration: none;
+                    border-radius: 5px;
+                    margin: 20px 0;
+                    font-weight: bold;
+                }}
+                .warning {{
+                    background-color: #fff3cd;
+                    border-left: 4px solid #ffc107;
+                    padding: 15px;
+                    margin: 20px 0;
+                }}
+                .footer {{
+                    margin-top: 20px;
+                    padding-top: 20px;
+                    border-top: 1px solid #ddd;
+                    text-align: center;
+                    font-size: 12px;
+                    color: #666;
+                }}
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    <img src="https://figilschools.com/logo.png" alt="FIGIL Schools Logo" class="logo">
+                    <h1>Password Reset Request</h1>
+                </div>
+                <div class="content">
+                    <h2>Hello {user.first_name} {user.last_name},</h2>
+
+                    <p>We received a request to reset your password for your FIGIL Schools account.</p>
+
+                    <div class="credentials-box">
+                        <h3>Account Information:</h3>
+                        <p><strong>Username:</strong> {user.username}</p>
+                        <p><strong>Email:</strong> {user.email}</p>
+                        <p><strong>Role:</strong> {user.get_role_display()}</p>
+                    </div>
+
+                    <p>Click the button below to reset your password:</p>
+
+                    <div style="text-align: center;">
+                        <a href="{reset_url}" class="button">Reset Password</a>
+                    </div>
+
+                    <p style="margin-top: 20px; font-size: 12px; color: #666;">
+                        Or copy and paste this link into your browser:<br>
+                        <a href="{reset_url}">{reset_url}</a>
+                    </p>
+
+                    <div class="warning" style="margin-top: 30px;">
+                        <p><strong>Security Notice:</strong></p>
+                        <ul style="margin: 5px 0; padding-left: 20px;">
+                            <li>This password reset link will expire in 1 hour</li>
+                            <li>If you didn't request this, please ignore this email</li>
+                            <li>Your password will not change until you click the link and set a new one</li>
+                            <li>This email cannot be replied to</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="footer">
+                    <p><strong>This is an automated password reset email from FIGIL Schools.</strong></p>
+                    <p>Please do not reply to this email.</p>
+                    <p>For support, contact: office@figilschools.com</p>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+
+        recipient_name = f"{user.first_name} {user.last_name}".strip() or user.username
+
+        payload = {
+            "sender": {
+                "name": "FIGIL Schools",
+                "email": "office@figilschools.com"
+            },
+            "to": [
+                {
+                    "email": user.email,
+                    "name": recipient_name
+                }
+            ],
+            "subject": subject,
+            "htmlContent": html_content
+        }
+
+        headers = {
+            "accept": "application/json",
+            "api-key": BREVO_API_KEY,
+            "content-type": "application/json"
+        }
+
+        logger.info(f"Sending password reset email to {user.email}")
+
+        response = requests.post(
+            BREVO_API_URL,
+            json=payload,
+            headers=headers,
+            timeout=15
+        )
+
+        if response.status_code == 201:
+            logger.info(f"Password reset email sent successfully to {user.email}")
+            return True
+        else:
+            logger.error(f"Brevo API error {response.status_code}: {response.text}")
+            return False
+
+    except requests.Timeout:
+        logger.error(f"Timeout sending password reset email to {user.email}")
+        return False
+
+    except Exception as e:
+        logger.error(f"Failed to send password reset email to {user.email}: {str(e)}")
+        return False
+
+
 def test_email_configuration():
     """
     Test email configuration by sending a test email via Brevo API

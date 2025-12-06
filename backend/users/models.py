@@ -84,6 +84,10 @@ class CustomUser(AbstractUser):
     email_verification_sent_at = models.DateTimeField(null=True, blank=True)
     must_change_password = models.BooleanField(default=True)
 
+    # Password reset fields
+    password_reset_token = models.CharField(max_length=100, null=True, blank=True)
+    password_reset_sent_at = models.DateTimeField(null=True, blank=True)
+
     USERNAME_FIELD = 'username'
     REQUIRED_FIELDS = ['first_name', 'last_name']
 

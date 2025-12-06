@@ -106,7 +106,7 @@
 
 .form-input {
   width: 100%;
-  padding: 12px 14px 12px 42px;
+  padding: 12px 14px 12px 44px;
   font-size: 15px;
   border: 1px solid #e2e8f0;
   border-radius: 6px;
@@ -326,7 +326,7 @@
   }
 
   .form-input {
-    padding: 11px 12px 11px 40px;
+    padding: 11px 12px 11px 42px;
   }
 
   .verify-button {
