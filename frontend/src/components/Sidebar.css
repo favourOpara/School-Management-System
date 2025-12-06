@@ -220,6 +220,7 @@ body {
     transform: none;
     overflow-y: auto;
     max-height: 100vh;
+    background-color: #0d47a1;
   }
 
   .sidebar-nav li {
