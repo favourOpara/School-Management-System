@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { API_BASE_URL } from '../config';
-import './VerifyEmail.css';
+import './ResetPassword.css';
 
 function ResetPassword() {
   const { token } = useParams();
