@@ -54,7 +54,25 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
 
     def validate(self, attrs):
         data = super().validate(attrs)
-        
+
+        # Check if user has verified their email (skip for admin users)
+        if self.user.role != 'admin' and not self.user.email_verified:
+            from rest_framework import serializers
+            raise serializers.ValidationError({
+                'detail': 'Email not verified. Please check your email and click the verification link to activate your account.',
+                'email_verified': False,
+                'email': self.user.email
+            })
+
+        # Check if user must change password
+        if self.user.must_change_password:
+            from rest_framework import serializers
+            raise serializers.ValidationError({
+                'detail': 'You must change your password before logging in. Please check your email for the verification link.',
+                'must_change_password': True,
+                'email': self.user.email
+            })
+
         # Add extra user info to response
         data.update({
             'user_id': self.user.id,

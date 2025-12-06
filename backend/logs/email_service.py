@@ -65,6 +65,11 @@ def send_notification_email(recipient_user, notification_title, notification_mes
                     text-align: center;
                     border-radius: 5px 5px 0 0;
                 }}
+                .logo {{
+                    max-width: 120px;
+                    height: auto;
+                    margin-bottom: 10px;
+                }}
                 .content {{
                     background-color: white;
                     padding: 30px;
@@ -104,6 +109,7 @@ def send_notification_email(recipient_user, notification_title, notification_mes
         <body>
             <div class="container">
                 <div class="header">
+                    <img src="https://figilschools.com/logo.png" alt="FIGIL Schools Logo" class="logo">
                     <h1>FIGIL Schools Notification</h1>
                 </div>
                 <div class="content">
@@ -111,7 +117,7 @@ def send_notification_email(recipient_user, notification_title, notification_mes
                         <h2>{notification_title}</h2>
                         <p>{notification_message.replace(chr(10), '<br>')}</p>
                     </div>
-                    
+
                     <p style="margin-top: 30px;">
                         <a href="https://figilschools.com" class="button">View in Dashboard</a>
                     </p>
@@ -257,6 +263,11 @@ def send_verification_email(user, verification_url):
                     text-align: center;
                     border-radius: 5px 5px 0 0;
                 }}
+                .logo {{
+                    max-width: 120px;
+                    height: auto;
+                    margin-bottom: 10px;
+                }}
                 .content {{
                     background-color: white;
                     padding: 30px;
@@ -297,6 +308,7 @@ def send_verification_email(user, verification_url):
         <body>
             <div class="container">
                 <div class="header">
+                    <img src="https://figilschools.com/logo.png" alt="FIGIL Schools Logo" class="logo">
                     <h1>Welcome to FIGIL Schools!</h1>
                 </div>
                 <div class="content">
