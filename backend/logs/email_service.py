@@ -262,11 +262,19 @@ def send_verification_email(user, verification_url):
                     padding: 30px 20px;
                     text-align: center;
                     border-radius: 5px 5px 0 0;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    gap: 15px;
                 }}
                 .logo {{
-                    max-width: 120px;
+                    max-width: 80px;
                     height: auto;
-                    margin-bottom: 10px;
+                    margin: 0;
+                }}
+                .header h1 {{
+                    margin: 0;
+                    display: inline-block;
                 }}
                 .content {{
                     background-color: white;
