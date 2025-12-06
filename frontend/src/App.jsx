@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import AdminLogin from './pages/AdminLogin';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import AdminDashboard from './pages/AdminDashboard';
 import PrincipalDashboard from './pages/PrincipalDashboard';
 import StudentDashboard from './pages/StudentDashboard';
@@ -15,11 +14,20 @@ import { isTokenExpired } from './authUtils';
 import ProtectedRoute from './components/ProtectedRoute';
 import { DialogProvider } from './contexts/DialogContext';
 
+// ScrollToTop component to handle scroll restoration
+function ScrollToTop() {
+  const { pathname } = useLocation();
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [pathname]);
+
+  return null;
+}
+
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [userRole, setUserRole] = useState(null);
-
-  const handleLogin = () => setIsAuthenticated(true);
 
   useEffect(() => {
     const token = localStorage.getItem('accessToken');
@@ -60,6 +68,7 @@ function App() {
   return (
     <DialogProvider>
       <Router>
+        <ScrollToTop />
         <Routes>
         {/* Home Route */}
         <Route
