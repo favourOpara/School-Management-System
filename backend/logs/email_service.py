@@ -59,7 +59,7 @@ def send_notification_email(recipient_user, notification_title, notification_mes
                     background-color: #f9f9f9;
                 }}
                 .header {{
-                    background-color: #4CAF50;
+                    background-color: #3b82f6;
                     color: white;
                     padding: 20px;
                     text-align: center;
@@ -98,7 +98,7 @@ def send_notification_email(recipient_user, notification_title, notification_mes
                 .button {{
                     display: inline-block;
                     padding: 12px 24px;
-                    background-color: #4CAF50;
+                    background-color: #3b82f6;
                     color: white;
                     text-decoration: none;
                     border-radius: 5px;
@@ -257,7 +257,7 @@ def send_verification_email(user, verification_url):
                     background-color: #f9f9f9;
                 }}
                 .header {{
-                    background-color: #4CAF50;
+                    background-color: #3b82f6;
                     color: white;
                     padding: 30px 20px;
                     text-align: center;
@@ -275,14 +275,14 @@ def send_verification_email(user, verification_url):
                 }}
                 .credentials-box {{
                     background-color: #f5f5f5;
-                    border-left: 4px solid #4CAF50;
+                    border-left: 4px solid #3b82f6;
                     padding: 15px;
                     margin: 20px 0;
                 }}
                 .button {{
                     display: inline-block;
                     padding: 15px 30px;
-                    background-color: #4CAF50;
+                    background-color: #3b82f6;
                     color: white;
                     text-decoration: none;
                     border-radius: 5px;
