@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
 import axios from 'axios';
 import './AdminLogin.css';
 import API_BASE_URL from '../config';
@@ -122,15 +121,6 @@ const AdminLogin = ({ onLogin }) => {
             </div>
           )}
         </form>
-
-        {/* Forgot Password Link */}
-        <div className="login-footer">
-          <p>
-            <Link to="/forgot-password" className="forgot-password-link">
-              Forgot your password?
-            </Link>
-          </p>
-        </div>
 
         {/* Footer */}
         <div className="login-footer">

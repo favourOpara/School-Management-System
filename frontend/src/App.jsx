@@ -81,16 +81,6 @@ function App() {
         <Route path="/reset-password/:token" element={<ResetPassword />} />
 
         {/* Admin Routes */}
-        <Route
-          path="/admin/login"
-          element={
-            isAuthenticated && userRole === 'admin' ? (
-              <Navigate to="/admin/dashboard" />
-            ) : (
-              <AdminLogin onLogin={handleLogin} />
-            )
-          }
-        />
 
         <Route
           path="/admin/dashboard"

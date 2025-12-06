@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
 import API_BASE_URL from '../config';
 import './HomePage.css';
@@ -166,6 +166,12 @@ const HomePage = () => {
         </form>
 
         {error && <p className="login-error">{error}</p>}
+
+        <div className="forgot-password-link-wrapper">
+          <Link to="/forgot-password" className="forgot-password-link">
+            Forgot your password?
+          </Link>
+        </div>
 
         <div className="login-footer">
           &copy; 2024 Figil Schools. All rights reserved.
