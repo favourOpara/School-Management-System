@@ -61,7 +61,7 @@ const AdminLogin = ({ onLogin }) => {
                 type="text"
                 id="username"
                 name="username"
-                className="form-input"
+                className="admin-form-input"
                 placeholder="Enter your username"
                 value={formData.username}
                 onChange={handleChange}
@@ -84,7 +84,7 @@ const AdminLogin = ({ onLogin }) => {
                 type="password"
                 id="password"
                 name="password"
-                className="form-input"
+                className="admin-form-input"
                 placeholder="Enter your password"
                 value={formData.password}
                 onChange={handleChange}

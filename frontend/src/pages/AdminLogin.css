@@ -115,7 +115,7 @@
   pointer-events: none;
 }
 
-.form-input {
+.admin-form-input {
   width: 100%;
   padding: 12px 14px 12px 42px;
   font-size: 15px;
@@ -128,16 +128,16 @@
   color: #1e293b;
 }
 
-.form-input:hover {
+.admin-form-input:hover {
   border-color: #cbd5e1;
 }
 
-.form-input:focus {
+.admin-form-input:focus {
   border-color: #3b82f6;
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
-.form-input::placeholder {
+.admin-form-input::placeholder {
   color: #94a3b8;
 }
 
@@ -269,7 +269,7 @@
 
 /* Focus visible for accessibility */
 .login-button:focus-visible,
-.form-input:focus-visible {
+.admin-form-input:focus-visible {
   outline: 2px solid #3b82f6;
   outline-offset: 2px;
 }

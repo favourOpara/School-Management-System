@@ -114,7 +114,7 @@ function ForgotPassword() {
                 required
                 value={identifier}
                 onChange={(e) => setIdentifier(e.target.value)}
-                className="form-input"
+                className="forgot-password-form-input"
                 placeholder="Enter your username or email"
                 disabled={loading}
               />
