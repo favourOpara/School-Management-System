@@ -134,22 +134,17 @@ function VerifyEmail() {
             <label htmlFor="newPassword" className="form-label">
               New Password
             </label>
-            <div className="input-wrapper">
-              <svg className="input-icon" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/>
-              </svg>
-              <input
-                id="newPassword"
-                name="newPassword"
-                type="password"
-                required
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                className="form-input"
-                placeholder="Enter your new password"
-                disabled={loading}
-              />
-            </div>
+            <input
+              id="newPassword"
+              name="newPassword"
+              type="password"
+              required
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              className="form-input"
+              placeholder="Enter your new password"
+              disabled={loading}
+            />
             <p className="password-hint">
               Must be at least 8 characters with uppercase, lowercase, and number
             </p>
@@ -159,22 +154,17 @@ function VerifyEmail() {
             <label htmlFor="confirmPassword" className="form-label">
               Confirm Password
             </label>
-            <div className="input-wrapper">
-              <svg className="input-icon" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/>
-              </svg>
-              <input
-                id="confirmPassword"
-                name="confirmPassword"
-                type="password"
-                required
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                className="form-input"
-                placeholder="Confirm your new password"
-                disabled={loading}
-              />
-            </div>
+            <input
+              id="confirmPassword"
+              name="confirmPassword"
+              type="password"
+              required
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              className="form-input"
+              placeholder="Confirm your new password"
+              disabled={loading}
+            />
           </div>
 
           <div className="alert alert-warning">

@@ -103,22 +103,17 @@ function ForgotPassword() {
             <label htmlFor="identifier" className="form-label">
               Username or Email
             </label>
-            <div className="input-wrapper">
-              <svg className="input-icon" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
-              </svg>
-              <input
-                id="identifier"
-                name="identifier"
-                type="text"
-                required
-                value={identifier}
-                onChange={(e) => setIdentifier(e.target.value)}
-                className="forgot-password-form-input"
-                placeholder="Enter your username or email"
-                disabled={loading}
-              />
-            </div>
+            <input
+              id="identifier"
+              name="identifier"
+              type="text"
+              required
+              value={identifier}
+              onChange={(e) => setIdentifier(e.target.value)}
+              className="forgot-password-form-input"
+              placeholder="Enter your username or email"
+              disabled={loading}
+            />
           </div>
 
           <button
