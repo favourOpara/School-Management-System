@@ -21,7 +21,7 @@ function App() {
   useEffect(() => {
     const token = localStorage.getItem('accessToken');
     const role = localStorage.getItem('userRole');
-    
+
     if (token && !isTokenExpired(token)) {
       setIsAuthenticated(true);
       setUserRole(role);
@@ -34,6 +34,9 @@ function App() {
       setIsAuthenticated(false);
       setUserRole(null);
     }
+
+    // Ensure page always loads from the top on refresh
+    window.scrollTo(0, 0);
   }, []);
 
   // Function to get default dashboard based on role
