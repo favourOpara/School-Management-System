@@ -1,106 +1,138 @@
-/* Wrapper for both desktop and mobile */
+/* Main Page Container */
 .create-teacher-wrapper {
-  display: flex;
-  justify-content: center;
-  align-items: flex-start;
-  min-height: calc(100vh - 60px);
-  padding: 0 1rem 1rem 1rem;
-  background-color: #ffffff;
-}
-
-/* Card container */
-.create-teacher-container {
-  max-width: 520px;
   width: 100%;
-  margin: 0 auto;
-  padding: 2.5rem;
-  background-color: #ffffff;
-  border-radius: 10px;
-  box-shadow: 0 8px 20px rgba(13, 71, 161, 0.1);
-  border: 1px solid #e0e0e0;
+  margin: 0;
+  padding: 0;
+  background-color: transparent;
 }
 
+.create-teacher-container {
+  background-color: transparent;
+  border: none;
+  box-shadow: none;
+  padding: 0;
+  border-radius: 0;
+  margin: 0;
+  width: 100%;
+  max-width: none;
+}
+
+/* Page Header */
 .create-teacher-container h3 {
-  text-align: center;
-  margin-bottom: 2rem;
-  color: #0d47a1;
-  font-size: 1.8rem;
+  margin-bottom: 3rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid #e5e7eb;
+  font-size: 2rem;
   font-weight: 600;
+  color: #111827;
+  letter-spacing: -0.025em;
+  text-align: left;
 }
 
-/* Form layout */
+/* Form Layout */
 .create-teacher-form {
   display: flex;
   flex-direction: column;
-  gap: 1.2rem;
+  gap: 1.5rem;
+  max-width: 600px;
 }
 
+/* Input Fields - Bottom Border Only */
 .create-teacher-form input {
-  padding: 0.85rem;
-  font-size: 1rem;
-  border-radius: 6px;
-  border: 1px solid #ccc;
-  background-color: #fafafa;
-  transition: border 0.3s ease;
+  padding: 0.625rem 0.875rem;
+  font-size: 0.95rem;
+  color: #111827;
+  background-color: transparent;
+  border: none;
+  border-bottom: 1px solid #e5e7eb;
+  border-radius: 0;
+  transition: all 0.15s ease;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', sans-serif;
 }
 
 .create-teacher-form input:focus {
-  border-color: #0d47a1;
-  background-color: #fff;
+  outline: none;
+  border-bottom-color: #3b82f6;
+  box-shadow: none;
+}
+
+.create-teacher-form input::placeholder {
+  color: #9ca3af;
 }
 
 /* Submit Button */
 .create-teacher-form button {
-  padding: 0.9rem;
-  font-size: 1rem;
-  background-color: #1565c0;
-  color: white;
+  padding: 0.625rem 1.25rem;
+  font-size: 0.95rem;
   font-weight: 500;
+  color: #ffffff;
+  background-color: #3b82f6;
   border: none;
   border-radius: 6px;
   cursor: pointer;
-  transition: background-color 0.3s ease;
+  transition: all 0.15s ease;
+  align-self: flex-start;
+  min-width: 120px;
 }
 
 .create-teacher-form button:hover {
-  background-color: #0d47a1;
+  background-color: #2563eb;
 }
 
-/* Feedback Message */
+/* Feedback Messages */
 .form-message.success {
-  color: #2e7d32;
-  background-color: #e8f5e9;
-  padding: 0.7rem;
-  border-radius: 5px;
-  text-align: center;
+  color: #16a34a;
+  background-color: #f0fdf4;
+  padding: 0.75rem 1rem;
+  border-radius: 6px;
+  border-left: 3px solid #16a34a;
+  font-size: 0.95rem;
+  margin-top: 1rem;
 }
 
 .form-message.error {
-  color: #c62828;
-  background-color: #ffebee;
-  padding: 0.7rem;
-  border-radius: 5px;
-  text-align: center;
+  color: #dc2626;
+  background-color: #fef2f2;
+  padding: 0.75rem 1rem;
+  border-radius: 6px;
+  border-left: 3px solid #dc2626;
+  font-size: 0.95rem;
+  margin-top: 1rem;
 }
 
-/* Mobile responsiveness */
-@media (max-width: 600px) {
+/* Responsive Design */
+@media (max-width: 768px) {
   .create-teacher-wrapper {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    background-color: #ffffff;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 5;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    padding-top: 2rem;
   }
 
   .create-teacher-container {
-    max-width: 360px;
-    padding: 1.5rem;
+    padding: 0;
+  }
+
+  .create-teacher-container h3 {
+    font-size: 1.75rem;
+    margin-bottom: 2rem;
+    padding-bottom: 1rem;
+  }
+
+  .create-teacher-form {
+    gap: 1rem;
+  }
+
+  .create-teacher-form button {
+    align-self: stretch;
+  }
+}
+
+@media (max-width: 480px) {
+  .create-teacher-wrapper {
+    margin: 0;
+    padding: 0;
+    padding-top: 2rem;
   }
 
   .create-teacher-container h3 {
@@ -109,13 +141,6 @@
 
   .create-teacher-form input,
   .create-teacher-form button {
-    font-size: 0.95rem;
-    padding: 0.75rem;
-  }
-
-  .form-message.success,
-  .form-message.error {
     font-size: 0.9rem;
-    padding: 0.6rem;
   }
 }

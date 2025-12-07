@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import axios from 'axios';
 import API_BASE_URL from '../config';
 
-import './CreateTeacherForm.css';
+import './CreatePrincipalForm.css';
 
 const CreatePrincipalForm = ({ onSuccess }) => {
   const [formData, setFormData] = useState({
@@ -57,10 +57,10 @@ const CreatePrincipalForm = ({ onSuccess }) => {
   };
 
   return (
-    <div className="create-teacher-wrapper">
-      <div className="create-teacher-container">
+    <div className="create-principal-wrapper">
+      <div className="create-principal-container">
         <h3>Create Principal</h3>
-        <form onSubmit={handleSubmit} className="create-teacher-form">
+        <form onSubmit={handleSubmit} className="create-principal-form">
           <input
             type="text"
             name="first_name"

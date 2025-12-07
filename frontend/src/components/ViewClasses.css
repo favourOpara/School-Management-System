@@ -1,5 +1,5 @@
 /* Wrapper to control layout */
-.view-users-wrapper {
+.class-form-wrapper {
   display: flex;
   justify-content: center;
   align-items: flex-start;
@@ -9,7 +9,7 @@
 }
 
 /* Main container */
-.view-users-container {
+.class-form-container {
   max-width: 960px;
   width: 100%;
   background-color: #ffffff;
@@ -249,7 +249,7 @@
 
 /* Mobile full-screen layout */
 @media (max-width: 600px) {
-  .view-users-wrapper {
+  .class-form-wrapper {
     position: fixed;
     top: 30px;
     left: 0;
@@ -261,7 +261,7 @@
     z-index: 5;
   }
 
-  .view-users-container {
+  .class-form-container {
     padding: 1.5rem;
     border: none;
     box-shadow: none;

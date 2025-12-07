@@ -1,0 +1,146 @@
+/* Main Page Container */
+.create-principal-wrapper {
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  background-color: transparent;
+}
+
+.create-principal-container {
+  background-color: transparent;
+  border: none;
+  box-shadow: none;
+  padding: 0;
+  border-radius: 0;
+  margin: 0;
+  width: 100%;
+  max-width: none;
+}
+
+/* Page Header */
+.create-principal-container h3 {
+  margin-bottom: 3rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid #e5e7eb;
+  font-size: 2rem;
+  font-weight: 600;
+  color: #111827;
+  letter-spacing: -0.025em;
+  text-align: left;
+}
+
+/* Form Layout */
+.create-principal-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  max-width: 600px;
+}
+
+/* Input Fields - Bottom Border Only */
+.create-principal-form input {
+  padding: 0.625rem 0.875rem;
+  font-size: 0.95rem;
+  color: #111827;
+  background-color: transparent;
+  border: none;
+  border-bottom: 1px solid #e5e7eb;
+  border-radius: 0;
+  transition: all 0.15s ease;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', sans-serif;
+}
+
+.create-principal-form input:focus {
+  outline: none;
+  border-bottom-color: #3b82f6;
+  box-shadow: none;
+}
+
+.create-principal-form input::placeholder {
+  color: #9ca3af;
+}
+
+/* Submit Button */
+.create-principal-form button {
+  padding: 0.625rem 1.25rem;
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: #ffffff;
+  background-color: #3b82f6;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  align-self: flex-start;
+  min-width: 120px;
+}
+
+.create-principal-form button:hover {
+  background-color: #2563eb;
+}
+
+/* Feedback Messages */
+.form-message.success {
+  color: #16a34a;
+  background-color: #f0fdf4;
+  padding: 0.75rem 1rem;
+  border-radius: 6px;
+  border-left: 3px solid #16a34a;
+  font-size: 0.95rem;
+  margin-top: 1rem;
+}
+
+.form-message.error {
+  color: #dc2626;
+  background-color: #fef2f2;
+  padding: 0.75rem 1rem;
+  border-radius: 6px;
+  border-left: 3px solid #dc2626;
+  font-size: 0.95rem;
+  margin-top: 1rem;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .create-principal-wrapper {
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    padding-top: 2rem;
+  }
+
+  .create-principal-container {
+    padding: 0;
+  }
+
+  .create-principal-container h3 {
+    font-size: 1.75rem;
+    margin-bottom: 2rem;
+    padding-bottom: 1rem;
+  }
+
+  .create-principal-form {
+    gap: 1rem;
+  }
+
+  .create-principal-form button {
+    align-self: stretch;
+  }
+}
+
+@media (max-width: 480px) {
+  .create-principal-wrapper {
+    margin: 0;
+    padding: 0;
+    padding-top: 2rem;
+  }
+
+  .create-principal-container h3 {
+    font-size: 1.5rem;
+  }
+
+  .create-principal-form input,
+  .create-principal-form button {
+    font-size: 0.9rem;
+  }
+}

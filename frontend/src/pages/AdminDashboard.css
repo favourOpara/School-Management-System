@@ -7,8 +7,10 @@
 
 .admin-dashboard-main {
   margin-left: 100px;
-  padding: 2rem;
   padding-top: 50px; /* Account for top header - matches header height */
+  padding-right: 2rem;
+  padding-bottom: 2rem;
+  padding-left: 2rem;
   flex: 1;
   min-height: 100vh;
   background-color: #ffffff;
@@ -120,12 +122,16 @@
     padding: 1rem;
     padding-top: 50px; /* Account for top header - matches header height */
   }
-  
+
+  .admin-dashboard-header-container {
+    display: none;
+  }
+
   .admin-dashboard-greeting {
     font-size: 1.25rem;
     margin-top: 0;
   }
-  
+
   .admin-dashboard-grid {
     grid-template-columns: 1fr;
   }

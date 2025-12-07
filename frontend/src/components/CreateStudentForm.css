@@ -1,94 +1,87 @@
-/* Layout Wrapper for Admin Dashboard */
+/* Main Page Container */
 .create-student-wrapper {
-  display: flex;
-  justify-content: flex-start;
-  align-items: flex-start;
-  padding: 0 1rem 1rem 1rem;
-  min-height: 100vh;
-  background-color: #ffffff;
-}
-
-/* Main Form Container */
-.create-student-container {
-  max-width: 900px;
-  padding: 2rem;
-  background-color: #ffffff;
-  border: 1px solid #e0e0e0;
-  border-radius: 10px;
-  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.05);
   width: 100%;
+  margin: 0;
+  padding: 0;
+  background-color: transparent;
 }
 
-/* Header */
+.create-student-container {
+  background-color: transparent;
+  border: none;
+  box-shadow: none;
+  padding: 0;
+  border-radius: 0;
+  margin: 0;
+  width: 100%;
+  max-width: none;
+}
+
+/* Page Header */
 .create-student-container h3 {
-  text-align: center;
-  margin-bottom: 1.5rem;
-  color: #0d47a1;
-  font-size: 1.6rem;
+  margin-bottom: 3rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid #e5e7eb;
+  font-size: 2rem;
   font-weight: 600;
+  color: #111827;
+  letter-spacing: -0.025em;
+  text-align: left;
 }
 
-/* Form Layout - DESKTOP: Two-column row layout */
+/* Form Layout */
 .create-student-form {
   display: flex;
   flex-wrap: wrap;
-  gap: 1rem;
+  gap: 1.5rem;
+  max-width: 900px;
 }
 
+/* Input Fields - Bottom Border Only */
 .create-student-form input,
 .create-student-form select {
-  flex: 1 1 calc(50% - 1rem); /* two fields per row */
-  padding: 0.85rem;
-  font-size: 1rem;
-  border-radius: 6px;
-  border: 1px solid #ccc;
-  background-color: #fafafa;
-  transition: border 0.3s ease;
+  flex: 1 1 calc(50% - 0.75rem);
+  padding: 0.625rem 0.875rem;
+  font-size: 0.95rem;
+  color: #111827;
+  background-color: transparent;
+  border: none;
+  border-bottom: 1px solid #e5e7eb;
+  border-radius: 0;
+  transition: all 0.15s ease;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', sans-serif;
 }
 
 .create-student-form input:focus,
 .create-student-form select:focus {
-  border-color: #0d47a1;
-  background-color: #fff;
+  outline: none;
+  border-bottom-color: #3b82f6;
+  box-shadow: none;
 }
 
-/* Full-width fields (for submit button and DOB if needed) */
+.create-student-form input::placeholder {
+  color: #9ca3af;
+}
+
+/* Full-width fields */
 .create-student-form .full-width {
   flex: 1 1 100%;
-}
-
-/* Submit Button */
-.create-student-form button[type="submit"] {
-  padding: 0.9rem;
-  font-size: 1rem;
-  background-color: #1565c0;
-  color: white;
-  font-weight: 500;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: background-color 0.3s ease;
-  flex: 1 1 100%;
-}
-
-.create-student-form button[type="submit"]:hover {
-  background-color: #0d47a1;
 }
 
 /* Photo Upload Section */
 .photo-upload-section {
   flex: 1 1 100%;
   margin: 1rem 0;
-  padding: 1rem;
-  border: 2px dashed #ccc;
+  padding: 1.5rem;
+  border: 2px dashed #e5e7eb;
   border-radius: 8px;
-  background-color: #fafafa;
+  background-color: #f9fafb;
 }
 
 .photo-upload-section label {
   display: block;
-  margin-bottom: 0.75rem;
-  color: #555;
+  margin-bottom: 1rem;
+  color: #374151;
   font-weight: 500;
   font-size: 0.95rem;
 }
@@ -96,24 +89,25 @@
 .photo-buttons {
   display: flex;
   gap: 1rem;
-  justify-content: center;
+  flex-wrap: wrap;
 }
 
 .upload-btn,
 .camera-btn {
-  padding: 0.75rem 1.5rem;
+  padding: 0.625rem 1.25rem;
   font-size: 0.95rem;
-  background-color: #1976d2;
+  font-weight: 500;
+  background-color: #3b82f6;
   color: white;
   border: none;
   border-radius: 6px;
   cursor: pointer;
-  transition: background-color 0.3s ease;
+  transition: all 0.15s ease;
 }
 
 .upload-btn:hover,
 .camera-btn:hover {
-  background-color: #1565c0;
+  background-color: #2563eb;
 }
 
 /* Camera Section */
@@ -122,13 +116,14 @@
   flex-direction: column;
   align-items: center;
   gap: 1rem;
+  margin-top: 1rem;
 }
 
 .camera-video {
   width: 240px;
   height: 300px;
   border-radius: 8px;
-  border: 2px solid #1976d2;
+  border: 2px solid #3b82f6;
   background-color: #000;
   object-fit: cover;
 }
@@ -139,33 +134,35 @@
 }
 
 .capture-btn {
-  padding: 0.75rem 1.5rem;
-  background-color: #2e7d32;
+  padding: 0.625rem 1.25rem;
+  background-color: #16a34a;
   color: white;
   border: none;
   border-radius: 6px;
   cursor: pointer;
   font-size: 0.95rem;
-  transition: background-color 0.3s ease;
+  font-weight: 500;
+  transition: all 0.15s ease;
 }
 
 .capture-btn:hover {
-  background-color: #1b5e20;
+  background-color: #15803d;
 }
 
 .cancel-btn {
-  padding: 0.75rem 1.5rem;
-  background-color: #d32f2f;
+  padding: 0.625rem 1.25rem;
+  background-color: #dc2626;
   color: white;
   border: none;
   border-radius: 6px;
   cursor: pointer;
   font-size: 0.95rem;
-  transition: background-color 0.3s ease;
+  font-weight: 500;
+  transition: all 0.15s ease;
 }
 
 .cancel-btn:hover {
-  background-color: #b71c1c;
+  background-color: #b91c1c;
 }
 
 /* Photo Preview */
@@ -174,87 +171,100 @@
   flex-direction: column;
   align-items: center;
   gap: 1rem;
+  margin-top: 1rem;
 }
 
 .preview-image {
   width: 120px;
   height: 150px;
   border-radius: 8px;
-  border: 2px solid #1976d2;
+  border: 2px solid #3b82f6;
   object-fit: cover;
 }
 
 .remove-photo-btn {
-  padding: 0.6rem 1.2rem;
-  background-color: #d32f2f;
+  padding: 0.5rem 1rem;
+  background-color: #dc2626;
   color: white;
   border: none;
   border-radius: 6px;
   cursor: pointer;
-  font-size: 0.9rem;
-  transition: background-color 0.3s ease;
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition: all 0.15s ease;
 }
 
 .remove-photo-btn:hover {
-  background-color: #b71c1c;
+  background-color: #b91c1c;
 }
 
-/* Messages */
+/* Submit Button */
+.create-student-form button[type="submit"] {
+  flex: 1 1 100%;
+  padding: 0.625rem 1.25rem;
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: #ffffff;
+  background-color: #3b82f6;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  margin-top: 1rem;
+}
+
+.create-student-form button[type="submit"]:hover {
+  background-color: #2563eb;
+}
+
+/* Feedback Messages */
 .form-message.success {
-  color: #2e7d32;
-  background-color: #e8f5e9;
-  padding: 0.7rem;
-  border-radius: 5px;
-  text-align: center;
+  color: #16a34a;
+  background-color: #f0fdf4;
+  padding: 0.75rem 1rem;
+  border-radius: 6px;
+  border-left: 3px solid #16a34a;
+  font-size: 0.95rem;
+  margin-top: 1rem;
 }
 
 .form-message.error {
-  color: #c62828;
-  background-color: #ffebee;
-  padding: 0.7rem;
-  border-radius: 5px;
-  text-align: center;
+  color: #dc2626;
+  background-color: #fef2f2;
+  padding: 0.75rem 1rem;
+  border-radius: 6px;
+  border-left: 3px solid #dc2626;
+  font-size: 0.95rem;
+  margin-top: 1rem;
 }
 
-/* Mobile View */
-@media (max-width: 600px) {
+/* Responsive Design */
+@media (max-width: 768px) {
   .create-student-wrapper {
-    position: fixed;
-    top: 30px;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    background-color: #ffffff;
-    display: flex;
-    justify-content: center;
-    align-items: flex-start;
-    z-index: 5;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    padding-top: 2rem;
   }
 
   .create-student-container {
-    width: 100%;
-    max-width: 100%;
-    padding: 1.5rem;
-    margin: 0;
-    box-shadow: none;
-    border: none;
+    padding: 0;
   }
 
   .create-student-container h3 {
-    font-size: 1.4rem;
-    text-align: left;
+    font-size: 1.75rem;
+    margin-bottom: 2rem;
+    padding-bottom: 1rem;
   }
 
   .create-student-form {
     flex-direction: column;
+    gap: 1rem;
   }
 
   .create-student-form input,
-  .create-student-form select,
-  .create-student-form button {
-    width: 100%;
-    font-size: 0.95rem;
-    padding: 0.75rem;
+  .create-student-form select {
+    flex: 1 1 100%;
   }
 
   .photo-buttons {
@@ -270,10 +280,22 @@
     width: 200px;
     height: 250px;
   }
+}
 
-  .form-message.success,
-  .form-message.error {
+@media (max-width: 480px) {
+  .create-student-wrapper {
+    margin: 0;
+    padding: 0;
+    padding-top: 2rem;
+  }
+
+  .create-student-container h3 {
+    font-size: 1.5rem;
+  }
+
+  .create-student-form input,
+  .create-student-form select,
+  .create-student-form button {
     font-size: 0.9rem;
-    padding: 0.6rem;
   }
 }
