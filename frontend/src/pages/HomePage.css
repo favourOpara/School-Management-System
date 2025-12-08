@@ -252,7 +252,7 @@
 
 /* Logo above card */
 .logo-above {
-  width: 280px;
+  width: 150px;
   height: auto;
   margin-bottom: 24px;
   margin-top: 20px;
@@ -421,7 +421,7 @@
   }
 
   .logo-above {
-    width: 200px;
+    width: 150px;
     margin-bottom: 20px;
     margin-top: 10px;
   }
