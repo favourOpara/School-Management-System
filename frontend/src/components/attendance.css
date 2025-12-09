@@ -71,67 +71,68 @@ html, body {
 /* Tab switcher for Create/View Attendance */
 .attendance-tabs {
   display: flex;
-  justify-content: center;
-  margin-bottom: 1.5rem;
-  gap: 1rem;
+  margin-bottom: 2rem;
+  border-radius: 6px;
+  overflow: hidden;
+  border: 1px solid #e5e7eb;
+  max-width: 600px;
   width: 100%;
 }
 
 .attendance-tabs button {
-  padding: 0.6rem 1.2rem;
-  font-size: 1rem;
+  flex: 1;
+  padding: 0.75rem 1rem;
+  background-color: transparent;
+  color: #6b7280;
   border: none;
-  border-radius: 6px;
-  background-color: #eee;
   cursor: pointer;
-  transition: background-color 0.3s ease;
+  transition: all 0.15s ease;
+  font-weight: 500;
+  font-size: 0.95rem;
 }
 
 .attendance-tabs button.active-tab {
-  background-color: #1565c0;
+  background-color: #3b82f6;
   color: white;
 }
 
-.attendance-tabs button:hover {
-  background-color: #ccc;
+.attendance-tabs button:hover:not(.active-tab) {
+  background-color: #f3f4f6;
 }
 
 /* Wrapper for Create Attendance */
 .create-attendance-wrapper {
-  display: flex;
-  justify-content: center;
-  align-items: flex-start;
-  padding: 0 1rem 2rem 1rem;
-  min-height: 100vh;
-  background-color: #ffffff;
   width: 100%;
+  margin: 0;
+  padding: 0;
+  background-color: transparent;
   box-sizing: border-box;
   overflow-x: hidden;
-  margin: 0 auto;
 }
 
 .create-attendance-container {
-  max-width: 960px;
+  background-color: transparent;
+  border: none;
+  box-shadow: none;
+  padding: 0;
+  border-radius: 0;
+  margin: 0;
   width: 100%;
-  background-color: #ffffff;
-  padding: 2rem;
-  border-radius: 10px;
-  border: 1px solid #e0e0e0;
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
+  max-width: none;
   overflow-x: hidden;
   box-sizing: border-box;
-  margin: 0 auto;
 }
 
 /* Section title */
 .attendance-section-header {
-  margin-bottom: 1.5rem;
-  font-size: 1.6rem;
+  margin-bottom: 3rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid #e5e7eb;
+  font-size: 2rem;
   font-weight: 600;
-  color: #0d47a1;
-  text-align: center;
-  border-bottom: 1px solid #e0e0e0;
-  padding-bottom: 0.5rem;
+  color: #111827;
+  letter-spacing: -0.025em;
+  text-align: left;
   width: 100%;
 }
 
@@ -406,22 +407,22 @@ html, body {
    VIEW ATTENDANCE SECTION
    =============================== */
 .view-attendance-wrapper {
-  display: flex;
-  justify-content: center;
-  padding: 1rem;
-  background-color: #ffffff;
   width: 100%;
+  margin: 0;
+  padding: 0;
+  background-color: transparent;
   box-sizing: border-box;
 }
 
 .view-attendance-container {
-  max-width: 960px;
+  background-color: transparent;
+  border: none;
+  box-shadow: none;
+  padding: 0;
+  border-radius: 0;
+  margin: 0;
   width: 100%;
-  background-color: #ffffff;
-  padding: 2rem;
-  border-radius: 10px;
-  border: 1px solid #e0e0e0;
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
+  max-width: none;
 }
 
 .view-attendance-filters {
@@ -430,6 +431,62 @@ html, body {
   gap: 1rem;
   margin-bottom: 1.5rem;
   align-items: center;
+}
+
+/* Unique styles for ViewAttendance dropdowns */
+.view-attendance-select__control {
+  background-color: #fff !important;
+  border: 1px solid #e5e7eb !important;
+  border-radius: 6px !important;
+  min-width: 200px !important;
+  font-size: 0.95rem !important;
+}
+
+.view-attendance-select__control:hover {
+  border-color: #d1d5db !important;
+}
+
+.view-attendance-select__menu {
+  background-color: #fff !important;
+  border: 1px solid #e5e7eb !important;
+  border-radius: 6px !important;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1) !important;
+  z-index: 9999 !important;
+}
+
+.view-attendance-select__option {
+  color: #111827 !important;
+  background-color: #fff !important;
+  font-size: 0.95rem !important;
+  padding: 0.5rem 0.75rem !important;
+}
+
+.view-attendance-select__option--is-focused {
+  background-color: #f3f4f6 !important;
+  color: #111827 !important;
+}
+
+.view-attendance-select__option--is-selected {
+  background-color: #3b82f6 !important;
+  color: #fff !important;
+}
+
+.view-attendance-select__single-value {
+  color: #111827 !important;
+  font-size: 0.95rem !important;
+}
+
+.view-attendance-select__placeholder {
+  color: #9ca3af !important;
+  font-size: 0.95rem !important;
+}
+
+.view-attendance-select__indicator-separator {
+  background-color: #e5e7eb !important;
+}
+
+.view-attendance-select__dropdown-indicator {
+  color: #6b7280 !important;
 }
 
 .load-data-btn {

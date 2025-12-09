@@ -240,6 +240,7 @@ const CreateSubjectForm = () => {
               <Select
                 isMulti
                 name="subjects"
+                classNamePrefix="subject-select"
                 value={assignmentData.subjects.map(val => ({ value: val, label: val }))}
                 onChange={(selected) => handleAssignmentSelectChange(selected, 'subjects')}
                 options={allSubjectOptions}
@@ -249,6 +250,7 @@ const CreateSubjectForm = () => {
               <Select
                 isMulti
                 name="classes"
+                classNamePrefix="subject-select"
                 value={assignmentData.classes.map(val => ({
                   value: val,
                   label: permanentClasses.find(c => c.id === val)?.name || val
@@ -260,6 +262,7 @@ const CreateSubjectForm = () => {
 
               <Select
                 name="academic_year"
+                classNamePrefix="subject-select"
                 value={assignmentData.academic_year ? { value: assignmentData.academic_year, label: assignmentData.academic_year } : null}
                 onChange={(option) => handleSingleChange(option, 'academic_year')}
                 options={academicYears.map(y => ({ value: y, label: y }))}
@@ -268,6 +271,7 @@ const CreateSubjectForm = () => {
 
               <Select
                 name="term"
+                classNamePrefix="subject-select"
                 value={assignmentData.term ? { value: assignmentData.term, label: assignmentData.term } : null}
                 onChange={(option) => handleSingleChange(option, 'term')}
                 options={[
@@ -280,6 +284,7 @@ const CreateSubjectForm = () => {
 
               <Select
                 name="teacher"
+                classNamePrefix="subject-select"
                 value={assignmentData.teacher ? {
                   value: assignmentData.teacher,
                   label: teachers.find(t => t.id === assignmentData.teacher)?.first_name + ' ' + teachers.find(t => t.id === assignmentData.teacher)?.last_name
@@ -293,6 +298,7 @@ const CreateSubjectForm = () => {
                 <Select
                   isMulti
                   name="departments"
+                  classNamePrefix="subject-select"
                   value={assignmentData.departments.map(val => ({ value: val, label: val }))}
                   onChange={(selected) => handleAssignmentSelectChange(selected, 'departments')}
                   options={[

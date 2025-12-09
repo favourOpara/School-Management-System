@@ -1,35 +1,35 @@
 /* Wrapper for View Fees Section */
 .view-fees-wrapper {
-  display: flex;
-  justify-content: center;
-  align-items: flex-start;
-  padding: 0 2rem 2rem 2rem;
-  min-height: 100vh;
-  background-color: #f4f6f8;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  background-color: transparent;
   overflow-x: hidden;
 }
 
 /* Main container */
 .view-fees-container {
-  max-width: 960px;
+  background-color: transparent;
+  border: none;
+  box-shadow: none;
+  padding: 0;
+  border-radius: 0;
+  margin: 0;
   width: 100%;
-  background-color: #ffffff;
-  padding: 2rem;
-  border-radius: 10px;
-  border: 1px solid #e0e0e0;
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
+  max-width: none;
   overflow-x: auto;
 }
 
 /* Section title */
 .section-header {
-  margin-bottom: 1.5rem;
-  font-size: 1.6rem;
+  margin-bottom: 3rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid #e5e7eb;
+  font-size: 2rem;
   font-weight: 600;
-  color: #0d47a1;
-  text-align: center;
-  border-bottom: 1px solid #e0e0e0;
-  padding-bottom: 0.5rem;
+  color: #111827;
+  letter-spacing: -0.025em;
+  text-align: left;
 }
 
 /* Filter layout for the View Fees section */

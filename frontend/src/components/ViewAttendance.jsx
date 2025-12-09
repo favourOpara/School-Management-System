@@ -15,13 +15,31 @@ const selectStyles = {
     ...base,
     fontSize: '0.95rem',
     backgroundColor: '#fff',
-    borderColor: '#ccc',
-    color: '#222',
-    minWidth: 180
+    borderColor: '#e5e7eb',
+    border: '1px solid #e5e7eb',
+    borderRadius: '6px',
+    color: '#000',
+    minWidth: 200
   }),
-  singleValue: base => ({ ...base, color: '#222' }),
-  placeholder: base => ({ ...base, color: '#555' }),
-  menu: base => ({ ...base, fontSize: '0.95rem', color: '#222' }),
+  singleValue: base => ({ ...base, color: '#111827' }),
+  placeholder: base => ({ ...base, color: '#9ca3af' }),
+  menu: base => ({
+    ...base,
+    fontSize: '0.95rem',
+    color: '#111827',
+    backgroundColor: '#fff',
+    zIndex: 9999,
+    border: '1px solid #e5e7eb',
+    borderRadius: '6px',
+    boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)'
+  }),
+  menuPortal: base => ({ ...base, zIndex: 9999 }),
+  option: (base, state) => ({
+    ...base,
+    color: '#111827',
+    backgroundColor: state.isSelected ? '#3b82f6' : state.isFocused ? '#f3f4f6' : '#fff',
+    padding: '0.5rem 0.75rem'
+  }),
 };
 
 const ViewAttendance = () => {
@@ -32,7 +50,8 @@ const ViewAttendance = () => {
   const [holidayDays, setHolidayDays] = useState([]);
   const [classList, setClassList] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [calendarExists, setCalendarExists] = useState(false); // Add this state
+  const [calendarExists, setCalendarExists] = useState(false);
+  const [hasAttemptedLoad, setHasAttemptedLoad] = useState(false);
 
   const [selectedClass, setSelectedClass] = useState(null);
   const [showSubjectModal, setShowSubjectModal] = useState(false);
@@ -69,6 +88,7 @@ const ViewAttendance = () => {
     if (!selectedYear || !selectedTerm) return;
 
     setLoading(true);
+    setHasAttemptedLoad(true);
 
     try {
       const res = await axios.get(`${API_BASE_URL}/api/attendance/calendar/`, {
@@ -176,15 +196,27 @@ const ViewAttendance = () => {
             placeholder="Select Academic Year"
             options={academicYears}
             value={selectedYear}
-            onChange={setSelectedYear}
+            onChange={(val) => {
+              setSelectedYear(val);
+              setHasAttemptedLoad(false);
+            }}
             styles={selectStyles}
+            classNamePrefix="view-attendance-select"
+            menuPortalTarget={document.body}
+            menuPosition="fixed"
           />
           <Select
             placeholder="Select Term"
             options={terms}
             value={selectedTerm}
-            onChange={setSelectedTerm}
+            onChange={(val) => {
+              setSelectedTerm(val);
+              setHasAttemptedLoad(false);
+            }}
             styles={selectStyles}
+            classNamePrefix="view-attendance-select"
+            menuPortalTarget={document.body}
+            menuPosition="fixed"
           />
           <button className="load-data-btn" onClick={handleLoadData}>
             Load Data
@@ -201,8 +233,8 @@ const ViewAttendance = () => {
 
         {loading && <p className="loading-text">Loading attendance data...</p>}
 
-        {/* Show message if no calendar exists */}
-        {selectedYear && selectedTerm && !loading && !calendarExists && (
+        {/* Show message if no calendar exists - only after user clicks Load Data */}
+        {selectedYear && selectedTerm && !loading && hasAttemptedLoad && !calendarExists && (
           <div className="no-calendar-message" style={{padding: '20px', background: '#f0f0f0', margin: '10px 0', borderRadius: '5px', color: '#333'}}>
             <h4 style={{color: '#333', marginBottom: '10px'}}>No Attendance Calendar Found</h4>
             <p style={{color: '#333', marginBottom: '5px'}}>No attendance calendar exists for <strong>{selectedYear.label} - {selectedTerm.label}</strong>.</p>

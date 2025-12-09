@@ -31,7 +31,7 @@ body {
 
 /* Mobile Header */
 .mobile-header {
-  background-color: #0d47a1;
+  background: linear-gradient(90deg, #3b82f6 0%, #1d4ed8 100%);
   padding: 0.5rem 1rem;
   height: 48px;
   display: flex;
@@ -56,7 +56,7 @@ body {
   top: 0;
   left: 0;
   height: 100vh;
-  background-color: #ffffff;
+  background: linear-gradient(180deg, #3b82f6 0%, #1d4ed8 100%);
   color: white;
   padding-top: 1rem;
   transition: transform 0.3s ease-in-out;
@@ -110,8 +110,8 @@ body {
 
 .sidebar-nav li:hover,
 .sidebar-nav li.active {
-  background-color: #ffffff;
-  color: #064a97;
+  background-color: rgba(255, 255, 255, 0.95);
+  color: #1d4ed8;
 }
 
 .sidebar-nav li svg {
@@ -122,8 +122,9 @@ body {
 
 /* Logout */
 .logout-btn {
-  background-color: #2a5db0;
+  background-color: rgba(255, 255, 255, 0.2);
   color: white;
+  border: 1px solid rgba(255, 255, 255, 0.3);
   width: 100%;
   text-align: center;
   padding: 14px 18px;
@@ -137,7 +138,8 @@ body {
 }
 
 .logout-btn:hover {
-  background-color: #174a8c;
+  background-color: rgba(255, 255, 255, 0.3);
+  border-color: rgba(255, 255, 255, 0.5);
 }
 
 /* MOBILE styles */
@@ -145,8 +147,8 @@ body {
   .sidebar {
     width: 100%;
     transform: translateX(-100%);
-    background-color: #ffffff;
-    color: #1a1a1a;
+    background: linear-gradient(180deg, #3b82f6 0%, #1d4ed8 100%);
+    color: #ffffff;
     padding: 2rem 1.5rem;
     align-items: flex-start;
   }
@@ -165,25 +167,25 @@ body {
     font-size: 20px;
     font: Century Gothic;
     font-weight: 500;
-    color: #0e2d52;
+    color: #ffffff;
   }
 
   .sidebar-nav li svg {
     width: 30px;
     height: 30px;
-    color: #76787e;
+    color: #ffffff;
   }
 
   .sidebar-submenu li {
     font-size: 20px !important;
-    color: #0e3152 !important;
+    color: #ffffff !important;
     padding-left: 2rem;
   }
 
   .sidebar-submenu li:hover,
   .sidebar-submenu li.active {
-    background-color: #f0f4ff;
-    color: #0a2a4e;
+    background-color: rgba(255, 255, 255, 0.95);
+    color: #1d4ed8;
   }
 
   .close-btn {
@@ -194,7 +196,7 @@ body {
     background: none;
     border: none;
     font-size: 1.5rem;
-    color: #333;
+    color: #ffffff;
     z-index: 100;
   }
 
@@ -204,8 +206,9 @@ body {
 
   .logout-btn {
     font-size: 16px;
-    background-color: #2a5db0;
+    background-color: rgba(255, 255, 255, 0.2);
     color: #ffffff;
+    border: 1px solid rgba(255, 255, 255, 0.3);
   }
 }
 
@@ -220,7 +223,6 @@ body {
     transform: none;
     overflow-y: auto;
     max-height: 100vh;
-    background-color: #0d47a1;
   }
 
   .sidebar-nav li {
@@ -273,8 +275,8 @@ body {
 
 .sidebar-submenu li:hover,
 .sidebar-submenu li.active {
-  background-color: #ffffff;
-  color: #0a2a4e;
+  background-color: rgba(255, 255, 255, 0.95);
+  color: #1d4ed8;
 }
 
 .sidebar-submenu li svg {

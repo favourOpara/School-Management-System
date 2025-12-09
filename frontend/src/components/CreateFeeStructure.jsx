@@ -20,19 +20,29 @@ const customSelectStyles = {
     ...base,
     borderColor: '#ccc',
     fontSize: '1rem',
+    backgroundColor: '#fff',
   }),
   option: (base, state) => ({
     ...base,
-    color: '#111',
-    backgroundColor: state.isFocused ? '#f0f0f0' : '#fff',
+    color: '#000',
+    backgroundColor: state.isFocused ? '#f3f4f6' : '#fff',
   }),
   singleValue: (base) => ({
     ...base,
-    color: '#111',
+    color: '#000',
   }),
   multiValueLabel: (base) => ({
     ...base,
-    color: '#111',
+    color: '#000',
+  }),
+  placeholder: (base) => ({
+    ...base,
+    color: '#9ca3af',
+  }),
+  menu: (base) => ({
+    ...base,
+    backgroundColor: '#fff',
+    zIndex: 1000,
   }),
 };
 
@@ -296,8 +306,8 @@ const CreateFeeStructure = () => {
                           <td>{fee.academic_year}</td>
                           <td>{fee.term}</td>
                           <td>
-                            <button className="edit-btn"   onClick={()=>handleEditClick(fee)}>Edit</button>
-                            <button className="delete-btn" onClick={()=>handleDelete(fee.id)}>Delete</button>
+                            <span className="fee-edit-text"   onClick={()=>handleEditClick(fee)}>Edit</span>
+                            <span className="fee-delete-text" onClick={()=>handleDelete(fee.id)}>Delete</span>
                           </td>
                         </tr>
                       ))}

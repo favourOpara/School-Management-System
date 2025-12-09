@@ -461,7 +461,7 @@ const AttendanceMarkingModal = ({ classInfo, academicYear, term, schoolDays, hol
                   </div>
 
                   {/* Summary */}
-                  <div className="attendance-summary" style={{
+                  <div className="attendance-marking-summary" style={{
                     marginTop: '15px',
                     padding: '12px',
                     backgroundColor: '#f5f5f5',
@@ -469,18 +469,18 @@ const AttendanceMarkingModal = ({ classInfo, academicYear, term, schoolDays, hol
                     display: 'flex',
                     justifyContent: 'space-between'
                   }}>
-                    <span>
+                    <span style={{ color: '#111827' }}>
                       Present: <strong style={{ color: '#4caf50' }}>
                         {Object.values(attendanceData).filter(v => v === true).length}
                       </strong>
                     </span>
-                    <span>
+                    <span style={{ color: '#111827' }}>
                       Absent: <strong style={{ color: '#f44336' }}>
                         {Object.values(attendanceData).filter(v => v === false).length}
                       </strong>
                     </span>
-                    <span>
-                      Total: <strong>{students.length}</strong>
+                    <span style={{ color: '#111827' }}>
+                      Total: <strong style={{ color: '#111827' }}>{students.length}</strong>
                     </span>
                   </div>
                 </div>

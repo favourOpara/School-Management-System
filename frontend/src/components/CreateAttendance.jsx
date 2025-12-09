@@ -14,11 +14,16 @@ const selectStyles = {
     fontSize: '0.95rem',
     backgroundColor: '#fff',
     borderColor: '#ccc',
-    color: '#222',
+    color: '#000',
   }),
-  singleValue: base => ({ ...base, color: '#222' }),
-  placeholder: base => ({ ...base, color: '#555' }),
-  menu: base => ({ ...base, fontSize: '0.95rem', color: '#222' }),
+  singleValue: base => ({ ...base, color: '#000' }),
+  placeholder: base => ({ ...base, color: '#9ca3af' }),
+  menu: base => ({ ...base, fontSize: '0.95rem', color: '#000', backgroundColor: '#fff', zIndex: 1000 }),
+  option: (base, state) => ({
+    ...base,
+    color: '#000',
+    backgroundColor: state.isFocused ? '#f3f4f6' : '#fff',
+  }),
 };
 
 const CreateAttendance = () => {

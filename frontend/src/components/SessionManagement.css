@@ -50,14 +50,14 @@
 }
 
 .session-btn-primary {
-  background: #2196f3;
+  background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
   color: white;
 }
 
 .session-btn-primary:hover:not(:disabled) {
-  background: #1976d2;
+  background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
   transform: translateY(-1px);
-  box-shadow: 0 4px 8px rgba(33, 150, 243, 0.3);
+  box-shadow: 0 4px 8px rgba(59, 130, 246, 0.4);
 }
 
 .session-btn-success {

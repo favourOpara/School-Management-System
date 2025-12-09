@@ -1,112 +1,147 @@
-/* ViewSubjects Specific Wrapper */
+/* Main Page Container */
 .view-subjects-page-wrapper {
-  display: flex;
-  justify-content: center;
-  align-items: flex-start;
-  padding: 0 2rem 2rem 2rem;
-  min-height: 100vh;
-  background-color: #ffffff;
-}
-
-/* ViewSubjects Main container */
-.view-subjects-page-container {
-  max-width: 960px;
   width: 100%;
-  background-color: #ffffff;
-  padding: 2rem;
-  border-radius: 10px;
-  border: 1px solid #e0e0e0;
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.05);
+  margin: 0;
+  padding: 0;
+  background-color: transparent;
 }
 
-/* ViewSubjects Section title */
+.view-subjects-page-container {
+  background-color: transparent;
+  border: none;
+  box-shadow: none;
+  padding: 0;
+  border-radius: 0;
+  margin: 0;
+  width: 100%;
+  max-width: none;
+}
+
+/* Page Header */
 .view-subjects-page-container .section-header {
-  margin-bottom: 1.5rem;
-  font-size: 1.6rem;
+  margin-bottom: 3rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid #e5e7eb;
+  font-size: 2rem;
   font-weight: 600;
-  color: #0d47a1;
-  text-align: center;
-  border-bottom: 1px solid #e0e0e0;
-  padding-bottom: 0.5rem;
+  color: #111827;
+  letter-spacing: -0.025em;
+  text-align: left;
 }
 
-/* ViewSubjects Filter layout */
+/* Filter Section */
 .view-subjects-page-container .filter-section {
   display: flex;
   flex-wrap: wrap;
-  gap: 1rem;
-  margin-bottom: 1.5rem;
+  gap: 1.5rem;
+  margin-bottom: 2.5rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid #e5e7eb;
+  max-width: 900px;
 }
 
 .view-subjects-page-container .filter-section select,
-.view-subjects-page-container .filter-section button,
 .view-subjects-page-container .filter-section .react-select__control {
-  padding: 0.65rem;
-  border: 1px solid #ccc;
-  border-radius: 5px;
-  min-width: 160px;
-  background-color: #fafafa;
+  padding: 0.625rem 0.875rem;
   font-size: 0.95rem;
-  color: #333333;
+  color: #111827;
+  background-color: transparent;
+  border: none;
+  border-bottom: 1px solid #e5e7eb;
+  border-radius: 0;
+  transition: all 0.15s ease;
+  min-width: 200px;
 }
 
 .view-subjects-page-container .filter-section select:focus,
-.view-subjects-page-container .filter-section button:focus,
 .view-subjects-page-container .filter-section .react-select__control--is-focused {
-  border-color: #0d47a1;
   outline: none;
-  background-color: #ffffff;
-  box-shadow: 0 0 0 1px #0d47a1;
+  border-bottom-color: #3b82f6;
+  box-shadow: none;
 }
 
 .view-subjects-page-container .filter-section button {
-  background-color: #1565c0;
-  color: white;
+  padding: 0.625rem 1.25rem;
+  font-size: 0.95rem;
   font-weight: 500;
-  transition: background-color 0.3s ease;
+  color: #ffffff;
+  background-color: #3b82f6;
+  border: none;
+  border-radius: 6px;
   cursor: pointer;
+  transition: all 0.15s ease;
 }
 
 .view-subjects-page-container .filter-section button:hover {
-  background-color: #0d47a1;
+  background-color: #2563eb;
 }
 
-/* ViewSubjects Class card list */
+/* React-Select Styling */
+.view-subjects-page-container .filter-section .react-select__single-value {
+  color: #111827 !important;
+}
+
+.view-subjects-page-container .filter-section .react-select__option {
+  color: #111827 !important;
+  font-size: 0.95rem;
+}
+
+.view-subjects-page-container .filter-section .react-select__placeholder {
+  color: #9ca3af !important;
+}
+
+.view-subjects-page-container .filter-section .react-select__option--is-focused {
+  background-color: #f3f4f6;
+}
+
+.view-subjects-page-container .filter-section .react-select__option--is-selected {
+  background-color: #3b82f6;
+}
+
+/* Class Card List */
 .view-subjects-page-container .class-list {
   display: flex;
   flex-direction: column;
   gap: 1rem;
+  max-width: 900px;
 }
 
 .view-subjects-page-container .class-card {
-  background: #f5f5f5;
-  padding: 1rem;
+  background: #f9fafb;
+  padding: 1.5rem;
   border-radius: 6px;
   cursor: pointer;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+  border: 1px solid #e5e7eb;
+  transition: all 0.15s ease;
+}
+
+.view-subjects-page-container .class-card:hover {
+  background: #f3f4f6;
+  border-color: #d1d5db;
 }
 
 .view-subjects-page-container .class-card h4 {
   margin: 0;
-  font-size: 1.2rem;
-  color: #0d47a1;
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #111827;
 }
 
-/* ViewSubjects Modal overlay */
+/* Modal Overlay */
 .view-subjects-modal-overlay {
   position: fixed;
   top: 0;
   left: 0;
   width: 100vw;
   height: 100vh;
-  background: rgba(0, 0, 0, 0.3);
+  background: rgba(0, 0, 0, 0.5);
   display: flex;
   justify-content: center;
   align-items: center;
-  z-index: 999;
+  z-index: 1000;
 }
 
-/* ViewSubjects Modal popup */
+/* Modal Popup */
 .view-subjects-modal {
   background: white;
   padding: 2rem;
@@ -114,22 +149,34 @@
   max-width: 95%;
   border-radius: 8px;
   position: relative;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
 }
 
-/* ViewSubjects Close button inside modal */
+/* Close Button */
 .view-subjects-modal .subject-close-button {
   position: absolute;
   top: 10px;
   right: 10px;
-  font-size: 1.6rem;
+  font-size: 1.5rem;
   background: none;
   border: none;
-  color: #444;
+  color: #6b7280;
   cursor: pointer;
-  z-index: 1000;
+  width: 32px;
+  height: 32px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
 }
 
-/* ViewSubjects Modal content list */
+.view-subjects-modal .subject-close-button:hover {
+  background-color: #f3f4f6;
+  color: #111827;
+}
+
+/* Modal Content List */
 .view-subjects-modal .modal-subject-list {
   list-style: none;
   padding: 0;
@@ -139,49 +186,57 @@
 .view-subjects-modal .modal-subject-list li {
   display: flex;
   align-items: center;
-  gap: 0.6rem;
-  margin-bottom: 0.8rem;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+  padding: 1rem;
+  background-color: #f9fafb;
+  border-radius: 6px;
+  border: 1px solid #e5e7eb;
 }
 
 .view-subjects-modal .modal-subject-list input,
 .view-subjects-modal .modal-subject-list select {
-  padding: 0.4rem;
+  padding: 0.5rem;
   font-size: 0.95rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 4px;
+  flex: 1;
 }
 
-/* ViewSubjects Modal Buttons - ALL buttons styling */
+/* Modal Buttons */
 .view-subjects-modal button {
   border: none;
-  padding: 0.4rem 0.7rem;
+  padding: 0.5rem 1rem;
   border-radius: 4px;
   cursor: pointer;
-  font-size: 0.85rem;
-  transition: background-color 0.3s ease;
-  margin-right: 0.3rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition: all 0.15s ease;
+  margin-right: 0.5rem;
 }
 
-/* ViewSubjects Delete buttons */
+/* Delete Buttons */
 .view-subjects-modal .modal-subject-list button,
 .view-subjects-modal button[onclick*="Delete"],
 .view-subjects-modal button[onclick*="delete"] {
-  background-color: #d32f2f !important;
+  background-color: #dc2626 !important;
   color: white !important;
 }
 
 .view-subjects-modal .modal-subject-list button:hover,
 .view-subjects-modal button[onclick*="Delete"]:hover,
 .view-subjects-modal button[onclick*="delete"]:hover {
-  background-color: #c62828 !important;
+  background-color: #b91c1c !important;
 }
 
-/* ViewSubjects Edit/Update buttons */
+/* Edit/Update Buttons */
 .view-subjects-modal button[onclick*="Edit"],
 .view-subjects-modal button[onclick*="edit"],
 .view-subjects-modal button[onclick*="Update"],
 .view-subjects-modal button[onclick*="update"],
 .view-subjects-modal .edit-btn,
 .view-subjects-modal .update-btn {
-  background-color: #1565c0 !important;
+  background-color: #3b82f6 !important;
   color: white !important;
 }
 
@@ -191,28 +246,31 @@
 .view-subjects-modal button[onclick*="update"]:hover,
 .view-subjects-modal .edit-btn:hover,
 .view-subjects-modal .update-btn:hover {
-  background-color: #0d47a1 !important;
+  background-color: #2563eb !important;
 }
 
-/* ViewSubjects Darken dropdown option texts */
-.view-subjects-page-container .filter-section .react-select__option {
-  color: #222 !important;
-}
-
-/* ViewSubjects Darken text for selected value */
-.view-subjects-page-container .filter-section .react-select__single-value {
-  color: #222 !important;
-}
-
-/* ViewSubjects Darken placeholder */
-.view-subjects-page-container .filter-section .react-select__placeholder {
-  color: #444 !important;
-}
-
-/* ViewSubjects Tablet & Mobile Responsiveness */
+/* Responsive Design */
 @media (max-width: 768px) {
+  .view-subjects-page-wrapper {
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    padding-top: 2rem;
+  }
+
+  .view-subjects-page-container {
+    padding: 0;
+  }
+
+  .view-subjects-page-container .section-header {
+    font-size: 1.75rem;
+    margin-bottom: 2rem;
+    padding-bottom: 1rem;
+  }
+
   .view-subjects-page-container .filter-section {
     flex-direction: column;
+    gap: 1rem;
   }
 
   .view-subjects-page-container .filter-section select,
@@ -220,42 +278,26 @@
   .view-subjects-page-container .filter-section .react-select__control {
     width: 100%;
   }
+
+  .view-subjects-modal {
+    width: 95%;
+    padding: 1.5rem;
+  }
 }
 
-/* ViewSubjects Mobile full-screen layout */
-@media (max-width: 600px) {
+@media (max-width: 480px) {
   .view-subjects-page-wrapper {
-    position: fixed;
-    top: 30px;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    overflow-y: scroll;
-    padding: 1rem;
-    background-color: #ffffff;
-    z-index: 5;
-  }
-
-  .view-subjects-page-container {
-    padding: 1.5rem;
-    border: none;
-    box-shadow: none;
-    border-radius: 0;
+    margin: 0;
+    padding: 0;
+    padding-top: 2rem;
   }
 
   .view-subjects-page-container .section-header {
-    font-size: 1.4rem;
-    text-align: left;
-  }
-
-  .view-subjects-page-container .filter-section {
-    gap: 0.8rem;
+    font-size: 1.5rem;
   }
 
   .view-subjects-page-container .filter-section select,
-  .view-subjects-page-container .filter-section button,
-  .view-subjects-page-container .filter-section .react-select__control {
-    font-size: 0.95rem;
-    padding: 0.7rem;
+  .view-subjects-page-container .filter-section button {
+    font-size: 0.9rem;
   }
 }

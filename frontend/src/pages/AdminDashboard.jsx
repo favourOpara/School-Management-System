@@ -25,6 +25,7 @@ import Announcements from '../components/Announcements';
 import TopHeader from '../components/TopHeader';
 import SessionManagement from '../components/SessionManagement';
 import AdminProfileSettings from '../components/AdminProfileSettings';
+import DashboardWelcome from '../components/DashboardWelcome';
 import './AdminDashboard.css';
 
 const getGreeting = () => {
@@ -127,11 +128,7 @@ const AdminDashboard = () => {
       case 'announcements':
         return <Announcements />;
       default:
-        return (
-          <div className="admin-dashboard-section">
-            <p className="admin-dashboard-section-text">Select a section from the sidebar to get started.</p>
-          </div>
-        );
+        return <DashboardWelcome userName={userName} />;
     }
   };
 
