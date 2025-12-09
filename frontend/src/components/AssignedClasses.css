@@ -249,8 +249,9 @@
 
 .students-list {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 1rem;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 240px));
+  gap: 1.5rem;
+  justify-content: start;
 }
 
 .student-card {
@@ -258,6 +259,7 @@
   border: 1px solid #e0e0e0;
   border-radius: 8px;
   padding: 1.5rem;
+  width: 240px;
   transition: box-shadow 0.3s ease, transform 0.3s ease;
 }
 
@@ -322,6 +324,8 @@
 }
 
 /* Responsive Design */
+
+/* Mobile - 1 column */
 @media (max-width: 768px) {
   .assigned-classes-container {
     padding: 0 1rem 1rem 1rem;
@@ -333,6 +337,12 @@
   
   .students-list {
     grid-template-columns: 1fr;
+    justify-content: center;
+  }
+
+  .student-card {
+    width: 100%;
+    max-width: 400px;
   }
   
   .subject-detail-header {

@@ -200,10 +200,9 @@ const StudentSubmissionsModal = ({ student, onClose }) => {
                           <span className="file-name">{file.original_name}</span>
                           <span className="file-size">{file.file_size}</span>
                         </div>
-                        <a 
-                          href={`${API_BASE_URL}${file.file_url}`}
-                          download={file.original_name}
-                          target="_blank" 
+                        <a
+                          href={file.file_url}
+                          target="_blank"
                           rel="noopener noreferrer"
                           className="download-btn"
                           onClick={(e) => e.stopPropagation()}

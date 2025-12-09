@@ -544,7 +544,6 @@ const StudentAssignments = () => {
                         target="_blank"
                         rel="noopener noreferrer"
                         className="file-download-link"
-                        download
                       >
                         <FileText size={16} />
                         <span>{file.original_name}</span>

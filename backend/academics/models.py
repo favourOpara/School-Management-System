@@ -1,6 +1,7 @@
 from django.db import models
 from django.conf import settings
 import os
+from .storage import AssignmentFileStorage
 
 
 def upload_to_subject_files(instance, filename):
@@ -271,7 +272,8 @@ class ContentFile(models.Model):
     )
     file = models.FileField(
         upload_to=upload_to_content_files,
-        help_text="File attachment"
+        help_text="File attachment",
+        storage=AssignmentFileStorage()
     )
     original_name = models.CharField(
         max_length=255,
@@ -449,7 +451,8 @@ class SubmissionFile(models.Model):
         related_name='files'
     )
     file = models.FileField(
-        upload_to='submissions/%Y/%m/%d/'
+        upload_to='submissions/%Y/%m/%d/',
+        storage=AssignmentFileStorage()
     )
     original_name = models.CharField(max_length=255)
     file_size = models.BigIntegerField()
