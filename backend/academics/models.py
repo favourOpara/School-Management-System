@@ -253,12 +253,21 @@ class SubjectContent(models.Model):
     def clean(self):
         """Validate model data"""
         from django.core.exceptions import ValidationError
-        
+
         # Assignments must have due_date
         if self.content_type == 'assignment' and not self.due_date:
             raise ValidationError({
                 'due_date': 'Due date is required for assignments.'
             })
+
+    def delete(self, *args, **kwargs):
+        """Override delete to remove all associated files from Cloudinary"""
+        # Explicitly delete all ContentFile objects and their files
+        for content_file in self.files.all():
+            if content_file.file:
+                content_file.file.delete(save=False)
+            content_file.delete()
+        super().delete(*args, **kwargs)
 
 
 class ContentFile(models.Model):
@@ -445,6 +454,15 @@ class AssignmentSubmission(models.Model):
     def can_resubmit(self):
         """Check if student can resubmit (max 2 submissions)"""
         return self.submission_count < 2 and self.status != 'graded'
+
+    def delete(self, *args, **kwargs):
+        """Override delete to remove all associated files from Cloudinary"""
+        # Explicitly delete all SubmissionFile objects and their files
+        for submission_file in self.files.all():
+            if submission_file.file:
+                submission_file.file.delete(save=False)
+            submission_file.delete()
+        super().delete(*args, **kwargs)
 
 
 class SubmissionFile(models.Model):
