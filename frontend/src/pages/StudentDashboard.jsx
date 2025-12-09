@@ -16,6 +16,7 @@ import SubjectRankings from '../components/SubjectRankings';
 import MySubjectGrades from '../components/MySubjectGrades';
 import FeeStatus from '../components/FeeStatus';
 import MyClasses from '../components/MyClasses';
+import StudentWelcome from '../components/StudentWelcome';
 import './StudentDashboard.css';
 
 const getGreeting = () => {
@@ -49,10 +50,7 @@ const StudentDashboard = () => {
       case 'dashboard':
         return (
           <div className="student-home-dashboard">
-            <div className="dashboard-welcome">
-              <h2 className="student-dashboard-greeting">{getGreeting()}, {userName.split(' ')[0]} 👋</h2>
-              <p className="student-dashboard-subtitle">Here's what's happening in your class</p>
-            </div>
+            <StudentWelcome userName={userName} />
 
             <div className="dashboard-records-grid">
               <AttendanceLeaderboard />

@@ -3,67 +3,87 @@ import { Bot, Sparkles, Zap, Star } from 'lucide-react';
 import './StudentWelcome.css';
 
 const StudentWelcome = ({ userName }) => {
-  // Gen-Z style welcome messages that rotate
+  // Fun welcome messages with DC/Marvel, Anime, and puns
   const welcomeMessages = [
     {
-      title: "Yooo, what's good!",
-      subtitle: "Your dashboard is lowkey fire today. Let's get this bread! 🔥"
+      title: "With great power...",
+      subtitle: "Comes great grades! Uncle Ben would be proud of your study grind 🕷️"
     },
     {
-      title: "Ayy, you made it!",
-      subtitle: "Time to slay your assignments and vibe with the squad 💯"
+      title: "Believe it! Dattebayo!",
+      subtitle: "Your ninja way is completing assignments on time. Shadow clone study session? 🍜"
     },
     {
-      title: "Bestie energy detected!",
-      subtitle: "Your grades are about to be bussin, no cap fr fr 🚀"
+      title: "I am Iron Study!",
+      subtitle: "Tony Stark built this dashboard in a cave... with a box of assignments! 🦾"
     },
     {
-      title: "Main character vibes!",
-      subtitle: "You're literally the GOAT. Now go crush those goals ✨"
+      title: "Plus Ultra!",
+      subtitle: "Go beyond your limits! All Might believes in your academic hero journey 💪"
     },
     {
-      title: "Period, let's go!",
-      subtitle: "It's giving academic excellence. Time to serve looks AND grades 💅"
+      title: "Wakanda Forever!",
+      subtitle: "Vibranium-level intelligence detected. T'Challa approves this dashboard 👑"
     },
     {
-      title: "Sheesh, looking fresh!",
-      subtitle: "Your dashboard just hit different today, we stan! 🌟"
+      title: "It's over 9000!",
+      subtitle: "Your power level is rising! Time to go Super Saiyan on these grades 🔥"
     },
     {
-      title: "No cap, you're here!",
-      subtitle: "Ready to absolutely demolish those assignments? Let's get it! 💪"
+      title: "Why so studious?",
+      subtitle: "The Joker couldn't distract you from your goals. Now that's dedication! 🃏"
     },
     {
-      title: "Slay the day!",
-      subtitle: "Main character moment: You vs Your goals. Spoiler: You win 🏆"
+      title: "Kamehameha!",
+      subtitle: "Channel your inner Goku and blast through those assignments! 🌊"
     },
     {
-      title: "It's giving scholar!",
-      subtitle: "Your brain is about to pop off today, we love to see it 🧠"
+      title: "Avengers, Assemble!",
+      subtitle: "Your study squad is ready. Time to snap those grades into existence ⚡"
     },
     {
-      title: "Rent free in success!",
-      subtitle: "Education is your side hustle and you're killing it bestie 📚"
+      title: "One Punch Study!",
+      subtitle: "Saitama didn't become strong by slacking. 100 assignments, 100 grades! 👊"
     },
     {
-      title: "Living for this!",
-      subtitle: "You woke up and chose excellence. That's so slay of you ⚡"
+      title: "I'm Batman.",
+      subtitle: "Dark Knight mode activated. Fighting crime? No. Fighting F's? Yes. 🦇"
     },
     {
-      title: "Ate and left no crumbs!",
-      subtitle: "Ready to serve academic realness? Your dashboard awaits 🎯"
+      title: "Omae wa mou shindeiru",
+      subtitle: "Your procrastination is already dead. Kenshiro would be impressed! 👀"
     },
     {
-      title: "Understood the assignment!",
-      subtitle: "Plot twist: You're the smart one. Let's prove it today 📖"
+      title: "Fastest Man Alive!",
+      subtitle: "Flash through those assignments before time runs out. Speed force engaged! ⚡"
     },
     {
-      title: "Caught in 4K studying!",
-      subtitle: "Your dedication is unmatched. Time to flex those grades 📸"
+      title: "All according to keikaku*",
+      subtitle: "*Keikaku means plan. And your plan? Ace everything on this dashboard! 📓"
     },
     {
-      title: "Touch grass later!",
-      subtitle: "Right now it's all about that grind. Your future self says thanks 🌱"
+      title: "Perfectly balanced...",
+      subtitle: "As all things should be. Thanos approves of your work-life balance 💎"
+    },
+    {
+      title: "Yare yare daze...",
+      subtitle: "JoJo's got nothing on your bizarre academic adventure. ORA ORA! ⭐"
+    },
+    {
+      title: "You're a wizard!",
+      subtitle: "Expecto Grade-tronum! Magic or hard work? Both work at Hogwarts Academy! ⚡"
+    },
+    {
+      title: "I can do this all day",
+      subtitle: "Captain America's spirit lives in your dedication. Shield up, grades up! 🛡️"
+    },
+    {
+      title: "ZA WARUDO!",
+      subtitle: "Time stop! But seriously, manage your time and DIO would be jealous ⏰"
+    },
+    {
+      title: "Hasta la vista, baby",
+      subtitle: "Terminator mode: eliminating bad grades since day one. I'll be back... with A's! 🤖"
     }
   ];
 

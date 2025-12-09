@@ -1,0 +1,244 @@
+/* Student Welcome Section */
+.student-welcome-section {
+  margin-bottom: 3rem;
+  margin-top: -1rem;
+  padding: 2rem;
+  background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+  border-radius: 16px;
+  box-shadow: 0 10px 30px rgba(59, 130, 246, 0.25);
+  position: relative;
+  overflow: hidden;
+}
+
+.student-welcome-section::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  right: -10%;
+  width: 400px;
+  height: 400px;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.student-welcome-content-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+  position: relative;
+  z-index: 1;
+}
+
+/* Two Robots Talking to Each Other */
+.student-welcome-robots {
+  display: flex;
+  gap: 1.5rem;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.student-robot-left,
+.student-robot-right {
+  position: relative;
+  width: 70px;
+  height: 70px;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+}
+
+.student-robot-left {
+  animation: robotBounceLeft 3s ease-in-out infinite;
+}
+
+.student-robot-right {
+  animation: robotBounceRight 3s ease-in-out infinite 1.5s;
+}
+
+.student-robot-left svg:first-child,
+.student-robot-right svg:first-child {
+  color: #3b82f6;
+}
+
+/* Robot Animations - Bouncing and Talking */
+@keyframes robotBounceLeft {
+  0%, 100% {
+    transform: translateY(0px) scale(1) rotate(5deg);
+  }
+  25% {
+    transform: translateY(-12px) scale(1.05) rotate(-5deg);
+  }
+  50% {
+    transform: translateY(0px) scale(1) rotate(5deg);
+  }
+  75% {
+    transform: translateY(-8px) scale(1.02) rotate(-3deg);
+  }
+}
+
+@keyframes robotBounceRight {
+  0%, 100% {
+    transform: translateY(0px) scale(1) rotate(-5deg);
+  }
+  25% {
+    transform: translateY(-8px) scale(1.02) rotate(3deg);
+  }
+  50% {
+    transform: translateY(0px) scale(1) rotate(-5deg);
+  }
+  75% {
+    transform: translateY(-12px) scale(1.05) rotate(5deg);
+  }
+}
+
+/* Sparkles Around Robots */
+.student-sparkle-icon {
+  position: absolute;
+  animation: studentSparkleFloat 2.5s ease-in-out infinite;
+}
+
+.student-sparkle-left-1 {
+  top: -8px;
+  right: 8px;
+  color: #fbbf24;
+  animation-delay: 0s;
+}
+
+.student-sparkle-left-2 {
+  bottom: -5px;
+  left: 5px;
+  color: #f59e0b;
+  animation-delay: 0.8s;
+}
+
+.student-sparkle-right-1 {
+  top: -5px;
+  left: 8px;
+  color: #fbbf24;
+  animation-delay: 1.5s;
+}
+
+.student-sparkle-right-2 {
+  bottom: -8px;
+  right: 5px;
+  color: #f59e0b;
+  animation-delay: 2.2s;
+}
+
+@keyframes studentSparkleFloat {
+  0%, 100% {
+    transform: translateY(0px) scale(1) rotate(0deg);
+    opacity: 1;
+  }
+  50% {
+    transform: translateY(-10px) scale(1.3) rotate(180deg);
+    opacity: 0.6;
+  }
+}
+
+/* Text Content */
+.student-welcome-text-content {
+  flex: 1;
+}
+
+.student-welcome-title {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #ffffff;
+  margin-bottom: 0.5rem;
+  letter-spacing: -0.025em;
+  line-height: 1.3;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.student-welcome-subtitle {
+  font-size: 1.125rem;
+  color: rgba(255, 255, 255, 0.95);
+  font-weight: 400;
+  line-height: 1.6;
+  max-width: 700px;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .student-welcome-section {
+    margin-bottom: 2rem;
+    margin-top: 0;
+    padding: 1.5rem;
+  }
+
+  .student-welcome-section::before {
+    width: 300px;
+    height: 300px;
+  }
+
+  .student-welcome-content-wrapper {
+    flex-direction: column;
+    gap: 1.5rem;
+    text-align: center;
+  }
+
+  .student-welcome-robots {
+    gap: 1rem;
+  }
+
+  .student-robot-left,
+  .student-robot-right {
+    width: 60px;
+    height: 60px;
+  }
+
+  .student-robot-left svg:first-child,
+  .student-robot-right svg:first-child {
+    width: 36px;
+    height: 36px;
+  }
+
+  .student-welcome-title {
+    font-size: 1.5rem;
+  }
+
+  .student-welcome-subtitle {
+    font-size: 1rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .student-welcome-section {
+    margin-bottom: 1.5rem;
+    padding: 1.25rem;
+  }
+
+  .student-welcome-section::before {
+    width: 250px;
+    height: 250px;
+  }
+
+  .student-robot-left,
+  .student-robot-right {
+    width: 55px;
+    height: 55px;
+  }
+
+  .student-robot-left svg:first-child,
+  .student-robot-right svg:first-child {
+    width: 32px;
+    height: 32px;
+  }
+
+  .student-sparkle-icon {
+    display: none;
+  }
+
+  .student-welcome-title {
+    font-size: 1.35rem;
+  }
+
+  .student-welcome-subtitle {
+    font-size: 0.9375rem;
+  }
+}
