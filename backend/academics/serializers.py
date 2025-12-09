@@ -223,14 +223,24 @@ class SubjectContentCreateSerializer(serializers.ModelSerializer):
         request = self.context.get('request')
         if request:
             validated_data['created_by'] = request.user
-        
+
         # Create the content instance
         content = super().create(validated_data)
-        
+
         # Handle multiple file uploads
         files = request.FILES
+        max_file_size = 100 * 1024  # 100KB in bytes
+
         for key, uploaded_file in files.items():
             if key.startswith('file_'):
+                # Validate file size
+                if uploaded_file.size > max_file_size:
+                    content.delete()  # Clean up created content
+                    file_size_kb = uploaded_file.size / 1024
+                    raise serializers.ValidationError(
+                        f'File "{uploaded_file.name}" is too large ({file_size_kb:.2f}KB). Maximum file size is 100KB.'
+                    )
+
                 ContentFile.objects.create(
                     content=content,
                     file=uploaded_file,
@@ -238,7 +248,7 @@ class SubjectContentCreateSerializer(serializers.ModelSerializer):
                     file_size=uploaded_file.size,
                     content_type_mime=uploaded_file.content_type
                 )
-        
+
         return content
 
 

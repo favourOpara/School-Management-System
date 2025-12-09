@@ -1725,10 +1725,10 @@ def upload_avatar(request):
             status=status.HTTP_400_BAD_REQUEST
         )
 
-    # Validate file size (max 5MB)
-    if avatar_file.size > 5 * 1024 * 1024:
+    # Validate file size (max 100KB)
+    if avatar_file.size > 100 * 1024:
         return Response(
-            {"detail": "File too large. Maximum size is 5MB."},
+            {"detail": "File too large. Maximum size is 100KB."},
             status=status.HTTP_400_BAD_REQUEST
         )
 

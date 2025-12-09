@@ -13,7 +13,7 @@ from users.views import IsPrincipalOrAdmin
 
 from .models import (
     Class, ClassSession, Subject, Topic, StudentSession, SubjectContent,
-    StudentContentView, AssignmentSubmission, SubmissionFile,
+    StudentContentView, AssignmentSubmission, SubmissionFile, ContentFile,
     Assessment, Question, QuestionOption, MatchingPair, Department
 )
 from .serializers import (
@@ -488,10 +488,10 @@ class TeacherContentDetailView(generics.RetrieveUpdateDestroyAPIView):
 
     def get_queryset(self):
         user = self.request.user
-        
+
         if user.role == 'admin':
             return SubjectContent.objects.all()
-        
+
         # Teachers can access content from subjects they teach
         teacher_subjects = Subject.objects.filter(teacher=user)
         return SubjectContent.objects.filter(subject__in=teacher_subjects)
@@ -499,17 +499,17 @@ class TeacherContentDetailView(generics.RetrieveUpdateDestroyAPIView):
     def get_object(self):
         content_id = self.kwargs['content_id']
         user = self.request.user
-        
+
         # Check if content exists
         try:
             content = SubjectContent.objects.select_related('subject__teacher').get(id=content_id)
         except SubjectContent.DoesNotExist:
             raise NotFound(f'Content with ID {content_id} does not exist')
-        
+
         # Admins can access any content
         if user.role == 'admin':
             return content
-        
+
         # Teachers can only access content from subjects they currently teach
         if content.subject.teacher != user:
             raise PermissionDenied(
@@ -517,8 +517,46 @@ class TeacherContentDetailView(generics.RetrieveUpdateDestroyAPIView):
                 f'This content belongs to {content.subject.name} which is currently assigned to '
                 f'{content.subject.teacher.username if content.subject.teacher else "no teacher"}.'
             )
-        
+
         return content
+
+    def update(self, request, *args, **kwargs):
+        """Handle file uploads when updating content"""
+        partial = kwargs.pop('partial', False)
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+
+        # Handle file uploads if new files are provided
+        files = request.FILES
+        if files:
+            # Delete old files from Cloudinary when new ones are uploaded
+            for old_file in instance.files.all():
+                old_file.file.delete(save=False)  # Delete from Cloudinary
+                old_file.delete()  # Delete from database
+
+            # Add new files
+            max_file_size = 100 * 1024  # 100KB in bytes
+            for key, uploaded_file in files.items():
+                if key.startswith('file_'):
+                    # Validate file size
+                    if uploaded_file.size > max_file_size:
+                        file_size_kb = uploaded_file.size / 1024
+                        return Response(
+                            {'detail': f'File "{uploaded_file.name}" is too large ({file_size_kb:.2f}KB). Maximum file size is 100KB.'},
+                            status=status.HTTP_400_BAD_REQUEST
+                        )
+
+                    ContentFile.objects.create(
+                        content=instance,
+                        file=uploaded_file,
+                        original_name=uploaded_file.name,
+                        file_size=uploaded_file.size,
+                        content_type_mime=uploaded_file.content_type
+                    )
+
+        return Response(serializer.data)
 
 
 class SubjectContentListView(generics.ListAPIView):
@@ -786,12 +824,12 @@ class SubmitAssignmentView(APIView):
         # Handle file uploads
         files = request.FILES.getlist('files')
         allowed_extensions = ['.pdf', '.docx', '.png', '.jpeg', '.jpg', '.ppt', '.pptx', '.zip', '.csv', '.xlsx']
-        max_file_size = 5 * 1024 * 1024  # 5MB in bytes
-        
+        max_file_size = 100 * 1024  # 100KB in bytes
+
         for file in files:
             # Get file extension
             file_extension = os.path.splitext(file.name)[1].lower()
-            
+
             # Validate file extension
             if file_extension not in allowed_extensions:
                 submission.delete() if not existing_submission else None
@@ -799,13 +837,13 @@ class SubmitAssignmentView(APIView):
                     {'detail': f'File type {file_extension} not allowed. Allowed types: {", ".join(allowed_extensions)}'},
                     status=status.HTTP_400_BAD_REQUEST
                 )
-            
-            # Validate file size (max 5MB)
+
+            # Validate file size (max 100KB)
             if file.size > max_file_size:
                 submission.delete() if not existing_submission else None
-                file_size_mb = file.size / (1024 * 1024)
+                file_size_kb = file.size / 1024
                 return Response(
-                    {'detail': f'File "{file.name}" is too large ({file_size_mb:.2f}MB). Maximum file size is 5MB.'},
+                    {'detail': f'File "{file.name}" is too large ({file_size_kb:.2f}KB). Maximum file size is 100KB.'},
                     status=status.HTTP_400_BAD_REQUEST
                 )
             

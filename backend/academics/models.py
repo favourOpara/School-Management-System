@@ -305,6 +305,12 @@ class ContentFile(models.Model):
         """Get file extension"""
         return os.path.splitext(self.original_name)[1].lower()
     
+    def delete(self, *args, **kwargs):
+        """Override delete to remove file from Cloudinary"""
+        if self.file:
+            self.file.delete(save=False)
+        super().delete(*args, **kwargs)
+
     @property
     def formatted_file_size(self):
         """Get file size in a readable format"""
@@ -469,6 +475,12 @@ class SubmissionFile(models.Model):
         """Get file extension"""
         return os.path.splitext(self.original_name)[1].lower()
     
+    def delete(self, *args, **kwargs):
+        """Override delete to remove file from Cloudinary"""
+        if self.file:
+            self.file.delete(save=False)
+        super().delete(*args, **kwargs)
+
     @property
     def formatted_file_size(self):
         """Format file size in human readable format"""

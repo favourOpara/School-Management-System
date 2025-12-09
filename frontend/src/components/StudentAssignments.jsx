@@ -71,7 +71,7 @@ const StudentAssignments = () => {
       'text/csv',
       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     ];
-    const maxFileSize = 5 * 1024 * 1024; // 5MB in bytes
+    const maxFileSize = 100 * 1024; // 100KB in bytes
 
     const validFiles = files.filter(file => {
       // Check file type
@@ -79,11 +79,11 @@ const StudentAssignments = () => {
         showMessage(`File ${file.name} has invalid type`, 'error');
         return false;
       }
-      
-      // Check file size (5MB limit)
+
+      // Check file size (100KB limit)
       if (file.size > maxFileSize) {
-        const fileSizeMB = (file.size / (1024 * 1024)).toFixed(2);
-        showMessage(`File ${file.name} is too large (${fileSizeMB}MB). Maximum size is 5MB.`, 'error');
+        const fileSizeKB = (file.size / 1024).toFixed(2);
+        showMessage(`File ${file.name} is too large (${fileSizeKB}KB). Maximum size is 100KB.`, 'error');
         return false;
       }
       
@@ -121,11 +121,11 @@ const StudentAssignments = () => {
     }
 
     // Validate file sizes before submission
-    const maxFileSize = 5 * 1024 * 1024; // 5MB
+    const maxFileSize = 100 * 1024; // 100KB
     for (const file of submissionFiles) {
       if (file.size > maxFileSize) {
-        const fileSizeMB = (file.size / (1024 * 1024)).toFixed(2);
-        showMessage(`File "${file.name}" is too large (${fileSizeMB}MB). Maximum size is 5MB per file.`, 'error');
+        const fileSizeKB = (file.size / 1024).toFixed(2);
+        showMessage(`File "${file.name}" is too large (${fileSizeKB}KB). Maximum size is 100KB per file.`, 'error');
         return;
       }
     }
@@ -431,7 +431,7 @@ const StudentAssignments = () => {
                     <Upload size={24} />
                     <span>Click to upload files</span>
                     <small>Supported: PDF, DOCX, PNG, JPEG, PPT, ZIP, CSV, XLSX</small>
-                    <small className="file-size-limit">Maximum file size: 5MB per file</small>
+                    <small className="file-size-limit">Maximum file size: 100KB per file</small>
                   </label>
                 </div>
 
@@ -439,8 +439,8 @@ const StudentAssignments = () => {
                   <div className="selected-files">
                     <h4>Selected Files ({submissionFiles.length})</h4>
                     {submissionFiles.map((file, index) => {
-                      const fileSizeMB = (file.size / (1024 * 1024)).toFixed(2);
-                      const isTooLarge = file.size > 5 * 1024 * 1024;
+                      const fileSizeKB = (file.size / 1024).toFixed(2);
+                      const isTooLarge = file.size > 100 * 1024;
                       
                       return (
                         <div key={index} className={`file-item ${isTooLarge ? 'file-too-large' : ''}`}>
@@ -449,7 +449,7 @@ const StudentAssignments = () => {
                             <span>{file.name}</span>
                             <small className={isTooLarge ? 'size-warning' : ''}>
                               ({formatFileSize(file.size)})
-                              {isTooLarge && ' - Exceeds 5MB limit!'}
+                              {isTooLarge && ' - Exceeds 100KB limit!'}
                             </small>
                           </div>
                           <button

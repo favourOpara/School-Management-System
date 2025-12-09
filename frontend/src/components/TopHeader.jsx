@@ -66,9 +66,9 @@ const TopHeader = ({ onMenuClick, onSettingsClick, onPasswordChangeClick }) => {
       return;
     }
 
-    // Validate file size (5MB max)
-    if (file.size > 5 * 1024 * 1024) {
-      alert('File too large. Maximum size is 5MB.');
+    // Validate file size (100KB max)
+    if (file.size > 100 * 1024) {
+      alert('File too large. Maximum size is 100KB.');
       return;
     }
 

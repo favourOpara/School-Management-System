@@ -134,6 +134,11 @@ class UserCreateSerializer(serializers.ModelSerializer):
         validated_data.pop('confirm_password', None)
         children = validated_data.pop('children', None)
 
+        # Delete old profile picture from Cloudinary if new one is being uploaded
+        if 'profile_picture' in validated_data and validated_data['profile_picture']:
+            if instance.profile_picture:
+                instance.profile_picture.delete(save=False)
+
         for attr, value in validated_data.items():
             if attr == 'password':
                 instance.set_password(value)
