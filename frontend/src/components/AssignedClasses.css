@@ -80,9 +80,9 @@
   font-size: 1rem;
 }
 
-.classes-grid {
-  display: flex;
-  flex-direction: column;
+.classes-grid-desktop {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
   gap: 2rem;
 }
 
@@ -247,7 +247,7 @@
   font-style: italic;
 }
 
-.teacher-subject-students-grid {
+.teacher-subject-students-grid-desktop {
   display: grid !important;
   grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)) !important;
   gap: 1.5rem !important;
@@ -333,13 +333,22 @@
     padding: 0 1rem 1rem 1rem;
   }
 
+  .classes-grid-desktop {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+  }
+
   .subjects-tiles {
     grid-template-columns: 1fr;
   }
 
-  .teacher-subject-students-grid {
-    grid-template-columns: 1fr !important;
+  .teacher-subject-students-grid-desktop {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
     justify-content: center !important;
+    gap: 1rem !important;
   }
 
   .teacher-student-card {

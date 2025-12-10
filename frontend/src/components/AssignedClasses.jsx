@@ -172,7 +172,7 @@ const AssignedClasses = () => {
             {students.length === 0 ? (
               <p className="no-students">No students found for this subject.</p>
             ) : (
-              <div className="teacher-subject-students-grid">
+              <div className="teacher-subject-students-grid-desktop">
                 {students.map(student => (
                   <div key={student.id} className="teacher-student-card">
                     <div className="teacher-student-info">
@@ -226,7 +226,7 @@ const AssignedClasses = () => {
           <p>You haven't been assigned any subjects yet. Please contact your administrator.</p>
         </div>
       ) : (
-        <div className="classes-grid">
+        <div className="classes-grid-desktop">
           {subjects.map((classData, classIndex) => (
             <div key={classIndex} className="class-section">
               <div className="class-header">
