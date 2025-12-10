@@ -1037,3 +1037,139 @@ html, body {
   opacity: 0.9;
   transform: translateY(-1px);
 }
+/* ===============================
+   VIEW ATTENDANCE CALENDAR SUMMARY
+   =============================== */
+
+.calendar-summary-container {
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 2rem;
+  margin-top: 2rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.attendance-calendar-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.stat-card {
+  background: linear-gradient(135deg, #f5f7fa 0%, #e3f2fd 100%);
+  border-radius: 10px;
+  padding: 1.5rem;
+  text-align: center;
+  border: 1px solid #e0e0e0;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.stat-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.school-days-card {
+  background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+}
+
+.holiday-days-card {
+  background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%);
+}
+
+.stat-card h4 {
+  color: #333333;
+  font-size: 1rem;
+  font-weight: 600;
+  margin-bottom: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.stat-number {
+  color: #0d47a1;
+  font-size: 3rem;
+  font-weight: 700;
+  margin: 0.5rem 0;
+  line-height: 1;
+}
+
+.stat-card small {
+  color: #666666;
+  font-size: 0.85rem;
+  display: block;
+  margin-top: 0.5rem;
+}
+
+.holiday-details {
+  background: #fafafa;
+  border-radius: 8px;
+  padding: 1.5rem;
+  border: 1px solid #e0e0e0;
+}
+
+.holiday-details h4 {
+  color: #333333;
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+}
+
+.holiday-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.holiday-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  margin-bottom: 0.5rem;
+  background: #ffffff;
+  border-radius: 6px;
+  border-left: 4px solid #ff9800;
+  transition: all 0.3s ease;
+}
+
+.holiday-item:hover {
+  background: #fff3e0;
+  transform: translateX(5px);
+}
+
+.holiday-item strong {
+  color: #333333;
+  font-weight: 600;
+}
+
+.holiday-label {
+  color: #666666;
+  font-style: italic;
+  background: #fff3e0;
+  padding: 0.25rem 0.75rem;
+  border-radius: 12px;
+  font-size: 0.9rem;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .calendar-summary-container {
+    padding: 1rem;
+  }
+
+  .attendance-calendar-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .stat-number {
+    font-size: 2.5rem;
+  }
+
+  .holiday-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+}

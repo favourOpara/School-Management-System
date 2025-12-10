@@ -6,26 +6,32 @@ from django.utils import timezone
 from django.shortcuts import get_object_or_404
 from .models import ActivityLog, NotificationStatus, NotificationPreference
 from .serializers import (
-    ActivityLogSerializer, AdminNotificationSerializer, 
+    ActivityLogSerializer, AdminNotificationSerializer,
     StudentNotificationSerializer, NotificationStatusSerializer,
     NotificationSummarySerializer, NotificationPreferenceSerializer
 )
 from academics.models import StudentSession
 
 
+class IsAdminRole(permissions.BasePermission):
+    """Allow access to admin and principal roles"""
+    def has_permission(self, request, view):
+        return request.user.is_authenticated and request.user.role in ['admin', 'principal']
+
+
 class ActivityLogListView(generics.ListAPIView):
-    """Admin-only: View all activity logs"""
+    """Admin and Principal: View all activity logs"""
     queryset = ActivityLog.objects.all().select_related(
         'user', 'subject__class_session__classroom'
     ).order_by('-timestamp')
     serializer_class = ActivityLogSerializer
-    permission_classes = [permissions.IsAdminUser]
+    permission_classes = [IsAdminRole]
 
 
 class AdminNotificationsView(generics.ListAPIView):
-    """Admin notifications: All content activities from teachers"""
+    """Admin and Principal notifications: All content activities from teachers"""
     serializer_class = AdminNotificationSerializer
-    permission_classes = [permissions.IsAdminUser]
+    permission_classes = [IsAdminRole]
 
     def get_queryset(self):
         """Return all content-related notifications"""
@@ -211,15 +217,15 @@ class NotificationSummaryView(APIView):
 
     def get(self, request):
         user = request.user
-        
-        if user.role == 'admin':
-            # Admin sees all content notifications
+
+        if user.role in ['admin', 'principal']:
+            # Admin and Principal see all content notifications
             queryset = ActivityLog.objects.filter(
                 is_notification=True,
                 activity_type__in=['content_created', 'content_updated', 'content_deleted']
             ).select_related('user', 'subject')
-            
-            # For admins, consider notifications from today as "unread"
+
+            # For admins and principals, consider notifications from today as "unread"
             today_start = timezone.now().replace(hour=0, minute=0, second=0, microsecond=0)
             unread_count = queryset.filter(timestamp__gte=today_start).count()
             
@@ -554,8 +560,8 @@ class NotificationDetailView(APIView):
             
             # Check permissions
             user = request.user
-            if user.role == 'admin':
-                # Admins can see all notifications
+            if user.role in ['admin', 'principal']:
+                # Admins and Principals can see all notifications
                 pass
             elif user.role == 'student':
                 # Students can only see notifications for their subjects
@@ -589,38 +595,77 @@ class NotificationDetailView(APIView):
             
             # Get content details
             content_details = None
+            debug_info = {
+                'has_content_id': bool(notification.content_id),
+                'content_id_value': notification.content_id,
+                'has_content_type': bool(notification.content_type),
+                'content_type_value': notification.content_type
+            }
+
             if notification.content_id and notification.content_type:
                 try:
                     from academics.models import SubjectContent
+                    from academics.serializers import StudentAssignmentListSerializer
+
+                    # Get the content exactly like StudentAssignmentListView does
                     content = SubjectContent.objects.select_related(
-                        'subject', 'teacher'
+                        'subject',
+                        'subject__class_session',
+                        'subject__class_session__classroom',
+                        'subject__teacher'
                     ).prefetch_related('files').get(id=notification.content_id)
-                    
-                    # Get file details
+
+                    # Get file details with signed URLs
                     files = []
-                    for file_obj in content.files.filter(is_active=True):
+                    for file_obj in content.files.all():
                         files.append({
                             'id': file_obj.id,
-                            'name': file_obj.original_name,
-                            'size': file_obj.formatted_file_size,
-                            'type': file_obj.content_type_mime,
-                            'url': file_obj.file.url if file_obj.file else None
+                            'original_name': file_obj.original_name,
+                            'file_url': file_obj.download_url,
+                            'formatted_file_size': file_obj.formatted_file_size,
+                            'file_extension': file_obj.file_extension if hasattr(file_obj, 'file_extension') else None
                         })
-                    
+
+                    # Build content details
                     content_details = {
                         'id': content.id,
                         'title': content.title,
                         'description': content.description,
-                        'content_type': content.content_type,
+                        'created_at': content.created_at,
                         'due_date': content.due_date,
                         'max_score': content.max_score,
-                        'created_at': content.created_at,
-                        'updated_at': content.updated_at,
                         'files': files,
-                        'file_count': len(files)
+                        'files_count': len(files),
+                        'teacher_name': f"{content.created_by.first_name} {content.created_by.last_name}" if content.created_by else "Unknown",
+                        'subject_name': content.subject.name if content.subject else "Unknown",
+                        'classroom_name': content.subject.class_session.classroom.name if content.subject and content.subject.class_session and content.subject.class_session.classroom else "Unknown"
                     }
-                except:
-                    content_details = None
+                except SubjectContent.DoesNotExist:
+                    # Content was deleted
+                    content_details = {
+                        'deleted': True,
+                        'message': f'This content has been deleted (content_id: {notification.content_id})',
+                        'debug': debug_info
+                    }
+                except Exception as e:
+                    # Log error and return debug info
+                    import logging
+                    import traceback
+                    logger = logging.getLogger(__name__)
+                    logger.error(f"Error fetching content details for notification {notification.id}: {str(e)}")
+                    logger.error(traceback.format_exc())
+                    content_details = {
+                        'error': True,
+                        'message': f'Error loading content: {str(e)}',
+                        'debug': debug_info
+                    }
+            else:
+                # No content_id or content_type - this might be an old notification
+                content_details = {
+                    'no_content_id': True,
+                    'message': 'No content reference found in this notification',
+                    'debug': debug_info
+                }
             
             # Build response
             response_data = {

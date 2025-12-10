@@ -111,12 +111,8 @@ class ContentFileSerializer(serializers.ModelSerializer):
         read_only_fields = ['uploaded_at', 'formatted_file_size', 'file_extension']
     
     def get_file_url(self, obj):
-        if obj.file:
-            request = self.context.get('request')
-            if request:
-                return request.build_absolute_uri(obj.file.url)
-            return obj.file.url
-        return None
+        """Return signed file URL for authenticated delivery"""
+        return obj.download_url
 
 
 class SubjectContentSerializer(serializers.ModelSerializer):
@@ -316,10 +312,8 @@ class SubmissionFileSerializer(serializers.ModelSerializer):
         read_only_fields = ['uploaded_at']
     
     def get_file_url(self, obj):
-        request = self.context.get('request')
-        if obj.file and hasattr(obj.file, 'url'):
-            return request.build_absolute_uri(obj.file.url) if request else obj.file.url
-        return None
+        """Return signed file URL for authenticated delivery"""
+        return obj.download_url
 
 
 class AssignmentSubmissionSerializer(serializers.ModelSerializer):
@@ -395,15 +389,14 @@ class StudentAssignmentListSerializer(serializers.ModelSerializer):
         return obj.files.count()
     
     def get_files(self, obj):
-        """Return assignment files with download URLs"""
+        """Return assignment files with signed URLs"""
         files = obj.files.all()
-        request = self.context.get('request')
-        
+
         return [
             {
                 'id': file.id,
                 'original_name': file.original_name,
-                'file_url': request.build_absolute_uri(file.file.url) if request and file.file else None,
+                'file_url': file.download_url,
                 'formatted_file_size': file.formatted_file_size,
                 'file_extension': file.file_extension
             }

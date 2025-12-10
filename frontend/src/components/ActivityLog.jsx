@@ -52,7 +52,7 @@ const ActivityLog = () => {
 
     try {
       let endpoint;
-      if (user.role === 'admin') {
+      if (user.role === 'admin' || user.role === 'principal') {
         endpoint = `${API_BASE_URL}/api/logs/admin/notifications/`;
       } else if (user.role === 'student') {
         endpoint = `${API_BASE_URL}/api/logs/student/notifications/`;
@@ -319,7 +319,7 @@ const ActivityLog = () => {
       <div className="activity-log-header-section">
         <div className="notifications-header-left">
           <h1 className="notifications-main-title">
-            🔔 {userRole === 'admin' ? 'All Notifications' : 'My Notifications'}
+            🔔 {(userRole === 'admin' || userRole === 'principal') ? 'All Notifications' : 'My Notifications'}
           </h1>
           {summary.unread_count > 0 && userRole === 'student' && (
             <span className="notifications-unread-badge">
@@ -478,7 +478,7 @@ const ActivityLog = () => {
                       <span className="meta-item">
                         {notification.classroom_name}
                       </span>
-                      {userRole === 'admin' && (
+                      {(userRole === 'admin' || userRole === 'principal') && (
                         <span className="meta-item">
                           👨‍🏫 {notification.teacher_name || notification.user_full_name}
                         </span>
@@ -544,7 +544,7 @@ const ActivityLog = () => {
                     </span>
                     <span className="notification-modal-time">{selectedNotification.time_ago}</span>
                   </div>
-                  
+
                   <div className="notification-modal-details">
                     <p><strong>Teacher:</strong> {selectedNotification.teacher?.name}</p>
                     <p><strong>Subject:</strong> {selectedNotification.subject?.name}</p>
@@ -552,46 +552,126 @@ const ActivityLog = () => {
                     {selectedNotification.subject?.department && (
                       <p><strong>Department:</strong> {selectedNotification.subject.department}</p>
                     )}
+                    <p><strong>Academic Year:</strong> {selectedNotification.subject?.academic_year}</p>
+                    <p><strong>Term:</strong> {selectedNotification.subject?.term}</p>
                   </div>
                 </div>
 
-                {selectedNotification.content_details && (
+                {selectedNotification.content_details && !selectedNotification.content_details.deleted && !selectedNotification.content_details.error ? (
                   <div className="notification-modal-body">
-                    <h3>Content Details</h3>
+                    <h3>📄 {selectedNotification.content_details.title}</h3>
+
                     <div className="content-description">
-                      <p>{selectedNotification.content_details.description}</p>
+                      <h4>Description:</h4>
+                      <p>{selectedNotification.content_details.description || 'No description provided'}</p>
                     </div>
-                    
+
                     {selectedNotification.content_details.due_date && (
                       <div className="content-due-date">
-                        <p><strong>Due Date:</strong> {new Date(selectedNotification.content_details.due_date).toLocaleString()}</p>
+                        <p><strong>📅 Due Date:</strong> {new Date(selectedNotification.content_details.due_date).toLocaleString()}</p>
                       </div>
                     )}
-                    
+
                     {selectedNotification.content_details.max_score && (
                       <div className="content-max-score">
-                        <p><strong>Maximum Score:</strong> {selectedNotification.content_details.max_score}</p>
+                        <p><strong>📊 Maximum Score:</strong> {selectedNotification.content_details.max_score}</p>
                       </div>
                     )}
-                    
-                    {selectedNotification.content_details.files && selectedNotification.content_details.files.length > 0 && (
+
+                    {/* Show files if they exist */}
+                    {selectedNotification.content_details.files && selectedNotification.content_details.files.length > 0 ? (
                       <div className="content-files">
-                        <h4>Attached Files ({selectedNotification.content_details.files.length})</h4>
+                        <h4>📎 Attached Files ({selectedNotification.content_details.files.length})</h4>
                         <ul className="file-list">
                           {selectedNotification.content_details.files.map((file, index) => (
                             <li key={index} className="file-item">
-                              <span className="file-name">{file.name}</span>
-                              <span className="file-size">({file.size})</span>
-                              {file.url && (
-                                <a href={file.url} target="_blank" rel="noopener noreferrer" className="file-download">
-                                  Download
-                                </a>
-                              )}
+                              <a
+                                href={file.file_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="file-download-link"
+                                style={{
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'space-between',
+                                  textDecoration: 'none',
+                                  color: 'inherit',
+                                  width: '100%',
+                                  padding: '12px',
+                                  borderRadius: '6px',
+                                  transition: 'background-color 0.2s'
+                                }}
+                              >
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                  <span className="file-icon">📄</span>
+                                  <div>
+                                    <div className="file-name" style={{ fontWeight: '500', marginBottom: '4px' }}>{file.original_name}</div>
+                                    <small style={{ color: '#666' }}>({file.formatted_file_size})</small>
+                                  </div>
+                                </div>
+                                <span style={{ color: '#3b82f6', fontSize: '14px' }}>Download</span>
+                              </a>
                             </li>
                           ))}
                         </ul>
                       </div>
+                    ) : (
+                      <div className="no-files-message">
+                        <p><em>No files attached to this content</em></p>
+                      </div>
                     )}
+
+                    <div className="content-metadata">
+                      <p><strong>Created:</strong> {selectedNotification.content_details.created_at ? new Date(selectedNotification.content_details.created_at).toLocaleString() : 'Unknown'}</p>
+                      <p><strong>Teacher:</strong> {selectedNotification.content_details.teacher_name || 'Unknown'}</p>
+                      <p><strong>Subject:</strong> {selectedNotification.content_details.subject_name || 'Unknown'}</p>
+                      <p><strong>Class:</strong> {selectedNotification.content_details.classroom_name || 'Unknown'}</p>
+                    </div>
+                  </div>
+                ) : selectedNotification.content_details?.deleted ? (
+                  <div className="notification-modal-body">
+                    <div className="deleted-content-message">
+                      <p>⚠️ {selectedNotification.content_details.message}</p>
+                      {selectedNotification.content_details.debug && (
+                        <details style={{marginTop: '10px', fontSize: '12px', color: '#666'}}>
+                          <summary>Debug Info</summary>
+                          <pre>{JSON.stringify(selectedNotification.content_details.debug, null, 2)}</pre>
+                        </details>
+                      )}
+                    </div>
+                  </div>
+                ) : selectedNotification.content_details?.error ? (
+                  <div className="notification-modal-body">
+                    <div className="deleted-content-message">
+                      <p>❌ {selectedNotification.content_details.message}</p>
+                      {selectedNotification.content_details.debug && (
+                        <details style={{marginTop: '10px', fontSize: '12px', color: '#666'}}>
+                          <summary>Debug Info</summary>
+                          <pre>{JSON.stringify(selectedNotification.content_details.debug, null, 2)}</pre>
+                        </details>
+                      )}
+                    </div>
+                  </div>
+                ) : selectedNotification.content_details?.no_content_id ? (
+                  <div className="notification-modal-body">
+                    <div className="no-content-message">
+                      <p><em>{selectedNotification.content_details.message}</em></p>
+                      {selectedNotification.content_details.debug && (
+                        <details style={{marginTop: '10px', fontSize: '12px', color: '#666'}}>
+                          <summary>Debug Info</summary>
+                          <pre>{JSON.stringify(selectedNotification.content_details.debug, null, 2)}</pre>
+                        </details>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="notification-modal-body">
+                    <div className="no-content-message">
+                      <p><em>Content details are not available</em></p>
+                      <p style={{fontSize: '12px', color: '#666', marginTop: '10px'}}>
+                        Notification data: {JSON.stringify(selectedNotification, null, 2).substring(0, 200)}...
+                      </p>
+                    </div>
                   </div>
                 )}
               </div>

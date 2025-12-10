@@ -3,8 +3,6 @@ import React, { useState, useEffect } from 'react';
 import Select from 'react-select';
 import axios from 'axios';
 import { Edit3 } from 'lucide-react';
-import AttendanceSubjectModal from './AttendanceSubjectModal';
-import AttendanceStudentTable from './AttendanceStudentTable';
 import EditAttendanceCalendar from './EditAttendanceCalendar';
 import API_BASE_URL from '../config';
 
@@ -48,18 +46,11 @@ const ViewAttendance = () => {
   const [selectedYear, setSelectedYear] = useState(null);
   const [selectedTerm, setSelectedTerm] = useState(null);
   const [holidayDays, setHolidayDays] = useState([]);
-  const [classList, setClassList] = useState([]);
   const [loading, setLoading] = useState(false);
   const [calendarExists, setCalendarExists] = useState(false);
   const [hasAttemptedLoad, setHasAttemptedLoad] = useState(false);
-
-  const [selectedClass, setSelectedClass] = useState(null);
-  const [showSubjectModal, setShowSubjectModal] = useState(false);
   const [showEditCalendar, setShowEditCalendar] = useState(false);
-
   const [schoolDays, setSchoolDays] = useState([]);
-  const [students, setStudents] = useState([]);
-  const [selectedSubject, setSelectedSubject] = useState(null);
 
   const token = localStorage.getItem('accessToken');
 
@@ -101,7 +92,6 @@ const ViewAttendance = () => {
 
       if (!calendar) {
         setHolidayDays([]);
-        setClassList([]);
         setSchoolDays([]);
         setCalendarExists(false); // Calendar doesn't exist
         setLoading(false);
@@ -124,12 +114,6 @@ const ViewAttendance = () => {
 
       setHolidayDays(holidays);
       setSchoolDays(academicDays);
-
-      const classesRes = await axios.get(`${API_BASE_URL}/api/academics/classes/`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      setClassList(classesRes.data);
     } catch (err) {
       console.error('Error loading attendance data:', err);
       setCalendarExists(false);
@@ -145,47 +129,6 @@ const ViewAttendance = () => {
   const handleCalendarUpdate = () => {
     // Refresh the data after calendar update
     handleLoadData();
-  };
-
-  const handleClassClick = (cls) => {
-    setSelectedClass(cls);
-    setShowSubjectModal(true);
-  };
-
-  const handleSubjectSelect = async (subject) => {
-    setSelectedSubject(subject);
-    setShowSubjectModal(false);
-
-    try {
-      const res = await axios.get(
-        `${API_BASE_URL}/api/attendance/records/?class_id=${selectedClass.id}&subject_id=${subject.id}&academic_year=${selectedYear.value}&term=${selectedTerm.value}`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      setStudents(res.data);
-    } catch (err) {
-      console.error('Failed to load student attendance:', err);
-      setStudents([]);
-    }
-  };
-
-  const handleUpdateAttendance = async (studentId, updatedDays) => {
-    try {
-      const res = await axios.patch(
-        `${API_BASE_URL}/api/attendance/records/${studentId}/`,
-        { attended_days: updatedDays },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-
-      setStudents(prev =>
-        prev.map(student =>
-          student.id === studentId
-            ? { ...student, attended_days: updatedDays, ...res.data }
-            : student
-        )
-      );
-    } catch (err) {
-      console.error('Error updating attendance:', err);
-    }
   };
 
   return (
@@ -242,60 +185,42 @@ const ViewAttendance = () => {
           </div>
         )}
 
-        {holidayDays.length > 0 && (
-          <div className="holiday-summary">
-            <h4>Holidays:</h4>
-            <ul>
-              {holidayDays.map((holiday, index) => (
-                <li key={index}>
-                  <strong>{holiday.date}</strong> – {holiday.label}
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
+        {calendarExists && (schoolDays.length > 0 || holidayDays.length > 0) && (
+          <div className="calendar-summary-container">
+            <h3 style={{ color: '#0d47a1', marginBottom: '1.5rem' }}>
+              Attendance Calendar for {selectedYear?.label} - {selectedTerm?.label}
+            </h3>
 
-        {classList.length > 0 && (
-          <div className="class-summary">
-            <h4>
-              Attendance for Classes in <span style={{ color: '#0d47a1' }}>
-                {selectedYear?.label} - {selectedTerm?.label}
-              </span>:
-            </h4>
-            <ul className="class-list">
-              {classList.map(cls => (
-                <li
-                  key={cls.id}
-                  className="class-name"
-                  onClick={() => handleClassClick(cls)}
-                >
-                  {cls.name}
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
+            <div className="attendance-calendar-stats">
+              <div className="stat-card school-days-card">
+                <h4>School Days</h4>
+                <p className="stat-number">{schoolDays.length}</p>
+                <small>Total school days in this term</small>
+              </div>
 
-        {/* Student Table Section */}
-        {students.length > 0 && selectedSubject && (
-          <AttendanceStudentTable
-            subjectName={selectedSubject.name}
-            students={students}
-            schoolDays={schoolDays}
-            onUpdateAttendance={handleUpdateAttendance}
-          />
+              <div className="stat-card holiday-days-card">
+                <h4>Holiday Days</h4>
+                <p className="stat-number">{holidayDays.length}</p>
+                <small>Total holidays in this term</small>
+              </div>
+            </div>
+
+            {holidayDays.length > 0 && (
+              <div className="holiday-details">
+                <h4>Holiday Details:</h4>
+                <ul className="holiday-list">
+                  {holidayDays.map((holiday, index) => (
+                    <li key={index} className="holiday-item">
+                      <strong>{holiday.date}</strong>
+                      <span className="holiday-label">{holiday.label}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
         )}
       </div>
-
-      {showSubjectModal && selectedClass && (
-        <AttendanceSubjectModal
-          classInfo={selectedClass}
-          academicYear={selectedYear?.value}
-          term={selectedTerm?.value}
-          onClose={() => setShowSubjectModal(false)}
-          onSubjectSelect={handleSubjectSelect}
-        />
-      )}
 
       {showEditCalendar && selectedYear && selectedTerm && (
         <EditAttendanceCalendar

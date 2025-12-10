@@ -21,10 +21,16 @@ from users.models import CustomUser
 from academics.models import Subject, ClassSession, StudentSession, Class, Assessment, AssessmentSubmission
 
 
-# Custom permission for teachers and admins
+# Custom permission for teachers, admins, and principals
 class IsTeacherOrAdmin(permissions.BasePermission):
     def has_permission(self, request, view):
-        return request.user.is_authenticated and request.user.role in ['teacher', 'admin']
+        return request.user.is_authenticated and request.user.role in ['teacher', 'admin', 'principal']
+
+
+# Admin-only permission (excluding principal)
+class IsAdminOnly(permissions.BasePermission):
+    def has_permission(self, request, view):
+        return request.user.is_authenticated and request.user.role == 'admin'
 
 
 # ============================================================================
@@ -34,7 +40,7 @@ class IsTeacherOrAdmin(permissions.BasePermission):
 class CreateFeeStructureView(generics.CreateAPIView):
     queryset = FeeStructure.objects.all()
     serializer_class = FeeStructureSerializer
-    permission_classes = [IsAuthenticated, IsAdminRole]
+    permission_classes = [IsAuthenticated, IsAdminOnly]
 
 
 class ListFeeStructuresView(generics.ListAPIView):
@@ -46,13 +52,13 @@ class ListFeeStructuresView(generics.ListAPIView):
 class UpdateFeeStructureView(generics.RetrieveUpdateAPIView):
     queryset = FeeStructure.objects.all()
     serializer_class = FeeStructureSerializer
-    permission_classes = [IsAuthenticated, IsAdminRole]
+    permission_classes = [IsAuthenticated, IsAdminOnly]
     lookup_field = 'pk'
 
 
 class DeleteFeeStructureView(generics.DestroyAPIView):
     queryset = FeeStructure.objects.all()
-    permission_classes = [IsAuthenticated, IsAdminRole]
+    permission_classes = [IsAuthenticated, IsAdminOnly]
     lookup_field = 'pk'
 
 
@@ -69,7 +75,7 @@ class ListStudentFeeRecordsView(generics.ListAPIView):
 
 
 class FeeStudentsView(APIView):
-    permission_classes = [IsAuthenticated, IsAdminRole]
+    permission_classes = [IsAuthenticated, IsAdminOnly]
 
     def get(self, request, fee_id):
         try:
@@ -502,8 +508,8 @@ class StudentGradeListCreateView(generics.ListCreateAPIView):
     def get_queryset(self):
         queryset = super().get_queryset()
         user = self.request.user
-        
-        if user.role == 'admin':
+
+        if user.role in ['admin', 'principal']:
             pass
         elif user.role == 'teacher':
             queryset = queryset.filter(subject__teacher=user)
@@ -545,8 +551,8 @@ class StudentGradeDetailView(generics.RetrieveUpdateDestroyAPIView):
     def get_queryset(self):
         queryset = super().get_queryset()
         user = self.request.user
-        
-        if user.role == 'admin':
+
+        if user.role in ['admin', 'principal']:
             return queryset
         elif user.role == 'teacher':
             return queryset.filter(subject__teacher=user)
@@ -643,8 +649,8 @@ class GradeSummaryListView(generics.ListAPIView):
     def get_queryset(self):
         queryset = super().get_queryset()
         user = self.request.user
-        
-        if user.role == 'admin':
+
+        if user.role in ['admin', 'principal']:
             pass
         elif user.role == 'teacher':
             queryset = queryset.filter(subject__teacher=user)

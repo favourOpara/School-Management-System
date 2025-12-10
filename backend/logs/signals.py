@@ -31,6 +31,18 @@ def create_content_notification(sender, instance, created, **kwargs):
             activity_type='content_created'
         )
         print(f"Notification created successfully for: {instance.title}")
+    elif not created and instance.created_by:
+        # Content was updated
+        print(f"Creating update notification for: {instance.title}")
+        ActivityLog.log_content_activity(
+            user=instance.created_by,
+            subject=instance.subject,
+            content_type=instance.content_type,
+            content_title=instance.title,
+            content_id=instance.id,
+            activity_type='content_updated'
+        )
+        print(f"Update notification created successfully for: {instance.title}")
 
 
 @receiver(post_delete, sender=SubjectContent)

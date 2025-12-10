@@ -20,10 +20,10 @@ from academics.models import Subject, StudentSession, ClassSession
 from logs.models import ActivityLog
 from datetime import date
 
-# Admin-only permission
+# Admin or Principal permission (for administrative endpoints)
 class IsAdminRole(permissions.BasePermission):
     def has_permission(self, request, view):
-        return request.user.is_authenticated and request.user.role == 'admin'
+        return request.user.is_authenticated and request.user.role in ['admin', 'principal']
 
 
 # Principal-only permission
@@ -232,6 +232,14 @@ def me(request):
 def list_teachers(request):
     teachers = CustomUser.objects.filter(role='teacher')
     serializer = TeacherDetailSerializer(teachers, many=True)
+    return Response(serializer.data)
+
+# List principals - Admin only
+@api_view(['GET'])
+@permission_classes([IsAuthenticated, IsAdminRole])
+def list_principals(request):
+    principals = CustomUser.objects.filter(role='principal')
+    serializer = TeacherDetailSerializer(principals, many=True)
     return Response(serializer.data)
 
 # List parents - Admin only - UPDATED to handle StudentSession

@@ -172,21 +172,21 @@ const AssignedClasses = () => {
             {students.length === 0 ? (
               <p className="no-students">No students found for this subject.</p>
             ) : (
-              <div className="students-list">
+              <div className="teacher-subject-students-grid">
                 {students.map(student => (
-                  <div key={student.id} className="student-card">
-                    <div className="student-info">
+                  <div key={student.id} className="teacher-student-card">
+                    <div className="teacher-student-info">
                       <h4>{student.full_name}</h4>
-                      <p className="student-username">@{student.username}</p>
-                      <div className="student-details">
-                        <span className="student-gender">{student.gender}</span>
-                        {student.age && <span className="student-age">{student.age} years</span>}
+                      <p className="teacher-student-username">@{student.username}</p>
+                      <div className="teacher-student-details">
+                        <span className="teacher-student-gender">{student.gender}</span>
+                        {student.age && <span className="teacher-student-age">{student.age} years</span>}
                         {student.department && (
-                          <span className="student-department">{student.department}</span>
+                          <span className="teacher-student-department">{student.department}</span>
                         )}
                       </div>
                     </div>
-                    <div className="student-actions">
+                    <div className="teacher-student-actions">
                       <button 
                         className="action-btn"
                         onClick={() => handleViewProfile(student)}

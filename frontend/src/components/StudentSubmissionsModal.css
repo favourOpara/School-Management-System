@@ -472,6 +472,22 @@
     border-radius: 0;
   }
 
+  .modal-header {
+    flex-direction: column-reverse;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 16px;
+  }
+
+  .close-btn {
+    align-self: flex-end;
+    margin-bottom: 8px;
+  }
+
+  .modal-header h2 {
+    font-size: 1.25rem;
+  }
+
   .submissions-grid {
     grid-template-columns: 1fr;
   }

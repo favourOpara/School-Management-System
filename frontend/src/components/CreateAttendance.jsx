@@ -18,7 +18,14 @@ const selectStyles = {
   }),
   singleValue: base => ({ ...base, color: '#000' }),
   placeholder: base => ({ ...base, color: '#9ca3af' }),
-  menu: base => ({ ...base, fontSize: '0.95rem', color: '#000', backgroundColor: '#fff', zIndex: 1000 }),
+  menuPortal: base => ({ ...base, zIndex: 9999 }),
+  menu: base => ({
+    ...base,
+    fontSize: '0.95rem',
+    color: '#000',
+    backgroundColor: '#fff',
+    zIndex: 9999,
+  }),
   option: (base, state) => ({
     ...base,
     color: '#000',
@@ -106,6 +113,8 @@ const CreateAttendance = () => {
                 value={selectedYear}
                 onChange={setSelectedYear}
                 styles={selectStyles}
+                menuPortalTarget={document.body}
+                menuPosition="fixed"
               />
               <Select
                 placeholder="Select Term"
@@ -113,6 +122,8 @@ const CreateAttendance = () => {
                 value={selectedTerm}
                 onChange={setSelectedTerm}
                 styles={selectStyles}
+                menuPortalTarget={document.body}
+                menuPosition="fixed"
               />
 
               {!sessionExists && selectedYear && selectedTerm && (

@@ -4,6 +4,7 @@ import Select from 'react-select';
 import EditUserModal from './EditUserModal';
 import EditParentModal from './EditParentModal';
 import EditTeacherModal from './EditTeacherModal';
+import EditPrincipalModal from './EditPrincipalModal';
 import './ViewUsers.css';
 import { useDialog } from '../contexts/DialogContext';
 
@@ -78,6 +79,12 @@ const ViewUsers = () => {
       } else if (userType === 'teacher') {
         // Fetch teachers
         const res = await axios.get(`${API_BASE_URL}/api/users/list-teachers/`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        setUsers(res.data);
+      } else if (userType === 'principal') {
+        // Fetch principals
+        const res = await axios.get(`${API_BASE_URL}/api/users/list-principals/`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         setUsers(res.data);
@@ -220,7 +227,8 @@ const ViewUsers = () => {
             options={[
               { value: 'student', label: 'Student' },
               { value: 'teacher', label: 'Teacher' },
-              { value: 'parent', label: 'Parent' }
+              { value: 'parent', label: 'Parent' },
+              { value: 'principal', label: 'Principal' }
             ]}
             placeholder="Select User Type"
             isClearable
@@ -344,6 +352,45 @@ const ViewUsers = () => {
                       <td>
                         <button onClick={() => handleEdit(teacher)}>Edit</button>
                         <button onClick={() => handleDelete(teacher.id)} className="delete-btn">Delete</button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
+
+        {/* Principal Table */}
+        {userType === 'principal' && users.length > 0 && (
+          <>
+            <div className="filters table-subfilters">
+              <button onClick={applyInTableFilters}>Apply Filters</button>
+            </div>
+
+            <div className="user-table">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Full Name</th>
+                    <th>Username</th>
+                    <th>Gender</th>
+                    <th>Email</th>
+                    <th>Phone Number</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(filteredUsers.length > 0 ? filteredUsers : users).map(principal => (
+                    <tr key={principal.id}>
+                      <td>{principal.full_name}</td>
+                      <td>{principal.username}</td>
+                      <td>{principal.gender || '—'}</td>
+                      <td>{principal.email || '—'}</td>
+                      <td>{principal.phone_number || '—'}</td>
+                      <td>
+                        <button onClick={() => handleEdit(principal)}>Edit</button>
+                        <button onClick={() => handleDelete(principal.id)} className="delete-btn">Delete</button>
                       </td>
                     </tr>
                   ))}
@@ -619,7 +666,22 @@ const ViewUsers = () => {
         )}
 
         {showEditModal && selectedUser && userType === 'parent' && (
-          <EditParentModal 
+          <EditParentModal
+            user={selectedUser}
+            onClose={() => setShowEditModal(false)}
+            onUpdated={(updatedUser) => {
+              setUsers(prev =>
+                prev.map(u => u.id === updatedUser.id ? { ...u, ...updatedUser } : u)
+              );
+              setFilteredUsers(prev =>
+                prev.map(u => u.id === updatedUser.id ? { ...u, ...updatedUser } : u)
+              );
+            }}
+          />
+        )}
+
+        {showEditModal && selectedUser && userType === 'principal' && (
+          <EditPrincipalModal
             user={selectedUser}
             onClose={() => setShowEditModal(false)}
             onUpdated={(updatedUser) => {

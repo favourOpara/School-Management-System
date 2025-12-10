@@ -331,6 +331,22 @@ class ContentFile(models.Model):
         else:
             return f"{size / (1024 * 1024):.1f} MB"
 
+    @property
+    def download_url(self):
+        """Get the actual Cloudinary URL from the API"""
+        if self.file:
+            import cloudinary.api
+            try:
+                # Get the public_id without extension
+                public_id = self.file.name
+                # Fetch the resource from Cloudinary to get the real URL
+                resource = cloudinary.api.resource(public_id, resource_type='raw')
+                return resource.get('secure_url', self.file.url)
+            except:
+                # Fallback to the stored URL if API call fails
+                return self.file.url
+        return None
+
 
 class StudentContentView(models.Model):
     """
@@ -508,6 +524,22 @@ class SubmissionFile(models.Model):
                 return f"{size:.1f} {unit}"
             size /= 1024.0
         return f"{size:.1f} TB"
+
+    @property
+    def download_url(self):
+        """Get the actual Cloudinary URL from the API"""
+        if self.file:
+            import cloudinary.api
+            try:
+                # Get the public_id without extension
+                public_id = self.file.name
+                # Fetch the resource from Cloudinary to get the real URL
+                resource = cloudinary.api.resource(public_id, resource_type='raw')
+                return resource.get('secure_url', self.file.url)
+            except:
+                # Fallback to the stored URL if API call fails
+                return self.file.url
+        return None
 
 
 class Assessment(models.Model):

@@ -40,7 +40,7 @@ class IsTeacherRole(permissions.BasePermission):
 
 class IsTeacherOrAdmin(permissions.BasePermission):
     def has_permission(self, request, view):
-        return request.user.is_authenticated and request.user.role in ['teacher', 'admin']
+        return request.user.is_authenticated and request.user.role in ['teacher', 'admin', 'principal']
 
 
 # ========================
@@ -50,18 +50,18 @@ class IsTeacherOrAdmin(permissions.BasePermission):
 class DepartmentListCreateView(generics.ListCreateAPIView):
     queryset = Department.objects.all()
     serializer_class = DepartmentSerializer
-    permission_classes = [permissions.IsAdminUser]
+    permission_classes = [permissions.IsAuthenticated, IsPrincipalOrAdmin]
 
 
 class DepartmentDetailView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Department.objects.all()
     serializer_class = DepartmentSerializer
-    permission_classes = [permissions.IsAdminUser]
+    permission_classes = [permissions.IsAuthenticated, IsPrincipalOrAdmin]
     lookup_field = 'id'
 
 
 @api_view(['POST'])
-@permission_classes([permissions.IsAdminUser])
+@permission_classes([permissions.IsAuthenticated, IsPrincipalOrAdmin])
 def assign_classes_to_department(request, department_id):
     """
     Assign multiple classes to a department
@@ -107,7 +107,7 @@ def assign_classes_to_department(request, department_id):
 
 
 @api_view(['POST'])
-@permission_classes([permissions.IsAdminUser])
+@permission_classes([permissions.IsAuthenticated, IsPrincipalOrAdmin])
 def remove_class_from_department(request, class_id):
     """
     Remove a class from its department
@@ -136,13 +136,13 @@ def remove_class_from_department(request, class_id):
 class ClassListCreateView(generics.ListCreateAPIView):
     queryset = Class.objects.all()
     serializer_class = ClassSerializer
-    permission_classes = [permissions.IsAdminUser]
+    permission_classes = [permissions.IsAuthenticated, IsPrincipalOrAdmin]
 
 
 class ClassDetailView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Class.objects.all()
     serializer_class = ClassSerializer
-    permission_classes = [permissions.IsAdminUser]
+    permission_classes = [permissions.IsAuthenticated, IsPrincipalOrAdmin]
     lookup_field = 'id'
 
 
@@ -187,7 +187,7 @@ class ClassSessionDetailView(generics.RetrieveUpdateDestroyAPIView):
 class SubjectListCreateView(generics.ListCreateAPIView):
     queryset = Subject.objects.all()
     serializer_class = SubjectSerializer
-    permission_classes = [permissions.IsAdminUser]
+    permission_classes = [permissions.IsAuthenticated, IsPrincipalOrAdmin]
 
     def create(self, request, *args, **kwargs):
         data = request.data
@@ -251,7 +251,7 @@ class SubjectListView(generics.ListAPIView):
 class SubjectDetailView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Subject.objects.all()
     serializer_class = SubjectSerializer
-    permission_classes = [permissions.IsAdminUser]
+    permission_classes = [permissions.IsAuthenticated, IsPrincipalOrAdmin]
     lookup_field = 'id'
 
 
@@ -413,9 +413,9 @@ class TeacherSubjectContentView(generics.ListAPIView):
         subject_id = self.kwargs['subject_id']
         user = self.request.user
         
-        # Verify the teacher is assigned to this subject (or is admin)
+        # Verify the teacher is assigned to this subject (or is admin/principal)
         try:
-            if user.role == 'admin':
+            if user.role in ['admin', 'principal']:
                 subject = Subject.objects.get(id=subject_id)
             else:
                 subject = Subject.objects.get(id=subject_id, teacher=user)
@@ -433,7 +433,7 @@ class TeacherSubjectContentView(generics.ListAPIView):
         user = request.user
         
         try:
-            if user.role == 'admin':
+            if user.role in ['admin', 'principal']:
                 subject = Subject.objects.select_related('class_session__classroom').get(id=subject_id)
             else:
                 subject = Subject.objects.select_related('class_session__classroom').get(
@@ -489,7 +489,7 @@ class TeacherContentDetailView(generics.RetrieveUpdateDestroyAPIView):
     def get_queryset(self):
         user = self.request.user
 
-        if user.role == 'admin':
+        if user.role in ['admin', 'principal']:
             return SubjectContent.objects.all()
 
         # Teachers can access content from subjects they teach
@@ -506,8 +506,8 @@ class TeacherContentDetailView(generics.RetrieveUpdateDestroyAPIView):
         except SubjectContent.DoesNotExist:
             raise NotFound(f'Content with ID {content_id} does not exist')
 
-        # Admins can access any content
-        if user.role == 'admin':
+        # Admins and principals can access any content
+        if user.role in ['admin', 'principal']:
             return content
 
         # Teachers can only access content from subjects they currently teach
@@ -1786,7 +1786,7 @@ class AdminAssessmentListView(APIView):
     GET /api/academics/admin/assessments/
     Query params: academic_year, term, subject_id
     """
-    permission_classes = [permissions.IsAdminUser]
+    permission_classes = [permissions.IsAuthenticated, IsPrincipalOrAdmin]
 
     def get(self, request):
         """List all assessments with optional filters"""
@@ -1829,7 +1829,7 @@ class AdminDeleteAssessmentView(APIView):
     Delete an assessment (admin only)
     DELETE /api/academics/admin/assessments/<id>/delete/
     """
-    permission_classes = [permissions.IsAdminUser]
+    permission_classes = [permissions.IsAuthenticated, IsPrincipalOrAdmin]
 
     def delete(self, request, pk):
         """Delete assessment permanently"""
@@ -1857,7 +1857,7 @@ class ToggleAssessmentReleaseView(APIView):
     Toggle release status of a single assessment
     POST /api/academics/admin/assessments/<id>/toggle-release/
     """
-    permission_classes = [permissions.IsAdminUser]
+    permission_classes = [permissions.IsAuthenticated, IsPrincipalOrAdmin]
 
     def post(self, request, pk):
         """Toggle release status"""
@@ -1881,7 +1881,7 @@ class UnlockAllAssessmentsView(APIView):
     POST /api/academics/admin/assessments/unlock-all/
     Body: academic_year (optional), term (optional), subject_id (optional), assessment_type (optional: 'test' or 'exam')
     """
-    permission_classes = [permissions.IsAdminUser]
+    permission_classes = [permissions.IsAuthenticated, IsPrincipalOrAdmin]
 
     def post(self, request):
         """Unlock all assessments matching filters"""

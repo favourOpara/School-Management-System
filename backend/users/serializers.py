@@ -27,8 +27,8 @@ class UserCreateSerializer(serializers.ModelSerializer):
             'email', 'phone_number', 'children'
         ]
         extra_kwargs = {
-            'password': {'write_only': True},
-            'email': {'required': True},  # Required for email notifications
+            'password': {'write_only': True, 'required': False},
+            'email': {'required': False},
             'phone_number': {'required': False},
             'date_of_birth': {'required': False},
         }
@@ -97,6 +97,20 @@ class UserCreateSerializer(serializers.ModelSerializer):
 
         if password and confirm_password and password != confirm_password:
             raise serializers.ValidationError({"confirm_password": "Passwords do not match."})
+
+        # Require email for new user creation (but not for updates)
+        if not self.instance and not data.get('email'):
+            raise serializers.ValidationError({
+                "email": "Email is required for new users."
+            })
+
+        # Prevent principals from creating other principal accounts
+        request = self.context.get('request')
+        if request and request.user:
+            if request.user.role == 'principal' and data.get('role') == 'principal':
+                raise serializers.ValidationError({
+                    "role": "Principals cannot create other principal accounts. Only admins can create principals."
+                })
 
         return data
 

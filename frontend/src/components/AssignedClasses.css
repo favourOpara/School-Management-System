@@ -247,50 +247,52 @@
   font-style: italic;
 }
 
-.students-list {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 240px));
-  gap: 1.5rem;
-  justify-content: start;
+.teacher-subject-students-grid {
+  display: grid !important;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)) !important;
+  gap: 1.5rem !important;
+  justify-content: start !important;
+  width: 100% !important;
 }
 
-.student-card {
+.teacher-student-card {
   background: #ffffff;
   border: 1px solid #e0e0e0;
   border-radius: 8px;
   padding: 1.5rem;
-  width: 240px;
+  max-width: 280px;
+  min-width: 240px;
   transition: box-shadow 0.3s ease, transform 0.3s ease;
 }
 
-.student-card:hover {
+.teacher-student-card:hover {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   transform: translateY(-2px);
 }
 
-.student-info h4 {
+.teacher-student-info h4 {
   color: #333333;
   font-size: 1.1rem;
   font-weight: 600;
   margin-bottom: 0.5rem;
 }
 
-.student-username {
+.teacher-student-username {
   color: #666666;
   font-size: 0.9rem;
   margin-bottom: 0.75rem;
 }
 
-.student-details {
+.teacher-student-details {
   display: flex;
   gap: 0.5rem;
   margin-bottom: 1rem;
   flex-wrap: wrap;
 }
 
-.student-gender,
-.student-age,
-.student-department {
+.teacher-student-gender,
+.teacher-student-age,
+.teacher-student-department {
   background-color: #f5f5f5;
   color: #333333;
   padding: 0.2rem 0.6rem;
@@ -298,12 +300,12 @@
   font-size: 0.8rem;
 }
 
-.student-department {
+.teacher-student-department {
   background-color: #e3f2fd;
   color: #0d47a1;
 }
 
-.student-actions {
+.teacher-student-actions {
   display: flex;
   gap: 0.5rem;
 }
@@ -334,15 +336,16 @@
   .subjects-tiles {
     grid-template-columns: 1fr;
   }
-  
-  .students-list {
-    grid-template-columns: 1fr;
-    justify-content: center;
+
+  .teacher-subject-students-grid {
+    grid-template-columns: 1fr !important;
+    justify-content: center !important;
   }
 
-  .student-card {
+  .teacher-student-card {
     width: 100%;
     max-width: 400px;
+    min-width: unset;
   }
   
   .subject-detail-header {

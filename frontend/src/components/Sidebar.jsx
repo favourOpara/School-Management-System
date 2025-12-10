@@ -76,34 +76,45 @@ const Sidebar = forwardRef(({ activeTab, setActiveTab, userRole = 'admin' }, ref
                 <li onClick={() => handleTabClick('create-teacher')}>
                   <PlusCircle /><span>Create Teacher</span>
                 </li>
-                <li onClick={() => handleTabClick('create-principal')}>
-                  <PlusCircle /><span>Create Principal</span>
-                </li>
+                {/* Create Principal - Admin only */}
+                {userRole === 'admin' && (
+                  <li onClick={() => handleTabClick('create-principal')}>
+                    <PlusCircle /><span>Create Principal</span>
+                  </li>
+                )}
                 <li onClick={() => handleTabClick('create-student')}>
                   <PlusCircle /><span>Create Student</span>
                 </li>
                 <li onClick={() => handleTabClick('create-parent')}>
                   <PlusCircle /><span>Create Parent</span>
                 </li>
-                <li onClick={() => handleTabClick('view-users')}>
-                  <Eye /><span>View Users</span>
-                </li>
+                {/* View Users - Admin only */}
+                {userRole === 'admin' && (
+                  <li onClick={() => handleTabClick('view-users')}>
+                    <Eye /><span>View Users</span>
+                  </li>
+                )}
               </ul>
             )}
 
-            <li onClick={() => handleDropdownToggle('classes')}>
-              <BookOpen />
-              <span>Manage Classes</span>
-            </li>
-            {openDropdown === 'classes' && (
-              <ul className="sidebar-submenu">
-                <li onClick={() => handleTabClick('create-class')}>
-                  <PlusCircle /><span>Create Class</span>
+            {/* Manage Classes - Admin only (includes session migration) */}
+            {userRole === 'admin' && (
+              <>
+                <li onClick={() => handleDropdownToggle('classes')}>
+                  <BookOpen />
+                  <span>Manage Classes</span>
                 </li>
-                <li onClick={() => handleTabClick('view-classes')}>
-                  <Eye /><span>View Classes</span>
-                </li>
-              </ul>
+                {openDropdown === 'classes' && (
+                  <ul className="sidebar-submenu">
+                    <li onClick={() => handleTabClick('create-class')}>
+                      <PlusCircle /><span>Create Class</span>
+                    </li>
+                    <li onClick={() => handleTabClick('view-classes')}>
+                      <Eye /><span>View Classes</span>
+                    </li>
+                  </ul>
+                )}
+              </>
             )}
 
             <li onClick={() => handleDropdownToggle('subjects')}>
@@ -130,15 +141,23 @@ const Sidebar = forwardRef(({ activeTab, setActiveTab, userRole = 'admin' }, ref
                 <li onClick={() => handleTabClick('attendance')}>
                   <CalendarCheck /><span>Attendance</span>
                 </li>
-                <li onClick={() => handleTabClick('fees')}>
-                  <DollarSign /><span>Fees</span>
-                </li>
-                <li onClick={() => handleTabClick('fee-receipts')}>
-                  <FileText /><span>Fee Receipts</span>
-                </li>
-                <li onClick={() => handleTabClick('results')}>
-                  <BookOpen /><span>Results</span>
-                </li>
+                {/* Fees - Admin only */}
+                {userRole === 'admin' && (
+                  <>
+                    <li onClick={() => handleTabClick('fees')}>
+                      <DollarSign /><span>Fees</span>
+                    </li>
+                    <li onClick={() => handleTabClick('fee-receipts')}>
+                      <FileText /><span>Fee Receipts</span>
+                    </li>
+                  </>
+                )}
+                {/* Results - Admin only */}
+                {userRole === 'admin' && (
+                  <li onClick={() => handleTabClick('results')}>
+                    <BookOpen /><span>Results</span>
+                  </li>
+                )}
                 <li onClick={() => handleTabClick('review-questions')}>
                   <ClipboardList /><span>Review Questions</span>
                 </li>
