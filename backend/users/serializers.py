@@ -244,8 +244,7 @@ class ParentSignupSerializer(serializers.ModelSerializer):
             parent.save()
 
             # Build verification URL
-            frontend_url = settings.CORS_ALLOWED_ORIGINS[0] if settings.CORS_ALLOWED_ORIGINS else 'http://localhost:5173'
-            verification_url = f"{frontend_url}/verify-email/{token}"
+            verification_url = f"{settings.FRONTEND_URL}/verify-email/{token}"
 
             # Send verification email
             send_verification_email(parent, verification_url)

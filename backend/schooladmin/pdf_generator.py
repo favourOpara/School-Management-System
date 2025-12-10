@@ -77,6 +77,8 @@ def generate_fee_receipt_pdf(receipt, payment_history):
         # Try to load the school logo
         import os
         from django.conf import settings
+        from PIL import Image as PILImage
+        from reportlab.lib.utils import ImageReader
 
         # Try multiple possible logo locations
         logo_paths = [
@@ -88,7 +90,15 @@ def generate_fee_receipt_pdf(receipt, payment_history):
         for logo_path in logo_paths:
             abs_path = os.path.abspath(logo_path)
             if os.path.exists(abs_path):
-                logo = Image(abs_path, width=1*inch, height=1*inch, kind='proportional')
+                # Use PIL to load and verify the image first
+                pil_img = PILImage.open(abs_path)
+                # Convert to RGB if needed (in case it's RGBA)
+                if pil_img.mode in ('RGBA', 'LA', 'P'):
+                    pil_img = pil_img.convert('RGB')
+
+                # Use ImageReader for better compatibility
+                img_reader = ImageReader(pil_img)
+                logo = Image(img_reader, width=1.2*inch, height=1.2*inch, kind='proportional')
                 logo.hAlign = 'CENTER'
                 elements.append(logo)
                 elements.append(Spacer(1, 0.08*inch))
@@ -96,6 +106,8 @@ def generate_fee_receipt_pdf(receipt, payment_history):
                 break
     except Exception as e:
         # Silently fail and use fallback
+        import sys
+        print(f"Logo loading error: {e}", file=sys.stderr)
         pass
 
     if not logo_loaded:
@@ -157,10 +169,10 @@ def generate_fee_receipt_pdf(receipt, payment_history):
     elements.append(fee_heading)
 
     fee_data = [
-        ['Description', 'Amount'],
-        ['Total School Fees', f'\u20A6{receipt.total_fees:,.2f}'],
-        ['Amount Paid', f'\u20A6{receipt.amount_paid:,.2f}'],
-        ['Outstanding Balance', f'\u20A6{receipt.balance:,.2f}'],
+        ['Description', 'Amount (NGN)'],
+        ['Total School Fees', f'{receipt.total_fees:,.2f}'],
+        ['Amount Paid', f'{receipt.amount_paid:,.2f}'],
+        ['Outstanding Balance', f'{receipt.balance:,.2f}'],
     ]
 
     fee_table = Table(fee_data, colWidths=[4*inch, 2.5*inch])
@@ -206,9 +218,9 @@ def generate_fee_receipt_pdf(receipt, payment_history):
             history_data.append([
                 transaction.transaction_date.strftime("%d/%m/%Y %H:%M"),
                 transaction.transaction_type.title(),
-                f'\u20A6{transaction.amount:,.2f}',
-                f'\u20A6{transaction.balance_before:,.2f}',
-                f'\u20A6{transaction.balance_after:,.2f}',
+                f'{transaction.amount:,.2f}',
+                f'{transaction.balance_before:,.2f}',
+                f'{transaction.balance_after:,.2f}',
                 f"{transaction.recorded_by.first_name} {transaction.recorded_by.last_name}" if transaction.recorded_by else 'System'
             ])
 

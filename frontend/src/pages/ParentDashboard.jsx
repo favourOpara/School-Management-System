@@ -380,12 +380,6 @@ const ParentDashboard = () => {
                             <h4 className="improvement-subject-name">{subject.subject_name}</h4>
                             <span className="improvement-teacher">{subject.teacher_name}</span>
                           </div>
-                          <div className="improvement-score">
-                            <span className="score-value" style={{ color: getScoreColor(subject.total_score) }}>
-                              {subject.total_score.toFixed(1)}
-                            </span>
-                            <span className="score-max">/ 100</span>
-                          </div>
                         </div>
                       ))}
                     </div>
