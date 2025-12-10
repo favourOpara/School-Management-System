@@ -132,12 +132,12 @@ const StudentSubmissionsModal = ({ student, onClose }) => {
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="submissions-modal" onClick={(e) => e.stopPropagation()}>
-        <div className="modal-header">
+        <div className="ssm-modal-header">
           <div>
             <h2>{student.full_name}'s Submissions</h2>
             <p className="student-username">@{student.username}</p>
           </div>
-          <button className="close-btn" onClick={onClose}>
+          <button className="ssm-close-btn" onClick={onClose}>
             <X size={24} />
           </button>
         </div>

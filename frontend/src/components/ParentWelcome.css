@@ -1,0 +1,250 @@
+/* Parent Welcome Section */
+.parent-welcome-section {
+  margin-bottom: 3rem;
+  margin-top: -1rem;
+  padding: 2rem;
+  background: linear-gradient(135deg, #ec4899 0%, #be185d 100%);
+  border-radius: 16px;
+  box-shadow: 0 10px 30px rgba(236, 72, 153, 0.25);
+  position: relative;
+  overflow: hidden;
+}
+
+.parent-welcome-section::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  right: -10%;
+  width: 400px;
+  height: 400px;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.parent-welcome-content-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+  position: relative;
+  z-index: 1;
+}
+
+/* Two Hearts with Love */
+.parent-welcome-hearts {
+  display: flex;
+  gap: 1.5rem;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.parent-heart-left,
+.parent-heart-right {
+  position: relative;
+  width: 70px;
+  height: 70px;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+}
+
+.parent-heart-left {
+  animation: heartBeatLeft 3s ease-in-out infinite;
+}
+
+.parent-heart-right {
+  animation: heartBeatRight 3s ease-in-out infinite 1.5s;
+}
+
+.parent-heart-left svg:first-child,
+.parent-heart-right svg:first-child {
+  color: #ec4899;
+}
+
+/* Heart Animations - Beating with Love */
+@keyframes heartBeatLeft {
+  0%, 100% {
+    transform: scale(1) rotate(-10deg);
+  }
+  10% {
+    transform: scale(1.15) rotate(-10deg);
+  }
+  20% {
+    transform: scale(1) rotate(-10deg);
+  }
+  30% {
+    transform: scale(1.15) rotate(-10deg);
+  }
+  40%, 70% {
+    transform: scale(1) rotate(-10deg);
+  }
+}
+
+@keyframes heartBeatRight {
+  0%, 100% {
+    transform: scale(1) rotate(10deg);
+  }
+  10% {
+    transform: scale(1.15) rotate(10deg);
+  }
+  20% {
+    transform: scale(1) rotate(10deg);
+  }
+  30% {
+    transform: scale(1.15) rotate(10deg);
+  }
+  40%, 70% {
+    transform: scale(1) rotate(10deg);
+  }
+}
+
+/* Sparkles Around Hearts */
+.parent-sparkle-icon {
+  position: absolute;
+  animation: parentSparkleFloat 2.5s ease-in-out infinite;
+}
+
+.parent-sparkle-left-1 {
+  top: -8px;
+  right: 8px;
+  color: #fbbf24;
+  animation-delay: 0s;
+}
+
+.parent-sparkle-left-2 {
+  bottom: -5px;
+  left: 5px;
+  color: #f59e0b;
+  animation-delay: 0.8s;
+}
+
+.parent-sparkle-right-1 {
+  top: -5px;
+  left: 8px;
+  color: #fbbf24;
+  animation-delay: 1.5s;
+}
+
+.parent-sparkle-right-2 {
+  bottom: -8px;
+  right: 5px;
+  color: #f59e0b;
+  animation-delay: 2.2s;
+}
+
+@keyframes parentSparkleFloat {
+  0%, 100% {
+    transform: translateY(0px) scale(1) rotate(0deg);
+    opacity: 1;
+  }
+  50% {
+    transform: translateY(-10px) scale(1.3) rotate(180deg);
+    opacity: 0.6;
+  }
+}
+
+/* Text Content */
+.parent-welcome-text-content {
+  flex: 1;
+}
+
+.parent-welcome-title {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #ffffff;
+  margin-bottom: 0.5rem;
+  letter-spacing: -0.025em;
+  line-height: 1.3;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.parent-welcome-subtitle {
+  font-size: 1.125rem;
+  color: rgba(255, 255, 255, 0.95);
+  font-weight: 400;
+  line-height: 1.6;
+  max-width: 700px;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .parent-welcome-section {
+    margin-bottom: 2rem;
+    margin-top: 0;
+    padding: 1.5rem;
+  }
+
+  .parent-welcome-section::before {
+    width: 300px;
+    height: 300px;
+  }
+
+  .parent-welcome-content-wrapper {
+    flex-direction: column;
+    gap: 1.5rem;
+    text-align: center;
+  }
+
+  .parent-welcome-hearts {
+    gap: 1rem;
+  }
+
+  .parent-heart-left,
+  .parent-heart-right {
+    width: 60px;
+    height: 60px;
+  }
+
+  .parent-heart-left svg:first-child,
+  .parent-heart-right svg:first-child {
+    width: 36px;
+    height: 36px;
+  }
+
+  .parent-welcome-title {
+    font-size: 1.5rem;
+  }
+
+  .parent-welcome-subtitle {
+    font-size: 1rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .parent-welcome-section {
+    margin-bottom: 1.5rem;
+    padding: 1.25rem;
+  }
+
+  .parent-welcome-section::before {
+    width: 250px;
+    height: 250px;
+  }
+
+  .parent-heart-left,
+  .parent-heart-right {
+    width: 55px;
+    height: 55px;
+  }
+
+  .parent-heart-left svg:first-child,
+  .parent-heart-right svg:first-child {
+    width: 32px;
+    height: 32px;
+  }
+
+  .parent-sparkle-icon {
+    display: none;
+  }
+
+  .parent-welcome-title {
+    font-size: 1.35rem;
+  }
+
+  .parent-welcome-subtitle {
+    font-size: 0.9375rem;
+  }
+}

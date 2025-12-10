@@ -10,6 +10,7 @@ import FeesReceipt from '../components/FeesReceipt';
 import NotificationPopup from '../components/NotificationPopup';
 import TopHeader from '../components/TopHeader';
 import PasswordChange from '../components/PasswordChange';
+import ParentWelcome from '../components/ParentWelcome';
 import API_BASE_URL from '../config';
 
 import './ParentDashboard.css';
@@ -195,12 +196,7 @@ const ParentDashboard = () => {
       case 'dashboard':
         return (
           <div className="parent-overview">
-            <div className="parent-welcome-section">
-              <h2 className="parent-dashboard-greeting">{getGreeting()}, {userName.split(' ')[0]}</h2>
-              <p className="parent-dashboard-subtitle">
-                Monitor your children's school activities, academic progress, and stay informed about their education journey.
-              </p>
-            </div>
+            <ParentWelcome userName={userName} />
 
             {/* Child Selector */}
             {children.length > 1 && (

@@ -22,7 +22,7 @@
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
 }
 
-.modal-header {
+.ssm-modal-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -34,7 +34,7 @@
   z-index: 10;
 }
 
-.modal-header h2 {
+.ssm-modal-header h2 {
   margin: 0;
   font-size: 1.5rem;
   color: #333;
@@ -46,7 +46,7 @@
   font-size: 0.9rem;
 }
 
-.close-btn {
+.ssm-close-btn {
   background: none;
   border: none;
   cursor: pointer;
@@ -55,7 +55,7 @@
   transition: background 0.2s;
 }
 
-.close-btn:hover {
+.ssm-close-btn:hover {
   background: #f5f5f5;
 }
 
@@ -472,19 +472,19 @@
     border-radius: 0;
   }
 
-  .modal-header {
+  .ssm-modal-header {
     flex-direction: column-reverse;
     align-items: flex-start;
     gap: 12px;
     padding: 16px;
   }
 
-  .close-btn {
+  .ssm-close-btn {
     align-self: flex-end;
     margin-bottom: 8px;
   }
 
-  .modal-header h2 {
+  .ssm-modal-header h2 {
     font-size: 1.25rem;
   }
 
