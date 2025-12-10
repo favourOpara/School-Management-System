@@ -807,10 +807,12 @@ class SubmitAssignmentView(APIView):
             submission.submission_count += 1  # Increment submission count
             submission.save()
             
-            # Delete old files if new ones are being uploaded
+            # Delete old files from Cloudinary if new ones are being uploaded
             files = request.FILES.getlist('files')
             if files:
-                submission.files.all().delete()
+                # Delete each file individually to trigger Cloudinary deletion
+                for old_file in submission.files.all():
+                    old_file.delete()
         else:
             # Create new submission
             submission = AssignmentSubmission.objects.create(
