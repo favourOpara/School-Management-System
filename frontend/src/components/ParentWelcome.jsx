@@ -3,6 +3,14 @@ import { GraduationCap, Sparkles, Star, Zap } from 'lucide-react';
 import './ParentWelcome.css';
 
 const ParentWelcome = ({ userName }) => {
+  // Get time-based greeting
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'Good Morning';
+    if (hour < 17) return 'Good Afternoon';
+    return 'Good Evening';
+  };
+
   // Motivational quotes for parents hustling for their children's future
   const parentQuotes = [
     {
@@ -109,7 +117,8 @@ const ParentWelcome = ({ userName }) => {
           </div>
         </div>
         <div className="parent-welcome-text-content">
-          <h1 className="parent-welcome-title">{currentQuote.title}</h1>
+          <h1 className="parent-welcome-greeting">{getGreeting()}, {userName}!</h1>
+          <h2 className="parent-welcome-title">{currentQuote.title}</h2>
           <p className="parent-welcome-subtitle">{currentQuote.subtitle}</p>
         </div>
       </div>

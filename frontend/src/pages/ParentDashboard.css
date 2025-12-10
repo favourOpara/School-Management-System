@@ -188,16 +188,16 @@
 /* Dashboard Tiles */
 .parent-dashboard-tiles {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 1.5rem;
+  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+  gap: 2rem;
 }
 
 /* Parent Tile */
 .parent-tile {
   background: white;
-  border-radius: 12px;
+  border-radius: 14px;
   border: 1px solid #e0e0e0;
-  padding: 1.5rem;
+  padding: 2rem;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
   transition: box-shadow 0.3s, transform 0.2s;
   width: 100%;
@@ -214,19 +214,21 @@
 .tile-header {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  margin-bottom: 1rem;
-  padding-bottom: 0.75rem;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
   border-bottom: 2px solid #f0f0f0;
 }
 
 .tile-header svg {
   color: #2196f3;
+  width: 28px;
+  height: 28px;
 }
 
 .tile-header h3 {
   margin: 0;
-  font-size: 1.15rem;
+  font-size: 1.35rem;
   font-weight: 600;
   color: #333;
 }
@@ -273,14 +275,14 @@
 }
 
 .fee-label {
-  font-size: 0.9rem;
+  font-size: 1rem;
   color: #555;
   font-weight: 500;
 }
 
 .fee-amount {
   font-weight: 600;
-  font-size: 1rem;
+  font-size: 1.1rem;
 }
 
 .fee-amount.total {
@@ -293,12 +295,12 @@
 
 .fee-amount.balance.owing {
   color: #d32f2f;
-  font-size: 1.1rem;
+  font-size: 1.25rem;
 }
 
 .fee-amount.balance.cleared {
   color: #2e7d32;
-  font-size: 1.1rem;
+  font-size: 1.25rem;
 }
 
 .fee-status {
@@ -396,13 +398,13 @@
 }
 
 .position-number {
-  font-size: 3rem;
+  font-size: 3.5rem;
   font-weight: 700;
   color: #ff9800;
 }
 
 .position-suffix {
-  font-size: 1.2rem;
+  font-size: 1.4rem;
   font-weight: 600;
   color: #ff9800;
   vertical-align: super;
@@ -410,7 +412,7 @@
 
 .position-label {
   color: #666;
-  font-size: 0.9rem;
+  font-size: 1rem;
   margin-bottom: 1.5rem;
 }
 
@@ -425,13 +427,13 @@
 }
 
 .average-label {
-  font-size: 0.9rem;
+  font-size: 1rem;
   color: #555;
   font-weight: 500;
 }
 
 .average-value {
-  font-size: 1.2rem;
+  font-size: 1.35rem;
   font-weight: 700;
   color: #e65100;
 }
@@ -446,13 +448,13 @@
 }
 
 .grade-display-parent .grade-label {
-  font-size: 0.9rem;
+  font-size: 1rem;
   color: #555;
   font-weight: 500;
 }
 
 .grade-letter {
-  font-size: 1.5rem;
+  font-size: 1.65rem;
   font-weight: 700;
   padding: 0.25rem 0.75rem;
   border-radius: 6px;
@@ -497,7 +499,7 @@
 .improvement-note {
   text-align: center;
   color: #666;
-  font-size: 0.85rem;
+  font-size: 0.95rem;
   margin: 0 0 1rem;
   font-style: italic;
 }
@@ -524,8 +526,8 @@
 }
 
 .improvement-rank {
-  min-width: 32px;
-  height: 32px;
+  min-width: 36px;
+  height: 36px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -533,7 +535,7 @@
   color: white;
   border-radius: 50%;
   font-weight: 700;
-  font-size: 0.9rem;
+  font-size: 1rem;
 }
 
 .improvement-subject-info {
@@ -543,7 +545,7 @@
 
 .improvement-subject-name {
   margin: 0 0 0.2rem;
-  font-size: 0.95rem;
+  font-size: 1.05rem;
   font-weight: 600;
   color: #333;
   white-space: nowrap;
@@ -552,7 +554,7 @@
 }
 
 .improvement-teacher {
-  font-size: 0.8rem;
+  font-size: 0.9rem;
   color: #888;
 }
 
@@ -601,7 +603,7 @@
   gap: 0.3rem;
   padding: 0.4rem 0.75rem;
   border-radius: 20px;
-  font-size: 0.8rem;
+  font-size: 0.9rem;
   font-weight: 600;
 }
 
@@ -758,10 +760,91 @@
 
   .parent-dashboard-tiles {
     grid-template-columns: 1fr;
+    gap: 1.5rem;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   }
 
   .parent-tile {
-    padding: 1.25rem;
+    padding: 1.5rem;
+    border-radius: 12px;
+  }
+
+  .tile-header {
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+    padding-bottom: 0.75rem;
+  }
+
+  .tile-header svg {
+    width: 24px;
+    height: 24px;
+  }
+
+  .tile-header h3 {
+    font-size: 1.15rem;
+  }
+
+  .fee-label {
+    font-size: 0.9rem;
+  }
+
+  .fee-amount {
+    font-size: 1rem;
+  }
+
+  .fee-amount.balance.owing,
+  .fee-amount.balance.cleared {
+    font-size: 1.1rem;
+  }
+
+  .position-number {
+    font-size: 3rem;
+  }
+
+  .position-suffix {
+    font-size: 1.2rem;
+  }
+
+  .position-label {
+    font-size: 0.9rem;
+  }
+
+  .average-label {
+    font-size: 0.9rem;
+  }
+
+  .average-value {
+    font-size: 1.2rem;
+  }
+
+  .grade-display-parent .grade-label {
+    font-size: 0.9rem;
+  }
+
+  .grade-letter {
+    font-size: 1.5rem;
+  }
+
+  .improvement-note {
+    font-size: 0.85rem;
+  }
+
+  .improvement-rank {
+    min-width: 32px;
+    height: 32px;
+    font-size: 0.9rem;
+  }
+
+  .improvement-subject-name {
+    font-size: 0.95rem;
+  }
+
+  .improvement-teacher {
+    font-size: 0.8rem;
+  }
+
+  .summary-badge {
+    font-size: 0.8rem;
   }
 
   .parent-dashboard-grid {
