@@ -72,6 +72,7 @@ def generate_fee_receipt_pdf(receipt, payment_history):
     )
 
     # Header - School Logo (Centered at top)
+    logo_loaded = False
     try:
         # Try to load the school logo
         import os
@@ -84,21 +85,21 @@ def generate_fee_receipt_pdf(receipt, payment_history):
             '/Users/newuser/Downloads/School-Management-System/frontend/public/logo.png',
         ]
 
-        logo_found = False
         for logo_path in logo_paths:
-            if os.path.exists(logo_path):
-                logo = Image(logo_path, width=1*inch, height=1*inch, kind='proportional')
+            abs_path = os.path.abspath(logo_path)
+            if os.path.exists(abs_path):
+                logo = Image(abs_path, width=1*inch, height=1*inch, kind='proportional')
                 logo.hAlign = 'CENTER'
                 elements.append(logo)
                 elements.append(Spacer(1, 0.08*inch))
-                logo_found = True
+                logo_loaded = True
                 break
-
-        if not logo_found:
-            # Fallback - just add minimal space
-            elements.append(Spacer(1, 0.1*inch))
     except Exception as e:
-        # If logo fails to load, just add minimal space
+        # Silently fail and use fallback
+        pass
+
+    if not logo_loaded:
+        # Fallback - just add minimal space
         elements.append(Spacer(1, 0.1*inch))
 
     # School Name (Centered)
