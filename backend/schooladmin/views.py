@@ -7062,10 +7062,10 @@ def get_reports_sent_stats(request):
     from schooladmin.models import StudentFeeRecord, GradeSummary, GradingConfiguration
     from django.db.models import Q
 
-    # Verify user is admin
-    if request.user.role != 'admin':
+    # Verify user is admin or principal
+    if request.user.role not in ['admin', 'principal']:
         return Response(
-            {"detail": "Only admins can view this data"},
+            {"detail": "Only admins and principals can view this data"},
             status=status.HTTP_403_FORBIDDEN
         )
 
@@ -7145,10 +7145,10 @@ def get_class_report_sent_students(request, class_session_id):
     from schooladmin.models import StudentFeeRecord, GradeSummary, GradingConfiguration
     from django.db.models import Q
 
-    # Verify user is admin
-    if request.user.role != 'admin':
+    # Verify user is admin or principal
+    if request.user.role not in ['admin', 'principal']:
         return Response(
-            {"detail": "Only admins can view this data"},
+            {"detail": "Only admins and principals can view this data"},
             status=status.HTTP_403_FORBIDDEN
         )
 
@@ -7273,9 +7273,9 @@ def get_subject_grading_stats(request):
     from schooladmin.models import GradeSummary, GradingConfiguration
     from django.db.models import Count, Q
 
-    if request.user.role != 'admin':
+    if request.user.role not in ['admin', 'principal']:
         return Response(
-            {"detail": "Only admins can view this data"},
+            {"detail": "Only admins and principals can view this data"},
             status=status.HTTP_403_FORBIDDEN
         )
 
@@ -7402,9 +7402,9 @@ def get_subject_incomplete_students(request, subject_id):
     from academics.models import Subject
     from schooladmin.models import GradeSummary, GradingConfiguration
 
-    if request.user.role != 'admin':
+    if request.user.role not in ['admin', 'principal']:
         return Response(
-            {"detail": "Only admins can view this data"},
+            {"detail": "Only admins and principals can view this data"},
             status=status.HTTP_403_FORBIDDEN
         )
 
