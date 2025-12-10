@@ -167,28 +167,28 @@ const AssignedClasses = () => {
             <p>Loading students...</p>
           </div>
         ) : (
-          <div className="students-grid">
+          <div className="ac-students-container">
             <h3>Students ({students.length})</h3>
             {students.length === 0 ? (
-              <p className="no-students">No students found for this subject.</p>
+              <p className="ac-no-students">No students found for this subject.</p>
             ) : (
-              <div className="teacher-subject-students-grid-desktop">
+              <div className="ac-students-horizontal-grid">
                 {students.map(student => (
-                  <div key={student.id} className="teacher-student-card">
-                    <div className="teacher-student-info">
+                  <div key={student.id} className="ac-student-card-item">
+                    <div className="ac-student-card-info">
                       <h4>{student.full_name}</h4>
-                      <p className="teacher-student-username">@{student.username}</p>
-                      <div className="teacher-student-details">
-                        <span className="teacher-student-gender">{student.gender}</span>
-                        {student.age && <span className="teacher-student-age">{student.age} years</span>}
+                      <p className="ac-student-card-username">@{student.username}</p>
+                      <div className="ac-student-card-details">
+                        <span className="ac-student-badge-gender">{student.gender}</span>
+                        {student.age && <span className="ac-student-badge-age">{student.age} years</span>}
                         {student.department && (
-                          <span className="teacher-student-department">{student.department}</span>
+                          <span className="ac-student-badge-department">{student.department}</span>
                         )}
                       </div>
                     </div>
-                    <div className="teacher-student-actions">
-                      <button 
-                        className="action-btn"
+                    <div className="ac-student-card-actions">
+                      <button
+                        className="ac-action-button"
                         onClick={() => handleViewProfile(student)}
                       >
                         View Submissions
