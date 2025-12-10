@@ -8,7 +8,7 @@ import './ParentAnnouncements.css';
 const ParentAnnouncements = () => {
   const [announcements, setAnnouncements] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState('all'); // all, unread, direct, activity
+  const [filter, setFilter] = useState('all'); // all, unread, direct, announcement
   const [error, setError] = useState(null);
 
   useEffect(() => {
@@ -97,7 +97,7 @@ const ParentAnnouncements = () => {
     if (filter === 'all') return true;
     if (filter === 'unread') return !announcement.is_read;
     if (filter === 'direct') return announcement.type === 'direct';
-    if (filter === 'activity') return announcement.type === 'activity';
+    if (filter === 'announcement') return announcement.type === 'announcement';
     return true;
   });
 
@@ -156,10 +156,10 @@ const ParentAnnouncements = () => {
           Direct ({announcements.filter(a => a.type === 'direct').length})
         </button>
         <button
-          className={`filter-btn ${filter === 'activity' ? 'active' : ''}`}
-          onClick={() => setFilter('activity')}
+          className={`filter-btn ${filter === 'announcement' ? 'active' : ''}`}
+          onClick={() => setFilter('announcement')}
         >
-          Activities ({announcements.filter(a => a.type === 'activity').length})
+          Announcements ({announcements.filter(a => a.type === 'announcement').length})
         </button>
       </div>
 

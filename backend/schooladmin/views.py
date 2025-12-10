@@ -8564,10 +8564,13 @@ def get_parent_announcements(request):
     """
     Get all announcements/notifications for the logged-in parent
     Includes:
+    - Admin-created announcements targeted to parents
     - Direct notifications (report releases, fee reminders, incomplete grades)
-    - Activity notifications from their children's classes (assignments, notes, announcements)
+
+    Note: Activity logs are admin-only and NOT included for parents
     """
-    from logs.models import Notification, ActivityLog, NotificationStatus
+    from logs.models import Notification
+    from schooladmin.models import Announcement
 
     user = request.user
 
@@ -8578,19 +8581,35 @@ def get_parent_announcements(request):
         )
 
     try:
+        # Get admin-created announcements targeted to parents
+        admin_announcements = Announcement.objects.filter(
+            target_audience__in=['all', 'parents']
+        ).order_by('-created_at')[:50]
+
         # Get direct notifications (Notification model)
         direct_notifications = Notification.objects.filter(
             recipient=user
-        ).order_by('-created_at')[:50]  # Limit to last 50
+        ).order_by('-created_at')[:50]
 
-        # Get activity-based notifications (ActivityLog with NotificationStatus)
-        activity_notifications = NotificationStatus.objects.filter(
-            user=user
-        ).select_related('activity_log', 'activity_log__subject').order_by('-activity_log__timestamp')[:50]
-
-        # Format direct notifications
+        # Format notifications list
         notifications_list = []
 
+        # Add admin announcements
+        for announcement in admin_announcements:
+            notifications_list.append({
+                'id': f"announcement_{announcement.id}",
+                'type': 'announcement',
+                'notification_type': 'announcement',
+                'title': announcement.title,
+                'message': announcement.message,
+                'priority': announcement.priority,
+                'is_read': False,  # Admin announcements don't have read status for parents
+                'created_at': announcement.created_at.isoformat(),
+                'child_name': None,
+                'extra_data': {}
+            })
+
+        # Add direct notifications
         for notif in direct_notifications:
             # Determine which child this notification is about
             child_name = None
@@ -8610,40 +8629,7 @@ def get_parent_announcements(request):
                 'extra_data': notif.extra_data
             })
 
-        # Format activity notifications
-        for notif_status in activity_notifications:
-            activity = notif_status.activity_log
-
-            # Get student name from the activity context
-            child_name = None
-            if activity.extra_data and 'class_session_id' in activity.extra_data:
-                # This is about a class, find which of parent's children is in this class
-                from academics.models import StudentSession
-                children_in_class = user.children.filter(
-                    student_sessions__class_session_id=activity.extra_data['class_session_id'],
-                    student_sessions__is_active=True
-                )
-                if children_in_class.exists():
-                    child_name = children_in_class.first().get_full_name()
-
-            notifications_list.append({
-                'id': f"activity_{notif_status.id}",
-                'type': 'activity',
-                'notification_type': activity.content_type or 'general',
-                'title': activity.content_title or 'New Activity',
-                'message': f"{activity.action} - Check the {activity.content_type} for {child_name or 'your child'}",
-                'priority': 'medium',
-                'is_read': notif_status.is_read,
-                'created_at': activity.timestamp.isoformat(),
-                'child_name': child_name,
-                'extra_data': {
-                    'subject_name': activity.subject.name if activity.subject else None,
-                    'classroom': activity.extra_data.get('classroom') if activity.extra_data else None,
-                    'teacher_name': activity.extra_data.get('teacher_name') if activity.extra_data else None
-                }
-            })
-
-        # Combine and sort by date
+        # Sort by date (most recent first)
         notifications_list.sort(key=lambda x: x['created_at'], reverse=True)
 
         # Count unread
@@ -8666,10 +8652,12 @@ def get_parent_announcements(request):
 
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated, IsPrincipalOrAdmin])
+@permission_classes([IsAuthenticated])
 def download_fee_receipt(request, receipt_id):
     """
     Download fee receipt as PDF
+    Parents can download receipts for their children
+    Admins and Principals can download any receipt
     """
     from schooladmin.models import FeeReceipt, FeePaymentHistory
     from schooladmin.pdf_generator import generate_fee_receipt_pdf
@@ -8677,24 +8665,28 @@ def download_fee_receipt(request, receipt_id):
 
     user = request.user
 
-    if user.role != 'parent':
+    # Only parents, admins, and principals can download receipts
+    if user.role not in ['parent', 'admin', 'principal']:
         return Response(
-            {"detail": "Only parents can access this endpoint"},
+            {"detail": "You don't have permission to download fee receipts"},
             status=status.HTTP_403_FORBIDDEN
         )
 
     try:
-        # Get the receipt and verify parent has access
+        # Get the receipt
         receipt = FeeReceipt.objects.select_related(
             'student', 'student__classroom', 'issued_by'
         ).get(id=receipt_id)
 
-        # Check if the parent has access to this student
-        if not receipt.student.parents.filter(id=user.id).exists():
-            return Response(
-                {"detail": "You don't have access to this receipt"},
-                status=status.HTTP_403_FORBIDDEN
-            )
+        # Check permissions based on role
+        if user.role == 'parent':
+            # Parents can only access receipts for their own children
+            if not receipt.student.parents.filter(id=user.id).exists():
+                return Response(
+                    {"detail": "You don't have access to this receipt"},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+        # Admins and principals can access any receipt (no additional check needed)
 
         # Get the student's fee record to fetch payment history
         from schooladmin.models import StudentFeeRecord

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Heart, Sparkles, Star, Zap } from 'lucide-react';
+import { GraduationCap, Sparkles, Star, Zap } from 'lucide-react';
 import './ParentWelcome.css';
 
 const ParentWelcome = ({ userName }) => {
@@ -98,12 +98,12 @@ const ParentWelcome = ({ userName }) => {
       <div className="parent-welcome-content-wrapper">
         <div className="parent-welcome-hearts">
           <div className="parent-heart-left">
-            <Heart size={42} strokeWidth={1.5} fill="currentColor" />
+            <GraduationCap size={42} strokeWidth={1.5} />
             <Sparkles className="parent-sparkle-icon parent-sparkle-left-1" size={14} />
             <Zap className="parent-sparkle-icon parent-sparkle-left-2" size={12} />
           </div>
           <div className="parent-heart-right">
-            <Heart size={42} strokeWidth={1.5} fill="currentColor" />
+            <GraduationCap size={42} strokeWidth={1.5} />
             <Star className="parent-sparkle-icon parent-sparkle-right-1" size={14} />
             <Sparkles className="parent-sparkle-icon parent-sparkle-right-2" size={12} />
           </div>

@@ -3,9 +3,9 @@
   margin-bottom: 3rem;
   margin-top: -1rem;
   padding: 2rem;
-  background: linear-gradient(135deg, #ec4899 0%, #be185d 100%);
+  background: linear-gradient(135deg, #0d47a1 0%, #1565c0 100%);
   border-radius: 16px;
-  box-shadow: 0 10px 30px rgba(236, 72, 153, 0.25);
+  box-shadow: 0 10px 30px rgba(13, 71, 161, 0.25);
   position: relative;
   overflow: hidden;
 }
@@ -30,7 +30,7 @@
   z-index: 1;
 }
 
-/* Two Hearts with Love */
+/* Two Professional Icons */
 .parent-welcome-hearts {
   display: flex;
   gap: 1.5rem;
@@ -52,52 +52,46 @@
 }
 
 .parent-heart-left {
-  animation: heartBeatLeft 3s ease-in-out infinite;
+  animation: iconBounceLeft 3s ease-in-out infinite;
 }
 
 .parent-heart-right {
-  animation: heartBeatRight 3s ease-in-out infinite 1.5s;
+  animation: iconBounceRight 3s ease-in-out infinite 1.5s;
 }
 
 .parent-heart-left svg:first-child,
 .parent-heart-right svg:first-child {
-  color: #ec4899;
+  color: #0d47a1;
 }
 
-/* Heart Animations - Beating with Love */
-@keyframes heartBeatLeft {
+/* Icon Animations - Professional Bounce */
+@keyframes iconBounceLeft {
   0%, 100% {
-    transform: scale(1) rotate(-10deg);
+    transform: translateY(0px) scale(1) rotate(5deg);
   }
-  10% {
-    transform: scale(1.15) rotate(-10deg);
+  25% {
+    transform: translateY(-12px) scale(1.05) rotate(-5deg);
   }
-  20% {
-    transform: scale(1) rotate(-10deg);
+  50% {
+    transform: translateY(0px) scale(1) rotate(5deg);
   }
-  30% {
-    transform: scale(1.15) rotate(-10deg);
-  }
-  40%, 70% {
-    transform: scale(1) rotate(-10deg);
+  75% {
+    transform: translateY(-8px) scale(1.02) rotate(-3deg);
   }
 }
 
-@keyframes heartBeatRight {
+@keyframes iconBounceRight {
   0%, 100% {
-    transform: scale(1) rotate(10deg);
+    transform: translateY(0px) scale(1) rotate(-5deg);
   }
-  10% {
-    transform: scale(1.15) rotate(10deg);
+  25% {
+    transform: translateY(-8px) scale(1.02) rotate(3deg);
   }
-  20% {
-    transform: scale(1) rotate(10deg);
+  50% {
+    transform: translateY(0px) scale(1) rotate(-5deg);
   }
-  30% {
-    transform: scale(1.15) rotate(10deg);
-  }
-  40%, 70% {
-    transform: scale(1) rotate(10deg);
+  75% {
+    transform: translateY(-12px) scale(1.05) rotate(5deg);
   }
 }
 
