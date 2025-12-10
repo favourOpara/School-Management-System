@@ -144,7 +144,6 @@ const RoleBasedSidebar = forwardRef(({ activeTab, setActiveTab, userRole }, ref)
             icon: <MessageCircle />,
             label: 'Communication',
             submenu: [
-              { key: 'messages', icon: <MessageCircle />, label: 'Messages' },
               { key: 'announcements', icon: <FileText />, label: 'Announcements' }
             ]
           }

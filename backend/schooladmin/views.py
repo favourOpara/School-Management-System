@@ -8583,7 +8583,7 @@ def get_parent_announcements(request):
     try:
         # Get admin-created announcements targeted to parents
         admin_announcements = Announcement.objects.filter(
-            target_audience__in=['all', 'parents']
+            audience__in=['all', 'parents']
         ).order_by('-created_at')[:50]
 
         # Get direct notifications (Notification model)
