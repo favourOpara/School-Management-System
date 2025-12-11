@@ -26,6 +26,7 @@ from .views import (
     ToggleAssessmentReleaseView,
     UnlockAllAssessmentsView,
     UnlockForPaidStudentsView,
+    UnlockForPaidStudentsSingleView,
     GetClassStudentsView,
     UnlockForSelectedStudentsView,
     StudentAvailableAssessmentsView,
@@ -106,6 +107,7 @@ urlpatterns = [
     path('admin/assessments/<int:pk>/toggle-release/', ToggleAssessmentReleaseView.as_view(), name='toggle-assessment-release'),
     path('admin/assessments/unlock-all/', UnlockAllAssessmentsView.as_view(), name='unlock-all-assessments'),
     path('admin/assessments/unlock-for-paid/', UnlockForPaidStudentsView.as_view(), name='unlock-for-paid-students'),
+    path('admin/assessments/unlock-for-paid-single/', UnlockForPaidStudentsSingleView.as_view(), name='unlock-for-paid-single'),
     path('admin/assessments/class-students/', GetClassStudentsView.as_view(), name='get-class-students'),
     path('admin/assessments/unlock-for-selected/', UnlockForSelectedStudentsView.as_view(), name='unlock-for-selected-students'),
 

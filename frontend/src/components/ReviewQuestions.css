@@ -1023,3 +1023,59 @@
     justify-content: center;
   }
 }
+
+/* Individual Assessment Unlock Buttons */
+.unlock-paid-btn-single,
+.unlock-selected-btn-single {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.5rem 0.875rem;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.unlock-paid-btn-single {
+  background-color: #3b82f6;
+  color: white;
+}
+
+.unlock-paid-btn-single:hover {
+  background-color: #2563eb;
+  transform: translateY(-1px);
+}
+
+.unlock-selected-btn-single {
+  background-color: #8b5cf6;
+  color: white;
+}
+
+.unlock-selected-btn-single:hover {
+  background-color: #7c3aed;
+  transform: translateY(-1px);
+}
+
+.assessment-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 768px) {
+  .unlock-paid-btn-single,
+  .unlock-selected-btn-single {
+    font-size: 0.75rem;
+    padding: 0.4rem 0.7rem;
+  }
+
+  .unlock-paid-btn-single span,
+  .unlock-selected-btn-single span {
+    display: none;
+  }
+}

@@ -2036,6 +2036,74 @@ class UnlockForPaidStudentsView(APIView):
         })
 
 
+class UnlockForPaidStudentsSingleView(APIView):
+    """
+    Unlock a single assessment only for students who have fully paid their fees
+    POST /api/academics/admin/assessments/unlock-for-paid-single/
+    Body: assessment_id (required)
+    """
+    permission_classes = [permissions.IsAuthenticated, IsPrincipalOrAdmin]
+
+    def post(self, request):
+        """Unlock single assessment for students with fully paid fees"""
+        from django.db.models import Q, F
+        from schooladmin.models import StudentFeeRecord
+
+        assessment_id = request.data.get('assessment_id')
+
+        if not assessment_id:
+            return Response(
+                {"detail": "assessment_id is required"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            assessment = Assessment.objects.get(id=assessment_id, is_active=True)
+        except Assessment.DoesNotExist:
+            return Response(
+                {"detail": "Assessment not found"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        # Get students who have fully paid fees
+        from django.db.models import F
+        paid_students = StudentFeeRecord.objects.filter(
+            payment_status='PAID'
+        ).values_list('student_id', flat=True).distinct()
+
+        fully_paid_students = StudentFeeRecord.objects.filter(
+            amount_paid__gte=F('fee_structure__amount')
+        ).values_list('student_id', flat=True).distinct()
+
+        paid_students = set(paid_students) | set(fully_paid_students)
+
+        # Get students in this assessment's class who have paid
+        from .models import StudentSession, AssessmentAccess
+        student_sessions = StudentSession.objects.filter(
+            class_session=assessment.subject.class_session,
+            is_active=True,
+            student_id__in=paid_students
+        )
+
+        access_count = 0
+        for student_session in student_sessions:
+            AssessmentAccess.objects.update_or_create(
+                assessment=assessment,
+                student=student_session.student,
+                defaults={
+                    'is_unlocked': True,
+                    'unlocked_by': request.user
+                }
+            )
+            access_count += 1
+
+        return Response({
+            'message': f'Successfully unlocked "{assessment.title}" for {access_count} paid student(s)',
+            'assessment_title': assessment.title,
+            'students_count': access_count
+        })
+
+
 class GetClassStudentsView(APIView):
     """
     Get students in a class with their assessment lock status and fee balance
@@ -2051,6 +2119,7 @@ class GetClassStudentsView(APIView):
 
         class_session_id = request.GET.get('class_session_id')
         assessment_type = request.GET.get('assessment_type')
+        assessment_id = request.GET.get('assessment_id')  # Optional: for individual assessment
 
         if not class_session_id or not assessment_type:
             return Response(
@@ -2073,21 +2142,29 @@ class GetClassStudentsView(APIView):
         ).select_related('student')
 
         # Get assessments for this class session and type
-        assessment_filters = Q(
-            subject__class_session=class_session,
-            is_active=True
-        )
-
-        if assessment_type == 'test':
-            assessment_filters &= (
-                Q(assessment_type='test_1') |
-                Q(assessment_type='test_2') |
-                Q(assessment_type='mid_term')
+        if assessment_id:
+            # Filter by specific assessment
+            assessments = Assessment.objects.filter(
+                id=assessment_id,
+                is_active=True
             )
-        elif assessment_type == 'exam':
-            assessment_filters &= Q(assessment_type='final_exam')
+        else:
+            # Filter by type
+            assessment_filters = Q(
+                subject__class_session=class_session,
+                is_active=True
+            )
 
-        assessments = Assessment.objects.filter(assessment_filters)
+            if assessment_type == 'test':
+                assessment_filters &= (
+                    Q(assessment_type='test_1') |
+                    Q(assessment_type='test_2') |
+                    Q(assessment_type='mid_term')
+                )
+            elif assessment_type == 'exam':
+                assessment_filters &= Q(assessment_type='final_exam')
+
+            assessments = Assessment.objects.filter(assessment_filters)
 
         students_data = []
         for student_session in student_sessions:
@@ -2149,37 +2226,62 @@ class UnlockForSelectedStudentsView(APIView):
         from django.db.models import Q
         from .models import AssessmentAccess
 
-        academic_year = request.data.get('academic_year')
-        term = request.data.get('term')
-        assessment_type = request.data.get('assessment_type')
         student_ids = request.data.get('student_ids', [])
-        subject_id = request.data.get('subject_id')
+        assessment_id = request.data.get('assessment_id')  # Optional: for individual assessment
 
-        if not academic_year or not term or not assessment_type or not student_ids:
+        if not student_ids:
             return Response(
-                {"detail": "academic_year, term, assessment_type, and student_ids are required"},
+                {"detail": "student_ids are required"},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        # Get assessments matching the filters
-        assessments = Assessment.objects.filter(
-            is_active=True,
-            subject__class_session__academic_year=academic_year,
-            subject__class_session__term=term
-        )
+        # Check if unlocking individual assessment or bulk
+        if assessment_id:
+            # Individual assessment unlock
+            try:
+                assessments = Assessment.objects.filter(id=assessment_id, is_active=True)
+                if not assessments.exists():
+                    return Response(
+                        {"detail": "Assessment not found"},
+                        status=status.HTTP_404_NOT_FOUND
+                    )
+            except Exception as e:
+                return Response(
+                    {"detail": f"Error: {str(e)}"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+        else:
+            # Bulk unlock - need year, term, type
+            academic_year = request.data.get('academic_year')
+            term = request.data.get('term')
+            assessment_type = request.data.get('assessment_type')
+            subject_id = request.data.get('subject_id')
 
-        if subject_id:
-            assessments = assessments.filter(subject_id=subject_id)
+            if not academic_year or not term or not assessment_type:
+                return Response(
+                    {"detail": "academic_year, term, and assessment_type are required for bulk unlock"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
 
-        # Filter by assessment type
-        if assessment_type == 'test':
-            assessments = assessments.filter(
-                Q(assessment_type='test_1') |
-                Q(assessment_type='test_2') |
-                Q(assessment_type='mid_term')
+            # Get assessments matching the filters
+            assessments = Assessment.objects.filter(
+                is_active=True,
+                subject__class_session__academic_year=academic_year,
+                subject__class_session__term=term
             )
-        elif assessment_type == 'exam':
-            assessments = assessments.filter(assessment_type='final_exam')
+
+            if subject_id:
+                assessments = assessments.filter(subject_id=subject_id)
+
+            # Filter by assessment type
+            if assessment_type == 'test':
+                assessments = assessments.filter(
+                    Q(assessment_type='test_1') |
+                    Q(assessment_type='test_2') |
+                    Q(assessment_type='mid_term')
+                )
+            elif assessment_type == 'exam':
+                assessments = assessments.filter(assessment_type='final_exam')
 
         # Get the selected students
         from django.contrib.auth import get_user_model

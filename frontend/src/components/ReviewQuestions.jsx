@@ -41,6 +41,7 @@ const ReviewQuestions = () => {
   const [loadingStudents, setLoadingStudents] = useState(false);
   const [selectedStudentIds, setSelectedStudentIds] = useState([]);
   const [unlockingSelected, setUnlockingSelected] = useState(false);
+  const [currentAssessmentId, setCurrentAssessmentId] = useState(null); // For individual assessment unlocking
 
   useEffect(() => {
     fetchSessionsAndSubjects();
@@ -409,21 +410,36 @@ const ReviewQuestions = () => {
   };
 
   const handleSelectClass = async (classSessionId) => {
-    if (!selectedAssessmentType) {
-      setError('Please select assessment type first');
-      return;
-    }
-
     try {
       setLoadingStudents(true);
       const token = localStorage.getItem('accessToken');
 
-      const response = await fetch(
-        `${API_BASE_URL}/api/academics/admin/assessments/class-students/?class_session_id=${classSessionId}&assessment_type=${selectedAssessmentType}`,
-        {
-          headers: { 'Authorization': `Bearer ${token}` }
+      // Determine assessment type
+      let assessmentType = selectedAssessmentType;
+
+      // If individual assessment, get type from that assessment
+      if (currentAssessmentId) {
+        const assessment = assessments.find(a => a.id === currentAssessmentId);
+        if (assessment) {
+          assessmentType = assessment.assessment_type.includes('exam') ? 'exam' : 'test';
         }
-      );
+      }
+
+      if (!assessmentType) {
+        setError('Assessment type could not be determined');
+        return;
+      }
+
+      let url = `${API_BASE_URL}/api/academics/admin/assessments/class-students/?class_session_id=${classSessionId}&assessment_type=${assessmentType}`;
+
+      // If single assessment, add assessment_id parameter
+      if (currentAssessmentId) {
+        url += `&assessment_id=${currentAssessmentId}`;
+      }
+
+      const response = await fetch(url, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
 
       if (!response.ok) {
         throw new Error('Failed to fetch students');
@@ -468,9 +484,18 @@ const ReviewQuestions = () => {
       return;
     }
 
+    // Determine message based on bulk or individual
+    let message;
+    if (currentAssessmentId) {
+      const assessment = assessments.find(a => a.id === currentAssessmentId);
+      message = `Are you sure you want to unlock "${assessment?.title}" for ${selectedStudentIds.length} selected student(s)?`;
+    } else {
+      message = `Are you sure you want to unlock ${selectedAssessmentType === 'test' ? 'tests' : 'exams'} for ${selectedStudentIds.length} selected student(s)?`;
+    }
+
     const confirmed = await showConfirm({
       title: 'Unlock for Selected Students',
-      message: `Are you sure you want to unlock ${selectedAssessmentType === 'test' ? 'tests' : 'exams'} for ${selectedStudentIds.length} selected student(s)?`,
+      message: message,
       confirmText: 'Unlock',
       cancelText: 'Cancel',
       confirmButtonClass: 'confirm-btn-warning'
@@ -482,13 +507,23 @@ const ReviewQuestions = () => {
       const token = localStorage.getItem('accessToken');
 
       const requestBody = {
-        assessment_type: selectedAssessmentType,
-        academic_year: selectedAcademicYear,
-        term: selectedTerm,
         student_ids: selectedStudentIds
       };
 
-      if (selectedSubject) requestBody.subject_id = selectedSubject;
+      // If individual assessment
+      if (currentAssessmentId) {
+        const assessment = assessments.find(a => a.id === currentAssessmentId);
+        requestBody.assessment_type = assessment.assessment_type.includes('exam') ? 'exam' : 'test';
+        requestBody.academic_year = assessment.subject.class_session.academic_year;
+        requestBody.term = assessment.subject.class_session.term;
+        requestBody.assessment_id = currentAssessmentId;
+      } else {
+        // Bulk unlock
+        requestBody.assessment_type = selectedAssessmentType;
+        requestBody.academic_year = selectedAcademicYear;
+        requestBody.term = selectedTerm;
+        if (selectedSubject) requestBody.subject_id = selectedSubject;
+      }
 
       const response = await fetch(`${API_BASE_URL}/api/academics/admin/assessments/unlock-for-selected/`, {
         method: 'POST',
@@ -534,6 +569,106 @@ const ReviewQuestions = () => {
     setSelectedModalClass(null);
     setClassStudents([]);
     setSelectedStudentIds([]);
+    setCurrentAssessmentId(null);
+  };
+
+  // Individual assessment unlock handlers
+  const handleUnlockForPaidStudentsSingle = async (assessmentId) => {
+    const assessment = assessments.find(a => a.id === assessmentId);
+    if (!assessment) return;
+
+    const typeLabel = assessment.assessment_type.includes('exam') ? 'exam' : 'test';
+
+    const confirmed = await showConfirm({
+      title: 'Unlock for Paid Students',
+      message: `Are you sure you want to unlock "${assessment.title}" for students with fully paid fees only?`,
+      confirmText: 'Unlock',
+      cancelText: 'Cancel',
+      confirmButtonClass: 'confirm-btn-warning'
+    });
+    if (!confirmed) return;
+
+    try {
+      const token = localStorage.getItem('accessToken');
+
+      // Determine assessment type for the backend
+      let assessmentType = 'test';
+      if (assessment.assessment_type === 'final_exam') {
+        assessmentType = 'exam';
+      }
+
+      const requestBody = {
+        assessment_type: assessmentType,
+        unlock_type: 'paid_only',
+        academic_year: assessment.subject.class_session.academic_year,
+        term: assessment.subject.class_session.term,
+        assessment_id: assessmentId // Single assessment
+      };
+
+      const response = await fetch(`${API_BASE_URL}/api/academics/admin/assessments/unlock-for-paid-single/`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(requestBody)
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to unlock assessment for paid students');
+      }
+
+      const data = await response.json();
+      showAlert({
+        type: 'success',
+        message: data.message
+      });
+
+      await handleSearch();
+    } catch (err) {
+      setError(err.message);
+      showAlert({
+        type: 'error',
+        message: 'Error: ' + err.message
+      });
+    }
+  };
+
+  const handleOpenUnlockModalSingle = async (assessmentId) => {
+    const assessment = assessments.find(a => a.id === assessmentId);
+    if (!assessment) return;
+
+    setCurrentAssessmentId(assessmentId);
+
+    try {
+      const token = localStorage.getItem('accessToken');
+      const academicYear = assessment.subject.class_session.academic_year;
+      const term = assessment.subject.class_session.term;
+
+      const response = await fetch(
+        `${API_BASE_URL}/api/academics/sessions/?academic_year=${academicYear}&term=${term}`,
+        {
+          headers: { 'Authorization': `Bearer ${token}` }
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch classes');
+      }
+
+      const data = await response.json();
+      setModalClasses(data);
+      setShowUnlockModal(true);
+      setSelectedModalClass(null);
+      setClassStudents([]);
+      setSelectedStudentIds([]);
+    } catch (err) {
+      setError(err.message);
+      showAlert({
+        type: 'error',
+        message: 'Error loading classes: ' + err.message
+      });
+    }
   };
 
   const handleEditQuestion = (question) => {
@@ -898,6 +1033,28 @@ const ReviewQuestions = () => {
                           >
                             {assessment.is_released ? <Lock size={16} /> : <Unlock size={16} />}
                             {assessment.is_released ? 'Lock' : 'Unlock'}
+                          </button>
+                          <button
+                            className="unlock-paid-btn-single"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleUnlockForPaidStudentsSingle(assessment.id);
+                            }}
+                            title="Unlock for Paid Students Only"
+                          >
+                            <DollarSign size={16} />
+                            Paid Only
+                          </button>
+                          <button
+                            className="unlock-selected-btn-single"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleOpenUnlockModalSingle(assessment.id);
+                            }}
+                            title="Unlock for Selected Students"
+                          >
+                            <Users size={16} />
+                            Select Students
                           </button>
                           <button className="toggle-btn">
                             <Eye size={20} />
