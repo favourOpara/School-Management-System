@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Edit2, Eye, Lock, Unlock, Trash2 } from 'lucide-react';
+import { Search, Edit2, Eye, Lock, Unlock, Trash2, Users, DollarSign, CheckCircle, XCircle } from 'lucide-react';
 import './ReviewQuestions.css';
 import { useDialog } from '../contexts/DialogContext';
 
@@ -32,6 +32,15 @@ const ReviewQuestions = () => {
   const [newImage, setNewImage] = useState(null);
   const [deleteImage, setDeleteImage] = useState(false);
   const [imagePreview, setImagePreview] = useState(null);
+
+  // Unlock for selected students modal state
+  const [showUnlockModal, setShowUnlockModal] = useState(false);
+  const [modalClasses, setModalClasses] = useState([]);
+  const [selectedModalClass, setSelectedModalClass] = useState(null);
+  const [classStudents, setClassStudents] = useState([]);
+  const [loadingStudents, setLoadingStudents] = useState(false);
+  const [selectedStudentIds, setSelectedStudentIds] = useState([]);
+  const [unlockingSelected, setUnlockingSelected] = useState(false);
 
   useEffect(() => {
     fetchSessionsAndSubjects();
@@ -297,6 +306,234 @@ const ReviewQuestions = () => {
     } catch (err) {
       setError(err.message);
     }
+  };
+
+  const handleUnlockForPaidStudents = async () => {
+    if (!selectedAssessmentType) {
+      setError('Please select assessment type before unlocking');
+      return;
+    }
+
+    const typeLabel = selectedAssessmentType === 'test' ? 'tests' : 'exams';
+    const filterSummary = selectedSubject
+      ? 'for the selected subject'
+      : selectedClass
+      ? 'for the selected class'
+      : selectedTerm && selectedAcademicYear
+      ? `for ${selectedTerm} ${selectedAcademicYear}`
+      : 'matching the current filters';
+
+    const confirmed = await showConfirm({
+      title: 'Unlock for Paid Students',
+      message: `Are you sure you want to unlock all ${typeLabel} ${filterSummary} for students with fully paid fees only?`,
+      confirmText: 'Unlock',
+      cancelText: 'Cancel',
+      confirmButtonClass: 'confirm-btn-warning'
+    });
+    if (!confirmed) return;
+
+    try {
+      const token = localStorage.getItem('accessToken');
+      const requestBody = {
+        assessment_type: selectedAssessmentType,
+        unlock_type: 'paid_only'
+      };
+
+      if (selectedAcademicYear) requestBody.academic_year = selectedAcademicYear;
+      if (selectedTerm) requestBody.term = selectedTerm;
+      if (selectedSubject) requestBody.subject_id = selectedSubject;
+
+      const response = await fetch(`${API_BASE_URL}/api/academics/admin/assessments/unlock-for-paid/`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(requestBody)
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to unlock assessments for paid students');
+      }
+
+      const data = await response.json();
+      showAlert({
+        type: 'success',
+        message: data.message
+      });
+
+      if (hasFiltered) {
+        await handleSearch();
+      }
+    } catch (err) {
+      setError(err.message);
+      showAlert({
+        type: 'error',
+        message: 'Error: ' + err.message
+      });
+    }
+  };
+
+  const handleOpenUnlockModal = async () => {
+    if (!selectedAcademicYear || !selectedTerm) {
+      setError('Please select academic year and term first');
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem('accessToken');
+      const response = await fetch(
+        `${API_BASE_URL}/api/academics/sessions/?academic_year=${selectedAcademicYear}&term=${selectedTerm}`,
+        {
+          headers: { 'Authorization': `Bearer ${token}` }
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch classes');
+      }
+
+      const data = await response.json();
+      setModalClasses(data);
+      setShowUnlockModal(true);
+      setSelectedModalClass(null);
+      setClassStudents([]);
+      setSelectedStudentIds([]);
+    } catch (err) {
+      setError(err.message);
+      showAlert({
+        type: 'error',
+        message: 'Error loading classes: ' + err.message
+      });
+    }
+  };
+
+  const handleSelectClass = async (classSessionId) => {
+    if (!selectedAssessmentType) {
+      setError('Please select assessment type first');
+      return;
+    }
+
+    try {
+      setLoadingStudents(true);
+      const token = localStorage.getItem('accessToken');
+
+      const response = await fetch(
+        `${API_BASE_URL}/api/academics/admin/assessments/class-students/?class_session_id=${classSessionId}&assessment_type=${selectedAssessmentType}`,
+        {
+          headers: { 'Authorization': `Bearer ${token}` }
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch students');
+      }
+
+      const data = await response.json();
+      setClassStudents(data.students || []);
+      setSelectedModalClass(classSessionId);
+    } catch (err) {
+      setError(err.message);
+      showAlert({
+        type: 'error',
+        message: 'Error loading students: ' + err.message
+      });
+    } finally {
+      setLoadingStudents(false);
+    }
+  };
+
+  const handleToggleStudent = (studentId) => {
+    setSelectedStudentIds(prev =>
+      prev.includes(studentId)
+        ? prev.filter(id => id !== studentId)
+        : [...prev, studentId]
+    );
+  };
+
+  const handleToggleAllStudents = () => {
+    if (selectedStudentIds.length === classStudents.length) {
+      setSelectedStudentIds([]);
+    } else {
+      setSelectedStudentIds(classStudents.map(s => s.id));
+    }
+  };
+
+  const handleUnlockSelectedStudents = async () => {
+    if (selectedStudentIds.length === 0) {
+      showAlert({
+        type: 'warning',
+        message: 'Please select at least one student'
+      });
+      return;
+    }
+
+    const confirmed = await showConfirm({
+      title: 'Unlock for Selected Students',
+      message: `Are you sure you want to unlock ${selectedAssessmentType === 'test' ? 'tests' : 'exams'} for ${selectedStudentIds.length} selected student(s)?`,
+      confirmText: 'Unlock',
+      cancelText: 'Cancel',
+      confirmButtonClass: 'confirm-btn-warning'
+    });
+    if (!confirmed) return;
+
+    try {
+      setUnlockingSelected(true);
+      const token = localStorage.getItem('accessToken');
+
+      const requestBody = {
+        assessment_type: selectedAssessmentType,
+        academic_year: selectedAcademicYear,
+        term: selectedTerm,
+        student_ids: selectedStudentIds
+      };
+
+      if (selectedSubject) requestBody.subject_id = selectedSubject;
+
+      const response = await fetch(`${API_BASE_URL}/api/academics/admin/assessments/unlock-for-selected/`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(requestBody)
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to unlock assessments for selected students');
+      }
+
+      const data = await response.json();
+      showAlert({
+        type: 'success',
+        message: data.message
+      });
+
+      // Refresh the students list to show updated lock status
+      if (selectedModalClass) {
+        await handleSelectClass(selectedModalClass);
+      }
+      setSelectedStudentIds([]);
+
+      if (hasFiltered) {
+        await handleSearch();
+      }
+    } catch (err) {
+      setError(err.message);
+      showAlert({
+        type: 'error',
+        message: 'Error: ' + err.message
+      });
+    } finally {
+      setUnlockingSelected(false);
+    }
+  };
+
+  const handleCloseUnlockModal = () => {
+    setShowUnlockModal(false);
+    setSelectedModalClass(null);
+    setClassStudents([]);
+    setSelectedStudentIds([]);
   };
 
   const handleEditQuestion = (question) => {
@@ -612,6 +849,14 @@ const ReviewQuestions = () => {
                    selectedTerm && selectedAcademicYear ? ` for ${selectedTerm} ${selectedAcademicYear}` :
                    ''}
                 </button>
+                <button className="unlock-paid-btn" onClick={handleUnlockForPaidStudents}>
+                  <DollarSign size={18} />
+                  Unlock for Paid Students Only
+                </button>
+                <button className="unlock-selected-btn" onClick={handleOpenUnlockModal}>
+                  <Users size={18} />
+                  Unlock for Selected Students
+                </button>
               </div>
             )}
           </div>
@@ -914,6 +1159,130 @@ const ReviewQuestions = () => {
               <button className="save-btn" onClick={handleSaveQuestion} disabled={saving}>
                 {saving ? 'Saving...' : 'Save Changes'}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Unlock for Selected Students Modal */}
+      {showUnlockModal && (
+        <div className="unlock-modal-overlay" onClick={handleCloseUnlockModal}>
+          <div className="unlock-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="unlock-modal-header">
+              <h3>Unlock for Selected Students</h3>
+              <button className="close-modal-btn" onClick={handleCloseUnlockModal}>×</button>
+            </div>
+
+            <div className="unlock-modal-body">
+              {!selectedModalClass ? (
+                <div className="modal-classes-section">
+                  <h4>Select a Class</h4>
+                  <p className="modal-subtitle">
+                    {selectedAcademicYear} - {selectedTerm}
+                  </p>
+                  <div className="modal-classes-list">
+                    {modalClasses.length === 0 ? (
+                      <div className="no-classes-message">No classes found for this session</div>
+                    ) : (
+                      modalClasses.map((cls) => (
+                        <div
+                          key={cls.id}
+                          className="modal-class-item"
+                          onClick={() => handleSelectClass(cls.id)}
+                        >
+                          <Users size={20} />
+                          <span>{cls.classroom.name}</span>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <div className="modal-students-section">
+                  <div className="students-header">
+                    <button
+                      className="back-to-classes-btn"
+                      onClick={() => {
+                        setSelectedModalClass(null);
+                        setClassStudents([]);
+                        setSelectedStudentIds([]);
+                      }}
+                    >
+                      ← Back to Classes
+                    </button>
+                    <h4>
+                      {modalClasses.find(c => c.id === selectedModalClass)?.classroom.name || 'Class'}
+                    </h4>
+                  </div>
+
+                  {loadingStudents ? (
+                    <div className="students-loading">Loading students...</div>
+                  ) : classStudents.length === 0 ? (
+                    <div className="no-students-message">No students found in this class</div>
+                  ) : (
+                    <>
+                      <div className="students-actions">
+                        <label className="select-all-checkbox">
+                          <input
+                            type="checkbox"
+                            checked={selectedStudentIds.length === classStudents.length && classStudents.length > 0}
+                            onChange={handleToggleAllStudents}
+                          />
+                          <span>Select All ({classStudents.length})</span>
+                        </label>
+                        <button
+                          className="unlock-selected-confirm-btn"
+                          onClick={handleUnlockSelectedStudents}
+                          disabled={selectedStudentIds.length === 0 || unlockingSelected}
+                        >
+                          {unlockingSelected ? 'Unlocking...' : `Unlock Selected (${selectedStudentIds.length})`}
+                        </button>
+                      </div>
+
+                      <div className="modal-students-list">
+                        {classStudents.map((student) => (
+                          <div key={student.id} className="modal-student-item">
+                            <label className="student-checkbox">
+                              <input
+                                type="checkbox"
+                                checked={selectedStudentIds.includes(student.id)}
+                                onChange={() => handleToggleStudent(student.id)}
+                              />
+                              <span className="student-name">{student.name}</span>
+                            </label>
+
+                            <div className="student-info">
+                              <div className={`lock-status ${student.is_unlocked ? 'unlocked' : 'locked'}`}>
+                                {student.is_unlocked ? (
+                                  <>
+                                    <Unlock size={14} />
+                                    <span>Unlocked</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <Lock size={14} />
+                                    <span>Locked</span>
+                                  </>
+                                )}
+                              </div>
+
+                              <div className={`fee-status ${student.fee_balance === 0 ? 'paid' : 'owing'}`}>
+                                <DollarSign size={14} />
+                                <span>
+                                  {student.fee_balance === 0
+                                    ? 'Fully Paid'
+                                    : `₦${student.fee_balance.toLocaleString()} Balance`
+                                  }
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </div>

@@ -859,3 +859,47 @@ class StudentAnswer(models.Model):
 
     def __str__(self):
         return f"{self.submission.student.get_full_name()} - Q{self.question.question_number}"
+
+class AssessmentAccess(models.Model):
+    """
+    Tracks individual student access to assessments.
+    Used for fee-based access control and selective unlocking.
+    """
+    assessment = models.ForeignKey(
+        Assessment,
+        on_delete=models.CASCADE,
+        related_name='access_records'
+    )
+    student = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='assessment_access'
+    )
+    is_unlocked = models.BooleanField(
+        default=False,
+        help_text="Whether this student has access to this assessment"
+    )
+    unlocked_at = models.DateTimeField(
+        auto_now_add=True,
+        help_text="When access was granted"
+    )
+    unlocked_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='assessments_unlocked',
+        help_text="Admin/Principal who granted access"
+    )
+
+    class Meta:
+        ordering = ['-unlocked_at']
+        unique_together = ('assessment', 'student')
+        indexes = [
+            models.Index(fields=['student', 'assessment']),
+            models.Index(fields=['is_unlocked']),
+        ]
+
+    def __str__(self):
+        status = "Unlocked" if self.is_unlocked else "Locked"
+        return f"{self.student.get_full_name()} - {self.assessment.title} ({status})"

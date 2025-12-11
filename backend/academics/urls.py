@@ -25,6 +25,9 @@ from .views import (
     AdminDeleteAssessmentView,
     ToggleAssessmentReleaseView,
     UnlockAllAssessmentsView,
+    UnlockForPaidStudentsView,
+    GetClassStudentsView,
+    UnlockForSelectedStudentsView,
     StudentAvailableAssessmentsView,
     StudentSubmitAssessmentView,
     get_student_class_info,
@@ -102,6 +105,9 @@ urlpatterns = [
     path('admin/assessments/<int:pk>/delete/', AdminDeleteAssessmentView.as_view(), name='admin-delete-assessment'),
     path('admin/assessments/<int:pk>/toggle-release/', ToggleAssessmentReleaseView.as_view(), name='toggle-assessment-release'),
     path('admin/assessments/unlock-all/', UnlockAllAssessmentsView.as_view(), name='unlock-all-assessments'),
+    path('admin/assessments/unlock-for-paid/', UnlockForPaidStudentsView.as_view(), name='unlock-for-paid-students'),
+    path('admin/assessments/class-students/', GetClassStudentsView.as_view(), name='get-class-students'),
+    path('admin/assessments/unlock-for-selected/', UnlockForSelectedStudentsView.as_view(), name='unlock-for-selected-students'),
 
     # Student assessment endpoints
     path('student/assessments/', StudentAvailableAssessmentsView.as_view(), name='student-assessments'),
