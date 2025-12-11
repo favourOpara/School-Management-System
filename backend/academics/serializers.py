@@ -542,6 +542,7 @@ class AssessmentSerializer(serializers.ModelSerializer):
     """
     Serializer for Assessment model (read operations)
     """
+    subject = SubjectSerializer(read_only=True)
     questions = QuestionSerializer(many=True, read_only=True)
     subject_name = serializers.CharField(source='subject.name', read_only=True)
     class_name = serializers.CharField(source='subject.class_session.classroom.name', read_only=True)

@@ -1937,10 +1937,17 @@ class UnlockAllAssessmentsView(APIView):
             assessments = assessments.filter(assessment_type='final_exam')
 
         count = assessments.count()
+
+        # Delete any existing AssessmentAccess records for these assessments
+        # This ensures that all students get access via is_released=True
+        from .models import AssessmentAccess
+        AssessmentAccess.objects.filter(assessment__in=assessments).delete()
+
+        # Now set is_released=True
         assessments.update(is_released=True)
 
         return Response({
-            'message': f'Successfully unlocked {count} assessment(s)',
+            'message': f'Successfully unlocked {count} assessment(s) for all students',
             'count': count
         })
 
@@ -2172,22 +2179,21 @@ class GetClassStudentsView(APIView):
 
             # Determine if student has access
             # Logic:
-            # 1. If assessments are released AND no access records exist → unlocked for all
-            # 2. If access records exist → check student's specific access
+            # 1. If this student has an AssessmentAccess record → use that
+            # 2. Else if assessments are released → unlocked for all
+            # 3. Else → locked
 
-            access_records_exist = AssessmentAccess.objects.filter(
-                assessment__in=assessments
-            ).exists()
+            # Check if this specific student has access records
+            student_access_record = AssessmentAccess.objects.filter(
+                assessment__in=assessments,
+                student=student
+            ).first()
 
-            if access_records_exist:
-                # If access control is enabled, check specific student access
-                has_unlocked = AssessmentAccess.objects.filter(
-                    assessment__in=assessments,
-                    student=student,
-                    is_unlocked=True
-                ).exists()
+            if student_access_record:
+                # Student has explicit access control
+                has_unlocked = student_access_record.is_unlocked
             else:
-                # No access control - check if assessments are released
+                # No explicit access control for this student - check if released
                 has_unlocked = assessments.filter(is_released=True).exists()
 
             # Get fee balance
