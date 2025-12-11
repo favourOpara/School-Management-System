@@ -839,26 +839,6 @@ const ReviewQuestions = () => {
               </button>
             </div>
 
-            {selectedAssessmentType && (
-              <div className="unlock-all-section">
-                <button className="unlock-all-btn" onClick={handleUnlockAll}>
-                  <Unlock size={18} />
-                  Unlock All {selectedAssessmentType === 'test' ? 'Tests' : 'Exams'}
-                  {selectedSubject ? ' for Selected Subject' :
-                   selectedClass ? ' for Selected Class' :
-                   selectedTerm && selectedAcademicYear ? ` for ${selectedTerm} ${selectedAcademicYear}` :
-                   ''}
-                </button>
-                <button className="unlock-paid-btn" onClick={handleUnlockForPaidStudents}>
-                  <DollarSign size={18} />
-                  Unlock for Paid Students Only
-                </button>
-                <button className="unlock-selected-btn" onClick={handleOpenUnlockModal}>
-                  <Users size={18} />
-                  Unlock for Selected Students
-                </button>
-              </div>
-            )}
           </div>
 
           {/* Results */}
@@ -868,7 +848,25 @@ const ReviewQuestions = () => {
                 <div className="no-results">No assessments found matching your filters.</div>
               ) : (
                 <div className="assessments-list">
-                  <h3>Found {assessments.length} assessment(s)</h3>
+                  <div className="assessments-header">
+                    <h3>Found {assessments.length} assessment(s)</h3>
+
+                    {/* Bulk Unlock Actions */}
+                    <div className="bulk-unlock-actions">
+                      <button className="unlock-all-btn" onClick={handleUnlockAll}>
+                        <Unlock size={18} />
+                        Unlock All {selectedAssessmentType === 'test' ? 'Tests' : 'Exams'}
+                      </button>
+                      <button className="unlock-paid-btn" onClick={handleUnlockForPaidStudents}>
+                        <DollarSign size={18} />
+                        Unlock for Paid Students Only
+                      </button>
+                      <button className="unlock-selected-btn" onClick={handleOpenUnlockModal}>
+                        <Users size={18} />
+                        Unlock for Selected Students
+                      </button>
+                    </div>
+                  </div>
 
                   {assessments.map(assessment => (
                     <div key={assessment.id} className="assessment-card">

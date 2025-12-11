@@ -2093,12 +2093,25 @@ class GetClassStudentsView(APIView):
         for student_session in student_sessions:
             student = student_session.student
 
-            # Check if ANY assessment is unlocked for this student
-            has_unlocked = AssessmentAccess.objects.filter(
-                assessment__in=assessments,
-                student=student,
-                is_unlocked=True
+            # Determine if student has access
+            # Logic:
+            # 1. If assessments are released AND no access records exist → unlocked for all
+            # 2. If access records exist → check student's specific access
+
+            access_records_exist = AssessmentAccess.objects.filter(
+                assessment__in=assessments
             ).exists()
+
+            if access_records_exist:
+                # If access control is enabled, check specific student access
+                has_unlocked = AssessmentAccess.objects.filter(
+                    assessment__in=assessments,
+                    student=student,
+                    is_unlocked=True
+                ).exists()
+            else:
+                # No access control - check if assessments are released
+                has_unlocked = assessments.filter(is_released=True).exists()
 
             # Get fee balance
             try:
