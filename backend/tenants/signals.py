@@ -132,6 +132,15 @@ def reset_email_counter(sender, instance, **kwargs):
     """
     today = timezone.now().date()
 
-    if instance.email_counter_reset_date < today:
-        instance.emails_sent_today = 0
+    # Handle case where email_counter_reset_date might be None or a datetime
+    if instance.email_counter_reset_date:
+        reset_date = instance.email_counter_reset_date
+        # Convert datetime to date if needed
+        if hasattr(reset_date, 'date'):
+            reset_date = reset_date.date()
+
+        if reset_date < today:
+            instance.emails_sent_today = 0
+            instance.email_counter_reset_date = today
+    else:
         instance.email_counter_reset_date = today
