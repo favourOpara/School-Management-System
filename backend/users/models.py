@@ -1,6 +1,7 @@
 from django.contrib.auth.models import AbstractUser, BaseUserManager
 from django.db import models
 from academics.models import Class
+from tenants.models import School
 
 
 def student_photo_upload_path(instance, filename):
@@ -56,6 +57,13 @@ class CustomUser(AbstractUser):
     ]
 
     role = models.CharField(max_length=10, choices=ROLE_CHOICES)
+    school = models.ForeignKey(
+        School,
+        on_delete=models.CASCADE,
+        related_name='users',
+        null=True,  # Temporarily nullable for migration
+        blank=True
+    )
     classroom = models.ForeignKey(Class, on_delete=models.SET_NULL, null=True, blank=True)
     middle_name = models.CharField(max_length=30, blank=True)
     gender = models.CharField(max_length=10, choices=GENDER_CHOICES, null=True, blank=True)

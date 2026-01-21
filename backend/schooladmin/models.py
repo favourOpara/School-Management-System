@@ -2,6 +2,7 @@ from django.db import models
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from academics.models import Class, ClassSession
+from tenants.models import School
 from decimal import Decimal
 
 
@@ -12,6 +13,13 @@ class FeeStructure(models.Model):
         ("Third Term", "Third Term"),
     ]
 
+    school = models.ForeignKey(
+        School,
+        on_delete=models.CASCADE,
+        related_name='fee_structures',
+        null=True,  # Temporarily nullable for migration
+        blank=True
+    )
     name = models.CharField(max_length=100)
     amount = models.DecimalField(max_digits=10, decimal_places=2)
     academic_year = models.CharField(max_length=9)  # e.g. '2024/2025'
@@ -169,6 +177,13 @@ class GradingScale(models.Model):
     """
     Defines letter grade boundaries (A, B, C, D, F) for a school
     """
+    school = models.ForeignKey(
+        School,
+        on_delete=models.CASCADE,
+        related_name='grading_scales',
+        null=True,  # Temporarily nullable for migration
+        blank=True
+    )
     name = models.CharField(max_length=100, help_text="Name for this grading scale (e.g., 'Standard Scale', 'Honors Scale')")
     description = models.TextField(blank=True)
     academic_year = models.CharField(max_length=9, blank=True)
@@ -247,6 +262,13 @@ class GradingConfiguration(models.Model):
     Stores grading weight configuration for each academic session
     Admin sets these percentages once per session, all teachers must follow
     """
+    school = models.ForeignKey(
+        School,
+        on_delete=models.CASCADE,
+        related_name='grading_configurations',
+        null=True,  # Temporarily nullable for migration
+        blank=True
+    )
     academic_year = models.CharField(max_length=9)  # e.g. '2024/2025'
     term = models.CharField(
         max_length=20,
@@ -730,6 +752,13 @@ class Announcement(models.Model):
         ('incomplete_grading', 'Teachers with Incomplete Grading After Deadline'),
     ]
 
+    school = models.ForeignKey(
+        School,
+        on_delete=models.CASCADE,
+        related_name='announcements',
+        null=True,  # Temporarily nullable for migration
+        blank=True
+    )
     title = models.CharField(max_length=200)
     message = models.TextField()
     audience = models.CharField(max_length=20, choices=AUDIENCE_CHOICES, default='everyone')

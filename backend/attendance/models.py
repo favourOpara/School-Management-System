@@ -2,6 +2,7 @@ from django.db import models
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from academics.models import Subject, ClassSession
+from tenants.models import School
 
 TERM_CHOICES = [
     ('First Term', 'First Term'),
@@ -68,7 +69,14 @@ class AttendanceCalendar(models.Model):
         ("Second Term", "Second Term"),
         ("Third Term", "Third Term"),
     ]
-    
+
+    school = models.ForeignKey(
+        School,
+        on_delete=models.CASCADE,
+        related_name='attendance_calendars',
+        null=True,  # Temporarily nullable for migration
+        blank=True
+    )
     academic_year = models.CharField(max_length=9)  # e.g. '2024/2025'
     term = models.CharField(max_length=20, choices=TERM_CHOICES)
     

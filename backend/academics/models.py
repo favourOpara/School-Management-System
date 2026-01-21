@@ -2,6 +2,7 @@ from django.db import models
 from django.conf import settings
 import os
 from .storage import AssignmentFileStorage
+from tenants.models import School
 
 
 def upload_to_subject_files(instance, filename):
@@ -46,12 +47,22 @@ class Class(models.Model):
     """
     A class/grade level (e.g., J.S.S.1, S.S.S.2)
     """
-    name = models.CharField(max_length=50, unique=True)
+    school = models.ForeignKey(
+        School,
+        on_delete=models.CASCADE,
+        related_name='classes',
+        null=True,  # Temporarily nullable for migration
+        blank=True
+    )
+    name = models.CharField(max_length=50)
     description = models.TextField(blank=True)
     has_departments = models.BooleanField(
         default=False,
         help_text="If True, students and subjects in this class must select a department (Science/Arts/Commercial)"
     )
+
+    class Meta:
+        unique_together = ('school', 'name')
 
     def __str__(self):
         return self.name

@@ -1,38 +1,74 @@
 """
 URL configuration for backend project.
 
-The `urlpatterns` list routes URLs to views. For more information please see:
-    https://docs.djangoproject.com/en/5.2/topics/http/urls/
-Examples:
-Function views
-    1. Add an import:  from my_app import views
-    2. Add a URL to urlpatterns:  path('', views.home, name='home')
-Class-based views
-    1. Add an import:  from other_app.views import Home
-    2. Add a URL to urlpatterns:  path('', Home.as_view(), name='home')
-Including another URLconf
-    1. Import the include() function: from django.urls import include, path
-    2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
+Multi-tenant URL Structure:
+- Public routes: /api/public/... (no auth required)
+- Webhooks: /api/webhooks/... (no auth required, signature verified)
+- Token routes: /api/token/... (for JWT authentication)
+- School-scoped routes: /api/<school_slug>/... (auth required)
+- Legacy routes: /api/users/... etc. (for backward compatibility)
+- Super admin routes: /api/superadmin/... (Django superuser only)
 """
 from django.contrib import admin
-from django.urls import path, include
+from django.urls import path, include, re_path
 from rest_framework_simplejwt.views import (
     TokenObtainPairView,
     TokenRefreshView,
 )
 
+from tenants.urls import (
+    public_urlpatterns as tenant_public_urls,
+    webhook_urlpatterns as tenant_webhook_urls,
+    school_urlpatterns as tenant_school_urls,
+    admin_urlpatterns as tenant_admin_urls,
+)
+
+
+# School-scoped URL patterns (mounted under /api/<school_slug>/)
+# These include the existing app URLs plus tenant-specific URLs
+school_scoped_patterns = [
+    # Tenant/subscription management
+    path('', include(tenant_school_urls)),
+
+    # Existing app URLs (now school-scoped)
+    path('users/', include('users.urls')),
+    path('academics/', include('academics.urls')),
+    path('admin/', include('schooladmin.urls')),
+    path('schooladmin/', include('schooladmin.urls')),
+    path('attendance/', include('attendance.urls')),
+    path('logs/', include('logs.urls')),
+]
+
 
 urlpatterns = [
+    # Django admin
     path('admin/', admin.site.urls),
-    path('api/users/', include('users.urls')),
+
+    # Public routes (no authentication required)
+    path('api/public/', include(tenant_public_urls)),
+
+    # Webhook routes (signature verified, no auth)
+    path('api/webhooks/', include(tenant_webhook_urls)),
+
+    # JWT Token routes
     path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
-    path('api/admin/', include('schooladmin.urls')),
+
+    # Super admin routes (Django superuser only)
+    path('api/superadmin/', include(tenant_admin_urls)),
+
+    # School-scoped routes (authentication required)
+    # The TenantMiddleware will extract school_slug and attach to request
+    re_path(r'^api/(?P<school_slug>[a-z0-9-]+)/', include(school_scoped_patterns)),
+
+    # Legacy routes (for backward compatibility during migration)
+    # These will use the default school or the user's school from the middleware
+    path('api/users/', include('users.urls')),
     path('api/academics/', include('academics.urls')),
-    path('api/logs/', include('logs.urls')),
+    path('api/admin/', include('schooladmin.urls')),
     path('api/schooladmin/', include('schooladmin.urls')),
     path('api/attendance/', include('attendance.urls')),
-
+    path('api/logs/', include('logs.urls')),
 ]
 
 # Note: Media files are served by Cloudinary, not locally

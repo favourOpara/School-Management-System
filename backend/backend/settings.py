@@ -90,6 +90,7 @@ INSTALLED_APPS = [
     'corsheaders',
     'django_apscheduler',
     # Project apps
+    'tenants',  # Must come before other project apps
     'users',
     'schooladmin',
     'academics',
@@ -105,6 +106,8 @@ MIDDLEWARE = [
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'tenants.middleware.TenantMiddleware',  # Extract school from URL
+    'tenants.middleware.SubscriptionValidationMiddleware',  # Validate subscription
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
@@ -259,3 +262,15 @@ BACKUP_INTERVAL_DAYS = config('BACKUP_INTERVAL_DAYS', default=5, cast=int)
 
 # APScheduler Settings
 SCHEDULER_DEFAULT = True
+
+# ============================================================================
+# PAYSTACK CONFIGURATION (Subscription Payments)
+# ============================================================================
+PAYSTACK_SECRET_KEY = config('PAYSTACK_SECRET_KEY', default='sk_test_xxxxx')
+PAYSTACK_PUBLIC_KEY = config('PAYSTACK_PUBLIC_KEY', default='pk_test_xxxxx')
+
+# ============================================================================
+# MULTI-TENANCY SETTINGS
+# ============================================================================
+# Default school slug for backwards compatibility
+DEFAULT_SCHOOL_SLUG = config('DEFAULT_SCHOOL_SLUG', default='figilschools')

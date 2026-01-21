@@ -1,6 +1,7 @@
 from django.db import models
 from django.contrib.auth import get_user_model
 from django.utils import timezone
+from tenants.models import School
 
 User = get_user_model()
 
@@ -22,12 +23,19 @@ class ActivityLog(models.Model):
         ('announcement', 'Announcement'),
     ]
 
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    school = models.ForeignKey(
+        School,
+        on_delete=models.CASCADE,
+        related_name='activity_logs',
+        null=True,  # Temporarily nullable for migration
+        blank=True
+    )
+    user = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True)
     role = models.CharField(max_length=20)
     action = models.TextField()
     activity_type = models.CharField(
-        max_length=20, 
-        choices=ACTIVITY_TYPES, 
+        max_length=20,
+        choices=ACTIVITY_TYPES,
         default='system'
     )
     timestamp = models.DateTimeField(auto_now_add=True)
@@ -280,6 +288,13 @@ class Notification(models.Model):
         ('high', 'High'),
     ]
 
+    school = models.ForeignKey(
+        School,
+        on_delete=models.CASCADE,
+        related_name='notifications',
+        null=True,  # Temporarily nullable for migration
+        blank=True
+    )
     recipient = models.ForeignKey(User, on_delete=models.CASCADE, related_name='notifications')
     title = models.CharField(max_length=200)
     message = models.TextField()
