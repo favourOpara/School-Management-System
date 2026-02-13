@@ -1,14 +1,44 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
-import API_BASE_URL from '../config';
+import { getSchoolSlug, buildPublicApiUrl } from '../config';
+import { useSchool } from '../contexts/SchoolContext';
 import './HomePage.css';
 
 const HomePage = () => {
   const [formData, setFormData] = useState({ username: '', password: '' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [schoolInfo, setSchoolInfo] = useState(null);
+  const [loadingSchool, setLoadingSchool] = useState(true);
   const navigate = useNavigate();
+  const { buildApiUrl, refreshSubscription } = useSchool();
+
+  // Fetch school info on mount
+  useEffect(() => {
+    const fetchSchoolInfo = async () => {
+      const slug = getSchoolSlug();
+      if (!slug) {
+        setLoadingSchool(false);
+        return;
+      }
+
+      try {
+        const response = await axios.get(buildPublicApiUrl(`school/${slug}/`));
+        setSchoolInfo(response.data);
+        // Update document title
+        if (response.data.name) {
+          document.title = response.data.name;
+        }
+      } catch (err) {
+        console.error('Failed to fetch school info:', err);
+      } finally {
+        setLoadingSchool(false);
+      }
+    };
+
+    fetchSchoolInfo();
+  }, []);
 
   const handleChange = e => {
     setFormData(f => ({ ...f, [e.target.name]: e.target.value }));
@@ -21,9 +51,11 @@ const HomePage = () => {
     setLoading(true);
 
     try {
+      // Include school_slug to ensure user belongs to this school
+      const schoolSlug = getSchoolSlug();
       const { data } = await axios.post(
-        `${API_BASE_URL}/api/users/login/`,
-        formData
+        buildApiUrl('/users/login/'),
+        { ...formData, school_slug: schoolSlug }
       );
 
       localStorage.setItem('accessToken', data.access);
@@ -32,24 +64,38 @@ const HomePage = () => {
       localStorage.setItem('userId', data.user_id);
       localStorage.setItem('userName', data.username);
 
+      // CRITICAL: Store school slug for multi-tenancy
+      // This ensures all API calls go to the correct school
+      if (schoolSlug) {
+        localStorage.setItem('schoolSlug', schoolSlug);
+      }
+
+      // Fetch subscription data now that user is authenticated
+      // (initial SchoolContext load skipped this because no token existed yet)
+      refreshSubscription();
+
+      const slug = schoolSlug || getSchoolSlug();
       switch (data.role) {
         case 'admin':
-          navigate('/admin/dashboard');
+          navigate(slug ? `/${slug}/admin/dashboard` : '/admin/dashboard');
           break;
         case 'principal':
-          navigate('/principal/dashboard');
+          navigate(slug ? `/${slug}/principal/dashboard` : '/principal/dashboard');
           break;
         case 'student':
-          navigate('/student/dashboard');
+          navigate(slug ? `/${slug}/student/dashboard` : '/student/dashboard');
           break;
         case 'teacher':
-          navigate('/teacher/dashboard');
+          navigate(slug ? `/${slug}/teacher/dashboard` : '/teacher/dashboard');
           break;
         case 'parent':
-          navigate('/parent/dashboard');
+          navigate(slug ? `/${slug}/parent/dashboard` : '/parent/dashboard');
+          break;
+        case 'proprietor':
+          navigate(slug ? `/${slug}/proprietor/dashboard` : '/proprietor/dashboard');
           break;
         default:
-          navigate('/dashboard');
+          navigate(slug ? `/${slug}/dashboard` : '/dashboard');
       }
 
     } catch (error) {
@@ -138,10 +184,19 @@ const HomePage = () => {
         <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 14H5V5h7v12zm7 0h-5V5h5v12z"/>
       </svg>
 
-      <img src="/logo.png" alt="Figil Schools Logo" className="logo-above" />
+      {/* School Logo */}
+      {schoolInfo?.logo ? (
+        <img src={schoolInfo.logo} alt={`${schoolInfo.name} Logo`} className="logo-above" />
+      ) : (
+        <div className="logo-placeholder-above">
+          <svg viewBox="0 0 24 24" fill="currentColor" width="60" height="60">
+            <path d="M5 13.18v4L12 21l7-3.82v-4L12 17l-7-3.82zM12 3L1 9l11 6 9-4.91V17h2V9L12 3z"/>
+          </svg>
+        </div>
+      )}
 
-      <div className="login-card">
-        <h2>Figil Schools</h2>
+      <div className="login-card" style={schoolInfo?.accent_color ? { '--accent-color': schoolInfo.accent_color } : {}}>
+        <h2>{schoolInfo?.name || 'School Portal'}</h2>
 
         <form onSubmit={handleSubmit}>
           <div className="input-group">
@@ -204,7 +259,7 @@ const HomePage = () => {
         </div>
 
         <div className="login-footer">
-          &copy; 2024 Figil Schools. All rights reserved.
+          &copy; {new Date().getFullYear()} {schoolInfo?.name || 'School'}. All rights reserved.
         </div>
       </div>
     </div>

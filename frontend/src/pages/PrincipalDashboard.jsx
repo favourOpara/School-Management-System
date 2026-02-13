@@ -1,5 +1,5 @@
 // src/pages/PrincipalDashboard.jsx
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, Suspense } from 'react';
 import { useLocation } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
 import ClassForm from '../components/ClassForm';
@@ -23,7 +23,10 @@ import ReportSheet from '../components/ReportSheet';
 import AdminFeeReceipts from '../components/AdminFeeReceipts';
 import TopHeader from '../components/TopHeader';
 import AdminProfileSettings from '../components/AdminProfileSettings';
+import { useSchool } from '../contexts/SchoolContext';
 import './AdminDashboard.css';
+
+const KnowledgeBase = React.lazy(() => import('../components/KnowledgeBase'));
 
 const getGreeting = () => {
   const hour = new Date().getHours();
@@ -34,6 +37,7 @@ const getGreeting = () => {
 
 const PrincipalDashboard = () => {
   const location = useLocation();
+  const { school } = useSchool();
   const [activeTab, setActiveTab] = useState('analytics');
   const [userName, setUserName] = useState('');
   const [showProfileSettings, setShowProfileSettings] = useState(false);
@@ -122,6 +126,12 @@ const PrincipalDashboard = () => {
         return <ViewResults />;
       case 'review-questions':
         return <ReviewQuestions />;
+      case 'knowledge-base':
+        return (
+          <Suspense fallback={<div className="kb-loading">Loading...</div>}>
+            <KnowledgeBase userRole="principal" />
+          </Suspense>
+        );
       default:
         return (
           <div className="admin-dashboard-section">
@@ -131,8 +141,16 @@ const PrincipalDashboard = () => {
     }
   };
 
+  // Apply accent color as CSS variable at the container level
+  const containerStyle = school?.accent_color ? {
+    '--accent-color': school.accent_color,
+    '--accent-color-dark': school.secondary_color || school.accent_color,
+    '--sidebar-accent': school.accent_color,
+    '--sidebar-accent-dark': school.secondary_color || school.accent_color,
+  } : {};
+
   return (
-    <div className="admin-dashboard-container">
+    <div className="admin-dashboard-container" style={containerStyle}>
       <Sidebar ref={sidebarRef} activeTab={activeTab} setActiveTab={setActiveTab} userRole="principal" />
       <TopHeader
         onMenuClick={() => sidebarRef.current?.openSidebar()}

@@ -4,11 +4,13 @@ import { BookOpen, Filter, AlertCircle, CheckCircle, Search, Users } from 'lucid
 import GradesModal from './GradesModal';
 import './ViewResults.css';
 import { useDialog } from '../contexts/DialogContext';
+import { useSchool } from '../contexts/SchoolContext';
 
 import API_BASE_URL from '../config';
 
 const ViewResults = () => {
   const { showConfirm } = useDialog();
+  const { buildApiUrl } = useSchool();
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [messageType, setMessageType] = useState('');
@@ -58,10 +60,10 @@ const ViewResults = () => {
       const token = localStorage.getItem('accessToken');
       
       // Fetch sessions for academic years and terms
-      const sessionResponse = await fetch(`${API_BASE_URL}/api/academics/sessions/`, {
+      const sessionResponse = await fetch(buildApiUrl('/academics/sessions/'), {
         headers: { 'Authorization': `Bearer ${token}` }
       });
-      
+
       if (sessionResponse.ok) {
         const sessionData = await sessionResponse.json();
         const uniqueYears = [...new Set(sessionData.map(s => s.academic_year))].sort().reverse();
@@ -69,9 +71,9 @@ const ViewResults = () => {
         setAcademicYears(uniqueYears);
         setTerms(uniqueTerms);
       }
-      
+
       // Fetch classes
-      const classResponse = await fetch(`${API_BASE_URL}/api/academics/classes/`, {
+      const classResponse = await fetch(buildApiUrl('/academics/classes/'), {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       
@@ -111,7 +113,7 @@ const ViewResults = () => {
       setLoading(true);
       const token = localStorage.getItem('accessToken');
       
-      let url = `${API_BASE_URL}/api/schooladmin/results/subjects/?academic_year=${selectedYear}&term=${selectedTerm}&class_id=${selectedClass}`;
+      let url = buildApiUrl(`/schooladmin/results/subjects/?academic_year=${selectedYear}&term=${selectedTerm}&class_id=${selectedClass}`);
       
       if (selectedDepartment) {
         url += `&department=${selectedDepartment}`;
@@ -170,7 +172,7 @@ const ViewResults = () => {
       setSyncing(true);
       const token = localStorage.getItem('accessToken');
 
-      const response = await fetch(`${API_BASE_URL}/api/schooladmin/results/sync-attendance/`, {
+      const response = await fetch(buildApiUrl('/schooladmin/results/sync-attendance/'), {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,

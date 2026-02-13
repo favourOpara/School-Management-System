@@ -2,11 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { Search, Edit2, Eye, Lock, Unlock, Trash2, Users, DollarSign, CheckCircle, XCircle } from 'lucide-react';
 import './ReviewQuestions.css';
 import { useDialog } from '../contexts/DialogContext';
+import { useSchool } from '../contexts/SchoolContext';
 
 import API_BASE_URL from '../config';
 
 const ReviewQuestions = () => {
   const { showConfirm, showAlert } = useDialog();
+  const { buildApiUrl } = useSchool();
   const [sessions, setSessions] = useState([]);
   const [classes, setClasses] = useState([]);
   const [allSubjects, setAllSubjects] = useState([]);
@@ -53,7 +55,7 @@ const ReviewQuestions = () => {
       const token = localStorage.getItem('accessToken');
 
       // Fetch all class sessions
-      const sessionsResponse = await fetch(`${API_BASE_URL}/api/academics/sessions/`, {
+      const sessionsResponse = await fetch(buildApiUrl('/academics/sessions/'), {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -86,7 +88,7 @@ const ReviewQuestions = () => {
       setSessions(uniqueSessions);
 
       // Fetch all classes
-      const classesResponse = await fetch(`${API_BASE_URL}/api/academics/classes/`, {
+      const classesResponse = await fetch(buildApiUrl('/academics/classes/'), {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -101,7 +103,7 @@ const ReviewQuestions = () => {
       setClasses(classesData || []);
 
       // Fetch all subjects
-      const subjectsResponse = await fetch(`${API_BASE_URL}/api/academics/subjects/list/`, {
+      const subjectsResponse = await fetch(buildApiUrl('/academics/subjects/list/'), {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -142,7 +144,7 @@ const ReviewQuestions = () => {
         params.append('subject_id', selectedSubject);
       }
 
-      const response = await fetch(`${API_BASE_URL}/api/academics/admin/assessments/?${params}`, {
+      const response = await fetch(buildApiUrl(`/academics/admin/assessments/?${params}`), {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -186,7 +188,7 @@ const ReviewQuestions = () => {
     try {
       const token = localStorage.getItem('accessToken');
 
-      const response = await fetch(`${API_BASE_URL}/api/academics/admin/assessments/${assessmentId}/toggle-release/`, {
+      const response = await fetch(buildApiUrl(`/academics/admin/assessments/${assessmentId}/toggle-release/`), {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -220,7 +222,7 @@ const ReviewQuestions = () => {
     try {
       const token = localStorage.getItem('accessToken');
 
-      const response = await fetch(`${API_BASE_URL}/api/academics/admin/assessments/${assessment.id}/delete/`, {
+      const response = await fetch(buildApiUrl(`/academics/admin/assessments/${assessment.id}/delete/`), {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -284,7 +286,7 @@ const ReviewQuestions = () => {
       if (selectedTerm) requestBody.term = selectedTerm;
       if (selectedSubject) requestBody.subject_id = selectedSubject;
 
-      const response = await fetch(`${API_BASE_URL}/api/academics/admin/assessments/unlock-all/`, {
+      const response = await fetch(buildApiUrl('/academics/admin/assessments/unlock-all/'), {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -344,7 +346,7 @@ const ReviewQuestions = () => {
       if (selectedTerm) requestBody.term = selectedTerm;
       if (selectedSubject) requestBody.subject_id = selectedSubject;
 
-      const response = await fetch(`${API_BASE_URL}/api/academics/admin/assessments/unlock-for-paid/`, {
+      const response = await fetch(buildApiUrl('/academics/admin/assessments/unlock-for-paid/'), {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -384,7 +386,7 @@ const ReviewQuestions = () => {
     try {
       const token = localStorage.getItem('accessToken');
       const response = await fetch(
-        `${API_BASE_URL}/api/academics/sessions/?academic_year=${selectedAcademicYear}&term=${selectedTerm}`,
+        buildApiUrl(`/academics/sessions/?academic_year=${selectedAcademicYear}&term=${selectedTerm}`),
         {
           headers: { 'Authorization': `Bearer ${token}` }
         }
@@ -430,7 +432,7 @@ const ReviewQuestions = () => {
         return;
       }
 
-      let url = `${API_BASE_URL}/api/academics/admin/assessments/class-students/?class_session_id=${classSessionId}&assessment_type=${assessmentType}`;
+      let url = buildApiUrl(`/academics/admin/assessments/class-students/?class_session_id=${classSessionId}&assessment_type=${assessmentType}`);
 
       // If single assessment, add assessment_id parameter
       if (currentAssessmentId) {
@@ -525,7 +527,7 @@ const ReviewQuestions = () => {
         if (selectedSubject) requestBody.subject_id = selectedSubject;
       }
 
-      const response = await fetch(`${API_BASE_URL}/api/academics/admin/assessments/unlock-for-selected/`, {
+      const response = await fetch(buildApiUrl('/academics/admin/assessments/unlock-for-selected/'), {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -605,7 +607,7 @@ const ReviewQuestions = () => {
         assessment_id: assessmentId // Single assessment
       };
 
-      const response = await fetch(`${API_BASE_URL}/api/academics/admin/assessments/unlock-for-paid-single/`, {
+      const response = await fetch(buildApiUrl('/academics/admin/assessments/unlock-for-paid-single/'), {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -646,7 +648,7 @@ const ReviewQuestions = () => {
       const term = assessment.subject.class_session.term;
 
       const response = await fetch(
-        `${API_BASE_URL}/api/academics/sessions/?academic_year=${academicYear}&term=${term}`,
+        buildApiUrl(`/academics/sessions/?academic_year=${academicYear}&term=${term}`),
         {
           headers: { 'Authorization': `Bearer ${token}` }
         }
@@ -744,7 +746,7 @@ const ReviewQuestions = () => {
         body = JSON.stringify(updateData);
       }
 
-      const response = await fetch(`${API_BASE_URL}/api/academics/questions/${editingQuestion.id}/`, {
+      const response = await fetch(buildApiUrl(`/academics/questions/${editingQuestion.id}/`), {
         method: 'PATCH',
         headers: headers,
         body: body

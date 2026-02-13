@@ -1,5 +1,5 @@
 // src/pages/TeacherDashboard.jsx
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, Suspense } from 'react';
 import { useLocation } from 'react-router-dom';
 import RoleBasedSidebar from '../components/RoleBasedSidebar';
 import AssignedClasses from '../components/AssignedClasses';
@@ -11,9 +11,12 @@ import TeacherAnnouncements from '../components/TeacherAnnouncements';
 import NotificationPopup from '../components/NotificationPopup';
 import TopHeader from '../components/TopHeader';
 import PasswordChange from '../components/PasswordChange';
-import API_BASE_URL from '../config';
+import StaffBookOnOff from '../components/StaffBookOnOff';
+import { useSchool } from '../contexts/SchoolContext';
 
 import './TeacherDashboard.css';
+
+const KnowledgeBase = React.lazy(() => import('../components/KnowledgeBase'));
 
 const getGreeting = () => {
   const hour = new Date().getHours();
@@ -24,6 +27,7 @@ const getGreeting = () => {
 
 const TeacherDashboard = () => {
   const location = useLocation();
+  const { school, buildApiUrl } = useSchool();
   const [activeTab, setActiveTab] = useState('dashboard');
   const [userName, setUserName] = useState('');
   const [showPasswordChange, setShowPasswordChange] = useState(false);
@@ -59,7 +63,7 @@ const TeacherDashboard = () => {
     try {
       setLoading(true);
       const token = localStorage.getItem('accessToken');
-      const response = await fetch(`${API_BASE_URL}/api/schooladmin/teacher/grading-stats/`, {
+      const response = await fetch(buildApiUrl('/schooladmin/teacher/grading-stats/'), {
         headers: { 'Authorization': `Bearer ${token}` }
       });
 
@@ -95,7 +99,7 @@ const TeacherDashboard = () => {
       const token = localStorage.getItem('accessToken');
       const endpoint = isGraded ? 'graded-students' : 'incomplete-students';
       const response = await fetch(
-        `${API_BASE_URL}/api/schooladmin/teacher/${endpoint}/?subject_id=${subjectId}&assessment_type=${assessmentType}`,
+        buildApiUrl(`/schooladmin/teacher/${endpoint}/?subject_id=${subjectId}&assessment_type=${assessmentType}`),
         {
           headers: { 'Authorization': `Bearer ${token}` }
         }
@@ -380,6 +384,8 @@ const TeacherDashboard = () => {
         return <ManualGrading />;
       case 'announcements':
         return <TeacherAnnouncements />;
+      case 'book-on-off':
+        return <StaffBookOnOff />;
       case 'grade-students':
         return (
           <div className="teacher-dashboard-section">
@@ -422,6 +428,12 @@ const TeacherDashboard = () => {
             <p className="teacher-dashboard-section-text">Adjust your account settings and preferences.</p>
           </div>
         );
+      case 'knowledge-base':
+        return (
+          <Suspense fallback={<div className="kb-loading">Loading...</div>}>
+            <KnowledgeBase userRole="teacher" />
+          </Suspense>
+        );
       default:
         return (
           <div className="teacher-dashboard-section">
@@ -431,8 +443,16 @@ const TeacherDashboard = () => {
     }
   };
 
+  // Apply accent color as CSS variable at the container level
+  const containerStyle = school?.accent_color ? {
+    '--accent-color': school.accent_color,
+    '--accent-color-dark': school.secondary_color || school.accent_color,
+    '--sidebar-accent': school.accent_color,
+    '--sidebar-accent-dark': school.secondary_color || school.accent_color,
+  } : {};
+
   return (
-    <div className="teacher-dashboard-container">
+    <div className="teacher-dashboard-container" style={containerStyle}>
       <RoleBasedSidebar
         ref={sidebarRef}
         userRole="teacher"

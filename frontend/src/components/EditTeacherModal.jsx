@@ -3,11 +3,13 @@ import React, { useState } from 'react';
 import axios from 'axios';
 import './EditUserModal.css';
 import { useDialog } from '../contexts/DialogContext';
+import { useSchool } from '../contexts/SchoolContext';
 
 import API_BASE_URL from '../config';
 
 const EditTeacherModal = ({ user, onClose, onUpdated }) => {
   const { showAlert } = useDialog();
+  const { buildApiUrl } = useSchool();
   const [formData, setFormData] = useState({
     first_name: user.first_name || '',
     last_name: user.last_name || '',
@@ -43,7 +45,7 @@ const EditTeacherModal = ({ user, onClose, onUpdated }) => {
       }
 
       const response = await axios.put(
-        `${API_BASE_URL}/api/users/${user.id}/`,
+        buildApiUrl(`/users/${user.id}/`),
         dataToSend,
         {
           headers: { Authorization: `Bearer ${token}` }

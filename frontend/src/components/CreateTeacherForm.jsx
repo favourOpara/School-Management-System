@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import API_BASE_URL from '../config';
+import { useSchool } from '../contexts/SchoolContext';
 
 import './CreateTeacherForm.css';
 
 const CreateTeacherForm = ({ onSuccess }) => {
+  const { buildApiUrl } = useSchool();
   const [formData, setFormData] = useState({
     username: '',
     password: '',
@@ -21,12 +23,23 @@ const CreateTeacherForm = ({ onSuccess }) => {
     setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
+  const validatePassword = (password) => {
+    if (password.length < 8) return 'Password must be at least 8 characters.';
+    if (!/[A-Z]/.test(password)) return 'Password must contain at least one uppercase letter.';
+    if (!/[a-z]/.test(password)) return 'Password must contain at least one lowercase letter.';
+    if (!/[0-9]/.test(password)) return 'Password must contain at least one number.';
+    return null;
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setMessage('');
 
+    const pwError = validatePassword(formData.password);
+    if (pwError) { setMessage(pwError); return; }
+
     try {
-      await axios.post(`${API_BASE_URL}/api/users/teacher-signup/`, formData, {
+      await axios.post(buildApiUrl('/users/teacher-signup/'), formData, {
         headers: { Authorization: `Bearer ${token}` }
       });
 
@@ -43,7 +56,9 @@ const CreateTeacherForm = ({ onSuccess }) => {
       if (onSuccess) onSuccess();
     } catch (err) {
       console.error('Error creating teacher:', err);
-      if (err.response && err.response.data) {
+      if (err.response?.data?.error) {
+        setMessage(err.response.data.error);
+      } else if (err.response?.data) {
         const errorDetails = JSON.stringify(err.response.data, null, 2);
         setMessage(`Failed to create teacher: ${errorDetails}`);
       } else {

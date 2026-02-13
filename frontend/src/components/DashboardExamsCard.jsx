@@ -5,6 +5,7 @@ import { FileText } from 'lucide-react';
 import ExamSubjectsModal from './ExamSubjectsModal';
 import ExamStudentScoresModal from './ExamStudentScoresModal';
 import API_BASE_URL from '../config';
+import { useSchool } from '../contexts/SchoolContext';
 
 import './DashboardExamsCard.css';
 
@@ -45,6 +46,7 @@ const selectStyles = {
 };
 
 const DashboardExamsCard = () => {
+  const { buildApiUrl } = useSchool();
   const [academicYears, setAcademicYears] = useState([]);
   const [selectedYear, setSelectedYear] = useState(null);
   const [selectedTerm, setSelectedTerm] = useState(termOptions[0]);
@@ -62,12 +64,12 @@ const DashboardExamsCard = () => {
     const fetchYears = async () => {
       try {
         // First, get the current active session
-        const sessionInfoRes = await axios.get(`${API_BASE_URL}/api/schooladmin/session/info/`, { headers });
+        const sessionInfoRes = await axios.get(buildApiUrl('/schooladmin/session/info/'), { headers });
         const currentYear = sessionInfoRes.data.academic_year;
         const currentTerm = sessionInfoRes.data.current_term;
 
         // Then get all available sessions
-        const res = await axios.get(`${API_BASE_URL}/api/academics/sessions/`, { headers });
+        const res = await axios.get(buildApiUrl('/academics/sessions/'), { headers });
         if (Array.isArray(res.data)) {
           const years = [...new Set(res.data.map(s => s.academic_year))].sort();
           const options = years.map(y => ({ value: y, label: y }));
@@ -102,7 +104,7 @@ const DashboardExamsCard = () => {
       setError('');
 
       try {
-        const response = await axios.get(`${API_BASE_URL}/api/schooladmin/analytics/exams/`, {
+        const response = await axios.get(buildApiUrl('/schooladmin/analytics/exams/'), {
           params: {
             academic_year: selectedYear.value,
             term: selectedTerm.value

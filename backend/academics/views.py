@@ -48,16 +48,30 @@ class IsTeacherOrAdmin(permissions.BasePermission):
 # ========================
 
 class DepartmentListCreateView(generics.ListCreateAPIView):
-    queryset = Department.objects.all()
     serializer_class = DepartmentSerializer
     permission_classes = [permissions.IsAuthenticated, IsPrincipalOrAdmin]
+
+    def get_queryset(self):
+        school = getattr(self.request, 'school', None)
+        if school:
+            return Department.objects.filter(school=school)
+        return Department.objects.none()
+
+    def perform_create(self, serializer):
+        school = getattr(self.request, 'school', None)
+        serializer.save(school=school)
 
 
 class DepartmentDetailView(generics.RetrieveUpdateDestroyAPIView):
-    queryset = Department.objects.all()
     serializer_class = DepartmentSerializer
     permission_classes = [permissions.IsAuthenticated, IsPrincipalOrAdmin]
     lookup_field = 'id'
+
+    def get_queryset(self):
+        school = getattr(self.request, 'school', None)
+        if school:
+            return Department.objects.filter(school=school)
+        return Department.objects.none()
 
 
 @api_view(['POST'])
@@ -67,8 +81,10 @@ def assign_classes_to_department(request, department_id):
     Assign multiple classes to a department
     Expected payload: { "class_ids": [1, 2, 3] }
     """
+    school = getattr(request, 'school', None)
     try:
-        department = Department.objects.get(id=department_id)
+        dept_qs = Department.objects.filter(school=school) if school else Department.objects.none()
+        department = dept_qs.get(id=department_id)
     except Department.DoesNotExist:
         return Response(
             {"detail": "Department not found"},
@@ -83,8 +99,9 @@ def assign_classes_to_department(request, department_id):
             status=status.HTTP_400_BAD_REQUEST
         )
 
-    # Get all classes
-    classes = Class.objects.filter(id__in=class_ids)
+    # Get all classes for this school
+    class_qs = Class.objects.filter(school=school) if school else Class.objects.none()
+    classes = class_qs.filter(id__in=class_ids)
 
     if classes.count() != len(class_ids):
         return Response(
@@ -112,8 +129,10 @@ def remove_class_from_department(request, class_id):
     """
     Remove a class from its department
     """
+    school = getattr(request, 'school', None)
     try:
-        cls = Class.objects.get(id=class_id)
+        cls_qs = Class.objects.filter(school=school) if school else Class.objects.none()
+        cls = cls_qs.get(id=class_id)
     except Class.DoesNotExist:
         return Response(
             {"detail": "Class not found"},
@@ -134,16 +153,30 @@ def remove_class_from_department(request, class_id):
 # ========================
 
 class ClassListCreateView(generics.ListCreateAPIView):
-    queryset = Class.objects.all()
     serializer_class = ClassSerializer
     permission_classes = [permissions.IsAuthenticated, IsPrincipalOrAdmin]
+
+    def get_queryset(self):
+        school = getattr(self.request, 'school', None)
+        if school:
+            return Class.objects.filter(school=school)
+        return Class.objects.none()
+
+    def perform_create(self, serializer):
+        school = getattr(self.request, 'school', None)
+        serializer.save(school=school)
 
 
 class ClassDetailView(generics.RetrieveUpdateDestroyAPIView):
-    queryset = Class.objects.all()
     serializer_class = ClassSerializer
     permission_classes = [permissions.IsAuthenticated, IsPrincipalOrAdmin]
     lookup_field = 'id'
+
+    def get_queryset(self):
+        school = getattr(self.request, 'school', None)
+        if school:
+            return Class.objects.filter(school=school)
+        return Class.objects.none()
 
 
 # ========================
@@ -151,13 +184,17 @@ class ClassDetailView(generics.RetrieveUpdateDestroyAPIView):
 # ========================
 
 class ClassSessionListCreateView(generics.ListCreateAPIView):
-    queryset = ClassSession.objects.all()
     serializer_class = ClassSessionSerializer
     permission_classes = [permissions.IsAuthenticated, IsPrincipalOrAdmin]
 
     def get_queryset(self):
         """Filter class sessions by academic_year and term if provided"""
-        queryset = ClassSession.objects.all()
+        # Filter by school for multi-tenancy data isolation
+        school = getattr(self.request, 'school', None)
+        if school:
+            queryset = ClassSession.objects.filter(classroom__school=school)
+        else:
+            queryset = ClassSession.objects.none()
 
         academic_year = self.request.query_params.get('academic_year')
         term = self.request.query_params.get('term')
@@ -171,28 +208,48 @@ class ClassSessionListCreateView(generics.ListCreateAPIView):
         return queryset.select_related('classroom')
 
     def create(self, request, *args, **kwargs):
-        classroom_id = request.data.get('classroom')
+        classroom_id = request.data.get('classroom') or request.data.get('classroom_id')
         academic_year = request.data.get('academic_year')
         term = request.data.get('term')
+        school = getattr(request, 'school', None)
 
-        if ClassSession.objects.filter(
+        # Check if session already exists for THIS school
+        existing_query = ClassSession.objects.filter(
             classroom_id=classroom_id,
             academic_year=academic_year,
             term=term
-        ).exists():
+        )
+        if school:
+            existing_query = existing_query.filter(classroom__school=school)
+
+        if existing_query.exists():
             return Response(
-                {"detail": "Session with this class, academic year, and term already exists."},
+                {"detail": f"A class session for {academic_year} {term} already exists for this class."},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        return super().create(request, *args, **kwargs)
+        # Create the session
+        response = super().create(request, *args, **kwargs)
+
+        # Always update school's current academic year/term to match the latest session created
+        if response.status_code == 201 and school:
+            school.current_academic_year = academic_year
+            school.current_term = term
+            school.save(update_fields=['current_academic_year', 'current_term'])
+
+        return response
 
 
 class ClassSessionDetailView(generics.RetrieveUpdateDestroyAPIView):
-    queryset = ClassSession.objects.all()
     serializer_class = ClassSessionSerializer
     permission_classes = [permissions.IsAuthenticated, IsPrincipalOrAdmin]
     lookup_field = 'id'
+
+    def get_queryset(self):
+        school = getattr(self.request, 'school', None)
+        if school:
+            return ClassSession.objects.filter(classroom__school=school)
+        return ClassSession.objects.none()
 
 
 # ========================
@@ -200,9 +257,14 @@ class ClassSessionDetailView(generics.RetrieveUpdateDestroyAPIView):
 # ========================
 
 class SubjectListCreateView(generics.ListCreateAPIView):
-    queryset = Subject.objects.all()
     serializer_class = SubjectSerializer
     permission_classes = [permissions.IsAuthenticated, IsPrincipalOrAdmin]
+
+    def get_queryset(self):
+        school = getattr(self.request, 'school', None)
+        if school:
+            return Subject.objects.filter(class_session__classroom__school=school)
+        return Subject.objects.none()
 
     def create(self, request, *args, **kwargs):
         data = request.data
@@ -258,16 +320,26 @@ class SubjectListCreateView(generics.ListCreateAPIView):
 
 
 class SubjectListView(generics.ListAPIView):
-    queryset = Subject.objects.all()
     serializer_class = SubjectSerializer
     permission_classes = [permissions.IsAuthenticated]
 
+    def get_queryset(self):
+        school = getattr(self.request, 'school', None)
+        if school:
+            return Subject.objects.filter(class_session__classroom__school=school)
+        return Subject.objects.none()
+
 
 class SubjectDetailView(generics.RetrieveUpdateDestroyAPIView):
-    queryset = Subject.objects.all()
     serializer_class = SubjectSerializer
     permission_classes = [permissions.IsAuthenticated, IsPrincipalOrAdmin]
     lookup_field = 'id'
+
+    def get_queryset(self):
+        school = getattr(self.request, 'school', None)
+        if school:
+            return Subject.objects.filter(class_session__classroom__school=school)
+        return Subject.objects.none()
 
 
 # ========================
@@ -503,12 +575,18 @@ class TeacherContentDetailView(generics.RetrieveUpdateDestroyAPIView):
 
     def get_queryset(self):
         user = self.request.user
+        school = getattr(self.request, 'school', None)
+
+        if not school:
+            return SubjectContent.objects.none()
+
+        school_subjects = Subject.objects.filter(class_session__classroom__school=school)
 
         if user.role in ['admin', 'principal']:
-            return SubjectContent.objects.all()
+            return SubjectContent.objects.filter(subject__in=school_subjects)
 
         # Teachers can access content from subjects they teach
-        teacher_subjects = Subject.objects.filter(teacher=user)
+        teacher_subjects = school_subjects.filter(teacher=user)
         return SubjectContent.objects.filter(subject__in=teacher_subjects)
 
     def get_object(self):

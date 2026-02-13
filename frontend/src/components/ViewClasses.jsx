@@ -3,11 +3,13 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import './ViewClasses.css';
 import { useDialog } from '../contexts/DialogContext';
+import { useSchool } from '../contexts/SchoolContext';
 
 import API_BASE_URL from '../config';
 
 const ViewClasses = () => {
   const { showConfirm } = useDialog();
+  const { buildApiUrl } = useSchool();
   const token = localStorage.getItem('accessToken');
   const [activeView, setActiveView] = useState('class'); // class | session
   const [permanentClasses, setPermanentClasses] = useState([]);
@@ -15,6 +17,7 @@ const ViewClasses = () => {
   const [filters, setFilters] = useState({ name: '', term: '', academic_year: '', department: '' });
   const [academicYears, setAcademicYears] = useState([]);
   const [showDepartment, setShowDepartment] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   
@@ -23,12 +26,13 @@ const ViewClasses = () => {
 
   useEffect(() => {
     const fetchData = async () => {
+      setLoading(true);
       try {
         const [classRes, sessionRes] = await Promise.all([
-          axios.get(`${API_BASE_URL}/api/academics/classes/`, {
+          axios.get(buildApiUrl('/academics/classes/'), {
             headers: { Authorization: `Bearer ${token}` },
           }),
-          axios.get(`${API_BASE_URL}/api/academics/sessions/`, {
+          axios.get(buildApiUrl('/academics/sessions/'), {
             headers: { Authorization: `Bearer ${token}` },
           }),
         ]);
@@ -37,11 +41,13 @@ const ViewClasses = () => {
       } catch (err) {
         console.error('Error loading data:', err);
         setError('Failed to load class data.');
+      } finally {
+        setLoading(false);
       }
     };
 
     fetchData();
-  }, [token]);
+  }, [token, buildApiUrl]);
 
   const classOptions = [...new Set(permanentClasses.map(cls => cls.name))];
 
@@ -53,7 +59,9 @@ const ViewClasses = () => {
     setError('');
 
     if (name === 'name') {
-      const showDept = ['S.S.S.1', 'S.S.S.2', 'S.S.S.3'].includes(value);
+      // Check if selected class has departments enabled
+      const selectedClass = permanentClasses.find(cls => cls.name === value);
+      const showDept = selectedClass?.has_departments === true;
       setShowDepartment(showDept);
       setFilters(prev => ({ ...prev, department: '', academic_year: '', name: value }));
     }
@@ -176,7 +184,7 @@ const ViewClasses = () => {
     try {
       // Delete all selected sessions
       const deletePromises = sessionsToDelete.map(sess =>
-        axios.delete(`${API_BASE_URL}/api/academics/sessions/${sess.id}/`, {
+        axios.delete(buildApiUrl(`/academics/sessions/${sess.id}/`), {
           headers: { Authorization: `Bearer ${token}` },
         })
       );
@@ -210,7 +218,7 @@ const ViewClasses = () => {
     if (!confirmed) return;
 
     try {
-      await axios.delete(`${API_BASE_URL}/api/academics/classes/${match.id}/`, {
+      await axios.delete(buildApiUrl(`/academics/classes/${match.id}/`), {
         headers: { Authorization: `Bearer ${token}` },
       });
       setPermanentClasses(prev => prev.filter(cls => cls.id !== match.id));
@@ -232,57 +240,79 @@ const ViewClasses = () => {
         {activeView === 'class' ? (
           <>
             <h3>Delete Class Name</h3>
-            <form className="class-form" onSubmit={e => { e.preventDefault(); handlePermanentDelete(); }}>
-              <select name="name" value={filters.name} onChange={handleChange} required>
-                <option value="">Select Class Name</option>
-                {classOptions.map(name => (
-                  <option key={name} value={name}>{name}</option>
-                ))}
-              </select>
-              <button type="submit">Delete Class Name</button>
-            </form>
+            {loading ? (
+              <div style={{textAlign:'center',padding:'40px',color:'#64748b'}}>
+                <p>Loading...</p>
+              </div>
+            ) : classOptions.length === 0 ? (
+              <div style={{textAlign:'center',padding:'40px',color:'#94a3b8'}}>
+                <p style={{fontSize:'1rem',fontWeight:500,color:'#64748b'}}>No classes found</p>
+                <p style={{fontSize:'0.875rem'}}>Create a class to get started.</p>
+              </div>
+            ) : (
+              <form className="class-form" onSubmit={e => { e.preventDefault(); handlePermanentDelete(); }}>
+                <select name="name" value={filters.name} onChange={handleChange} required>
+                  <option value="">Select Class Name</option>
+                  {classOptions.map(name => (
+                    <option key={name} value={name}>{name}</option>
+                  ))}
+                </select>
+                <button type="submit">Delete Class Name</button>
+              </form>
+            )}
           </>
         ) : (
           <>
             <h3>Delete Class Session</h3>
-            <form className="class-form" onSubmit={e => { e.preventDefault(); handleSessionDelete(); }}>
-              {/* Multi-select checkboxes for classes */}
-              <div className="multi-select-classes">
-                <label>Select Classes:</label>
-                <div className="checkbox-container">
-                  {classOptions.map(name => (
-                    <label key={name} className="checkbox-item">
-                      <input
-                        type="checkbox"
-                        checked={selectedClasses.includes(name)}
-                        onChange={() => handleClassSelect(name)}
-                      />
-                      {name}
-                    </label>
-                  ))}
-                </div>
-                {selectedClasses.length > 0 && (
-                  <p className="selected-count">{selectedClasses.length} class{selectedClasses.length > 1 ? 'es' : ''} selected</p>
-                )}
+            {loading ? (
+              <div style={{textAlign:'center',padding:'40px',color:'#64748b'}}>
+                <p>Loading...</p>
               </div>
+            ) : classOptions.length === 0 ? (
+              <div style={{textAlign:'center',padding:'40px',color:'#94a3b8'}}>
+                <p style={{fontSize:'1rem',fontWeight:500,color:'#64748b'}}>No class sessions found</p>
+                <p style={{fontSize:'0.875rem'}}>Create a class and assign sessions to get started.</p>
+              </div>
+            ) : (
+              <form className="class-form" onSubmit={e => { e.preventDefault(); handleSessionDelete(); }}>
+                {/* Multi-select checkboxes for classes */}
+                <div className="multi-select-classes">
+                  <label>Select Classes:</label>
+                  <div className="checkbox-container">
+                    {classOptions.map(name => (
+                      <label key={name} className="checkbox-item">
+                        <input
+                          type="checkbox"
+                          checked={selectedClasses.includes(name)}
+                          onChange={() => handleClassSelect(name)}
+                        />
+                        {name}
+                      </label>
+                    ))}
+                  </div>
+                  {selectedClasses.length > 0 && (
+                    <p className="selected-count">{selectedClasses.length} class{selectedClasses.length > 1 ? 'es' : ''} selected</p>
+                  )}
+                </div>
 
-              <select name="term" value={filters.term} onChange={handleChange} required>
-                <option value="">Select Term</option>
-                <option value="First Term">First Term</option>
-                <option value="Second Term">Second Term</option>
-                <option value="Third Term">Third Term</option>
-              </select>
+                <select name="term" value={filters.term} onChange={handleChange} required>
+                  <option value="">Select Term</option>
+                  <option value="First Term">First Term</option>
+                  <option value="Second Term">Second Term</option>
+                  <option value="Third Term">Third Term</option>
+                </select>
 
-              <select name="academic_year" value={filters.academic_year} onChange={handleChange} required>
-                <option value="">Select Academic Year</option>
-                {[...new Set(sessions.map(s => s.academic_year))].map(year => (
-                  <option key={year} value={year}>{year}</option>
-                ))}
-              </select>
+                <select name="academic_year" value={filters.academic_year} onChange={handleChange} required>
+                  <option value="">Select Academic Year</option>
+                  {[...new Set(sessions.map(s => s.academic_year))].map(year => (
+                    <option key={year} value={year}>{year}</option>
+                  ))}
+                </select>
 
-              <button type="button" onClick={handleFilterSession}>Filter Session</button>
-              <button type="submit">Delete Class Session{selectedClasses.length > 1 ? 's' : ''}</button>
-            </form>
+                <button type="button" onClick={handleFilterSession}>Filter Session</button>
+                <button type="submit">Delete Class Session{selectedClasses.length > 1 ? 's' : ''}</button>
+              </form>
+            )}
           </>
         )}
 

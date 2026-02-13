@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { X, FileText, Download, Calendar, CheckCircle, Clock, AlertCircle } from 'lucide-react';
 import API_BASE_URL from '../config';
+import { useSchool } from '../contexts/SchoolContext';
 
 import './StudentSubmissionsModal.css';
 
 const StudentSubmissionsModal = ({ student, onClose }) => {
+  const { buildApiUrl } = useSchool();
   const [submissions, setSubmissions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -26,7 +28,7 @@ const StudentSubmissionsModal = ({ student, onClose }) => {
       const token = localStorage.getItem('accessToken');
       
       const response = await fetch(
-        `${API_BASE_URL}/api/academics/student/${student.id}/submissions/`,
+        buildApiUrl(`/academics/student/${student.id}/submissions/`),
         {
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -59,7 +61,7 @@ const StudentSubmissionsModal = ({ student, onClose }) => {
       const token = localStorage.getItem('accessToken');
       
       const response = await fetch(
-        `${API_BASE_URL}/api/academics/submission/${submissionId}/grade/`,
+        buildApiUrl(`/academics/submission/${submissionId}/grade/`),
         {
           method: 'PATCH',
           headers: {

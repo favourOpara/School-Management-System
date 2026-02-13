@@ -1,0 +1,349 @@
+/* Portal Login Styles */
+
+.portal-login-page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #1e3a8a, #1e40af, #312e81);
+  position: relative;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.portal-login-page *,
+.portal-login-page *::before,
+.portal-login-page *::after {
+  box-sizing: border-box;
+}
+
+.portal-login-bg {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.portal-login-blob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  opacity: 0.5;
+}
+
+.portal-login-blob-1 {
+  width: 600px;
+  height: 600px;
+  background: #3b82f6;
+  top: -200px;
+  right: -200px;
+}
+
+.portal-login-blob-2 {
+  width: 500px;
+  height: 500px;
+  background: #8b5cf6;
+  bottom: -150px;
+  left: -150px;
+}
+
+.portal-login-nav {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  padding: 1.5rem 2rem;
+}
+
+.portal-login-logo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-decoration: none;
+}
+
+.portal-login-logo-icon {
+  width: 44px;
+  height: 44px;
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(8px);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.portal-login-logo-icon svg {
+  width: 26px;
+  height: 26px;
+  color: white;
+}
+
+.portal-login-logo-text {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: white;
+}
+
+.portal-login-container {
+  position: relative;
+  z-index: 10;
+  width: 100%;
+  max-width: 440px;
+  padding: 1rem;
+}
+
+.portal-login-card {
+  background: white;
+  border-radius: 24px;
+  padding: 2.5rem;
+  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.25);
+}
+
+.portal-login-header {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.portal-login-icon {
+  width: 64px;
+  height: 64px;
+  background: linear-gradient(135deg, #2563eb, #4f46e5);
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 1.25rem;
+  box-shadow: 0 8px 20px rgba(37, 99, 235, 0.3);
+}
+
+.portal-login-icon svg {
+  color: white;
+}
+
+.portal-login-header h1 {
+  margin: 0 0 0.5rem;
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #111827;
+}
+
+.portal-login-header p {
+  margin: 0;
+  color: #6b7280;
+  font-size: 0.938rem;
+}
+
+.portal-login-error {
+  background: #fef2f2;
+  color: #dc2626;
+  padding: 0.875rem 1rem;
+  border-radius: 12px;
+  margin-bottom: 1.5rem;
+  font-size: 0.875rem;
+  border: 1px solid #fecaca;
+}
+
+.portal-login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.portal-login-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.portal-login-field label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #374151;
+}
+
+.portal-login-input-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0 1rem;
+  border: 2px solid #e5e7eb;
+  border-radius: 12px;
+  transition: all 0.2s;
+}
+
+.portal-login-input-wrapper:focus-within {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1);
+}
+
+.portal-login-input-wrapper svg {
+  color: #9ca3af;
+  flex-shrink: 0;
+}
+
+.portal-login-input-wrapper input {
+  flex: 1;
+  padding: 0.875rem 0;
+  border: none;
+  outline: none;
+  font-size: 1rem;
+  background: transparent;
+}
+
+.portal-login-input-wrapper input::placeholder {
+  color: #9ca3af;
+}
+
+.portal-login-toggle-password {
+  background: none;
+  border: none;
+  padding: 4px;
+  cursor: pointer;
+  color: #9ca3af;
+  transition: color 0.2s;
+}
+
+.portal-login-toggle-password:hover {
+  color: #6b7280;
+}
+
+.portal-login-submit {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 1rem;
+  background: linear-gradient(135deg, #2563eb, #4f46e5);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-top: 0.5rem;
+}
+
+.portal-login-submit:hover:not(:disabled) {
+  box-shadow: 0 8px 20px rgba(37, 99, 235, 0.4);
+  transform: translateY(-2px);
+}
+
+.portal-login-submit:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.portal-login-spinner {
+  animation: portalSpin 1s linear infinite;
+}
+
+@keyframes portalSpin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.portal-login-footer {
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid #e5e7eb;
+  text-align: center;
+}
+
+.portal-login-footer p {
+  margin: 0;
+  color: #6b7280;
+  font-size: 0.875rem;
+}
+
+.portal-login-footer a {
+  color: #2563eb;
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.portal-login-footer a:hover {
+  text-decoration: underline;
+}
+
+.portal-login-help {
+  text-align: center;
+  margin-top: 1.5rem;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.875rem;
+}
+
+.portal-login-help a {
+  color: white;
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.portal-login-help a:hover {
+  text-decoration: underline;
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+  .portal-login-nav {
+    padding: 1rem;
+  }
+
+  .portal-login-logo-icon {
+    width: 38px;
+    height: 38px;
+  }
+
+  .portal-login-logo-icon svg {
+    width: 22px;
+    height: 22px;
+  }
+
+  .portal-login-logo-text {
+    font-size: 1.25rem;
+  }
+
+  .portal-login-container {
+    padding: 0.75rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .portal-login-card {
+    padding: 1.5rem;
+    border-radius: 20px;
+  }
+
+  .portal-login-icon {
+    width: 56px;
+    height: 56px;
+  }
+
+  .portal-login-icon svg {
+    width: 24px;
+    height: 24px;
+  }
+
+  .portal-login-header h1 {
+    font-size: 1.5rem;
+  }
+
+  .portal-login-header p {
+    font-size: 0.875rem;
+  }
+
+  .portal-login-input-wrapper {
+    padding: 0 0.875rem;
+  }
+
+  .portal-login-input-wrapper input {
+    font-size: 16px; /* Prevent zoom on iOS */
+  }
+
+  .portal-login-submit {
+    padding: 0.875rem;
+  }
+}

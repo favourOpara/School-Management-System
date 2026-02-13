@@ -1,4 +1,11 @@
 from django.urls import path
+from .staff_views import (
+    manage_schedule_groups, schedule_group_detail,
+    manage_assignments, delete_assignment,
+    list_staff_records, manage_staff_settings, staff_dashboard_stats,
+    unassigned_teachers,
+    book_on, book_off, my_schedule, my_records,
+)
 from .views import (
     # Fee Structure Views
     CreateFeeStructureView, ListFeeStructuresView, UpdateFeeStructureView,
@@ -67,6 +74,9 @@ from .views import (
 
     # Reports Sent Analytics Views
     get_reports_sent_stats, get_class_report_sent_students,
+
+    # Email Quota
+    get_email_quota,
 
     # Subject Grading Completion Analytics Views
     get_subject_grading_stats, get_subject_incomplete_students, notify_teachers_incomplete_grades,
@@ -239,6 +249,9 @@ urlpatterns = [
     path('analytics/reports-sent/', get_reports_sent_stats, name='reports-sent-stats'),
     path('analytics/reports-sent/class/<int:class_session_id>/students/', get_class_report_sent_students, name='class-report-sent-students'),
 
+    # Email quota
+    path('email-quota/', get_email_quota, name='email-quota'),
+
     # Subject grading completion endpoints
     path('analytics/subject-grading/', get_subject_grading_stats, name='subject-grading-stats'),
     path('analytics/subject-grading/<int:subject_id>/incomplete/', get_subject_incomplete_students, name='subject-incomplete-students'),
@@ -289,4 +302,23 @@ urlpatterns = [
     path('session/revert/', revert_to_previous_session, name='revert-to-previous-session'),
     path('session/info/', get_current_session_info, name='get-current-session-info'),
     path('session/all/', get_all_available_sessions, name='get-all-available-sessions'),
+
+    # ============================================================================
+    # STAFF MANAGEMENT URLS
+    # ============================================================================
+    # Admin endpoints
+    path('staff/schedule-groups/', manage_schedule_groups, name='staff-schedule-groups'),
+    path('staff/schedule-groups/<int:group_id>/', schedule_group_detail, name='staff-schedule-group-detail'),
+    path('staff/assignments/', manage_assignments, name='staff-assignments'),
+    path('staff/assignments/<int:assignment_id>/', delete_assignment, name='staff-assignment-detail'),
+    path('staff/records/', list_staff_records, name='staff-records'),
+    path('staff/settings/', manage_staff_settings, name='staff-settings'),
+    path('staff/dashboard-stats/', staff_dashboard_stats, name='staff-dashboard-stats'),
+    path('staff/unassigned-teachers/', unassigned_teachers, name='staff-unassigned-teachers'),
+
+    # Teacher endpoints
+    path('staff/book-on/', book_on, name='staff-book-on'),
+    path('staff/book-off/', book_off, name='staff-book-off'),
+    path('staff/my-schedule/', my_schedule, name='staff-my-schedule'),
+    path('staff/my-records/', my_records, name='staff-my-records'),
 ]

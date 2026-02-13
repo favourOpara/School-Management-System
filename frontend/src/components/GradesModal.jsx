@@ -2,10 +2,12 @@
 import React, { useState, useEffect } from 'react';
 import { X, Save, AlertCircle, CheckCircle, Edit2, Lock } from 'lucide-react';
 import API_BASE_URL from '../config';
+import { useSchool } from '../contexts/SchoolContext';
 
 import './GradesModal.css';
 
 const GradesModal = ({ subject, onClose, onUpdate }) => {
+  const { buildApiUrl } = useSchool();
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [messageType, setMessageType] = useState('');
@@ -29,7 +31,7 @@ const GradesModal = ({ subject, onClose, onUpdate }) => {
       const token = localStorage.getItem('accessToken');
       
       const response = await fetch(
-        `${API_BASE_URL}/api/schooladmin/results/subjects/${subject.id}/grades/`,
+        buildApiUrl(`/schooladmin/results/subjects/${subject.id}/grades/`),
         {
           headers: { 'Authorization': `Bearer ${token}` }
         }
@@ -92,7 +94,7 @@ const GradesModal = ({ subject, onClose, onUpdate }) => {
       const token = localStorage.getItem('accessToken');
       
       const response = await fetch(
-        `${API_BASE_URL}/api/schooladmin/results/grade-summary/${student.grade_summary_id}/`,
+        buildApiUrl(`/schooladmin/results/grade-summary/${student.grade_summary_id}/`),
         {
           method: 'PATCH',
           headers: {

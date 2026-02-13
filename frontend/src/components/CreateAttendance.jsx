@@ -4,6 +4,7 @@ import Select from 'react-select';
 import axios from 'axios';
 import CreateAttendanceCalendar from './CreateAttendanceCalendar';
 import API_BASE_URL from '../config';
+import { useSchool } from '../contexts/SchoolContext';
 
 import ViewAttendance from './ViewAttendance'; // Placeholder for the upcoming view attendance section
 import './attendance.css';
@@ -34,6 +35,7 @@ const selectStyles = {
 };
 
 const CreateAttendance = () => {
+  const { buildApiUrl } = useSchool();
   const [academicYears, setAcademicYears] = useState([]);
   const [terms, setTerms] = useState([]);
   const [selectedYear, setSelectedYear] = useState(null);
@@ -46,7 +48,7 @@ const CreateAttendance = () => {
   useEffect(() => {
     const fetchSessions = async () => {
       try {
-        const res = await axios.get(`${API_BASE_URL}/api/academics/sessions/`, {
+        const res = await axios.get(buildApiUrl('/academics/sessions/'), {
           headers: { Authorization: `Bearer ${token}` },
         });
 
@@ -68,7 +70,7 @@ const CreateAttendance = () => {
     const verifySession = async () => {
       if (!selectedYear || !selectedTerm) return;
       try {
-        const res = await axios.get(`${API_BASE_URL}/api/academics/sessions/`, {
+        const res = await axios.get(buildApiUrl('/academics/sessions/'), {
           headers: { Authorization: `Bearer ${token}` },
         });
 
@@ -82,7 +84,7 @@ const CreateAttendance = () => {
     };
 
     verifySession();
-  }, [selectedYear, selectedTerm]);
+  }, [selectedYear, selectedTerm, buildApiUrl, token]);
 
   return (
     <div className="create-attendance-wrapper">

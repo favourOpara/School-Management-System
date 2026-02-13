@@ -92,6 +92,31 @@ class HasImportFeature(permissions.BasePermission):
         return True
 
 
+class HasStaffManagement(permissions.BasePermission):
+    """
+    Permission class to check if staff management feature is available.
+
+    Premium and Custom plans have access to staff management.
+    """
+    message = "Staff management is not available on your current plan. Please upgrade to Premium to access this feature."
+
+    def has_permission(self, request, view):
+        subscription = getattr(request, 'subscription', None)
+
+        if not subscription:
+            self.message = "No subscription found for this school."
+            return False
+
+        if not subscription.plan.has_staff_management:
+            self.message = (
+                f"Staff management is not available on your {subscription.plan.display_name} plan. "
+                f"Please upgrade to Premium to access staff management features."
+            )
+            return False
+
+        return True
+
+
 class CanSendEmail(permissions.BasePermission):
     """
     Permission class to check daily email sending limits.
@@ -264,22 +289,116 @@ def get_feature_limits(school):
             'max_daily_emails': 0,
             'emails_sent_today': 0,
             'has_import': False,
+            'has_staff_management': False,
         }
+
+    from users.models import CustomUser
+    counts = _get_user_counts(school)
+    plan = subscription.plan
 
     return {
         'has_subscription': True,
-        'plan_name': subscription.plan.display_name,
-        'max_admins': subscription.plan.max_admin_accounts,
+        'plan_name': plan.display_name,
+        'max_admins': plan.max_admin_accounts,
         'current_admins': subscription.get_admin_count(),
-        'max_daily_emails': subscription.plan.max_daily_emails,
+        'max_daily_emails': plan.max_daily_emails,
         'emails_sent_today': subscription.emails_sent_today,
         'emails_remaining': (
-            -1 if subscription.plan.max_daily_emails == 0
-            else max(0, subscription.plan.max_daily_emails - subscription.emails_sent_today)
+            -1 if plan.max_daily_emails == 0
+            else max(0, plan.max_daily_emails - subscription.emails_sent_today)
         ),
-        'has_import': subscription.plan.has_import_feature,
+        'has_import': plan.has_import_feature,
+        'has_staff_management': plan.has_staff_management,
+        'max_import_rows': plan.max_import_rows,
+        'max_students': plan.max_students,
+        'current_students': counts['student'],
+        'max_teachers': plan.max_teachers,
+        'current_teachers': counts['teacher'],
+        'max_principals': plan.max_principals,
+        'current_principals': counts['principal'],
+        'max_parents': plan.max_parents,
+        'current_parents': counts['parent'],
         'status': subscription.status,
         'is_trial': subscription.status == 'trial',
         'billing_cycle': subscription.billing_cycle,
         'current_period_end': subscription.current_period_end,
     }
+
+
+def _get_user_counts(school):
+    """Get current user counts by role for a school."""
+    from users.models import CustomUser
+    from django.db.models import Count
+
+    counts_qs = (
+        CustomUser.objects.filter(school=school, is_active=True)
+        .values('role')
+        .annotate(count=Count('id'))
+    )
+    counts = {r: 0 for r in ('student', 'teacher', 'principal', 'parent', 'admin', 'proprietor')}
+    for row in counts_qs:
+        counts[row['role']] = row['count']
+    return counts
+
+
+def check_user_limit(school, role):
+    """
+    Check if a school can create another user of the given role.
+
+    Returns:
+        (bool, str): (can_create, message)
+        - (True, '') if allowed
+        - (False, 'message') if limit reached
+    """
+    subscription = getattr(school, 'subscription', None)
+    if not subscription:
+        return False, 'No active subscription.'
+
+    plan = subscription.plan
+    counts = _get_user_counts(school)
+
+    limit_map = {
+        'student': ('max_students', counts['student']),
+        'teacher': ('max_teachers', counts['teacher']),
+        'principal': ('max_principals', counts['principal']),
+        'parent': ('max_parents', counts['parent']),
+        'admin': ('max_admin_accounts', counts['admin']),
+        'proprietor': ('max_proprietors', counts['proprietor']),
+    }
+
+    if role not in limit_map:
+        return True, ''
+
+    field, current = limit_map[role]
+    max_allowed = getattr(plan, field, 0)
+
+    if max_allowed == 0:
+        return True, ''  # 0 means unlimited
+
+    if current >= max_allowed:
+        role_label = role.capitalize() + 's' if role != 'principal' else 'Principals'
+        return False, f'You have reached the maximum of {max_allowed} {role_label.lower()} on your {plan.display_name} plan. Please upgrade to add more.'
+
+    return True, ''
+
+
+def check_trial_expiry(subscription):
+    """
+    Check if a trial subscription has expired. If so, mark it as expired.
+    Called from middleware on every request.
+
+    Returns:
+        bool: True if subscription is still valid, False if expired.
+    """
+    from django.utils import timezone
+
+    if subscription.status == 'trial' and subscription.current_period_end:
+        if timezone.now() > subscription.current_period_end:
+            subscription.status = 'expired'
+            subscription.save(update_fields=['status'])
+            return False
+
+    if subscription.status == 'expired':
+        return False
+
+    return True

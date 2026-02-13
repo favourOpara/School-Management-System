@@ -43,6 +43,7 @@ class CustomUser(AbstractUser):
         ('teacher', 'Teacher'),
         ('student', 'Student'),
         ('parent', 'Parent'),
+        ('proprietor', 'Proprietor'),
     ]
 
     GENDER_CHOICES = [

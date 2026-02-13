@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { BookOpen, ChevronDown, ChevronUp, Trophy, User } from 'lucide-react';
 import API_BASE_URL from '../config';
+import { useSchool } from '../contexts/SchoolContext';
 
 import './SubjectRankings.css';
 
 const SubjectRankings = () => {
+  const { buildApiUrl } = useSchool();
   const [subjects, setSubjects] = useState([]);
   const [classInfo, setClassInfo] = useState({});
   const [loading, setLoading] = useState(false);
@@ -19,7 +21,7 @@ const SubjectRankings = () => {
     setLoading(true);
     try {
       const token = localStorage.getItem('accessToken');
-      const response = await fetch(`${API_BASE_URL}/api/schooladmin/student/dashboard/subject-rankings/`, {
+      const response = await fetch(buildApiUrl('/schooladmin/student/dashboard/subject-rankings/'), {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -49,7 +51,7 @@ const SubjectRankings = () => {
     setLoadingStudents(true);
     try {
       const token = localStorage.getItem('accessToken');
-      const response = await fetch(`${API_BASE_URL}/api/schooladmin/student/dashboard/subject/${subjectId}/top-students/`, {
+      const response = await fetch(buildApiUrl(`/schooladmin/student/dashboard/subject/${subjectId}/top-students/`), {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'

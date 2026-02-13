@@ -3,6 +3,8 @@ import { BookOpen, Bell, Search, ChevronDown, ChevronUp, AlertCircle } from 'luc
 import Select from 'react-select';
 import SubjectIncompleteStudentsModal from './SubjectIncompleteStudentsModal';
 import API_BASE_URL from '../config';
+import { useSchool } from '../contexts/SchoolContext';
+import { checkEmailQuotaBeforeSend } from '../utils/emailQuota';
 
 import './DashboardSubjectGradingCard.css';
 
@@ -51,6 +53,7 @@ const getCompletionColor = (percentage) => {
 };
 
 const DashboardSubjectGradingCard = () => {
+  const { buildApiUrl } = useSchool();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [stats, setStats] = useState(null);
@@ -79,7 +82,7 @@ const DashboardSubjectGradingCard = () => {
       const token = localStorage.getItem('accessToken');
 
       // First, get the current active session
-      const sessionInfoRes = await fetch(`${API_BASE_URL}/api/schooladmin/session/info/`, {
+      const sessionInfoRes = await fetch(buildApiUrl('/schooladmin/session/info/'), {
         headers: { 'Authorization': `Bearer ${token}` }
       });
 
@@ -93,7 +96,7 @@ const DashboardSubjectGradingCard = () => {
       }
 
       // Then get all available sessions
-      const response = await fetch(`${API_BASE_URL}/api/academics/sessions/`, {
+      const response = await fetch(buildApiUrl('/academics/sessions/'), {
         headers: { 'Authorization': `Bearer ${token}` }
       });
 
@@ -138,7 +141,7 @@ const DashboardSubjectGradingCard = () => {
       if (selectedYear) params.append('academic_year', selectedYear.value);
       if (selectedTerm) params.append('term', selectedTerm.value);
 
-      const response = await fetch(`${API_BASE_URL}/api/schooladmin/analytics/subject-grading/?${params.toString()}`, {
+      const response = await fetch(buildApiUrl(`/schooladmin/analytics/subject-grading/?${params.toString()}`), {
         headers: { 'Authorization': `Bearer ${token}` }
       });
 
@@ -164,12 +167,15 @@ const DashboardSubjectGradingCard = () => {
   const handleNotifyTeachers = async () => {
     if (!selectedYear || !selectedTerm) return;
 
+    const canSend = await checkEmailQuotaBeforeSend(buildApiUrl);
+    if (!canSend) return;
+
     try {
       setSendingNotifications(true);
       setNotificationResult(null);
       const token = localStorage.getItem('accessToken');
 
-      const response = await fetch(`${API_BASE_URL}/api/schooladmin/analytics/subject-grading/notify-teachers/`, {
+      const response = await fetch(buildApiUrl('/schooladmin/analytics/subject-grading/notify-teachers/'), {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,

@@ -3,8 +3,10 @@ import './SubjectModal.css';
 import axios from 'axios';
 
 import API_BASE_URL from '../config';
+import { useSchool } from '../contexts/SchoolContext';
 
 const SubjectModal = ({ subjects, onClose, onUpdate, onDelete }) => {
+  const { buildApiUrl } = useSchool();
   const [editingId, setEditingId] = useState(null);
   const [editedData, setEditedData] = useState({});
   const [teachers, setTeachers] = useState([]);
@@ -13,7 +15,7 @@ const SubjectModal = ({ subjects, onClose, onUpdate, onDelete }) => {
   useEffect(() => {
     const fetchTeachers = async () => {
       try {
-        const res = await axios.get(`${API_BASE_URL}/api/users/teachers/`, {
+        const res = await axios.get(buildApiUrl('/users/teachers/'), {
           headers: { Authorization: `Bearer ${token}` },
         });
         setTeachers(res.data);

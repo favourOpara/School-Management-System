@@ -2,11 +2,13 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useLoading } from '../context/LoadingContext';
 import { useDialog } from '../contexts/DialogContext';
+import { useSchool } from '../contexts/SchoolContext';
 
 import API_BASE_URL from '../config';
 
 const ClassList = ({ classes, onRefresh }) => {
     const { showConfirm } = useDialog();
+    const { buildApiUrl } = useSchool();
     const [editId, setEditId] = useState(null);
     const [editData, setEditData] = useState({ name: '', description: '' });
     const [message, setMessage] = useState('');
@@ -31,7 +33,7 @@ const ClassList = ({ classes, onRefresh }) => {
     const submitEdit = async () => {
       showLoader();
       try {
-        await axios.put(`${API_BASE_URL}/api/admin/classes/${editId}/`, editData, {
+        await axios.put(buildApiUrl(`/admin/classes/${editId}/`), editData, {
           headers: { Authorization: `Bearer ${token}` }
         });
         setMessage('Class updated.');
@@ -56,7 +58,7 @@ const ClassList = ({ classes, onRefresh }) => {
 
       showLoader();
       try {
-        await axios.delete(`${API_BASE_URL}/api/admin/classes/${id}/`, {
+        await axios.delete(buildApiUrl(`/admin/classes/${id}/`), {
           headers: { Authorization: `Bearer ${token}` }
         });
         setMessage('Class deleted.');

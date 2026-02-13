@@ -1,11 +1,12 @@
 // src/components/FeesReceipt.jsx
 import React, { useState, useEffect } from 'react';
 import { FileText, Users, Calendar, Download, Receipt, Loader, AlertCircle } from 'lucide-react';
-import API_BASE_URL from '../config';
+import { useSchool } from '../contexts/SchoolContext';
 
 import './FeesReceipt.css';
 
 const FeesReceipt = () => {
+  const { buildApiUrl } = useSchool();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [receipts, setReceipts] = useState([]);
@@ -33,7 +34,7 @@ const FeesReceipt = () => {
       const token = localStorage.getItem('accessToken');
 
       // Build query params
-      let url = `${API_BASE_URL}/api/schooladmin/parent/fee-receipts/`;
+      let url = buildApiUrl('/schooladmin/parent/fee-receipts/');
       const params = new URLSearchParams();
       if (selectedChild) params.append('child_id', selectedChild);
       if (selectedYear) params.append('academic_year', selectedYear);
@@ -46,7 +47,6 @@ const FeesReceipt = () => {
 
       if (response.ok) {
         const data = await response.json();
-        console.log('Receipts data received:', data);
         setReceipts(data.receipts || []);
         setFilterData({
           children: data.children || [],
@@ -79,7 +79,7 @@ const FeesReceipt = () => {
   const handleDownloadReceipt = async (receiptId) => {
     try {
       const token = localStorage.getItem('accessToken');
-      const response = await fetch(`${API_BASE_URL}/api/schooladmin/parent/fee-receipts/${receiptId}/download/`, {
+      const response = await fetch(buildApiUrl(`/schooladmin/parent/fee-receipts/${receiptId}/download/`), {
         headers: { 'Authorization': `Bearer ${token}` }
       });
 
@@ -101,7 +101,6 @@ const FeesReceipt = () => {
           // Handle JSON response (fallback)
           const data = await response.json();
           alert(data.message || 'Receipt details retrieved successfully');
-          console.log('Receipt data:', data.receipt);
         }
       } else {
         alert('Failed to download receipt');

@@ -29,6 +29,8 @@ const ProtectedRoute = ({ children, requiredRole }) => {
         return <Navigate to="/teacher/dashboard" />;
       case 'parent':
         return <Navigate to="/parent/dashboard" />;
+      case 'proprietor':
+        return <Navigate to="/proprietor/dashboard" />;
       default:
         return <Navigate to="/" />;
     }

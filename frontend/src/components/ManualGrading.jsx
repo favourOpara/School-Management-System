@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { AlertCircle, CheckCircle, Lock, Save } from 'lucide-react';
 import API_BASE_URL from '../config';
+import { useSchool } from '../contexts/SchoolContext';
 
 import './ManualGrading.css';
 
 const ManualGrading = () => {
+  const { buildApiUrl } = useSchool();
   const [subjects, setSubjects] = useState([]);
   const [selectedSubject, setSelectedSubject] = useState(null);
   const [students, setStudents] = useState([]);
@@ -23,7 +25,7 @@ const ManualGrading = () => {
     try {
       setLoading(true);
       const token = localStorage.getItem('accessToken');
-      const response = await fetch(`${API_BASE_URL}/api/schooladmin/teacher/grading/subjects/`, {
+      const response = await fetch(buildApiUrl('/schooladmin/teacher/grading/subjects/'), {
         headers: { 'Authorization': `Bearer ${token}` }
       });
 
@@ -45,7 +47,7 @@ const ManualGrading = () => {
       setLoading(true);
       const token = localStorage.getItem('accessToken');
       const response = await fetch(
-        `${API_BASE_URL}/api/schooladmin/teacher/grading/subjects/${subjectId}/students/`,
+        buildApiUrl(`/schooladmin/teacher/grading/subjects/${subjectId}/students/`),
         {
           headers: { 'Authorization': `Bearer ${token}` }
         }
@@ -111,7 +113,7 @@ const ManualGrading = () => {
       setLoading(true);
       const token = localStorage.getItem('accessToken');
       const response = await fetch(
-        `${API_BASE_URL}/api/schooladmin/teacher/grading/subjects/${selectedSubject.id}/save/`,
+        buildApiUrl(`/schooladmin/teacher/grading/subjects/${selectedSubject.id}/save/`),
         {
           method: 'POST',
           headers: {

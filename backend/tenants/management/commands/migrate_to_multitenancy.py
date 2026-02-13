@@ -3,7 +3,7 @@ Management command to migrate existing data to multi-tenancy.
 Run: python manage.py migrate_to_multitenancy
 
 This command:
-1. Creates the default school (Figil Schools)
+1. Creates the default school (Default School)
 2. Creates a premium subscription for the default school
 3. Associates all existing users with the default school
 4. Associates all existing classes with the default school
@@ -30,19 +30,19 @@ class Command(BaseCommand):
         parser.add_argument(
             '--school-name',
             type=str,
-            default='Figil Schools',
+            default='My School',
             help='Name for the default school',
         )
         parser.add_argument(
             '--school-slug',
             type=str,
-            default='figilschools',
+            default='myschool',
             help='URL slug for the default school',
         )
         parser.add_argument(
             '--school-email',
             type=str,
-            default='office@figilschools.com',
+            default='admin@myschool.com',
             help='Email for the default school',
         )
 

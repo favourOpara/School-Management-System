@@ -6,10 +6,13 @@ import {
 } from 'lucide-react';
 import axios from 'axios';
 import API_BASE_URL from '../config';
+import { useSchool } from '../contexts/SchoolContext';
+import { checkEmailQuotaBeforeSend } from '../utils/emailQuota';
 
 import './Announcements.css';
 
 const Announcements = () => {
+  const { buildApiUrl } = useSchool();
   const [announcements, setAnnouncements] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -47,7 +50,22 @@ const Announcements = () => {
   const [userSearchQuery, setUserSearchQuery] = useState('');
   const [filteredUsers, setFilteredUsers] = useState([]);
 
+  const [emailQuota, setEmailQuota] = useState(null);
+
   const token = localStorage.getItem('accessToken');
+
+  const fetchEmailQuota = async () => {
+    try {
+      const res = await fetch(buildApiUrl('/schooladmin/email-quota/'), {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        setEmailQuota(await res.json());
+      }
+    } catch {
+      // ignore
+    }
+  };
 
   useEffect(() => {
     fetchAnnouncements();
@@ -63,7 +81,7 @@ const Announcements = () => {
       if (filterActive) params.append('is_active', filterActive);
 
       const response = await axios.get(
-        `${API_BASE_URL}/api/schooladmin/announcements/?${params.toString()}`,
+        buildApiUrl(`/schooladmin/announcements/?${params.toString()}`),
         { headers: { Authorization: `Bearer ${token}` } }
       );
       setAnnouncements(response.data.announcements || []);
@@ -80,7 +98,7 @@ const Announcements = () => {
       if (search) params.append('search', search);
 
       const response = await axios.get(
-        `${API_BASE_URL}/api/schooladmin/announcements/users-and-classes/?${params.toString()}`,
+        buildApiUrl(`/schooladmin/announcements/users-and-classes/?${params.toString()}`),
         { headers: { Authorization: `Bearer ${token}` } }
       );
       const fetchedUsers = response.data.users || [];
@@ -128,6 +146,7 @@ const Announcements = () => {
       specific_classes: []
     });
     setUserSearchQuery('');
+    fetchEmailQuota();
     setShowModal(true);
   };
 
@@ -151,6 +170,7 @@ const Announcements = () => {
       specific_classes: (announcement.specific_classes || []).map(c => typeof c === 'object' ? c.id : c)
     });
     setUserSearchQuery('');
+    fetchEmailQuota();
     setShowModal(true);
   };
 
@@ -187,6 +207,9 @@ const Announcements = () => {
       return;
     }
 
+    const canSend = await checkEmailQuotaBeforeSend(buildApiUrl);
+    if (!canSend) return;
+
     setSubmitting(true);
     try {
       // Sanitize data to ensure IDs are numbers, not objects
@@ -199,7 +222,7 @@ const Announcements = () => {
       if (editingAnnouncement) {
         // Update
         await axios.put(
-          `${API_BASE_URL}/api/schooladmin/announcements/${editingAnnouncement.id}/`,
+          buildApiUrl(`/schooladmin/announcements/${editingAnnouncement.id}/`),
           sanitizedData,
           { headers: { Authorization: `Bearer ${token}` } }
         );
@@ -207,7 +230,7 @@ const Announcements = () => {
       } else {
         // Create
         const response = await axios.post(
-          `${API_BASE_URL}/api/schooladmin/announcements/`,
+          buildApiUrl('/schooladmin/announcements/'),
           sanitizedData,
           { headers: { Authorization: `Bearer ${token}` } }
         );
@@ -228,7 +251,7 @@ const Announcements = () => {
 
     try {
       await axios.delete(
-        `${API_BASE_URL}/api/schooladmin/announcements/${id}/`,
+        buildApiUrl(`/schooladmin/announcements/${id}/`),
         {
           headers: { Authorization: `Bearer ${token}` },
           timeout: 30000 // 30 second timeout for deletion
@@ -252,7 +275,7 @@ const Announcements = () => {
   const handleToggleActive = async (announcement) => {
     try {
       await axios.put(
-        `${API_BASE_URL}/api/schooladmin/announcements/${announcement.id}/`,
+        buildApiUrl(`/schooladmin/announcements/${announcement.id}/`),
         { ...announcement, is_active: !announcement.is_active },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -676,11 +699,57 @@ const Announcements = () => {
                 </div>
               )}
 
+              {/* Email quota warning */}
+              {(() => {
+                if (!emailQuota || emailQuota.max_daily_emails === 0) return null;
+                const { emails_sent_today, max_daily_emails, emails_remaining } = emailQuota;
+
+                // Estimate recipient count from loaded users data
+                let estimatedRecipients = 0;
+                if (formData.audience === 'everyone') {
+                  estimatedRecipients = users.length;
+                } else if (formData.audience === 'students') {
+                  estimatedRecipients = users.filter(u => u.role === 'student').length;
+                } else if (formData.audience === 'teachers') {
+                  estimatedRecipients = users.filter(u => u.role === 'teacher').length;
+                } else if (formData.audience === 'parents') {
+                  estimatedRecipients = users.filter(u => u.role === 'parent').length;
+                } else if (formData.audience === 'specific') {
+                  estimatedRecipients = formData.specific_users.length;
+                }
+
+                if (emails_remaining <= 0) {
+                  return (
+                    <div className="email-quota-warning email-quota-error">
+                      <AlertCircle size={16} />
+                      <span>
+                        Daily email limit reached ({emails_sent_today}/{max_daily_emails} sent today).
+                        No emails will be delivered. Upgrade your plan from the Admin Portal for higher limits.
+                      </span>
+                    </div>
+                  );
+                }
+
+                if (estimatedRecipients > emails_remaining) {
+                  return (
+                    <div className="email-quota-warning">
+                      <AlertCircle size={16} />
+                      <span>
+                        This announcement targets ~{estimatedRecipients} recipient(s), but you only have {emails_remaining} email(s) remaining today ({emails_sent_today}/{max_daily_emails} used).
+                        Only {emails_remaining} email(s) will be delivered. Upgrade your plan for higher limits.
+                      </span>
+                    </div>
+                  );
+                }
+
+                return null;
+              })()}
+
               <div className="modal-actions">
                 <button type="button" className="cancel-btn" onClick={() => setShowModal(false)} disabled={submitting}>
                   Cancel
                 </button>
-                <button type="submit" className="submit-btn" disabled={submitting}>
+                <button type="submit" className="submit-btn" disabled={submitting || (emailQuota && emailQuota.max_daily_emails > 0 && emailQuota.emails_remaining <= 0)}>
                   {submitting ? (
                     <>
                       <Loader size={16} className="spin" style={{ marginRight: '8px' }} />

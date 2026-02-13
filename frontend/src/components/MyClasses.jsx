@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import API_BASE_URL from '../config';
+import { useSchool } from '../contexts/SchoolContext';
 
 import {
   BookOpen,
@@ -29,6 +30,7 @@ import {
 import './MyClasses.css';
 
 const MyClasses = () => {
+  const { buildApiUrl } = useSchool();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [classData, setClassData] = useState(null);
@@ -43,7 +45,7 @@ const MyClasses = () => {
     try {
       setLoading(true);
       const token = localStorage.getItem('accessToken');
-      const response = await fetch(`${API_BASE_URL}/api/academics/student/my-classes/`, {
+      const response = await fetch(buildApiUrl('/academics/student/my-classes/'), {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'

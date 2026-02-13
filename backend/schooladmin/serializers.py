@@ -160,7 +160,6 @@ class GradingConfigurationSerializer(serializers.ModelSerializer):
             # Deactivate the existing configuration
             existing_config.is_active = False
             existing_config.save()
-            print(f"Deactivated existing config: {existing_config.id} for {academic_year} - {term}")
 
         validated_data['created_by'] = self.context['request'].user
         config = super().create(validated_data)

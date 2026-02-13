@@ -22,8 +22,8 @@ class Command(BaseCommand):
         parser.add_argument(
             '--email',
             type=str,
-            default='admin@figilschools.com',
-            help='Admin email (default: admin@figilschools.com)'
+            default='admin@admin.local',
+            help='Admin email (default: admin@admin.local)'
         )
         parser.add_argument(
             '--password',

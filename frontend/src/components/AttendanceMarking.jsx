@@ -4,6 +4,7 @@ import Select from 'react-select';
 import axios from 'axios';
 import AttendanceMarkingModal from './AttendanceMarkingModal';
 import API_BASE_URL from '../config';
+import { useSchool } from '../contexts/SchoolContext';
 
 import './attendance.css';
 
@@ -40,6 +41,7 @@ const selectStyles = {
 };
 
 const AttendanceMarking = () => {
+  const { buildApiUrl } = useSchool();
   const [academicYears, setAcademicYears] = useState([]);
   const [terms, setTerms] = useState([]);
   const [selectedYear, setSelectedYear] = useState(null);
@@ -61,7 +63,7 @@ const AttendanceMarking = () => {
   useEffect(() => {
     const fetchSessionOptions = async () => {
       try {
-        const res = await axios.get(`${API_BASE_URL}/api/academics/sessions/`, {
+        const res = await axios.get(buildApiUrl('/academics/sessions/'), {
           headers: { Authorization: `Bearer ${token}` },
         });
 
@@ -89,7 +91,7 @@ const AttendanceMarking = () => {
 
     try {
       // Fetch from the attendance calendar system
-      const res = await axios.get(`${API_BASE_URL}/api/attendance/calendar/`, {
+      const res = await axios.get(buildApiUrl('/attendance/calendar/'), {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -126,12 +128,12 @@ const AttendanceMarking = () => {
       setSchoolDays(academicDays);
 
       // Fetch classes associated with this calendar
-      const classesRes = await axios.get(`${API_BASE_URL}/api/academics/classes/`, {
+      const classesRes = await axios.get(buildApiUrl('/academics/classes/'), {
         headers: { Authorization: `Bearer ${token}` },
       });
 
       // Filter classes that have sessions for this academic year and term
-      const sessionsRes = await axios.get(`${API_BASE_URL}/api/academics/sessions/`, {
+      const sessionsRes = await axios.get(buildApiUrl('/academics/sessions/'), {
         headers: { Authorization: `Bearer ${token}` },
       });
 

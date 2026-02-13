@@ -5,11 +5,13 @@ import Select from 'react-select';
 import './ViewSubjects.css';
 import SubjectModal from './SubjectModal';
 import { useDialog } from '../contexts/DialogContext';
+import { useSchool } from '../contexts/SchoolContext';
 
 import API_BASE_URL from '../config';
 
 const ViewSubjects = () => {
   const { showConfirm, showAlert } = useDialog();
+  const { buildApiUrl } = useSchool();
   const token = localStorage.getItem('accessToken');
   const [academicYears, setAcademicYears] = useState([]);
   const [selectedYear, setSelectedYear] = useState('');
@@ -19,15 +21,17 @@ const ViewSubjects = () => {
   const [showModal, setShowModal] = useState(false);
   const [modalSubjects, setModalSubjects] = useState([]);
   const [modalClassName, setModalClassName] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [hasFetched, setHasFetched] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         const [classSessionRes, classRes] = await Promise.all([
-          axios.get(`${API_BASE_URL}/api/academics/sessions/`, {
+          axios.get(buildApiUrl('/academics/sessions/'), {
             headers: { Authorization: `Bearer ${token}` },
           }),
-          axios.get(`${API_BASE_URL}/api/academics/classes/`, {
+          axios.get(buildApiUrl('/academics/classes/'), {
             headers: { Authorization: `Bearer ${token}` },
           }),
         ]);
@@ -41,11 +45,12 @@ const ViewSubjects = () => {
     };
 
     fetchData();
-  }, [token]);
+  }, [token, buildApiUrl]);
 
   const handleFilter = async () => {
+    setLoading(true);
     try {
-      const res = await axios.get(`${API_BASE_URL}/api/academics/sessions/`, {
+      const res = await axios.get(buildApiUrl('/academics/sessions/'), {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -56,8 +61,11 @@ const ViewSubjects = () => {
       const matchedClassIds = matchedSessions.map(sess => sess.classroom.id);
       const filtered = classes.filter(cls => matchedClassIds.includes(cls.id));
       setFilteredClasses(filtered);
+      setHasFetched(true);
     } catch (err) {
       console.error('❌ Failed to filter classes:', err);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -65,7 +73,7 @@ const ViewSubjects = () => {
     const classId = classObj.id;
 
     try {
-      const res = await axios.get(`${API_BASE_URL}/api/academics/subjects/`, {
+      const res = await axios.get(buildApiUrl('/academics/subjects/'), {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -103,7 +111,7 @@ const ViewSubjects = () => {
     }
 
     try {
-      await axios.delete(`${API_BASE_URL}/api/academics/subjects/${subjectId}/`, {
+      await axios.delete(buildApiUrl(`/academics/subjects/${subjectId}/`), {
         headers: { Authorization: `Bearer ${token}` },
       });
       setModalSubjects(prev => prev.filter(sub => sub.id !== subjectId));
@@ -118,7 +126,7 @@ const ViewSubjects = () => {
 
   const handleSubjectEdit = async (subjectId, updatedData) => {
     try {
-      await axios.put(`${API_BASE_URL}/api/academics/subjects/${subjectId}/`, updatedData, {
+      await axios.put(buildApiUrl(`/academics/subjects/${subjectId}/`), updatedData, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setModalSubjects(prev => prev.map(sub =>
@@ -163,11 +171,22 @@ const ViewSubjects = () => {
         </div>
 
         <div className="class-list">
-          {filteredClasses.map(cls => (
-            <div key={cls.id} className="class-card" onClick={() => handleClassClick(cls)}>
-              <h4>{cls.name}</h4>
+          {loading ? (
+            <div style={{textAlign:'center',padding:'40px',color:'#64748b'}}>
+              <p>Loading...</p>
             </div>
-          ))}
+          ) : hasFetched && filteredClasses.length === 0 ? (
+            <div style={{textAlign:'center',padding:'40px',color:'#94a3b8'}}>
+              <p style={{fontSize:'1rem',fontWeight:500,color:'#64748b'}}>No subjects found</p>
+              <p style={{fontSize:'0.875rem'}}>Add subjects to your class sessions to see them here.</p>
+            </div>
+          ) : (
+            filteredClasses.map(cls => (
+              <div key={cls.id} className="class-card" onClick={() => handleClassClick(cls)}>
+                <h4>{cls.name}</h4>
+              </div>
+            ))
+          )}
         </div>
 
         {showModal && (

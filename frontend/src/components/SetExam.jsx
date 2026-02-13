@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Trash2, Save } from 'lucide-react';
 import API_BASE_URL from '../config';
+import { useSchool } from '../contexts/SchoolContext';
 
 import './SetExam.css';
 
 const SetExam = () => {
+  const { buildApiUrl } = useSchool();
   const [sessions, setSessions] = useState([]);
   const [subjects, setSubjects] = useState([]);
   const [topics, setTopics] = useState([]);
@@ -60,7 +62,7 @@ const SetExam = () => {
       setLoading(true);
       const token = localStorage.getItem('accessToken');
 
-      const response = await fetch(`${API_BASE_URL}/api/academics/teacher/assigned-subjects/`, {
+      const response = await fetch(buildApiUrl('/academics/teacher/assigned-subjects/'), {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -123,7 +125,7 @@ const SetExam = () => {
     try {
       const token = localStorage.getItem('accessToken');
 
-      const response = await fetch(`${API_BASE_URL}/api/academics/teacher/assigned-subjects/`, {
+      const response = await fetch(buildApiUrl('/academics/teacher/assigned-subjects/'), {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -171,7 +173,7 @@ const SetExam = () => {
   const fetchTopics = async (subjectId) => {
     try {
       const token = localStorage.getItem('accessToken');
-      const response = await fetch(`${API_BASE_URL}/api/academics/topics/?subject_id=${subjectId}`, {
+      const response = await fetch(buildApiUrl(`/academics/topics/?subject_id=${subjectId}`), {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -429,7 +431,7 @@ const SetExam = () => {
           }
         });
 
-        const response = await fetch(`${API_BASE_URL}/api/academics/teacher/create-assessment/`, {
+        const response = await fetch(buildApiUrl('/academics/teacher/create-assessment/'), {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -463,7 +465,7 @@ const SetExam = () => {
           }))
         };
 
-        const response = await fetch(`${API_BASE_URL}/api/academics/teacher/create-assessment/`, {
+        const response = await fetch(buildApiUrl('/academics/teacher/create-assessment/'), {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${token}`,

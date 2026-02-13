@@ -2,11 +2,13 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useLoading } from '../context/LoadingContext';
 import API_BASE_URL from '../config';
+import { useSchool } from '../contexts/SchoolContext';
 
 import './DepartmentManagement.css';
 
 const DepartmentManagement = () => {
   const { showLoader, hideLoader } = useLoading();
+  const { buildApiUrl } = useSchool();
   const token = localStorage.getItem('accessToken');
 
   const [message, setMessage] = useState('');
@@ -19,7 +21,7 @@ const DepartmentManagement = () => {
   // Fetch departments
   const fetchDepartments = async () => {
     try {
-      const res = await axios.get(`${API_BASE_URL}/api/academics/departments/`, {
+      const res = await axios.get(buildApiUrl('/academics/departments/'), {
         headers: { Authorization: `Bearer ${token}` }
       });
       setDepartments(res.data);
@@ -31,7 +33,7 @@ const DepartmentManagement = () => {
   // Fetch classes
   const fetchClasses = async () => {
     try {
-      const res = await axios.get(`${API_BASE_URL}/api/academics/classes/`, {
+      const res = await axios.get(buildApiUrl('/academics/classes/'), {
         headers: { Authorization: `Bearer ${token}` }
       });
       setClasses(res.data);
@@ -79,7 +81,7 @@ const DepartmentManagement = () => {
 
     try {
       await axios.patch(
-        `${API_BASE_URL}/api/academics/classes/${selectedClass.id}/`,
+        buildApiUrl(`/academics/classes/${selectedClass.id}/`),
         { department_ids: selectedDepartments },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -94,7 +96,7 @@ const DepartmentManagement = () => {
 
       // Update selected class with new data
       const updatedClass = await axios.get(
-        `${API_BASE_URL}/api/academics/classes/${selectedClass.id}/`,
+        buildApiUrl(`/academics/classes/${selectedClass.id}/`),
         { headers: { Authorization: `Bearer ${token}` } }
       );
       setSelectedClass(updatedClass.data);

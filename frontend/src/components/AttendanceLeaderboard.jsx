@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 import { Trophy, ChevronDown, ChevronUp, User } from 'lucide-react';
 import API_BASE_URL from '../config';
+import { useSchool } from '../contexts/SchoolContext';
 
 import './AttendanceLeaderboard.css';
 
 const AttendanceLeaderboard = () => {
+  const { buildApiUrl } = useSchool();
   const [rankings, setRankings] = useState([]);
   const [classInfo, setClassInfo] = useState({});
   const [loading, setLoading] = useState(false);
@@ -16,7 +18,7 @@ const AttendanceLeaderboard = () => {
     setLoading(true);
     try {
       const token = localStorage.getItem('accessToken');
-      const response = await fetch(`${API_BASE_URL}/api/schooladmin/student/dashboard/attendance-ranking/`, {
+      const response = await fetch(buildApiUrl('/schooladmin/student/dashboard/attendance-ranking/'), {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'

@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import API_BASE_URL from '../config';
+import { useSchool } from '../contexts/SchoolContext';
 
 import './CreatePrincipalForm.css';
 
 const CreatePrincipalForm = ({ onSuccess }) => {
+  const { buildApiUrl } = useSchool();
   const [formData, setFormData] = useState({
     username: '',
     password: '',
@@ -21,13 +23,24 @@ const CreatePrincipalForm = ({ onSuccess }) => {
     setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
+  const validatePassword = (password) => {
+    if (password.length < 8) return 'Password must be at least 8 characters.';
+    if (!/[A-Z]/.test(password)) return 'Password must contain at least one uppercase letter.';
+    if (!/[a-z]/.test(password)) return 'Password must contain at least one lowercase letter.';
+    if (!/[0-9]/.test(password)) return 'Password must contain at least one number.';
+    return null;
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setMessage('');
 
+    const pwError = validatePassword(formData.password);
+    if (pwError) { setMessage(pwError); return; }
+
     try {
       // Use the generic user creation endpoint with role='principal'
-      await axios.post(`${API_BASE_URL}/api/users/create-user/`, {
+      await axios.post(buildApiUrl('/users/create-user/'), {
         ...formData,
         role: 'principal'
       }, {
@@ -47,7 +60,9 @@ const CreatePrincipalForm = ({ onSuccess }) => {
       if (onSuccess) onSuccess();
     } catch (err) {
       console.error('Error creating principal:', err);
-      if (err.response && err.response.data) {
+      if (err.response?.data?.error) {
+        setMessage(err.response.data.error);
+      } else if (err.response?.data) {
         const errorDetails = JSON.stringify(err.response.data, null, 2);
         setMessage(`Failed to create principal: ${errorDetails}`);
       } else {

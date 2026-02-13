@@ -3,7 +3,7 @@
   margin-bottom: 3rem;
   margin-top: -1rem;
   padding: 2rem;
-  background: linear-gradient(135deg, #0d47a1 0%, #1565c0 100%);
+  background: linear-gradient(135deg, var(--accent-color, var(--accent-color, #3b82f6)) 0%, #1565c0 100%);
   border-radius: 16px;
   box-shadow: 0 10px 30px rgba(13, 71, 161, 0.25);
   position: relative;
@@ -61,7 +61,7 @@
 
 .parent-heart-left svg:first-child,
 .parent-heart-right svg:first-child {
-  color: #0d47a1;
+  color: var(--accent-color, var(--accent-color, #3b82f6));
 }
 
 /* Icon Animations - Professional Bounce */

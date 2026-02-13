@@ -1,13 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import API_BASE_URL from '../config';
+import { useSchool } from '../contexts/SchoolContext';
 
-import { 
-  FileText, Calendar, Clock, CheckCircle, AlertCircle, 
-  Upload, X, Eye, Download, Trash2 
+import {
+  FileText, Calendar, Clock, CheckCircle, AlertCircle,
+  Upload, X, Eye, Download, Trash2
 } from 'lucide-react';
 import './StudentAssignments.css';
 
 const StudentAssignments = () => {
+  const { buildApiUrl } = useSchool();
   const [assignments, setAssignments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -30,9 +32,9 @@ const StudentAssignments = () => {
   const fetchAssignments = async () => {
     try {
       setLoading(true);
-      const url = filter === 'all' 
-        ? `${API_BASE_URL}/api/academics/student/assignments/`
-        : `${API_BASE_URL}/api/academics/student/assignments/?status=${filter}`;
+      const url = filter === 'all'
+        ? buildApiUrl('/academics/student/assignments/')
+        : buildApiUrl(`/academics/student/assignments/?status=${filter}`);
       
       const response = await fetch(url, {
         headers: {
@@ -141,7 +143,7 @@ const StudentAssignments = () => {
         formData.append('files', file);
       });
 
-      const response = await fetch(`${API_BASE_URL}/api/academics/student/assignments/submit/`, {
+      const response = await fetch(buildApiUrl('/academics/student/assignments/submit/'), {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -168,7 +170,7 @@ const StudentAssignments = () => {
   const viewSubmissionDetails = async (assignmentId) => {
     try {
       const response = await fetch(
-        `${API_BASE_URL}/api/academics/student/assignments/${assignmentId}/`,
+        buildApiUrl(`/academics/student/assignments/${assignmentId}/`),
         {
           headers: {
             'Authorization': `Bearer ${token}`

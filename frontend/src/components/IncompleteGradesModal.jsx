@@ -2,10 +2,13 @@
 import React, { useState, useEffect } from 'react';
 import { X, Users, ArrowLeft, Loader, Search, AlertTriangle, BookOpen, Bell, CheckCircle } from 'lucide-react';
 import API_BASE_URL from '../config';
+import { useSchool } from '../contexts/SchoolContext';
+import { checkEmailQuotaBeforeSend } from '../utils/emailQuota';
 
 import './IncompleteGradesModal.css';
 
 const IncompleteGradesModal = ({ isOpen, onClose }) => {
+  const { buildApiUrl } = useSchool();
   const [view, setView] = useState('classes'); // 'classes', 'students', or 'search'
   const [classes, setClasses] = useState([]);
   const [students, setStudents] = useState([]);
@@ -18,6 +21,15 @@ const IncompleteGradesModal = ({ isOpen, onClose }) => {
   const [expandedStudents, setExpandedStudents] = useState(new Set());
   const [notifyingStudent, setNotifyingStudent] = useState(null);
   const [notifiedStudents, setNotifiedStudents] = useState(new Set());
+
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => { document.body.style.overflow = ''; };
+  }, [isOpen]);
 
   useEffect(() => {
     if (isOpen) {
@@ -37,7 +49,7 @@ const IncompleteGradesModal = ({ isOpen, onClose }) => {
       setError(null);
       const token = localStorage.getItem('accessToken');
 
-      const response = await fetch(`${API_BASE_URL}/api/schooladmin/analytics/incomplete-grades/classes/`, {
+      const response = await fetch(buildApiUrl('/schooladmin/analytics/incomplete-grades/classes/'), {
         headers: { 'Authorization': `Bearer ${token}` }
       });
 
@@ -63,7 +75,7 @@ const IncompleteGradesModal = ({ isOpen, onClose }) => {
       const token = localStorage.getItem('accessToken');
 
       const response = await fetch(
-        `${API_BASE_URL}/api/schooladmin/analytics/incomplete-grades/class/${classSessionId}/students/`,
+        buildApiUrl(`/schooladmin/analytics/incomplete-grades/class/${classSessionId}/students/`),
         {
           headers: { 'Authorization': `Bearer ${token}` }
         }
@@ -100,7 +112,7 @@ const IncompleteGradesModal = ({ isOpen, onClose }) => {
       const token = localStorage.getItem('accessToken');
 
       const response = await fetch(
-        `${API_BASE_URL}/api/schooladmin/analytics/incomplete-grades/search/?q=${encodeURIComponent(query)}`,
+        buildApiUrl(`/schooladmin/analytics/incomplete-grades/search/?q=${encodeURIComponent(query)}`),
         {
           headers: { 'Authorization': `Bearer ${token}` }
         }
@@ -137,11 +149,14 @@ const IncompleteGradesModal = ({ isOpen, onClose }) => {
   };
 
   const handleNotifyStudent = async (studentId) => {
+    const canSend = await checkEmailQuotaBeforeSend(buildApiUrl);
+    if (!canSend) return;
+
     try {
       setNotifyingStudent(studentId);
       const token = localStorage.getItem('accessToken');
 
-      const response = await fetch(`${API_BASE_URL}/api/schooladmin/analytics/incomplete-grades/notify/`, {
+      const response = await fetch(buildApiUrl('/schooladmin/analytics/incomplete-grades/notify/'), {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,

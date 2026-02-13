@@ -11,9 +11,7 @@ export default defineConfig({
     host: '0.0.0.0',
     port: 4173,
     allowedHosts: [
-      'enchanting-luck-production.up.railway.app',
-      'figilschools.com',
-      'www.figilschools.com'
+      'enchanting-luck-production.up.railway.app'
     ]
   }
 })

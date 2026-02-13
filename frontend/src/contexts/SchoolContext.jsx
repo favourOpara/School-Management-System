@@ -55,10 +55,13 @@ export function SchoolProvider({ children }) {
         ? { Authorization: `Bearer ${token}` }
         : {};
 
-      // Fetch school basic info (public endpoint)
+      // Fetch school basic info (public endpoint) with cache busting
       const schoolResponse = await fetch(
         `${API_ENDPOINTS.base}/api/public/school/${slug}/`,
-        { headers }
+        {
+          headers,
+          cache: 'no-store'
+        }
       );
 
       if (!schoolResponse.ok) {
@@ -129,6 +132,28 @@ export function SchoolProvider({ children }) {
     }
   }, [activeSchoolSlug, fetchSchoolInfo]);
 
+  // Safety net: if school is loaded but subscription isn't, retry when token becomes available
+  // This handles the case where the initial fetch happened before login (no token)
+  useEffect(() => {
+    if (school && !subscription && !loading && activeSchoolSlug) {
+      const token = localStorage.getItem('accessToken');
+      if (token) {
+        refreshSubscription();
+      }
+    }
+  }, [school, subscription, loading, activeSchoolSlug, refreshSubscription]);
+
+  // Update document title when school name changes
+  useEffect(() => {
+    if (school?.name) {
+      document.title = school.name;
+    }
+    // Cleanup: reset title when component unmounts
+    return () => {
+      document.title = 'EduCare';
+    };
+  }, [school?.name]);
+
   // Build API URL with school slug
   const buildApiUrl = useCallback(
     (endpoint) => {
@@ -155,11 +180,18 @@ export function SchoolProvider({ children }) {
   // Check if a feature is available
   const hasFeature = useCallback(
     (feature) => {
-      if (!featureLimits) return true; // Default to true if no limits loaded
+      if (!featureLimits) {
+        // Premium-gated features default to false when limits aren't loaded
+        const premiumFeatures = ['import', 'staff_management'];
+        if (premiumFeatures.includes(feature)) return false;
+        return true;
+      }
 
       switch (feature) {
         case 'import':
           return featureLimits.has_import;
+        case 'staff_management':
+          return featureLimits.has_staff_management === true;
         case 'create_admin':
           return featureLimits.current_admins < featureLimits.max_admins;
         case 'send_email':

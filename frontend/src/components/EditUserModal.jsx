@@ -2,10 +2,12 @@ import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import Select from 'react-select';
 import API_BASE_URL from '../config';
+import { useSchool } from '../contexts/SchoolContext';
 
 import './EditUserModal.css';
 
 const EditUserModal = ({ user, onClose, onUpdated }) => {
+  const { buildApiUrl } = useSchool();
   const [classrooms, setClassrooms] = useState([]);
   const [academicYears, setAcademicYears] = useState([]);
   const [formData, setFormData] = useState({
@@ -37,6 +39,9 @@ const EditUserModal = ({ user, onClose, onUpdated }) => {
   const token = localStorage.getItem('accessToken');
 
   useEffect(() => {
+    // Extract classroom ID - backend returns classroom as object {id, name} or null
+    const classroomId = typeof user.classroom === 'object' ? user.classroom?.id : user.classroom;
+
     setFormData({
       first_name: user.first_name || '',
       last_name: user.last_name || '',
@@ -44,7 +49,7 @@ const EditUserModal = ({ user, onClose, onUpdated }) => {
       gender: user.gender || '',
       username: user.username || '',
       email: user.email || '',
-      classroom: user.classroom || '',
+      classroom: classroomId || '',
       academic_year: user.academic_year || '',
       term: user.term || '',
       date_of_birth: user.date_of_birth || '',
@@ -71,12 +76,12 @@ const EditUserModal = ({ user, onClose, onUpdated }) => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const classRes = await axios.get(`${API_BASE_URL}/api/academics/classes/`, {
+        const classRes = await axios.get(buildApiUrl('/academics/classes/'), {
           headers: { Authorization: `Bearer ${token}` }
         });
         setClassrooms(classRes.data);
 
-        const sessionRes = await axios.get(`${API_BASE_URL}/api/academics/sessions/`, {
+        const sessionRes = await axios.get(buildApiUrl('/academics/sessions/'), {
           headers: { Authorization: `Bearer ${token}` }
         });
         const years = [...new Set(sessionRes.data.map(s => s.academic_year))];
@@ -227,7 +232,7 @@ const EditUserModal = ({ user, onClose, onUpdated }) => {
         payload.append('profile_picture', profilePicture);
       }
 
-      const res = await axios.put(`${API_BASE_URL}/api/users/${user.id}/`, payload, {
+      const res = await axios.put(buildApiUrl(`/users/${user.id}/`), payload, {
         headers: {
           Authorization: `Bearer ${token}`,
           'Content-Type': 'multipart/form-data'
@@ -250,7 +255,8 @@ const EditUserModal = ({ user, onClose, onUpdated }) => {
     }
   };
 
-  const selectedClassroomName = classrooms.find(c => c.id === formData.classroom)?.name || '';
+  const selectedClassroom = classrooms.find(c => c.id === formData.classroom);
+  const showDepartmentField = selectedClassroom?.has_departments === true;
 
   return (
     <div className="edit-user-modal-overlay">
@@ -289,7 +295,7 @@ const EditUserModal = ({ user, onClose, onUpdated }) => {
           />
 
           {/* Department Select */}
-          {selectedClassroomName.startsWith('S.S.S.') && (
+          {showDepartmentField && (
             <Select
               classNamePrefix="react-select"
               name="department"

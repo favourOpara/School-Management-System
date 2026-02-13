@@ -2,10 +2,12 @@
 import React, { useState, useEffect } from 'react';
 import { Bell, AlertCircle, Info, CheckCircle, Clock, FileText, DollarSign, BookOpen } from 'lucide-react';
 import API_BASE_URL from '../config';
+import { useSchool } from '../contexts/SchoolContext';
 
 import './ParentAnnouncements.css';
 
 const ParentAnnouncements = () => {
+  const { buildApiUrl } = useSchool();
   const [announcements, setAnnouncements] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all'); // all, unread, direct, announcement
@@ -19,7 +21,7 @@ const ParentAnnouncements = () => {
     try {
       setLoading(true);
       const token = localStorage.getItem('accessToken');
-      const response = await fetch(`${API_BASE_URL}/api/schooladmin/parent/announcements/`, {
+      const response = await fetch(buildApiUrl('/schooladmin/parent/announcements/'), {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'

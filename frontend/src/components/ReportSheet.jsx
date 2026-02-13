@@ -1,11 +1,12 @@
 // src/components/ReportSheet.jsx
 import React, { useState, useEffect } from 'react';
 import { FileText, Filter, Search, Printer, Download, Loader } from 'lucide-react';
-import API_BASE_URL from '../config';
+import { useSchool } from '../contexts/SchoolContext';
 
 import './ReportSheet.css';
 
 const ReportSheet = () => {
+  const { buildApiUrl } = useSchool();
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [messageType, setMessageType] = useState('');
@@ -42,7 +43,7 @@ const ReportSheet = () => {
       const token = localStorage.getItem('accessToken');
 
       // Fetch sessions for academic years and terms
-      const sessionResponse = await fetch(`${API_BASE_URL}/api/academics/sessions/`, {
+      const sessionResponse = await fetch(buildApiUrl('/academics/sessions/'), {
         headers: { 'Authorization': `Bearer ${token}` }
       });
 
@@ -55,7 +56,7 @@ const ReportSheet = () => {
       }
 
       // Fetch classes
-      const classResponse = await fetch(`${API_BASE_URL}/api/academics/classes/`, {
+      const classResponse = await fetch(buildApiUrl('/academics/classes/'), {
         headers: { 'Authorization': `Bearer ${token}` }
       });
 
@@ -76,7 +77,7 @@ const ReportSheet = () => {
       const token = localStorage.getItem('accessToken');
 
       // Build query params - class_id is optional
-      let url = `${API_BASE_URL}/api/schooladmin/reports/students/?academic_year=${selectedYear}&term=${selectedTerm}`;
+      let url = buildApiUrl(`/schooladmin/reports/students/?academic_year=${selectedYear}&term=${selectedTerm}`);
       if (selectedClass) {
         url += `&class_id=${selectedClass}`;
       }
@@ -107,7 +108,7 @@ const ReportSheet = () => {
       const token = localStorage.getItem('accessToken');
 
       const response = await fetch(
-        `${API_BASE_URL}/api/schooladmin/reports/student/${studentId}/?academic_year=${selectedYear}&term=${selectedTerm}`,
+        buildApiUrl(`/schooladmin/reports/student/${studentId}/?academic_year=${selectedYear}&term=${selectedTerm}`),
         { headers: { 'Authorization': `Bearer ${token}` } }
       );
 
@@ -143,7 +144,7 @@ const ReportSheet = () => {
     try {
       const token = localStorage.getItem('accessToken');
       const response = await fetch(
-        `${API_BASE_URL}/api/schooladmin/reports/student/${selectedStudent.id}/download/?academic_year=${selectedYear}&term=${selectedTerm}`,
+        buildApiUrl(`/schooladmin/reports/student/${selectedStudent.id}/download/?academic_year=${selectedYear}&term=${selectedTerm}`),
         {
           headers: { 'Authorization': `Bearer ${token}` }
         }
@@ -333,7 +334,7 @@ const ReportSheet = () => {
               <div className="school-logo">
                 <img src="/logo.png" alt="School Logo" />
               </div>
-              <h1 className="school-name">Figil High School</h1>
+              <h1 className="school-name">{reportData.school_name || 'School Name'}</h1>
               <h2 className="report-title">Student Result Management System</h2>
               <p className="report-term">
                 Term {reportData.session.term === 'First Term' ? 'ONE' : reportData.session.term === 'Second Term' ? 'TWO' : 'THREE'} ({reportData.session.academic_year} Academic Session Report)

@@ -106,8 +106,6 @@ def generate_fee_receipt_pdf(receipt, payment_history):
                 break
     except Exception as e:
         # Silently fail and use fallback
-        import sys
-        print(f"Logo loading error: {e}", file=sys.stderr)
         pass
 
     if not logo_loaded:
@@ -115,7 +113,8 @@ def generate_fee_receipt_pdf(receipt, payment_history):
         elements.append(Spacer(1, 0.1*inch))
 
     # School Name (Centered)
-    school_name = Paragraph("<b>FIGIL HIGH SCHOOL</b>", title_style)
+    school_name_text = context.get('school_name', 'School Name')
+    school_name = Paragraph(f"<b>{school_name_text.upper()}</b>", title_style)
     elements.append(school_name)
 
     school_info = Paragraph("Official Fee Receipt", subtitle_style)
@@ -387,7 +386,7 @@ def generate_report_sheet_pdf(context):
             pass
 
     # School Name
-    elements.append(Paragraph("Figil High School", school_name_style))
+    elements.append(Paragraph(context.get('school_name', 'School Name'), school_name_style))
 
     # Report Title
     elements.append(Paragraph("Student Result Management System", report_title_style))

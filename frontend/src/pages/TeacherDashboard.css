@@ -50,7 +50,7 @@
 }
 
 .teacher-dashboard-card-title {
-  color: #0d47a1;
+  color: var(--accent-color, var(--accent-color, #3b82f6));
   font-size: 1.2rem;
   font-weight: 600;
   margin-bottom: 1rem;
@@ -145,7 +145,7 @@
 .grading-tile:hover {
   box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
   transform: translateY(-4px);
-  border-color: #3b82f6;
+  border-color: var(--accent-color, #3b82f6);
 }
 
 .grading-tile-header {
@@ -165,7 +165,7 @@
 }
 
 .session-badge {
-  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  background: linear-gradient(135deg, var(--accent-color, #3b82f6) 0%, var(--accent-color-dark, #2563eb) 100%);
   color: white;
   padding: 0.75rem 1.5rem;
   border-radius: 20px;
@@ -205,12 +205,12 @@
 }
 
 .subject-dropdown:hover {
-  border-color: #3b82f6;
+  border-color: var(--accent-color, #3b82f6);
 }
 
 .subject-dropdown:focus {
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  border-color: var(--accent-color, #3b82f6);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-color, #3b82f6) 10%, transparent);
 }
 
 /* Grading Sections */
@@ -233,9 +233,9 @@
 
 .grading-section.clickable:hover {
   background: #f3f4f6;
-  border-color: #3b82f6;
+  border-color: var(--accent-color, #3b82f6);
   transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(59, 130, 246, 0.15);
+  box-shadow: 0 4px 8px color-mix(in srgb, var(--accent-color, #3b82f6) 15%, transparent);
 }
 
 .section-title {
@@ -321,6 +321,9 @@
     display: flex;
     justify-content: center;
     align-items: center;
+    overflow-x: hidden;
+    max-width: 100vw;
+    box-sizing: border-box;
   }
 
   .teacher-dashboard-greeting {
@@ -419,7 +422,7 @@
 
   .grading-section.clickable:hover {
     transform: translateY(-1px);
-    box-shadow: 0 2px 4px rgba(59, 130, 246, 0.1);
+    box-shadow: 0 2px 4px color-mix(in srgb, var(--accent-color, #3b82f6) 10%, transparent);
   }
 
   .section-title {
@@ -618,8 +621,8 @@
 }
 
 .status-awaiting {
-  background: #dbeafe;
-  color: #1e40af;
+  background: var(--accent-color-lightest, #dbeafe);
+  color: var(--accent-color-darker, #1e40af);
 }
 
 .score-display {
@@ -652,7 +655,7 @@
 
 .students-ranking-list li:hover {
   background: #f9fafb;
-  border-color: #3b82f6;
+  border-color: var(--accent-color, #3b82f6);
 }
 
 .rank-number {

@@ -12,6 +12,8 @@ PUBLIC_ROUTES = [
     r'^/api/public/',
     r'^/api/webhooks/',
     r'^/api/token/',
+    r'^/api/portal/',
+    r'^/api/superadmin/',
     r'^/admin/',
     r'^/static/',
     r'^/media/',
@@ -43,6 +45,27 @@ class TenantMiddleware(MiddlewareMixin):
     4. Verifies the school is active and subscription is valid
     """
 
+    def _get_user_from_jwt(self, request):
+        """
+        Extract user from JWT token in Authorization header.
+        This is needed because DRF authentication happens at view level,
+        but we need the user's school in middleware for legacy routes.
+        """
+        from rest_framework_simplejwt.authentication import JWTAuthentication
+        from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
+
+        auth_header = request.META.get('HTTP_AUTHORIZATION', '')
+        if not auth_header.startswith('Bearer '):
+            return None
+
+        try:
+            jwt_auth = JWTAuthentication()
+            validated_token = jwt_auth.get_validated_token(auth_header.split(' ')[1])
+            user = jwt_auth.get_user(validated_token)
+            return user
+        except (InvalidToken, TokenError, Exception):
+            return None
+
     def process_request(self, request):
         # Initialize school to None
         request.school = None
@@ -55,21 +78,24 @@ class TenantMiddleware(MiddlewareMixin):
             if re.match(pattern, path):
                 return None
 
-        # Handle legacy routes (redirect to default school for backwards compatibility)
+        # Handle legacy routes (redirect to user's school for backwards compatibility)
         for pattern in LEGACY_ROUTE_PATTERNS:
             if re.match(pattern, path):
-                # Check if user is authenticated and has a school
+                # Try to get user from JWT token (since DRF auth happens at view level)
+                user = self._get_user_from_jwt(request)
+                if user and hasattr(user, 'school') and user.school:
+                    request.school = user.school
+                    request.subscription = getattr(user.school, 'subscription', None)
+                    return None
+
+                # Check if user is authenticated via session and has a school
                 if hasattr(request, 'user') and request.user.is_authenticated:
                     if hasattr(request.user, 'school') and request.user.school:
                         request.school = request.user.school
                         request.subscription = getattr(request.school, 'subscription', None)
                         return None
 
-                # For unauthenticated requests to legacy routes, try to find default school
-                default_school = School.objects.filter(slug='figilschools').first()
-                if default_school:
-                    request.school = default_school
-                    request.subscription = getattr(default_school, 'subscription', None)
+                # No school found - let the request fail gracefully
                 return None
 
         # Extract school slug from path: /api/<school_slug>/...
@@ -82,7 +108,7 @@ class TenantMiddleware(MiddlewareMixin):
         school_slug = match.group(1)
 
         # Skip if slug is a known non-tenant route
-        non_tenant_slugs = ['public', 'webhooks', 'token', 'admin']
+        non_tenant_slugs = ['public', 'webhooks', 'token', 'portal', 'superadmin', 'admin']
         if school_slug in non_tenant_slugs:
             return None
 
@@ -170,6 +196,10 @@ class SubscriptionValidationMiddleware(MiddlewareMixin):
                 'error': 'No subscription',
                 'message': 'This school does not have an active subscription.'
             }, status=402)
+
+        # Server-side trial expiry check
+        from .permissions import check_trial_expiry
+        check_trial_expiry(subscription)
 
         if not subscription.is_active_or_trial():
             if subscription.status == 'expired':

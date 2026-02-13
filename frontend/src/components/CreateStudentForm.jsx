@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import API_BASE_URL from '../config';
+import { useSchool } from '../contexts/SchoolContext';
 
 import './CreateStudentForm.css';
 
 const CreateStudentForm = ({ onSuccess }) => {
+  const { buildApiUrl } = useSchool();
   const [formData, setFormData] = useState({
     first_name: '',
     middle_name: '',
@@ -40,10 +42,10 @@ const CreateStudentForm = ({ onSuccess }) => {
     const fetchData = async () => {
       try {
         const [classRes, sessionRes] = await Promise.all([
-          axios.get(`${API_BASE_URL}/api/academics/classes/`, {
+          axios.get(buildApiUrl('/academics/classes/'), {
             headers: { Authorization: `Bearer ${token}` }
           }),
-          axios.get(`${API_BASE_URL}/api/academics/sessions/`, {
+          axios.get(buildApiUrl('/academics/sessions/'), {
             headers: { Authorization: `Bearer ${token}` }
           })
         ]);
@@ -55,6 +57,7 @@ const CreateStudentForm = ({ onSuccess }) => {
         setAcademicYears(uniqueYears);
       } catch (err) {
         console.error('Error fetching classes or sessions:', err);
+        setMessage('Failed to load form data. Please refresh the page.');
       }
     };
 
@@ -162,9 +165,20 @@ const CreateStudentForm = ({ onSuccess }) => {
     }
   };
 
+  const validatePassword = (password) => {
+    if (password.length < 8) return 'Password must be at least 8 characters.';
+    if (!/[A-Z]/.test(password)) return 'Password must contain at least one uppercase letter.';
+    if (!/[a-z]/.test(password)) return 'Password must contain at least one lowercase letter.';
+    if (!/[0-9]/.test(password)) return 'Password must contain at least one number.';
+    return null;
+  };
+
   const handleSubmit = async e => {
     e.preventDefault();
     setMessage('');
+
+    const pwError = validatePassword(formData.password);
+    if (pwError) { setMessage(pwError); return; }
 
     if (formData.password !== formData.confirm_password) {
       setMessage('Passwords do not match.');
@@ -185,7 +199,7 @@ const CreateStudentForm = ({ onSuccess }) => {
 
     try {
       await axios.post(
-        `${API_BASE_URL}/api/users/create-user/`,
+        buildApiUrl('/users/create-user/'),
         payload,
         {
           headers: {
@@ -221,7 +235,9 @@ const CreateStudentForm = ({ onSuccess }) => {
       if (onSuccess) onSuccess();
     } catch (err) {
       console.error('Error creating student:', err);
-      if (err.response?.data) {
+      if (err.response?.data?.error) {
+        setMessage(err.response.data.error);
+      } else if (err.response?.data) {
         const errors = Object.entries(err.response.data)
           .map(([field, msgs]) => `${field}: ${Array.isArray(msgs) ? msgs.join(', ') : msgs}`)
           .join('\n');
@@ -232,8 +248,8 @@ const CreateStudentForm = ({ onSuccess }) => {
     }
   };
 
-  const selectedClassName = classrooms.find(cls => cls.id.toString() === formData.classroom)?.name;
-  const isSeniorClass = selectedClassName?.startsWith('S.S.S.');
+  const selectedClass = classrooms.find(cls => cls.id.toString() === formData.classroom);
+  const showDepartment = selectedClass?.has_departments === true;
 
   return (
     <div className="create-student-wrapper">
@@ -262,7 +278,7 @@ const CreateStudentForm = ({ onSuccess }) => {
             ))}
           </select>
 
-          {isSeniorClass && (
+          {showDepartment && (
             <select name="department" value={formData.department} onChange={handleChange} required>
               <option value="">Select Department</option>
               {DEPARTMENTS.map(dept => (

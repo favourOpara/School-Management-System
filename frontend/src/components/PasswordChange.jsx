@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import API_BASE_URL from '../config';
+import { useSchool } from '../contexts/SchoolContext';
 
 import './PasswordChange.css';
 
 const PasswordChange = ({ onClose }) => {
+  const { buildApiUrl } = useSchool();
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState(null);
   const [error, setError] = useState(null);
@@ -25,7 +27,7 @@ const PasswordChange = ({ onClose }) => {
     try {
       const token = localStorage.getItem('accessToken');
       const response = await axios.post(
-        `${API_BASE_URL}/api/users/change-password/`,
+        buildApiUrl('/users/change-password/'),
         passwordData,
         {
           headers: {

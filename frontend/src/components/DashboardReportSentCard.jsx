@@ -4,6 +4,7 @@ import { Send, CheckCircle, XCircle, AlertCircle, Loader } from 'lucide-react';
 import Select from 'react-select';
 import './DashboardReportSentCard.css';
 import ReportSentModal from './ReportSentModal';
+import { useSchool } from '../contexts/SchoolContext';
 
 import API_BASE_URL from '../config';
 
@@ -46,6 +47,7 @@ const selectStyles = {
 };
 
 const DashboardReportSentCard = () => {
+  const { buildApiUrl } = useSchool();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [stats, setStats] = useState(null);
@@ -74,7 +76,7 @@ const DashboardReportSentCard = () => {
       const token = localStorage.getItem('accessToken');
 
       // First, get the current active session
-      const sessionInfoRes = await fetch(`${API_BASE_URL}/api/schooladmin/session/info/`, {
+      const sessionInfoRes = await fetch(buildApiUrl('/schooladmin/session/info/'), {
         headers: { 'Authorization': `Bearer ${token}` }
       });
 
@@ -88,7 +90,7 @@ const DashboardReportSentCard = () => {
       }
 
       // Then get all available sessions
-      const response = await fetch(`${API_BASE_URL}/api/academics/sessions/`, {
+      const response = await fetch(buildApiUrl('/academics/sessions/'), {
         headers: { 'Authorization': `Bearer ${token}` }
       });
 
@@ -133,7 +135,7 @@ const DashboardReportSentCard = () => {
       if (selectedYear) params.append('academic_year', selectedYear.value);
       if (selectedTerm) params.append('term', selectedTerm.value);
 
-      const response = await fetch(`${API_BASE_URL}/api/schooladmin/analytics/reports-sent/?${params.toString()}`, {
+      const response = await fetch(buildApiUrl(`/schooladmin/analytics/reports-sent/?${params.toString()}`), {
         headers: { 'Authorization': `Bearer ${token}` }
       });
 

@@ -17,46 +17,26 @@ from .serializers import (
 )
 from users.views import IsAdminRole
 
-# ORIGINAL ATTENDANCE VIEWS
+# DEPRECATED: SessionCalendar views are replaced by AttendanceCalendar.
+# These endpoints are kept for backwards compatibility but are not used by the frontend.
+# The AttendanceCalendar model (below) is the active implementation with school FK support.
 class SessionCalendarCreateView(APIView):
+    """Deprecated: Use AttendanceCalendar endpoints instead."""
     permission_classes = [IsAuthenticated, IsAdminRole]
 
     def post(self, request):
-        academic_year = request.data.get("academic_year")
-        term = request.data.get("term")
-        selected_dates = request.data.get("school_days", [])
-        holidays = request.data.get("holidays", [])
-
-        if not academic_year or not term or not selected_dates:
-            return Response({"detail": "Missing academic_year, term or school_days"}, status=400)
-
-        if SessionCalendar.objects.filter(academic_year=academic_year, term=term).exists():
-            return Response({"detail": "Calendar already exists for this academic year and term"}, status=400)
-
-        calendar = SessionCalendar.objects.create(academic_year=academic_year, term=term)
-
-        for date_str in selected_dates:
-            try:
-                date_obj = datetime.strptime(date_str, "%Y-%m-%d").date()
-                SchoolDay.objects.create(session=calendar, date=date_obj, is_school_day=True)
-            except Exception as e:
-                print(f"Error creating school day for {date_str}: {str(e)}")
-
-        for h in holidays:
-            try:
-                date_obj = datetime.strptime(h['date'], "%Y-%m-%d").date()
-                school_day = SchoolDay.objects.get(session=calendar, date=date_obj)
-                HolidayLabel.objects.create(school_day=school_day, label=h['label'])
-            except Exception as e:
-                print(f"Error labeling holiday for {h['date']}: {str(e)}")
-
-        return Response({"message": "Session calendar created successfully"}, status=201)
+        return Response(
+            {"detail": "This endpoint is deprecated. Use the AttendanceCalendar endpoints instead."},
+            status=status.HTTP_410_GONE
+        )
 
 
 class SessionCalendarListView(generics.ListAPIView):
+    """Deprecated: Use AttendanceCalendar endpoints instead."""
     permission_classes = [IsAuthenticated, IsAdminRole]
     serializer_class = SessionCalendarSerializer
-    queryset = SessionCalendar.objects.all()
+    def get_queryset(self):
+        return SessionCalendar.objects.none()
 
 
 class StudentAttendanceRecordView(APIView):
@@ -71,15 +51,18 @@ class StudentAttendanceRecordView(APIView):
         if not all([academic_year, term, class_id, subject_id]):
             return Response({"detail": "Missing required parameters"}, status=400)
 
+        school = getattr(request, 'school', None)
         try:
-            class_session = ClassSession.objects.get(classroom__id=class_id, academic_year=academic_year, term=term)
+            cs_qs = ClassSession.objects.filter(classroom__school=school) if school else ClassSession.objects.none()
+            class_session = cs_qs.get(classroom__id=class_id, academic_year=academic_year, term=term)
             subject = Subject.objects.get(id=subject_id, class_session=class_session)
         except ClassSession.DoesNotExist:
             return Response({"detail": "Class session not found"}, status=404)
         except Subject.DoesNotExist:
             return Response({"detail": "Subject not found"}, status=404)
 
-        students = CustomUser.objects.filter(role="student", classroom__id=class_id, academic_year=academic_year)
+        student_qs = CustomUser.objects.filter(school=school) if school else CustomUser.objects.none()
+        students = student_qs.filter(role="student", classroom__id=class_id, academic_year=academic_year)
 
         school_days = SchoolDay.objects.filter(session__academic_year=academic_year, session__term=term, is_school_day=True)
         school_day_dates = [d.date for d in school_days]
@@ -116,7 +99,12 @@ class StudentAttendanceRecordView(APIView):
 def list_attendance_calendars(request):
     """List all attendance calendars - used by ViewAttendance.jsx"""
     try:
-        calendars = AttendanceCalendar.objects.all().order_by('-academic_year', 'term')
+        # Filter by school for multi-tenancy data isolation
+        school = getattr(request, 'school', None)
+        if school:
+            calendars = AttendanceCalendar.objects.filter(school=school).order_by('-academic_year', 'term')
+        else:
+            calendars = AttendanceCalendar.objects.none()
         
         calendar_data = []
         for calendar in calendars:
@@ -172,18 +160,26 @@ def create_attendance_calendar(request):
             status=status.HTTP_400_BAD_REQUEST
         )
     
-    if AttendanceCalendar.objects.filter(academic_year=academic_year, term=term).exists():
+    # Filter by school for multi-tenancy data isolation
+    school = getattr(request, 'school', None)
+
+    calendar_exists_query = AttendanceCalendar.objects.filter(academic_year=academic_year, term=term)
+    if school:
+        calendar_exists_query = calendar_exists_query.filter(school=school)
+
+    if calendar_exists_query.exists():
         return Response(
-            {'error': f'Calendar for {academic_year} - {term} already exists'}, 
+            {'error': f'Calendar for {academic_year} - {term} already exists'},
             status=status.HTTP_400_BAD_REQUEST
         )
-    
+
     try:
         with transaction.atomic():
             calendar = AttendanceCalendar.objects.create(
                 academic_year=academic_year,
                 term=term,
-                created_by=request.user
+                created_by=request.user,
+                school=school
             )
             
             matching_sessions = ClassSession.objects.filter(

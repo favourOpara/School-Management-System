@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import API_BASE_URL from '../config';
+import { useSchool } from '../contexts/SchoolContext';
 
 import './attendancesubjectmodal.css'; // Make sure this file is imported
 
 const AttendanceSubjectModal = ({ classInfo, academicYear, term, onClose, onSubjectSelect }) => {
+  const { buildApiUrl } = useSchool();
   const [subjects, setSubjects] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -13,7 +15,7 @@ const AttendanceSubjectModal = ({ classInfo, academicYear, term, onClose, onSubj
   useEffect(() => {
     const fetchSubjects = async () => {
       try {
-        const res = await axios.get(`${API_BASE_URL}/api/academics/subjects/`, {
+        const res = await axios.get(buildApiUrl('/academics/subjects/'), {
           headers: { Authorization: `Bearer ${token}` },
         });
 

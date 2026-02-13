@@ -6,6 +6,7 @@ import FeeStudentModal from './FeeStudentModal';
 import './viewfees.css';
 import './createfees.css';
 import { useDialog } from '../contexts/DialogContext';
+import { useSchool } from '../contexts/SchoolContext';
 
 import API_BASE_URL from '../config';
 
@@ -48,6 +49,7 @@ const customSelectStyles = {
 
 const CreateFeeStructure = () => {
   const { showConfirm } = useDialog();
+  const { buildApiUrl } = useSchool();
   const [activeTab, setActiveTab] = useState('create');
 
   // form state
@@ -83,13 +85,13 @@ const CreateFeeStructure = () => {
     const fetchData = async () => {
       try {
         const [classRes, sessionRes, feeRes] = await Promise.all([
-          axios.get(`${API_BASE_URL}/api/academics/classes/`, {
+          axios.get(buildApiUrl('/academics/classes/'), {
             headers: { Authorization: `Bearer ${token}` },
           }),
-          axios.get(`${API_BASE_URL}/api/academics/sessions/`, {
+          axios.get(buildApiUrl('/academics/sessions/'), {
             headers: { Authorization: `Bearer ${token}` },
           }),
-          axios.get(`${API_BASE_URL}/api/schooladmin/fees/`, {
+          axios.get(buildApiUrl('/schooladmin/fees/'), {
             headers: { Authorization: `Bearer ${token}` },
           }),
         ]);
@@ -128,7 +130,7 @@ const CreateFeeStructure = () => {
     }
     try {
       await axios.post(
-        `${API_BASE_URL}/api/schooladmin/fees/create/`,
+        buildApiUrl('/schooladmin/fees/create/'),
         {
           name,
           amount,
@@ -146,7 +148,7 @@ const CreateFeeStructure = () => {
       setTerm(termOptions[0]);
       setSelectedClasses([]);
       // refresh list
-      const res = await axios.get(`${API_BASE_URL}/api/schooladmin/fees/`, {
+      const res = await axios.get(buildApiUrl('/schooladmin/fees/'), {
         headers: { Authorization: `Bearer ${token}` },
       });
       setFees(res.data || []);
@@ -167,7 +169,7 @@ const CreateFeeStructure = () => {
     if (!confirmed) return;
 
     try {
-      await axios.delete(`${API_BASE_URL}/api/schooladmin/fees/${feeId}/delete/`, {
+      await axios.delete(buildApiUrl(`/schooladmin/fees/${feeId}/delete/`), {
         headers: { Authorization: `Bearer ${token}` },
       });
       setFees(f => f.filter(x => x.id !== feeId));
@@ -195,7 +197,7 @@ const CreateFeeStructure = () => {
       setSelectedClassInfo(null);
       try {
         const res = await axios.get(
-          `${API_BASE_URL}/api/schooladmin/fees/${fee.id}/students/`,
+          buildApiUrl(`/schooladmin/fees/${fee.id}/students/`),
           { headers: { Authorization: `Bearer ${token}` } }
         );
         // ensure array

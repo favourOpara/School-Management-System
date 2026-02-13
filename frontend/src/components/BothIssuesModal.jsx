@@ -2,10 +2,13 @@
 import React, { useState, useEffect } from 'react';
 import { X, Users, ArrowLeft, Loader, AlertTriangle, BookOpen, Bell, CheckCircle, DollarSign } from 'lucide-react';
 import API_BASE_URL from '../config';
+import { useSchool } from '../contexts/SchoolContext';
+import { checkEmailQuotaBeforeSend } from '../utils/emailQuota';
 
 import './BothIssuesModal.css';
 
 const BothIssuesModal = ({ isOpen, onClose }) => {
+  const { buildApiUrl } = useSchool();
   const [view, setView] = useState('classes');
   const [classes, setClasses] = useState([]);
   const [students, setStudents] = useState([]);
@@ -17,6 +20,15 @@ const BothIssuesModal = ({ isOpen, onClose }) => {
   const [notifiedStudents, setNotifiedStudents] = useState(new Set());
   const [sendingBulk, setSendingBulk] = useState(false);
   const [bulkResult, setBulkResult] = useState(null);
+
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => { document.body.style.overflow = ''; };
+  }, [isOpen]);
 
   useEffect(() => {
     if (isOpen) {
@@ -35,7 +47,7 @@ const BothIssuesModal = ({ isOpen, onClose }) => {
       setError(null);
       const token = localStorage.getItem('accessToken');
 
-      const response = await fetch(`${API_BASE_URL}/api/schooladmin/analytics/both-issues/classes/`, {
+      const response = await fetch(buildApiUrl('/schooladmin/analytics/both-issues/classes/'), {
         headers: { 'Authorization': `Bearer ${token}` }
       });
 
@@ -61,7 +73,7 @@ const BothIssuesModal = ({ isOpen, onClose }) => {
       const token = localStorage.getItem('accessToken');
 
       const response = await fetch(
-        `${API_BASE_URL}/api/schooladmin/analytics/both-issues/class/${classSessionId}/students/`,
+        buildApiUrl(`/schooladmin/analytics/both-issues/class/${classSessionId}/students/`),
         {
           headers: { 'Authorization': `Bearer ${token}` }
         }
@@ -105,11 +117,14 @@ const BothIssuesModal = ({ isOpen, onClose }) => {
   };
 
   const handleNotifyStudent = async (studentId) => {
+    const canSend = await checkEmailQuotaBeforeSend(buildApiUrl);
+    if (!canSend) return;
+
     try {
       setNotifyingStudent(studentId);
       const token = localStorage.getItem('accessToken');
 
-      const response = await fetch(`${API_BASE_URL}/api/schooladmin/analytics/both-issues/notify/`, {
+      const response = await fetch(buildApiUrl('/schooladmin/analytics/both-issues/notify/'), {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -133,12 +148,15 @@ const BothIssuesModal = ({ isOpen, onClose }) => {
   };
 
   const handleNotifyAll = async () => {
+    const canSend = await checkEmailQuotaBeforeSend(buildApiUrl);
+    if (!canSend) return;
+
     try {
       setSendingBulk(true);
       setBulkResult(null);
       const token = localStorage.getItem('accessToken');
 
-      const response = await fetch(`${API_BASE_URL}/api/schooladmin/analytics/both-issues/notify-all/`, {
+      const response = await fetch(buildApiUrl('/schooladmin/analytics/both-issues/notify-all/'), {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,

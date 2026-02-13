@@ -1,5 +1,5 @@
 // src/pages/AdminDashboard.jsx
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, Suspense } from 'react';
 import { useLocation } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
 import ClassForm from '../components/ClassForm';
@@ -26,7 +26,11 @@ import TopHeader from '../components/TopHeader';
 import SessionManagement from '../components/SessionManagement';
 import AdminProfileSettings from '../components/AdminProfileSettings';
 import DashboardWelcome from '../components/DashboardWelcome';
+import ManageStaff from '../components/ManageStaff';
+import { useSchool } from '../contexts/SchoolContext';
 import './AdminDashboard.css';
+
+const KnowledgeBase = React.lazy(() => import('../components/KnowledgeBase'));
 
 const getGreeting = () => {
   const hour = new Date().getHours();
@@ -37,6 +41,7 @@ const getGreeting = () => {
 
 const AdminDashboard = () => {
   const location = useLocation();
+  const { school } = useSchool();
   const [activeTab, setActiveTab] = useState('analytics');
   const [userName, setUserName] = useState('');
   const [showProfileSettings, setShowProfileSettings] = useState(false);
@@ -113,6 +118,8 @@ const AdminDashboard = () => {
         return <ViewSubjects />;
       case 'view-users':
         return <ViewUsers />;
+      case 'manage-staff':
+        return <ManageStaff />;
       case 'attendance':
         return <CreateAttendance />;
       case 'mark-attendance':
@@ -127,13 +134,27 @@ const AdminDashboard = () => {
         return <ReviewQuestions />;
       case 'announcements':
         return <Announcements />;
+      case 'knowledge-base':
+        return (
+          <Suspense fallback={<div className="kb-loading">Loading...</div>}>
+            <KnowledgeBase userRole="admin" />
+          </Suspense>
+        );
       default:
         return <DashboardWelcome userName={userName} />;
     }
   };
 
+  // Apply accent color as CSS variable at the container level
+  const containerStyle = school?.accent_color ? {
+    '--accent-color': school.accent_color,
+    '--accent-color-dark': school.secondary_color || school.accent_color,
+    '--sidebar-accent': school.accent_color,
+    '--sidebar-accent-dark': school.secondary_color || school.accent_color,
+  } : {};
+
   return (
-    <div className="admin-dashboard-container">
+    <div className="admin-dashboard-container" style={containerStyle}>
       <Sidebar ref={sidebarRef} activeTab={activeTab} setActiveTab={setActiveTab} />
       <TopHeader
         onMenuClick={() => sidebarRef.current?.openSidebar()}

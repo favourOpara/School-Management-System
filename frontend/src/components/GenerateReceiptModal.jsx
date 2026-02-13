@@ -3,10 +3,12 @@ import React, { useState, useEffect } from 'react';
 import { X, FileText, Download, Send, Loader } from 'lucide-react';
 import axios from 'axios';
 import API_BASE_URL from '../config';
+import { useSchool } from '../contexts/SchoolContext';
 
 import './GenerateReceiptModal.css';
 
 const GenerateReceiptModal = ({ student, onClose, onGenerated }) => {
+  const { buildApiUrl } = useSchool();
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [paymentHistory, setPaymentHistory] = useState([]);
@@ -25,7 +27,7 @@ const GenerateReceiptModal = ({ student, onClose, onGenerated }) => {
     try {
       setLoading(true);
       const response = await axios.get(
-        `${API_BASE_URL}/api/schooladmin/fee-records/${student.record_id}/payment-history/`,
+        buildApiUrl(`/schooladmin/fee-records/${student.record_id}/payment-history/`),
         { headers: { Authorization: `Bearer ${token}` } }
       );
       setPaymentHistory(response.data.history || []);
@@ -41,7 +43,7 @@ const GenerateReceiptModal = ({ student, onClose, onGenerated }) => {
     try {
       setGenerating(true);
       const response = await axios.post(
-        `${API_BASE_URL}/api/schooladmin/fee-records/${student.record_id}/generate-receipt/`,
+        buildApiUrl(`/schooladmin/fee-records/${student.record_id}/generate-receipt/`),
         { remarks },
         { headers: { Authorization: `Bearer ${token}` } }
       );

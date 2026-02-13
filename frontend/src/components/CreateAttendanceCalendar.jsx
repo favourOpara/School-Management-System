@@ -5,8 +5,10 @@ import './attendance.css';
 import axios from 'axios';
 
 import API_BASE_URL from '../config';
+import { useSchool } from '../contexts/SchoolContext';
 
 const CreateAttendanceCalendar = ({ selectedYear, selectedTerm }) => {
+  const { buildApiUrl } = useSchool();
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
   const [excludeWeekends, setExcludeWeekends] = useState(false);
@@ -96,7 +98,7 @@ const CreateAttendanceCalendar = ({ selectedYear, selectedTerm }) => {
     };
 
     try {
-      await axios.post(`${API_BASE_URL}/api/attendance/calendar/create/`, payload, {
+      await axios.post(buildApiUrl('/attendance/calendar/create/'), payload, {
         headers: { Authorization: `Bearer ${token}` },
       });
 

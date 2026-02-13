@@ -1,10 +1,12 @@
 // src/components/SubjectContentManager.jsx
 import React, { useState, useEffect } from 'react';
 import API_BASE_URL from '../config';
+import { useSchool } from '../contexts/SchoolContext';
 
 import './SubjectContentManager.css';
 
 const SubjectContentManager = ({ subjectId, subjectInfo, onBack }) => {
+  const { buildApiUrl } = useSchool();
   const [activeTab, setActiveTab] = useState('view');
   const [contentData, setContentData] = useState({
     assignments: [],
@@ -38,7 +40,7 @@ const SubjectContentManager = ({ subjectId, subjectInfo, onBack }) => {
     try {
       setLoading(true);
       const token = localStorage.getItem('accessToken');
-      const response = await fetch(`${API_BASE_URL}/api/academics/teacher/subjects/${subjectId}/content/`, {
+      const response = await fetch(buildApiUrl(`/academics/teacher/subjects/${subjectId}/content/`), {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -162,7 +164,7 @@ const SubjectContentManager = ({ subjectId, subjectInfo, onBack }) => {
   const handleDeleteContent = async (contentId) => {
     try {
       const token = localStorage.getItem('accessToken');
-      const response = await fetch(`${API_BASE_URL}/api/academics/teacher/content/${contentId}/`, {
+      const response = await fetch(buildApiUrl(`/academics/teacher/content/${contentId}/`), {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -243,17 +245,17 @@ const SubjectContentManager = ({ subjectId, subjectInfo, onBack }) => {
       if (editingContent) {
         // For updates, we'll delete the old content and create new one
         // This ensures consistency with the current backend structure
-        
+
         // First delete the old content
-        await fetch(`${API_BASE_URL}/api/academics/teacher/content/${editingContent.id}/`, {
+        await fetch(buildApiUrl(`/academics/teacher/content/${editingContent.id}/`), {
           method: 'DELETE',
           headers: {
             'Authorization': `Bearer ${token}`,
           }
         });
-        
+
         // Then create new content with updated data
-        response = await fetch(`${API_BASE_URL}/api/academics/teacher/content/create/`, {
+        response = await fetch(buildApiUrl('/academics/teacher/content/create/'), {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -262,7 +264,7 @@ const SubjectContentManager = ({ subjectId, subjectInfo, onBack }) => {
         });
       } else {
         // Create new content
-        response = await fetch(`${API_BASE_URL}/api/academics/teacher/content/create/`, {
+        response = await fetch(buildApiUrl('/academics/teacher/content/create/'), {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${token}`,

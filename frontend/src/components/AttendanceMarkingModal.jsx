@@ -7,8 +7,10 @@ import './attendance.css';
 import axios from 'axios';
 
 import API_BASE_URL from '../config';
+import { useSchool } from '../contexts/SchoolContext';
 
 const AttendanceMarkingModal = ({ classInfo, academicYear, term, schoolDays, holidayDays, onClose }) => {
+  const { buildApiUrl } = useSchool();
   const [selectedDate, setSelectedDate] = useState(null);
   const [students, setStudents] = useState([]);
   const [filteredStudents, setFilteredStudents] = useState([]);
@@ -30,7 +32,7 @@ const AttendanceMarkingModal = ({ classInfo, academicYear, term, schoolDays, hol
         setLoading(true);
 
         // Get the class session for this class, academic year, and term
-        const sessionsRes = await axios.get(`${API_BASE_URL}/api/academics/sessions/`, {
+        const sessionsRes = await axios.get(buildApiUrl('/academics/sessions/'), {
           headers: { Authorization: `Bearer ${token}` },
         });
 
@@ -49,7 +51,7 @@ const AttendanceMarkingModal = ({ classInfo, academicYear, term, schoolDays, hol
 
         // Fetch students in this class session
         const studentsRes = await axios.get(
-          `${API_BASE_URL}/api/academics/session-students/${session.id}/`,
+          buildApiUrl(`/academics/session-students/${session.id}/`),
           { headers: { Authorization: `Bearer ${token}` } }
         );
 
@@ -58,7 +60,7 @@ const AttendanceMarkingModal = ({ classInfo, academicYear, term, schoolDays, hol
 
         // Fetch existing attendance records for this session
         const attendanceRes = await axios.get(
-          `${API_BASE_URL}/api/schooladmin/attendance/?class_session=${session.id}`,
+          buildApiUrl(`/schooladmin/attendance/?class_session=${session.id}`),
           { headers: { Authorization: `Bearer ${token}` } }
         );
 
@@ -117,10 +119,6 @@ const AttendanceMarkingModal = ({ classInfo, academicYear, term, schoolDays, hol
   const isHoliday = (date) => {
     const dateStr = formatDateString(date);
     const result = holidayDays.some(h => h.date === dateStr);
-    // Debug logging - remove after fixing
-    if (result) {
-      console.log(`Holiday match found: ${dateStr}`, holidayDays.find(h => h.date === dateStr));
-    }
     return result;
   };
 
@@ -215,7 +213,7 @@ const AttendanceMarkingModal = ({ classInfo, academicYear, term, schoolDays, hol
 
     try {
       const response = await axios.post(
-        `${API_BASE_URL}/api/schooladmin/attendance/`,
+        buildApiUrl('/schooladmin/attendance/'),
         { attendance_records: attendanceRecords },
         { headers: { Authorization: `Bearer ${token}` } }
       );

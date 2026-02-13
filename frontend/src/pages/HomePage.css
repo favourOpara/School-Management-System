@@ -337,8 +337,8 @@
 
 .login-input:focus {
   outline: none;
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  border-color: var(--accent-color, #3b82f6);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-color, #3b82f6) 10%, transparent);
 }
 
 .login-input::placeholder {
@@ -354,7 +354,7 @@
 .login-button {
   width: 100%;
   padding: 14px 20px;
-  background: #1a202c;
+  background: var(--accent-color, #3b82f6);
   color: white;
   border: none;
   border-radius: 8px;
@@ -367,7 +367,7 @@
 }
 
 .login-button:hover:not(:disabled) {
-  background: #2d3748;
+  background: var(--accent-color-dark, #1d4ed8);
   transform: translateY(-1px);
   box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
 }

@@ -5,13 +5,16 @@ import EditUserModal from './EditUserModal';
 import EditParentModal from './EditParentModal';
 import EditTeacherModal from './EditTeacherModal';
 import EditPrincipalModal from './EditPrincipalModal';
+import ImportStudentsModal from './ImportStudentsModal';
 import './ViewUsers.css';
 import { useDialog } from '../contexts/DialogContext';
+import { useSchool } from '../contexts/SchoolContext';
 
 import API_BASE_URL from '../config';
 
 const ViewUsers = () => {
   const { showConfirm, showAlert } = useDialog();
+  const { buildApiUrl } = useSchool();
   const [userType, setUserType] = useState('');
   const [academicYear, setAcademicYear] = useState('');
   const [term, setTerm] = useState('');
@@ -23,7 +26,10 @@ const ViewUsers = () => {
   const [subjectFilter, setSubjectFilter] = useState('');
   const [selectedUser, setSelectedUser] = useState(null);
   const [showEditModal, setShowEditModal] = useState(false);
-  
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [hasFetched, setHasFetched] = useState(false);
+
   // Student history state
   const [viewMode, setViewMode] = useState('current');
   const [studentHistory, setStudentHistory] = useState([]);
@@ -33,19 +39,22 @@ const ViewUsers = () => {
   const token = localStorage.getItem('accessToken');
 
   useEffect(() => {
-    axios.get(`${API_BASE_URL}/api/academics/sessions/`, {
+    axios.get(buildApiUrl('/academics/sessions/'), {
       headers: { Authorization: `Bearer ${token}` }
     })
     .then(res => {
       const years = [...new Set(res.data.map(s => s.academic_year))];
       setAcademicYears(years);
     })
-    .catch(err => console.error('Error loading academic years:', err));
-  }, [token]);
+    .catch(err => {
+      console.error('Error loading academic years:', err);
+      showAlert({ type: 'error', message: 'Failed to load academic years.' });
+    });
+  }, [token, buildApiUrl]);
 
   const fetchStudentHistory = async () => {
     try {
-      const res = await axios.get(`${API_BASE_URL}/api/users/student-history/`, {
+      const res = await axios.get(buildApiUrl('/users/student-history/'), {
         headers: { Authorization: `Bearer ${token}` }
       });
       setStudentHistory(res.data);
@@ -61,10 +70,13 @@ const ViewUsers = () => {
   };
 
   const handleFilter = async () => {
+    setLoading(true);
+    setHasFetched(true);
     try {
       if (userType === 'student') {
         if (viewMode === 'history') {
           await fetchStudentHistory();
+          setLoading(false);
           return;
         }
 
@@ -72,24 +84,24 @@ const ViewUsers = () => {
         if (academicYear) query += `academic_year=${academicYear}`;
         if (term) query += `${query ? '&' : ''}term=${term}`;
 
-        const res = await axios.get(`${API_BASE_URL}/api/users/students-with-subjects/?${query}`, {
+        const res = await axios.get(buildApiUrl(`/users/students-with-subjects/?${query}`), {
           headers: { Authorization: `Bearer ${token}` }
         });
         setUsers(res.data);
       } else if (userType === 'teacher') {
         // Fetch teachers
-        const res = await axios.get(`${API_BASE_URL}/api/users/list-teachers/`, {
+        const res = await axios.get(buildApiUrl('/users/list-teachers/'), {
           headers: { Authorization: `Bearer ${token}` }
         });
         setUsers(res.data);
       } else if (userType === 'principal') {
         // Fetch principals
-        const res = await axios.get(`${API_BASE_URL}/api/users/list-principals/`, {
+        const res = await axios.get(buildApiUrl('/users/list-principals/'), {
           headers: { Authorization: `Bearer ${token}` }
         });
         setUsers(res.data);
       } else if (userType === 'parent') {
-        const res = await axios.get(`${API_BASE_URL}/api/users/list-parents/`, {
+        const res = await axios.get(buildApiUrl('/users/list-parents/'), {
           headers: { Authorization: `Bearer ${token}` }
         });
 
@@ -112,6 +124,9 @@ const ViewUsers = () => {
       setFilteredUsers([]);
     } catch (err) {
       console.error('Error fetching users:', err);
+      showAlert({ type: 'error', message: 'Failed to load users. Please try again.' });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -147,7 +162,7 @@ const ViewUsers = () => {
 
   const viewStudentHistory = async (studentId) => {
     try {
-      const res = await axios.get(`${API_BASE_URL}/api/users/student-history/${studentId}/`, {
+      const res = await axios.get(buildApiUrl(`/users/student-history/${studentId}/`), {
         headers: { Authorization: `Bearer ${token}` }
       });
       setSelectedStudentHistory(res.data);
@@ -177,7 +192,7 @@ const ViewUsers = () => {
     if (!confirmed) return;
 
     try {
-      await axios.delete(`${API_BASE_URL}/api/users/${userId}/`, {
+      await axios.delete(buildApiUrl(`/users/${userId}/`), {
         headers: { Authorization: `Bearer ${token}` }
       });
       setUsers(prev => prev.filter(u => u.id !== userId));
@@ -305,7 +320,35 @@ const ViewUsers = () => {
           />
 
           <button onClick={handleFilter}>Filter</button>
+          {userType === 'student' && (
+            <button className="import-students-btn" onClick={() => setShowImportModal(true)}>
+              Import Students
+            </button>
+          )}
         </div>
+
+        {/* Loading State */}
+        {loading && (
+          <div style={{textAlign:'center',padding:'40px',color:'#64748b'}}>
+            <p>Loading users...</p>
+          </div>
+        )}
+
+        {/* Empty State — no user type selected */}
+        {!userType && !loading && (
+          <div style={{textAlign:'center',padding:'48px 20px',color:'#94a3b8'}}>
+            <p style={{fontSize:'1rem',fontWeight:500,color:'#64748b',margin:'0 0 4px'}}>Select a user type</p>
+            <p style={{fontSize:'0.875rem',margin:0}}>Choose a user type above and click Filter to view users.</p>
+          </div>
+        )}
+
+        {/* Empty State — fetched but no results */}
+        {!loading && hasFetched && userType && users.length === 0 && studentHistory.length === 0 && (
+          <div style={{textAlign:'center',padding:'48px 20px',color:'#94a3b8'}}>
+            <p style={{fontSize:'1rem',fontWeight:500,color:'#64748b',margin:'0 0 4px'}}>No {userType}s found</p>
+            <p style={{fontSize:'0.875rem',margin:0}}>Try adjusting your filters or create a new {userType}.</p>
+          </div>
+        )}
 
         {/* Teacher Table */}
         {userType === 'teacher' && users.length > 0 && (
@@ -516,15 +559,16 @@ const ViewUsers = () => {
                         <td>{user.username}</td>
                         <td>{user.gender}</td>
                         <td>{user.age || '—'}</td>
-                        <td>{user.classroom || '—'}</td>
+                        <td>{user.classroom?.name || user.classroom || '—'}</td>
                         <td>{user.academic_year}</td>
                         <td>{user.email || '—'}</td>
                         <td>{user.parent?.full_name || '—'}</td>
                         <td>{user.parent?.phone_number || '—'}</td>
                         <td>
-                          {user.classroom?.startsWith('S.S.S.')
-                            ? [...new Set(user.subjects?.map(sub => sub.department))].join(', ')
-                            : '—'}
+                          {user.department ||
+                            (user.subjects?.length > 0
+                              ? [...new Set(user.subjects.map(sub => sub.department).filter(Boolean))].join(', ') || '—'
+                              : '—')}
                         </td>
                         <td>
                           <button onClick={() => handleEdit(user)}>Edit</button>
@@ -691,6 +735,16 @@ const ViewUsers = () => {
               setFilteredUsers(prev =>
                 prev.map(u => u.id === updatedUser.id ? { ...u, ...updatedUser } : u)
               );
+            }}
+          />
+        )}
+
+        {showImportModal && (
+          <ImportStudentsModal
+            onClose={() => setShowImportModal(false)}
+            onSuccess={() => {
+              setShowImportModal(false);
+              handleFilter();
             }}
           />
         )}

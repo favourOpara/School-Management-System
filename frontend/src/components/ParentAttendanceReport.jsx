@@ -1,11 +1,12 @@
 // src/components/ParentAttendanceReport.jsx
 import React, { useState, useEffect } from 'react';
 import { Calendar, Users, BookOpen, Sunset, TrendingUp, ChevronDown } from 'lucide-react';
-import API_BASE_URL from '../config';
+import { useSchool } from '../contexts/SchoolContext';
 
 import './ParentAttendanceReport.css';
 
 const ParentAttendanceReport = () => {
+  const { buildApiUrl } = useSchool();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [reportData, setReportData] = useState(null);
@@ -32,7 +33,7 @@ const ParentAttendanceReport = () => {
       const token = localStorage.getItem('accessToken');
 
       // Build query params
-      let url = `${API_BASE_URL}/api/users/parent/attendance-report/`;
+      let url = buildApiUrl('/users/parent/attendance-report/');
       const params = new URLSearchParams();
       if (selectedChild) params.append('child_id', selectedChild);
       if (selectedYear) params.append('academic_year', selectedYear);

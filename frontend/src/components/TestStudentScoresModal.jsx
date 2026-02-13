@@ -2,11 +2,13 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import './TestStudentScoresModal.css';
 import { useDialog } from '../contexts/DialogContext';
+import { useSchool } from '../contexts/SchoolContext';
 
 import API_BASE_URL from '../config';
 
 const TestStudentScoresModal = ({ subjectData, onClose }) => {
   const { showConfirm, showAlert } = useDialog();
+  const { buildApiUrl } = useSchool();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -23,11 +25,9 @@ const TestStudentScoresModal = ({ subjectData, onClose }) => {
       setError('');
 
       const response = await axios.get(
-        `${API_BASE_URL}/api/schooladmin/analytics/tests/subject/${subjectData.subject_id}/scores/`,
+        buildApiUrl(`/schooladmin/analytics/tests/subject/${subjectData.subject_id}/scores/`),
         { headers }
       );
-
-      console.log('Fetched scores data:', response.data);
 
       // Log submission IDs to check for duplicates
       const submissionIds = [];
@@ -51,8 +51,6 @@ const TestStudentScoresModal = ({ subjectData, onClose }) => {
           }
         });
       });
-      console.log('All scores:', allScores);
-      console.log('Submission IDs with submissions:', submissionIds);
 
       // Check for duplicate submission IDs
       const submissionIdCounts = {};
@@ -69,7 +67,6 @@ const TestStudentScoresModal = ({ subjectData, onClose }) => {
         console.error('⚠️ DUPLICATE SUBMISSION IDs FOUND:', duplicates);
         console.error('This will cause issues! Each submission should have a unique ID.');
       } else {
-        console.log('✅ No duplicate submission IDs found');
       }
 
       setData(response.data);
@@ -88,7 +85,6 @@ const TestStudentScoresModal = ({ subjectData, onClose }) => {
   }, [subjectData]);
 
   const handleEditScore = (studentId, assessmentId, submissionId, currentScore, studentName, assessmentTitle) => {
-    console.log('Starting edit:', { studentId, assessmentId, submissionId, currentScore, studentName, assessmentTitle });
     setEditingCell({ studentId, assessmentId });
     setEditValue(currentScore.toString());
   };
@@ -96,8 +92,6 @@ const TestStudentScoresModal = ({ subjectData, onClose }) => {
   const handleSaveScore = async (studentId, assessmentId, submissionId, totalMarks, isManual = false) => {
     try {
       const scoreValue = parseFloat(editValue);
-
-      console.log('Saving score:', { studentId, assessmentId, submissionId, scoreValue, totalMarks, isManual });
 
       if (isNaN(scoreValue) || scoreValue < 0) {
         showAlert({
@@ -133,15 +127,11 @@ const TestStudentScoresModal = ({ subjectData, onClose }) => {
         requestData = { student_id: studentId, assessment_id: assessmentId, score: scoreValue };
       }
 
-      console.log('Request data:', requestData);
-
       const response = await axios.post(
-        `${API_BASE_URL}/api/schooladmin/analytics/tests/scores/update/`,
+        buildApiUrl('/schooladmin/analytics/tests/scores/update/'),
         requestData,
         { headers }
       );
-
-      console.log('Update response:', response.data);
 
       setEditingCell(null);
       setEditValue('');
@@ -174,7 +164,7 @@ const TestStudentScoresModal = ({ subjectData, onClose }) => {
       setUnlocking(true);
 
       await axios.post(
-        `${API_BASE_URL}/api/schooladmin/analytics/tests/scores/unlock/`,
+        buildApiUrl('/schooladmin/analytics/tests/scores/unlock/'),
         {
           subject_id: subjectData.subject_id
         },
@@ -309,15 +299,6 @@ const TestStudentScoresModal = ({ subjectData, onClose }) => {
                             <div
                               className={`score-display ${score.is_submitted ? 'submitted' : 'not-submitted'} ${score.is_manual ? 'manual' : ''} editable`}
                               onClick={() => {
-                                console.log('Clicked to edit:', {
-                                  student: student.student_name,
-                                  assessment: score.title,
-                                  student_id: student.student_id,
-                                  assessment_id: score.assessment_id,
-                                  submission_id: score.submission_id,
-                                  current_score: score.score,
-                                  is_manual: score.is_manual
-                                });
                                 handleEditScore(
                                   student.student_id,
                                   score.assessment_id,

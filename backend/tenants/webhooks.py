@@ -146,6 +146,15 @@ def handle_charge_success(data):
 
                     # Activate subscription
                     subscription.status = 'active'
+
+                    # Update plan from metadata
+                    plan_name = metadata.get('plan') or metadata.get('new_plan')
+                    if plan_name:
+                        from .models import SubscriptionPlan
+                        new_plan = SubscriptionPlan.objects.filter(name=plan_name).first()
+                        if new_plan:
+                            subscription.plan = new_plan
+
                     if authorization.get('authorization_code'):
                         subscription.paystack_authorization_code = authorization['authorization_code']
                     if customer.get('customer_code'):

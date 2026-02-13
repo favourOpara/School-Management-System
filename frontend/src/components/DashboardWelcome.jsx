@@ -1,8 +1,21 @@
 import React from 'react';
-import { Users, BookOpen, Calendar, CreditCard, BarChart3, Settings } from 'lucide-react';
+import { Users, BookOpen, Calendar, CreditCard, BarChart3, Settings, Sparkles, Zap, Star, LayoutDashboard } from 'lucide-react';
+import { useSchool } from '../contexts/SchoolContext';
 import './DashboardWelcome.css';
 
 const DashboardWelcome = ({ userName }) => {
+  const { school } = useSchool();
+
+  // Get time-based greeting
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'Good Morning';
+    if (hour < 17) return 'Good Afternoon';
+    return 'Good Evening';
+  };
+
+  const accentColor = school?.accent_color || '#3b82f6';
+
   const quickActions = [
     {
       icon: Users,
@@ -44,11 +57,29 @@ const DashboardWelcome = ({ userName }) => {
 
   return (
     <div className="dashboard-welcome-container">
-      <div className="welcome-header">
-        <h1 className="welcome-title">Welcome to Your Dashboard</h1>
-        <p className="welcome-subtitle">
-          Manage your school activities efficiently from one centralized platform
-        </p>
+      {/* Colored Welcome Banner */}
+      <div className="dw-banner">
+        <div className="dw-content-wrapper">
+          <div className="dw-icons">
+            <div className="dw-icon-left">
+              <LayoutDashboard size={42} strokeWidth={1.5} color={accentColor} />
+              <Sparkles className="dw-sparkle-icon dw-sparkle-left-1" size={14} />
+              <Zap className="dw-sparkle-icon dw-sparkle-left-2" size={12} />
+            </div>
+            <div className="dw-icon-right">
+              <LayoutDashboard size={42} strokeWidth={1.5} color={accentColor} />
+              <Star className="dw-sparkle-icon dw-sparkle-right-1" size={14} />
+              <Sparkles className="dw-sparkle-icon dw-sparkle-right-2" size={12} />
+            </div>
+          </div>
+          <div className="dw-text-content">
+            <h1 className="dw-greeting">{getGreeting()}, {userName}!</h1>
+            <h2 className="dw-title">Welcome to Your Dashboard</h2>
+            <p className="dw-subtitle">
+              Manage your school activities efficiently from one centralized platform
+            </p>
+          </div>
+        </div>
       </div>
 
       <div className="quick-stats-grid">

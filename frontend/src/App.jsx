@@ -5,12 +5,14 @@ import PrincipalDashboard from './pages/PrincipalDashboard';
 import StudentDashboard from './pages/StudentDashboard';
 import TeacherDashboard from './pages/TeacherDashboard';
 import ParentDashboard from './pages/ParentDashboard';
+import ProprietorDashboard from './pages/ProprietorDashboard';
 import HomePage from './pages/HomePage';
 import VerifyEmail from './pages/VerifyEmail';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
+import PaymentCallback from './pages/PaymentCallback';
 import TakeAssessment from './components/TakeAssessment';
-import { isTokenExpired } from './authUtils';
+import { isTokenExpired, parseJwt } from './authUtils';
 import ProtectedRoute from './components/ProtectedRoute';
 import { DialogProvider } from './contexts/DialogContext';
 import { SchoolProvider } from './contexts/SchoolContext';
@@ -21,7 +23,14 @@ import {
   PricingPage,
   SchoolRegistration,
   ContactSales,
+  PublicKnowledgeBase,
 } from './pages/public';
+
+// Portal pages
+import { PortalLogin, PortalDashboard } from './pages/portal';
+
+// Platform admin pages
+import { PlatformLogin, PlatformDashboard } from './pages/platform';
 
 // School login page wrapper
 function SchoolLoginPage() {
@@ -36,6 +45,8 @@ function SchoolRoutes() {
   const { schoolSlug } = useParams();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [userRole, setUserRole] = useState(null);
+  const [schoolMismatch, setSchoolMismatch] = useState(false);
+  const [userSchoolSlug, setUserSchoolSlug] = useState(null);
 
   useEffect(() => {
     const token = localStorage.getItem('accessToken');
@@ -44,6 +55,15 @@ function SchoolRoutes() {
     if (token && !isTokenExpired(token)) {
       setIsAuthenticated(true);
       setUserRole(role);
+
+      // Verify user belongs to this school
+      const decoded = parseJwt(token);
+      if (decoded?.school_slug && decoded.school_slug !== schoolSlug) {
+        setSchoolMismatch(true);
+        setUserSchoolSlug(decoded.school_slug);
+      } else {
+        setSchoolMismatch(false);
+      }
     } else {
       localStorage.removeItem('accessToken');
       localStorage.removeItem('refreshToken');
@@ -53,14 +73,20 @@ function SchoolRoutes() {
       setIsAuthenticated(false);
       setUserRole(null);
     }
-  }, []);
+  }, [schoolSlug]);
 
-  // Store school slug for API calls
+  // Only store school slug if user belongs to this school
   useEffect(() => {
-    if (schoolSlug) {
+    if (schoolSlug && !schoolMismatch) {
       localStorage.setItem('schoolSlug', schoolSlug);
     }
-  }, [schoolSlug]);
+  }, [schoolSlug, schoolMismatch]);
+
+  // If authenticated user is trying to access a school they don't belong to,
+  // redirect them to their own school's dashboard
+  if (schoolMismatch && isAuthenticated && userRole && userSchoolSlug) {
+    return <Navigate to={`/${userSchoolSlug}/${userRole}/dashboard`} replace />;
+  }
 
   return (
     <SchoolProvider>
@@ -140,6 +166,16 @@ function SchoolRoutes() {
           }
         />
 
+        {/* Proprietor Dashboard */}
+        <Route
+          path="proprietor/dashboard"
+          element={
+            <ProtectedRoute requiredRole="proprietor">
+              <ProprietorDashboard />
+            </ProtectedRoute>
+          }
+        />
+
         {/* Catch all within school - redirect to school root */}
         <Route path="*" element={<Navigate to={`/${schoolSlug}`} />} />
       </Routes>
@@ -174,7 +210,18 @@ function App() {
 
   // Function to get default dashboard based on role
   const getDefaultDashboard = (role) => {
-    const schoolSlug = localStorage.getItem('schoolSlug') || 'figilschools';
+    const schoolSlug = localStorage.getItem('schoolSlug');
+    if (!schoolSlug) return '/';
+
+    const firstTimeSetup = localStorage.getItem('firstTimeSetup');
+
+    // Check if this is first-time setup for admin
+    if (role === 'admin' && firstTimeSetup === 'true') {
+      // Clear the flag so they don't keep getting redirected
+      localStorage.removeItem('firstTimeSetup');
+      return `/${schoolSlug}/admin/dashboard?tab=settings`;
+    }
+
     switch (role) {
       case 'admin':
         return `/${schoolSlug}/admin/dashboard`;
@@ -186,6 +233,8 @@ function App() {
         return `/${schoolSlug}/teacher/dashboard`;
       case 'parent':
         return `/${schoolSlug}/parent/dashboard`;
+      case 'proprietor':
+        return `/${schoolSlug}/proprietor/dashboard`;
       default:
         return '/';
     }
@@ -218,20 +267,23 @@ function App() {
           {/* Contact Sales */}
           <Route path="/contact-sales" element={<ContactSales />} />
 
+          {/* Public Knowledge Base */}
+          <Route path="/knowledge-base" element={<PublicKnowledgeBase />} />
+
+          {/* Admin Portal */}
+          <Route path="/portal" element={<PortalLogin />} />
+          <Route path="/portal/dashboard" element={<PortalDashboard />} />
+
+          {/* Platform Admin Routes */}
+          <Route path="/platform/login" element={<PlatformLogin />} />
+          <Route path="/platform/dashboard" element={<PlatformDashboard />} />
+
           {/* Password Reset Routes - Public (global) */}
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password/:token" element={<ResetPassword />} />
 
           {/* Payment callback */}
-          <Route
-            path="/payment/callback"
-            element={
-              <div style={{ textAlign: 'center', padding: '50px' }}>
-                <h2>Processing Payment...</h2>
-                <p>Please wait while we verify your payment.</p>
-              </div>
-            }
-          />
+          <Route path="/payment/callback" element={<PaymentCallback />} />
 
           {/* ============== LEGACY ROUTES (Backwards Compatibility) ============== */}
 
@@ -239,37 +291,37 @@ function App() {
           <Route
             path="/admin/dashboard"
             element={
-              <Navigate to={`/${localStorage.getItem('schoolSlug') || 'figilschools'}/admin/dashboard`} />
+              <Navigate to={localStorage.getItem('schoolSlug') ? `/${localStorage.getItem('schoolSlug')}/admin/dashboard` : '/'} />
             }
           />
           <Route
             path="/principal/dashboard"
             element={
-              <Navigate to={`/${localStorage.getItem('schoolSlug') || 'figilschools'}/principal/dashboard`} />
+              <Navigate to={localStorage.getItem('schoolSlug') ? `/${localStorage.getItem('schoolSlug')}/principal/dashboard` : '/'} />
             }
           />
           <Route
             path="/student/dashboard"
             element={
-              <Navigate to={`/${localStorage.getItem('schoolSlug') || 'figilschools'}/student/dashboard`} />
+              <Navigate to={localStorage.getItem('schoolSlug') ? `/${localStorage.getItem('schoolSlug')}/student/dashboard` : '/'} />
             }
           />
           <Route
             path="/teacher/dashboard"
             element={
-              <Navigate to={`/${localStorage.getItem('schoolSlug') || 'figilschools'}/teacher/dashboard`} />
+              <Navigate to={localStorage.getItem('schoolSlug') ? `/${localStorage.getItem('schoolSlug')}/teacher/dashboard` : '/'} />
             }
           />
           <Route
             path="/parent/dashboard"
             element={
-              <Navigate to={`/${localStorage.getItem('schoolSlug') || 'figilschools'}/parent/dashboard`} />
+              <Navigate to={localStorage.getItem('schoolSlug') ? `/${localStorage.getItem('schoolSlug')}/parent/dashboard` : '/'} />
             }
           />
           <Route
             path="/student-dashboard/take-assessment/:assessmentId"
             element={
-              <Navigate to={`/${localStorage.getItem('schoolSlug') || 'figilschools'}/student/take-assessment/${window.location.pathname.split('/').pop()}`} />
+              <Navigate to={localStorage.getItem('schoolSlug') ? `/${localStorage.getItem('schoolSlug')}/student/take-assessment/${window.location.pathname.split('/').pop()}` : '/'} />
             }
           />
           <Route

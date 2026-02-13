@@ -1,5 +1,5 @@
 // src/pages/StudentDashboard.jsx
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, Suspense } from 'react';
 import { useLocation } from 'react-router-dom';
 import RoleBasedSidebar from '../components/RoleBasedSidebar';
 import ActivityLog from '../components/ActivityLog';
@@ -17,7 +17,10 @@ import MySubjectGrades from '../components/MySubjectGrades';
 import FeeStatus from '../components/FeeStatus';
 import MyClasses from '../components/MyClasses';
 import StudentWelcome from '../components/StudentWelcome';
+import { useSchool } from '../contexts/SchoolContext';
 import './StudentDashboard.css';
+
+const KnowledgeBase = React.lazy(() => import('../components/KnowledgeBase'));
 
 const getGreeting = () => {
   const hour = new Date().getHours();
@@ -28,6 +31,7 @@ const getGreeting = () => {
 
 const StudentDashboard = () => {
   const location = useLocation();
+  const { school } = useSchool();
   const [activeTab, setActiveTab] = useState('dashboard');
   const [userName, setUserName] = useState('');
   const [showPasswordChange, setShowPasswordChange] = useState(false);
@@ -89,6 +93,12 @@ const StudentDashboard = () => {
             <p className="student-dashboard-section-text">Adjust your account settings and preferences.</p>
           </div>
         );
+      case 'knowledge-base':
+        return (
+          <Suspense fallback={<div className="kb-loading">Loading...</div>}>
+            <KnowledgeBase userRole="student" />
+          </Suspense>
+        );
       default:
         return (
           <div className="student-dashboard-section">
@@ -98,8 +108,16 @@ const StudentDashboard = () => {
     }
   };
 
+  // Apply accent color as CSS variable at the container level
+  const containerStyle = school?.accent_color ? {
+    '--accent-color': school.accent_color,
+    '--accent-color-dark': school.secondary_color || school.accent_color,
+    '--sidebar-accent': school.accent_color,
+    '--sidebar-accent-dark': school.secondary_color || school.accent_color,
+  } : {};
+
   return (
-    <div className="student-dashboard-container">
+    <div className="student-dashboard-container" style={containerStyle}>
       <RoleBasedSidebar
         ref={sidebarRef}
         userRole="student"

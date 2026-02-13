@@ -96,7 +96,7 @@ class AttendanceCalendar(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
     
     class Meta:
-        unique_together = ('academic_year', 'term')
+        unique_together = ('school', 'academic_year', 'term')
         ordering = ['-academic_year', 'term']
     
     def save(self, *args, **kwargs):

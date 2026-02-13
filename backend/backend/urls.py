@@ -21,6 +21,8 @@ from tenants.urls import (
     webhook_urlpatterns as tenant_webhook_urls,
     school_urlpatterns as tenant_school_urls,
     admin_urlpatterns as tenant_admin_urls,
+    portal_urlpatterns as tenant_portal_urls,
+    proprietor_urlpatterns as tenant_proprietor_urls,
 )
 
 
@@ -29,6 +31,9 @@ from tenants.urls import (
 school_scoped_patterns = [
     # Tenant/subscription management
     path('', include(tenant_school_urls)),
+
+    # Proprietor analytics
+    path('proprietor/', include(tenant_proprietor_urls)),
 
     # Existing app URLs (now school-scoped)
     path('users/', include('users.urls')),
@@ -56,6 +61,9 @@ urlpatterns = [
 
     # Super admin routes (Django superuser only)
     path('api/superadmin/', include(tenant_admin_urls)),
+
+    # Admin Portal routes (for school admin configuration)
+    path('api/portal/', include(tenant_portal_urls)),
 
     # School-scoped routes (authentication required)
     # The TenantMiddleware will extract school_slug and attach to request

@@ -2,11 +2,13 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import './ExamStudentScoresModal.css';
 import { useDialog } from '../contexts/DialogContext';
+import { useSchool } from '../contexts/SchoolContext';
 
 import API_BASE_URL from '../config';
 
 const ExamStudentScoresModal = ({ subjectData, onClose }) => {
   const { showAlert } = useDialog();
+  const { buildApiUrl } = useSchool();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -22,11 +24,9 @@ const ExamStudentScoresModal = ({ subjectData, onClose }) => {
       setError('');
 
       const response = await axios.get(
-        `${API_BASE_URL}/api/schooladmin/analytics/exams/subject/${subjectData.subject_id}/scores/`,
+        buildApiUrl(`/schooladmin/analytics/exams/subject/${subjectData.subject_id}/scores/`),
         { headers }
       );
-
-      console.log('Fetched exam scores data:', response.data);
 
       setData(response.data);
     } catch (err) {
@@ -44,7 +44,6 @@ const ExamStudentScoresModal = ({ subjectData, onClose }) => {
   }, [subjectData]);
 
   const handleEditScore = (studentId, assessmentId, submissionId, currentScore) => {
-    console.log('Starting edit:', { studentId, assessmentId, submissionId, currentScore });
     setEditingCell({ studentId, assessmentId });
     setEditValue(currentScore.toString());
   };
@@ -52,8 +51,6 @@ const ExamStudentScoresModal = ({ subjectData, onClose }) => {
   const handleSaveScore = async (studentId, assessmentId, submissionId, totalMarks, isManual = false) => {
     try {
       const scoreValue = parseFloat(editValue);
-
-      console.log('Saving exam score:', { studentId, assessmentId, submissionId, scoreValue, totalMarks, isManual });
 
       if (isNaN(scoreValue) || scoreValue < 0) {
         showAlert({
@@ -89,15 +86,11 @@ const ExamStudentScoresModal = ({ subjectData, onClose }) => {
         requestData = { student_id: studentId, assessment_id: assessmentId, score: scoreValue };
       }
 
-      console.log('Request data:', requestData);
-
       const response = await axios.post(
-        `${API_BASE_URL}/api/schooladmin/analytics/exams/scores/update/`,
+        buildApiUrl('/schooladmin/analytics/exams/scores/update/'),
         requestData,
         { headers }
       );
-
-      console.log('Update response:', response.data);
 
       setEditingCell(null);
       setEditValue('');
@@ -223,15 +216,6 @@ const ExamStudentScoresModal = ({ subjectData, onClose }) => {
                             <div
                               className={`score-display ${score.is_submitted ? 'submitted' : 'not-submitted'} ${isManual && score.is_submitted ? 'manual' : ''} editable`}
                               onClick={() => {
-                                console.log('Clicked to edit exam score:', {
-                                  student: student.student_name,
-                                  assessment: score.title,
-                                  student_id: student.student_id,
-                                  assessment_id: score.assessment_id,
-                                  submission_id: score.submission_id,
-                                  current_score: score.score,
-                                  is_manual: isManual
-                                });
                                 handleEditScore(
                                   student.student_id,
                                   score.assessment_id,

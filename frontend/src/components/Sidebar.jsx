@@ -4,21 +4,36 @@ import {
   Menu, X,
   User, LayoutDashboard, Users, BookOpen,
   LogOut, Settings, Shield, PlusCircle, Eye, Book,
-  ClipboardList, CalendarCheck, DollarSign, BarChart3, FileText, Megaphone
+  ClipboardList, CalendarCheck, DollarSign, BarChart3, FileText, Megaphone,
+  GraduationCap, Briefcase, HelpCircle
 } from 'lucide-react';
+import { useSchool } from '../contexts/SchoolContext';
 import './Sidebar.css';
 
 const Sidebar = forwardRef(({ activeTab, setActiveTab, userRole = 'admin' }, ref) => {
   const [isOpen, setIsOpen] = useState(false);
   const [openDropdown, setOpenDropdown] = useState(null);
+  const { school } = useSchool();
 
   useImperativeHandle(ref, () => ({
     openSidebar: () => setIsOpen(true)
   }));
 
   const handleLogout = () => {
-    localStorage.clear();
-    window.location.href = '/';
+    // Get the school slug before clearing
+    const schoolSlug = school?.slug || localStorage.getItem('schoolSlug');
+
+    // Clear school-specific auth data
+    localStorage.removeItem('accessToken');
+    localStorage.removeItem('refreshToken');
+    localStorage.removeItem('schoolSlug');
+    localStorage.removeItem('userName');
+    localStorage.removeItem('userRole');
+    localStorage.removeItem('userId');
+    localStorage.removeItem('firstTimeSetup');
+
+    // Redirect to school login page
+    window.location.href = `/${schoolSlug}`;
   };
 
   const handleDropdownToggle = (key) => {
@@ -31,15 +46,28 @@ const Sidebar = forwardRef(({ activeTab, setActiveTab, userRole = 'admin' }, ref
     setOpenDropdown(null);
   };
 
+  // Apply accent color as CSS variable
+  const sidebarStyle = school?.accent_color ? {
+    '--sidebar-accent': school.accent_color,
+    '--sidebar-accent-dark': school.secondary_color || school.accent_color,
+  } : {};
+
   return (
     <>
-      <div className={`sidebar ${isOpen ? 'open' : ''}`}>
+      <div className={`sidebar ${isOpen ? 'open' : ''}`} style={sidebarStyle}>
         <button className="close-btn" onClick={() => setIsOpen(false)}>
           <X />
         </button>
 
         <div className="sidebar-top">
-          <img src="/logo.png" alt="School Logo" className="sidebar-logo" />
+          {school?.logo ? (
+            <img src={school.logo} alt={school.name || 'School Logo'} className="sidebar-logo" />
+          ) : (
+            <div className="sidebar-logo-placeholder">
+              <GraduationCap size={32} />
+              <span>{school?.name || 'School'}</span>
+            </div>
+          )}
         </div>
 
         <nav className="sidebar-nav">
@@ -92,6 +120,12 @@ const Sidebar = forwardRef(({ activeTab, setActiveTab, userRole = 'admin' }, ref
                 {userRole === 'admin' && (
                   <li onClick={() => handleTabClick('view-users')}>
                     <Eye /><span>View Users</span>
+                  </li>
+                )}
+                {/* Manage Staff - Admin only */}
+                {userRole === 'admin' && (
+                  <li onClick={() => handleTabClick('manage-staff')}>
+                    <Briefcase /><span>Manage Staff</span>
                   </li>
                 )}
               </ul>
@@ -177,6 +211,11 @@ const Sidebar = forwardRef(({ activeTab, setActiveTab, userRole = 'admin' }, ref
                 <span>Announcements</span>
               </li>
             )}
+
+            <li onClick={() => handleTabClick('knowledge-base')}>
+              <HelpCircle />
+              <span>Knowledge Base</span>
+            </li>
           </ul>
         </nav>
       </div>

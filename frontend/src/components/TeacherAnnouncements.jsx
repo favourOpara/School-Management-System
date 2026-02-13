@@ -2,10 +2,12 @@
 import React, { useState, useEffect } from 'react';
 import { Bell, AlertCircle, Info, CheckCircle, Clock, AlertTriangle } from 'lucide-react';
 import API_BASE_URL from '../config';
+import { useSchool } from '../contexts/SchoolContext';
 
 import './TeacherAnnouncements.css';
 
 const TeacherAnnouncements = () => {
+  const { buildApiUrl } = useSchool();
   const [announcements, setAnnouncements] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all'); // all, unread, high-priority
@@ -19,7 +21,7 @@ const TeacherAnnouncements = () => {
     try {
       setLoading(true);
       const token = localStorage.getItem('accessToken');
-      const response = await fetch(`${API_BASE_URL}/api/schooladmin/my-announcements/`, {
+      const response = await fetch(buildApiUrl('/schooladmin/my-announcements/'), {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'

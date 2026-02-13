@@ -6,6 +6,7 @@ import TestSubjectsModal from './TestSubjectsModal';
 import TestStudentScoresModal from './TestStudentScoresModal';
 import './DashboardTestsCard.css';
 import { useDialog } from '../contexts/DialogContext';
+import { useSchool } from '../contexts/SchoolContext';
 
 import API_BASE_URL from '../config';
 
@@ -47,6 +48,7 @@ const selectStyles = {
 
 const DashboardTestsCard = () => {
   const { showConfirm, showAlert } = useDialog();
+  const { buildApiUrl } = useSchool();
   const [academicYears, setAcademicYears] = useState([]);
   const [selectedYear, setSelectedYear] = useState(null);
   const [selectedTerm, setSelectedTerm] = useState(termOptions[0]);
@@ -65,12 +67,12 @@ const DashboardTestsCard = () => {
     const fetchYears = async () => {
       try {
         // First, get the current active session
-        const sessionInfoRes = await axios.get(`${API_BASE_URL}/api/schooladmin/session/info/`, { headers });
+        const sessionInfoRes = await axios.get(buildApiUrl('/schooladmin/session/info/'), { headers });
         const currentYear = sessionInfoRes.data.academic_year;
         const currentTerm = sessionInfoRes.data.current_term;
 
         // Then get all available sessions
-        const res = await axios.get(`${API_BASE_URL}/api/academics/sessions/`, { headers });
+        const res = await axios.get(buildApiUrl('/academics/sessions/'), { headers });
         if (Array.isArray(res.data)) {
           const years = [...new Set(res.data.map(s => s.academic_year))].sort();
           const options = years.map(y => ({ value: y, label: y }));
@@ -105,7 +107,7 @@ const DashboardTestsCard = () => {
       setError('');
 
       try {
-        const response = await axios.get(`${API_BASE_URL}/api/schooladmin/analytics/tests/`, {
+        const response = await axios.get(buildApiUrl('/schooladmin/analytics/tests/'), {
           params: {
             academic_year: selectedYear.value,
             term: selectedTerm.value
@@ -187,7 +189,7 @@ const DashboardTestsCard = () => {
       setUnlocking(true);
 
       await axios.post(
-        `${API_BASE_URL}/api/schooladmin/analytics/tests/scores/unlock/`,
+        buildApiUrl('/schooladmin/analytics/tests/scores/unlock/'),
         {
           academic_year: selectedYear.value,
           term: selectedTerm.value

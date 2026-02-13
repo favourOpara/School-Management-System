@@ -3,10 +3,12 @@ import ClassForm from '../components/ClassForm';
 import ClassList from '../components/ClassList';
 import axios from 'axios';
 import { useLoading } from '../context/LoadingContext';
+import { useSchool } from '../contexts/SchoolContext';
 
 import API_BASE_URL from '../config';
 
 const Classes = () => {
+  const { buildApiUrl } = useSchool();
   const [classes, setClasses] = useState([]);
   const [message, setMessage] = useState('');
   const { showLoader, hideLoader } = useLoading();
@@ -15,7 +17,7 @@ const Classes = () => {
     showLoader();
     try {
       const token = localStorage.getItem('accessToken');
-      const res = await axios.get(`${API_BASE_URL}/api/admin/classes/`, {
+      const res = await axios.get(buildApiUrl('/admin/classes/'), {
         headers: { Authorization: `Bearer ${token}` }
       });
       setClasses(res.data);

@@ -3,10 +3,12 @@ import React, { useState, useEffect } from 'react';
 import { FileText, Search, Download, Calendar, Users, BookOpen, Loader, AlertCircle } from 'lucide-react';
 import axios from 'axios';
 import API_BASE_URL from '../config';
+import { useSchool } from '../contexts/SchoolContext';
 
 import './AdminFeeReceipts.css';
 
 const AdminFeeReceipts = () => {
+  const { buildApiUrl } = useSchool();
   const [loading, setLoading] = useState(true);
   const [receipts, setReceipts] = useState([]);
   const [filterData, setFilterData] = useState(null);
@@ -31,7 +33,7 @@ const AdminFeeReceipts = () => {
       if (selectedTerm) params.append('term', selectedTerm);
       if (selectedClass) params.append('class_id', selectedClass);
 
-      const url = `${API_BASE_URL}/api/schooladmin/admin/fee-receipts/?${params.toString()}`;
+      const url = buildApiUrl(`/schooladmin/admin/fee-receipts/?${params.toString()}`);
       const response = await axios.get(url, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -59,7 +61,7 @@ const AdminFeeReceipts = () => {
   const handleDownloadReceipt = async (receiptId) => {
     try {
       const response = await fetch(
-        `${API_BASE_URL}/api/schooladmin/admin/fee-receipts/${receiptId}/download/`,
+        buildApiUrl(`/schooladmin/admin/fee-receipts/${receiptId}/download/`),
         { headers: { Authorization: `Bearer ${token}` } }
       );
 

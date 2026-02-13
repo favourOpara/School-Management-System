@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { BookOpen, Award, CheckCircle, Clock, RefreshCw } from 'lucide-react';
-import API_BASE_URL from '../config';
+import { useSchool } from '../contexts/SchoolContext';
 
 import './MyGrades.css';
 
 const MyGrades = () => {
+  const { buildApiUrl } = useSchool();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [gradesData, setGradesData] = useState(null);
@@ -23,7 +24,7 @@ const MyGrades = () => {
       const token = localStorage.getItem('accessToken');
       
       // Build URL with optional filters
-      let url = `${API_BASE_URL}/api/schooladmin/student/grades/`;
+      let url = buildApiUrl('/schooladmin/student/grades/');
       const params = new URLSearchParams();
       if (year) params.append('academic_year', year);
       if (term) params.append('term', term);

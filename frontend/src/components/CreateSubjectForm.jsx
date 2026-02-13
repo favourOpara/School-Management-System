@@ -2,10 +2,12 @@ import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import Select from 'react-select';
 import API_BASE_URL from '../config';
+import { useSchool } from '../contexts/SchoolContext';
 
 import './CreateSubjectForm.css';
 
 const CreateSubjectForm = () => {
+  const { buildApiUrl } = useSchool();
   const [activeForm, setActiveForm] = useState('create');
   const [createdSubjects, setCreatedSubjects] = useState([]);
   const [existingSubjects, setExistingSubjects] = useState([]);
@@ -32,10 +34,10 @@ const CreateSubjectForm = () => {
     const fetchData = async () => {
       try {
         const [classRes, sessionRes, teacherRes, subjectRes] = await Promise.all([
-          axios.get(`${API_BASE_URL}/api/academics/classes/`, { headers: { Authorization: `Bearer ${token}` } }),
-          axios.get(`${API_BASE_URL}/api/academics/sessions/`, { headers: { Authorization: `Bearer ${token}` } }),
-          axios.get(`${API_BASE_URL}/api/users/teachers/`, { headers: { Authorization: `Bearer ${token}` } }),
-          axios.get(`${API_BASE_URL}/api/academics/subjects/`, { headers: { Authorization: `Bearer ${token}` } }),
+          axios.get(buildApiUrl('/academics/classes/'), { headers: { Authorization: `Bearer ${token}` } }),
+          axios.get(buildApiUrl('/academics/sessions/'), { headers: { Authorization: `Bearer ${token}` } }),
+          axios.get(buildApiUrl('/users/teachers/'), { headers: { Authorization: `Bearer ${token}` } }),
+          axios.get(buildApiUrl('/academics/subjects/'), { headers: { Authorization: `Bearer ${token}` } }),
         ]);
 
         setPermanentClasses(classRes.data);
@@ -51,7 +53,7 @@ const CreateSubjectForm = () => {
     };
 
     fetchData();
-  }, [token]);
+  }, [token, buildApiUrl]);
 
   useEffect(() => {
     if (subjectName.trim()) {
@@ -100,12 +102,12 @@ const CreateSubjectForm = () => {
       const updated = { ...prev, [name]: values };
 
       if (name === 'classes') {
-        const selectedNames = values.map(id => {
+        // Check if any selected class has departments enabled
+        const hasDepartmentClass = values.some(id => {
           const cls = permanentClasses.find(c => c.id === id);
-          return cls?.name;
+          return cls?.has_departments === true;
         });
-        const isSenior = selectedNames.some(name => ['S.S.S.1', 'S.S.S.2', 'S.S.S.3'].includes(name));
-        setShowDepartment(isSenior);
+        setShowDepartment(hasDepartmentClass);
       }
 
       return updated;
@@ -171,7 +173,7 @@ const CreateSubjectForm = () => {
     });
 
     try {
-      await axios.post(`${API_BASE_URL}/api/academics/subjects/`, payload, {
+      await axios.post(buildApiUrl('/academics/subjects/'), payload, {
         headers: { Authorization: `Bearer ${token}` },
       });
 

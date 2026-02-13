@@ -1,12 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { LogOut, Menu, User, Camera, ChevronDown, X, Settings, Lock } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import API_BASE_URL from '../config';
+import API_BASE_URL, { getSchoolSlug } from '../config';
+import { useSchool } from '../contexts/SchoolContext';
 
 import './TopHeader.css';
 
 const TopHeader = ({ onMenuClick, onSettingsClick, onPasswordChangeClick }) => {
   const navigate = useNavigate();
+  const { school, buildApiUrl } = useSchool();
   const [showDropdown, setShowDropdown] = useState(false);
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState(null);
@@ -32,7 +34,7 @@ const TopHeader = ({ onMenuClick, onSettingsClick, onPasswordChangeClick }) => {
   const fetchUserProfile = async () => {
     try {
       const token = localStorage.getItem('accessToken');
-      const response = await fetch(`${API_BASE_URL}/api/users/profile/`, {
+      const response = await fetch(buildApiUrl('/users/profile/'), {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -50,9 +52,19 @@ const TopHeader = ({ onMenuClick, onSettingsClick, onPasswordChangeClick }) => {
   };
 
   const handleLogout = () => {
-    localStorage.clear();
-    navigate('/');
-    window.location.reload();
+    // Get the school slug before clearing localStorage
+    const schoolSlug = getSchoolSlug();
+
+    // Clear school-specific auth data (not portal data)
+    localStorage.removeItem('accessToken');
+    localStorage.removeItem('refreshToken');
+    localStorage.removeItem('schoolSlug');
+    localStorage.removeItem('userName');
+    localStorage.removeItem('userRole');
+    localStorage.removeItem('firstTimeSetup');
+
+    // Redirect to school login page using direct URL change
+    window.location.href = `/${schoolSlug}`;
   };
 
   const handleAvatarUpload = async (event) => {
@@ -78,7 +90,7 @@ const TopHeader = ({ onMenuClick, onSettingsClick, onPasswordChangeClick }) => {
 
     try {
       const token = localStorage.getItem('accessToken');
-      const response = await fetch(`${API_BASE_URL}/api/users/avatar/upload/`, {
+      const response = await fetch(buildApiUrl('/users/avatar/upload/'), {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -107,7 +119,7 @@ const TopHeader = ({ onMenuClick, onSettingsClick, onPasswordChangeClick }) => {
 
     try {
       const token = localStorage.getItem('accessToken');
-      const response = await fetch(`${API_BASE_URL}/api/users/avatar/remove/`, {
+      const response = await fetch(buildApiUrl('/users/avatar/remove/'), {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -123,9 +135,15 @@ const TopHeader = ({ onMenuClick, onSettingsClick, onPasswordChangeClick }) => {
     }
   };
 
+  // Apply accent color as CSS variable
+  const headerStyle = school?.accent_color ? {
+    '--accent-color': school.accent_color,
+    '--accent-color-dark': school.secondary_color || school.accent_color,
+  } : {};
+
   return (
     <>
-      <div className="top-header">
+      <div className="top-header" style={headerStyle}>
         <div className="top-header-left">
           {onMenuClick && (
             <button className="top-hamburger-btn" onClick={onMenuClick}>

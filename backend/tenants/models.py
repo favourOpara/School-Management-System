@@ -28,6 +28,48 @@ class School(models.Model):
     address = models.TextField(blank=True, help_text="School address")
     logo = models.ImageField(upload_to='school_logos/', blank=True, null=True)
 
+    # Branding & Configuration
+    accent_color = models.CharField(
+        max_length=7,
+        default='#2563eb',
+        help_text="Primary accent color in hex format (e.g., #2563eb)"
+    )
+    secondary_color = models.CharField(
+        max_length=7,
+        default='#4f46e5',
+        help_text="Secondary color in hex format"
+    )
+    email_sender_name = models.CharField(
+        max_length=100,
+        blank=True,
+        help_text="Name to display as email sender (e.g., 'Greenwood Academy')"
+    )
+    tagline = models.CharField(
+        max_length=200,
+        blank=True,
+        help_text="School tagline/motto"
+    )
+    website = models.URLField(blank=True, help_text="School website URL")
+
+    # Academic Session Settings - Empty for new schools
+    current_academic_year = models.CharField(
+        max_length=9,
+        blank=True,
+        null=True,
+        help_text="Current academic year (e.g., 2024/2025) - Set when first session is created"
+    )
+    current_term = models.CharField(
+        max_length=20,
+        choices=[
+            ('First Term', 'First Term'),
+            ('Second Term', 'Second Term'),
+            ('Third Term', 'Third Term'),
+        ],
+        blank=True,
+        null=True,
+        help_text="Current term - Set when first session is created"
+    )
+
     # School status
     is_active = models.BooleanField(default=True, help_text="Whether the school is active")
     is_verified = models.BooleanField(default=False, help_text="Whether the school has been verified")
@@ -109,6 +151,40 @@ class SubscriptionPlan(models.Model):
     has_import_feature = models.BooleanField(
         default=False,
         help_text="Whether CSV import is available"
+    )
+    has_staff_management = models.BooleanField(
+        default=False,
+        help_text="Whether staff management (Book On/Off) is available"
+    )
+    max_import_rows = models.IntegerField(
+        default=0,
+        validators=[MinValueValidator(0)],
+        help_text="Maximum students per XLSX import (0 = not available)"
+    )
+    max_students = models.IntegerField(
+        default=50,
+        validators=[MinValueValidator(0)],
+        help_text="Maximum student accounts (0 = unlimited)"
+    )
+    max_teachers = models.IntegerField(
+        default=5,
+        validators=[MinValueValidator(0)],
+        help_text="Maximum teacher accounts (0 = unlimited)"
+    )
+    max_principals = models.IntegerField(
+        default=1,
+        validators=[MinValueValidator(0)],
+        help_text="Maximum principal accounts (0 = unlimited)"
+    )
+    max_parents = models.IntegerField(
+        default=50,
+        validators=[MinValueValidator(0)],
+        help_text="Maximum parent accounts (0 = unlimited)"
+    )
+    max_proprietors = models.IntegerField(
+        default=0,
+        validators=[MinValueValidator(0)],
+        help_text="Maximum proprietor accounts (0 = not available)"
     )
 
     # Trial settings
@@ -253,6 +329,21 @@ class Subscription(models.Model):
         """Check if more admin accounts can be created."""
         return self.get_admin_count() < self.plan.max_admin_accounts
 
+    def get_proprietor_count(self):
+        """Get the current count of proprietor users for this school."""
+        from users.models import CustomUser
+        return CustomUser.objects.filter(
+            school=self.school,
+            role='proprietor',
+            is_active=True
+        ).count()
+
+    def can_create_proprietor(self):
+        """Check if more proprietor accounts can be created."""
+        if self.plan.max_proprietors == 0:
+            return False
+        return self.get_proprietor_count() < self.plan.max_proprietors
+
 
 class PaymentHistory(models.Model):
     """
@@ -307,6 +398,66 @@ class PaymentHistory(models.Model):
     def amount_in_naira(self):
         """Convert kobo amount to Naira."""
         return self.amount / 100
+
+
+class PortalUser(models.Model):
+    """
+    Portal user for Admin Portal authentication.
+    This is separate from the school management system users (CustomUser).
+
+    Portal users are school owners who can:
+    - Configure school branding
+    - Manage subscription
+    - Create/manage admin accounts for the school system
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    school = models.ForeignKey(
+        School,
+        on_delete=models.CASCADE,
+        related_name='portal_users'
+    )
+
+    # Authentication
+    email = models.EmailField(unique=True)
+    password = models.CharField(max_length=128)  # Hashed password
+
+    # Profile
+    first_name = models.CharField(max_length=50)
+    last_name = models.CharField(max_length=50)
+    phone = models.CharField(max_length=20, blank=True)
+
+    # Status
+    is_active = models.BooleanField(default=True)
+    is_primary = models.BooleanField(
+        default=False,
+        help_text="Primary portal user (school owner)"
+    )
+
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    last_login = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ['-is_primary', 'created_at']
+        verbose_name = 'Portal User'
+        verbose_name_plural = 'Portal Users'
+
+    def __str__(self):
+        return f"{self.email} - {self.school.name}"
+
+    def set_password(self, raw_password):
+        """Hash and set the password."""
+        from django.contrib.auth.hashers import make_password
+        self.password = make_password(raw_password)
+
+    def check_password(self, raw_password):
+        """Check the password against the stored hash."""
+        from django.contrib.auth.hashers import check_password
+        return check_password(raw_password, self.password)
+
+    def get_full_name(self):
+        return f"{self.first_name} {self.last_name}"
 
 
 class SchoolInvitation(models.Model):

@@ -28,12 +28,18 @@ from .views import (
     initialize_admin_3,
     initialize_admin_4
 )
+from .import_views import (
+    import_student_info,
+    validate_import,
+    confirm_import,
+)
 from .verification_views import (
     verify_email,
     verify_and_change_password,
     resend_verification_email,
     forgot_password,
-    reset_password
+    reset_password,
+    get_token_school_branding,
 )
 from rest_framework_simplejwt.views import TokenRefreshView
 
@@ -68,8 +74,14 @@ urlpatterns = [
     path('initialize-admin-3/', initialize_admin_3, name='initialize_admin_3'),
     path('initialize-admin-4/', initialize_admin_4, name='initialize_admin_4'),
 
+    # Student XLSX import endpoints
+    path('import-students/info/', import_student_info, name='import_student_info'),
+    path('import-students/validate/', validate_import, name='validate_import'),
+    path('import-students/confirm/', confirm_import, name='confirm_import'),
+
     # Email verification endpoints
     path('verify-email/<str:token>/', verify_email, name='verify_email'),
+    path('token-branding/<str:token>/', get_token_school_branding, name='token_branding'),
     path('verify-and-change-password/<str:token>/', verify_and_change_password, name='verify_and_change_password'),
     path('resend-verification/', resend_verification_email, name='resend_verification'),
 

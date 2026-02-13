@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { TrendingUp, TrendingDown, ChevronDown, ChevronUp } from 'lucide-react';
-import API_BASE_URL from '../config';
+import { useSchool } from '../contexts/SchoolContext';
 
 import './MySubjectGrades.css';
 
 const MySubjectGrades = ({ type = 'highest' }) => {
+  const { buildApiUrl } = useSchool();
   const [grades, setGrades] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -15,7 +16,7 @@ const MySubjectGrades = ({ type = 'highest' }) => {
     setLoading(true);
     try {
       const token = localStorage.getItem('accessToken');
-      const response = await fetch(`${API_BASE_URL}/api/schooladmin/student/dashboard/my-grades/`, {
+      const response = await fetch(buildApiUrl('/schooladmin/student/dashboard/my-grades/'), {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'

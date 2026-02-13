@@ -8,15 +8,30 @@ import {
   Shield,
   CheckCircle,
   ArrowRight,
-  Star,
   Menu,
   X,
   BookOpen,
   Bell,
   Calendar,
-  TrendingUp,
-  Globe,
+  Zap,
+  Eye,
+  ShieldCheck,
+  FileText,
+  ClipboardCheck,
+  Layers,
+  Upload,
+  Building2,
+  Settings,
+  Rocket,
+  Lock,
+  Database,
+  KeyRound,
+  Activity,
+  Cloud,
+  Sparkles,
 } from 'lucide-react';
+import AOS from 'aos';
+import 'aos/dist/aos.css';
 import './LandingPage.css';
 
 const features = [
@@ -56,59 +71,93 @@ const features = [
     description: 'Digital attendance with real-time parent notifications and comprehensive attendance reports.',
     color: 'cyan',
   },
-];
-
-const stats = [
-  { value: '500+', label: 'Schools Trust Us', icon: GraduationCap },
-  { value: '50K+', label: 'Students Managed', icon: Users },
-  { value: '99.9%', label: 'Uptime Guarantee', icon: TrendingUp },
-  { value: '24/7', label: 'Support Available', icon: Globe },
-];
-
-const testimonials = [
   {
-    name: 'Mrs. Adebayo Folake',
-    role: 'Principal',
-    school: 'Lagos International Academy',
-    image: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop&crop=face',
-    quote: 'EduCare transformed our administrative processes. What used to take days now takes minutes. Our teachers can focus on teaching, not paperwork.',
-    rating: 5,
+    icon: FileText,
+    title: 'Report Cards',
+    description: 'Automated report card generation with customizable grading scales, class rankings, and downloadable PDFs.',
+    color: 'indigo',
   },
   {
-    name: 'Mr. Chukwuemeka Obi',
-    role: 'School Administrator',
-    school: 'Victory Heights School',
-    image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face',
-    quote: 'The fee management system alone has saved us countless hours. Parents love the transparency and easy payment options through Paystack.',
-    rating: 5,
+    icon: Users,
+    title: 'Multi-Role Access',
+    description: 'Dedicated dashboards for admins, principals, teachers, students, and parents with role-specific tools.',
+    color: 'teal',
   },
   {
-    name: 'Dr. Amina Ibrahim',
-    role: 'Director of Education',
-    school: 'Crescent Schools Group',
-    image: 'https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?w=100&h=100&fit=crop&crop=face',
-    quote: 'We manage 5 schools with EduCare. The multi-tenant system and analytics give us complete visibility across all our institutions.',
-    rating: 5,
+    icon: ClipboardCheck,
+    title: 'Exam & Test Management',
+    description: 'Create, schedule, and grade exams with automatic score computation and subject-level analytics.',
+    color: 'red',
+  },
+  {
+    icon: Layers,
+    title: 'Class & Session Management',
+    description: 'Organize students by class, arm, and academic session with seamless term-to-term transitions.',
+    color: 'amber',
+  },
+  {
+    icon: CreditCard,
+    title: 'Paystack Integration',
+    description: 'Accept fee payments online through Paystack with automatic receipt generation and payment tracking.',
+    color: 'emerald',
+  },
+  {
+    icon: Upload,
+    title: 'Data Import & Export',
+    description: 'Bulk import students from Excel/CSV and export any data for external reporting.',
+    color: 'slate',
   },
 ];
 
-const benefits = [
-  'Start with 30-day free trial - no credit card required',
-  'Set up your school in under 10 minutes',
-  'Import existing data from Excel/CSV files',
-  'Dedicated onboarding support team',
-  'Regular feature updates at no extra cost',
-  'Bank-grade security and data encryption',
-  'NDPR and GDPR compliant',
-  'Export your data anytime',
+const valuePillars = [
+  {
+    icon: Zap,
+    title: 'Built for Efficiency',
+    description: 'Automate repetitive tasks like report cards, attendance tracking, and fee collection so your staff can focus on what matters.',
+    color: 'blue',
+  },
+  {
+    icon: Eye,
+    title: 'Complete Visibility',
+    description: 'Real-time dashboards give administrators, teachers, and parents instant insight into every aspect of school operations.',
+    color: 'purple',
+  },
+  {
+    icon: ShieldCheck,
+    title: 'Secure by Design',
+    description: 'Enterprise-grade encryption, role-based access, and NDPR compliance keep your school data safe and protected.',
+    color: 'green',
+  },
 ];
 
-const securityFeatures = [
-  '256-bit SSL encryption',
-  'Daily automated backups',
-  'NDPR compliant data handling',
-  'Role-based access control',
-  '99.9% uptime SLA',
+const howItWorks = [
+  {
+    step: 1,
+    icon: Building2,
+    title: 'Register Your School',
+    description: 'Create your school account in minutes. Choose your plan and configure your school profile.',
+  },
+  {
+    step: 2,
+    icon: Settings,
+    title: 'Set Up Your System',
+    description: 'Add classes, subjects, and teachers. Import existing student data from Excel spreadsheets.',
+  },
+  {
+    step: 3,
+    icon: Rocket,
+    title: 'Start Managing',
+    description: 'Your school is live. Track attendance, manage fees, generate report cards, and more.',
+  },
+];
+
+const securityBadges = [
+  { icon: Lock, title: '256-bit SSL Encryption' },
+  { icon: Database, title: 'Daily Automated Backups' },
+  { icon: Shield, title: 'NDPR & GDPR Compliant' },
+  { icon: KeyRound, title: 'Role-Based Access Control' },
+  { icon: Activity, title: '99.9% Uptime SLA' },
+  { icon: Cloud, title: 'Secure Cloud Hosting' },
 ];
 
 function LandingPage() {
@@ -117,6 +166,13 @@ function LandingPage() {
   const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
+    AOS.init({
+      duration: 800,
+      easing: 'ease-out-cubic',
+      once: true,
+      offset: 80,
+    });
+
     const handleScroll = () => {
       setScrolled(window.scrollY > 20);
     };
@@ -138,7 +194,11 @@ function LandingPage() {
 
           <div className="landing-nav-links">
             <Link to="/pricing" className="landing-nav-link">Pricing</Link>
+            <Link to="/knowledge-base" className="landing-nav-link">Knowledge Base</Link>
             <Link to="/contact-sales" className="landing-nav-link">Contact</Link>
+            <button onClick={() => navigate('/portal')} className="landing-signin-btn">
+              Sign In
+            </button>
             <button onClick={() => navigate('/register')} className="landing-cta-btn">
               Get Started Free
             </button>
@@ -155,7 +215,11 @@ function LandingPage() {
         <div className={`landing-mobile-menu ${mobileMenuOpen ? 'open' : ''}`}>
           <div className="landing-mobile-menu-links">
             <Link to="/pricing" className="landing-mobile-link">Pricing</Link>
+            <Link to="/knowledge-base" className="landing-mobile-link">Knowledge Base</Link>
             <Link to="/contact-sales" className="landing-mobile-link">Contact</Link>
+            <button onClick={() => { setMobileMenuOpen(false); navigate('/portal'); }} className="landing-mobile-signin">
+              Sign In
+            </button>
             <button onClick={() => navigate('/register')} className="landing-mobile-cta">
               Get Started Free
             </button>
@@ -169,29 +233,49 @@ function LandingPage() {
           <div className="landing-hero-blob landing-hero-blob-1" />
           <div className="landing-hero-blob landing-hero-blob-2" />
           <div className="landing-hero-blob landing-hero-blob-3" />
+
+          {/* Geometric decorative shapes */}
+          <svg className="landing-geo landing-geo-dotted-circle" viewBox="0 0 200 200" fill="none">
+            <circle cx="100" cy="100" r="80" stroke="rgba(255,255,255,0.12)" strokeWidth="2" strokeDasharray="8 6" />
+          </svg>
+          <svg className="landing-geo landing-geo-dots" viewBox="0 0 100 100" fill="none">
+            {[0, 1, 2, 3, 4].map(row =>
+              [0, 1, 2, 3, 4].map(col => (
+                <circle key={`${row}-${col}`} cx={10 + col * 20} cy={10 + row * 20} r="2.5" fill="rgba(255,255,255,0.15)" />
+              ))
+            )}
+          </svg>
+          <svg className="landing-geo landing-geo-ring" viewBox="0 0 120 120" fill="none">
+            <circle cx="60" cy="60" r="50" stroke="rgba(255,255,255,0.08)" strokeWidth="3" />
+            <circle cx="60" cy="60" r="35" stroke="rgba(255,255,255,0.05)" strokeWidth="2" />
+          </svg>
+          <svg className="landing-geo landing-geo-cross" viewBox="0 0 60 60" fill="none">
+            <line x1="0" y1="30" x2="60" y2="30" stroke="rgba(255,255,255,0.1)" strokeWidth="2" />
+            <line x1="30" y1="0" x2="30" y2="60" stroke="rgba(255,255,255,0.1)" strokeWidth="2" />
+          </svg>
         </div>
         <div className="landing-hero-pattern" />
 
         <div className="landing-hero-content">
           <div className="landing-hero-grid">
             <div className="landing-hero-text">
-              <div className="landing-hero-badge">
-                <span className="landing-hero-badge-dot" />
-                <span className="landing-hero-badge-text">Trusted by 500+ Nigerian Schools</span>
+              <div className="landing-hero-badge" data-aos="fade-down">
+                <Sparkles size={16} />
+                <span className="landing-hero-badge-text">All-in-One School Management Platform</span>
               </div>
 
-              <h1 className="landing-hero-title">
+              <h1 className="landing-hero-title" data-aos="fade-up" data-aos-delay="100">
                 The Future of
                 <span className="landing-hero-title-gradient">School Management</span>
               </h1>
 
-              <p className="landing-hero-description">
+              <p className="landing-hero-description" data-aos="fade-up" data-aos-delay="200">
                 Streamline admissions, automate report cards, collect fees online, and manage your entire school from one powerful platform.
               </p>
 
-              <div className="landing-hero-buttons">
+              <div className="landing-hero-buttons" data-aos="fade-up" data-aos-delay="300">
                 <button onClick={() => navigate('/register')} className="landing-hero-btn-primary">
-                  Start Free Trial
+                  Get Started, It's Free
                   <ArrowRight size={20} />
                 </button>
                 <button onClick={() => navigate('/pricing')} className="landing-hero-btn-secondary">
@@ -200,24 +284,23 @@ function LandingPage() {
                 </button>
               </div>
 
-              <div className="landing-hero-social-proof">
-                <div className="landing-hero-avatars">
-                  {[1, 2, 3, 4, 5].map((i) => (
-                    <div key={i} className="landing-hero-avatar" />
-                  ))}
+              <div className="landing-hero-highlights" data-aos="fade-up" data-aos-delay="400">
+                <div className="landing-hero-highlight-item">
+                  <CheckCircle size={16} />
+                  <span>No credit card required</span>
                 </div>
-                <div className="landing-hero-rating">
-                  <div className="landing-hero-stars">
-                    {[1, 2, 3, 4, 5].map((i) => (
-                      <Star key={i} />
-                    ))}
-                  </div>
-                  <p className="landing-hero-reviews">From 2,000+ reviews</p>
+                <div className="landing-hero-highlight-item">
+                  <CheckCircle size={16} />
+                  <span>Set up in 10 minutes</span>
+                </div>
+                <div className="landing-hero-highlight-item">
+                  <CheckCircle size={16} />
+                  <span>Free plan available</span>
                 </div>
               </div>
             </div>
 
-            <div className="landing-hero-preview">
+            <div className="landing-hero-preview" data-aos="fade-left" data-aos-delay="200">
               <div className="landing-hero-dashboard">
                 <div className="landing-hero-dashboard-frame">
                   <div className="landing-hero-dashboard-inner">
@@ -230,7 +313,7 @@ function LandingPage() {
                       </div>
                       <div className="landing-hero-browser-url">
                         <Shield size={12} />
-                        <span>educare.com/figilschools/admin</span>
+                        <span>educare.com/yourschool/admin</span>
                       </div>
                     </div>
 
@@ -268,11 +351,10 @@ function LandingPage() {
 
                       {/* Main Content */}
                       <div className="landing-hero-main-content">
-                        {/* Header */}
                         <div className="landing-hero-content-header">
                           <div>
                             <p className="landing-hero-welcome">Welcome back, Admin</p>
-                            <p className="landing-hero-school-name">Figil International Schools</p>
+                            <p className="landing-hero-school-name">Your School Name</p>
                           </div>
                           <div className="landing-hero-header-actions">
                             <div className="landing-hero-notification">
@@ -282,7 +364,6 @@ function LandingPage() {
                           </div>
                         </div>
 
-                        {/* Stats Grid */}
                         <div className="landing-hero-stats-grid">
                           <div className="landing-hero-stat-card blue">
                             <div className="landing-hero-stat-card-icon">
@@ -322,7 +403,6 @@ function LandingPage() {
                           </div>
                         </div>
 
-                        {/* Chart Area */}
                         <div className="landing-hero-chart-section">
                           <div className="landing-hero-chart-header">
                             <p>Student Enrollment Trend</p>
@@ -380,19 +460,19 @@ function LandingPage() {
         </div>
       </section>
 
-      {/* Stats Section */}
-      <section className="landing-stats">
-        <div className="landing-stats-container">
-          <div className="landing-stats-grid">
-            {stats.map((stat, index) => {
-              const Icon = stat.icon;
+      {/* Value Proposition Pillars */}
+      <section className="landing-pillars">
+        <div className="landing-pillars-container">
+          <div className="landing-pillars-grid">
+            {valuePillars.map((pillar, index) => {
+              const Icon = pillar.icon;
               return (
-                <div key={index} className="landing-stat-item">
-                  <div className="landing-stat-icon">
-                    <Icon />
+                <div key={index} className="landing-pillar-card" data-aos="fade-up" data-aos-delay={index * 100}>
+                  <div className={`landing-pillar-icon ${pillar.color}`}>
+                    <Icon size={28} />
                   </div>
-                  <p className="landing-stat-value">{stat.value}</p>
-                  <p className="landing-stat-label">{stat.label}</p>
+                  <h3 className="landing-pillar-title">{pillar.title}</h3>
+                  <p className="landing-pillar-description">{pillar.description}</p>
                 </div>
               );
             })}
@@ -401,13 +481,13 @@ function LandingPage() {
       </section>
 
       {/* Features Section */}
-      <section className="landing-features">
+      <section id="features" className="landing-features">
         <div className="landing-features-container">
-          <div className="landing-features-header">
+          <div className="landing-features-header" data-aos="fade-up">
             <span className="landing-features-badge">POWERFUL FEATURES</span>
             <h2 className="landing-features-title">Everything Your School Needs</h2>
             <p className="landing-features-subtitle">
-              A complete suite of tools designed specifically for Nigerian schools to manage operations efficiently.
+              A complete suite of tools designed specifically for schools to manage operations efficiently.
             </p>
           </div>
 
@@ -415,7 +495,7 @@ function LandingPage() {
             {features.map((feature, index) => {
               const Icon = feature.icon;
               return (
-                <div key={index} className="landing-feature-card">
+                <div key={index} className="landing-feature-card" data-aos="fade-up" data-aos-delay={(index % 3) * 100}>
                   <div className={`landing-feature-icon ${feature.color}`}>
                     <Icon />
                   </div>
@@ -428,99 +508,82 @@ function LandingPage() {
         </div>
       </section>
 
-      {/* Benefits Section */}
-      <section className="landing-benefits">
-        <div className="landing-benefits-pattern" />
-        <div className="landing-benefits-container">
-          <div className="landing-benefits-grid">
-            <div>
-              <span className="landing-benefits-badge">WHY CHOOSE EDUCARE</span>
-              <h2 className="landing-benefits-title">Built for Nigerian Schools, By Nigerians</h2>
-              <div className="landing-benefits-list">
-                {benefits.map((benefit, index) => (
-                  <div key={index} className="landing-benefit-item">
-                    <div className="landing-benefit-check">
-                      <CheckCircle size={16} />
-                    </div>
-                    <span className="landing-benefit-text">{benefit}</span>
-                  </div>
-                ))}
-              </div>
-              <button onClick={() => navigate('/register')} className="landing-benefits-cta">
-                Start Your Free Trial
-                <ArrowRight size={20} />
-              </button>
-            </div>
+      {/* How It Works */}
+      <section className="landing-how-it-works">
+        <div className="landing-how-container">
+          <div className="landing-how-header" data-aos="fade-up">
+            <span className="landing-how-badge">HOW IT WORKS</span>
+            <h2 className="landing-how-title">Get Started in 3 Simple Steps</h2>
+            <p className="landing-how-subtitle">
+              From registration to full school management in minutes, not months.
+            </p>
+          </div>
 
-            <div className="landing-security-card">
-              <div className="landing-security-header">
-                <div className="landing-security-icon">
-                  <Shield />
-                </div>
-                <h3 className="landing-security-title">Enterprise-Grade Security</h3>
-              </div>
-              <div className="landing-security-list">
-                {securityFeatures.map((item, i) => (
-                  <div key={i} className="landing-security-item">
-                    <CheckCircle />
-                    <span>{item}</span>
+          <div className="landing-how-steps">
+            {howItWorks.map((step, index) => {
+              const Icon = step.icon;
+              return (
+                <div key={index} className="landing-how-step" data-aos="fade-up" data-aos-delay={index * 150}>
+                  <div className="landing-how-step-number">{step.step}</div>
+                  <div className="landing-how-step-icon">
+                    <Icon size={32} />
                   </div>
-                ))}
-              </div>
-            </div>
+                  <h3 className="landing-how-step-title">{step.title}</h3>
+                  <p className="landing-how-step-description">{step.description}</p>
+                  {index < howItWorks.length - 1 && (
+                    <div className="landing-how-step-connector" />
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="landing-how-cta" data-aos="fade-up" data-aos-delay="300">
+            <button onClick={() => navigate('/register')} className="landing-how-cta-btn">
+              Get Started Free — No Credit Card Required
+              <ArrowRight size={20} />
+            </button>
           </div>
         </div>
       </section>
 
-      {/* Testimonials Section */}
-      <section className="landing-testimonials">
-        <div className="landing-testimonials-container">
-          <div className="landing-testimonials-header">
-            <span className="landing-testimonials-badge">TESTIMONIALS</span>
-            <h2 className="landing-testimonials-title">Loved by Schools Across Nigeria</h2>
-            <p className="landing-testimonials-subtitle">
-              Join hundreds of schools that have transformed their operations with EduCare.
+      {/* Security & Compliance */}
+      <section className="landing-security-section">
+        <div className="landing-security-section-pattern" />
+        <div className="landing-security-section-container">
+          <div className="landing-security-section-header" data-aos="fade-up">
+            <span className="landing-security-section-badge">SECURITY & COMPLIANCE</span>
+            <h2 className="landing-security-section-title">Enterprise-Grade Security</h2>
+            <p className="landing-security-section-subtitle">
+              Your school data is protected with industry-leading security standards.
             </p>
           </div>
 
-          <div className="landing-testimonials-grid">
-            {testimonials.map((testimonial, index) => (
-              <div key={index} className="landing-testimonial-card">
-                <div className="landing-testimonial-stars">
-                  {[...Array(testimonial.rating)].map((_, i) => (
-                    <Star key={i} />
-                  ))}
-                </div>
-                <p className="landing-testimonial-quote">"{testimonial.quote}"</p>
-                <div className="landing-testimonial-author">
-                  <img
-                    src={testimonial.image}
-                    alt={testimonial.name}
-                    className="landing-testimonial-avatar"
-                    onError={(e) => {
-                      e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(testimonial.name)}&background=3b82f6&color=fff`;
-                    }}
-                  />
-                  <div>
-                    <p className="landing-testimonial-name">{testimonial.name}</p>
-                    <p className="landing-testimonial-role">{testimonial.role}, {testimonial.school}</p>
+          <div className="landing-security-section-grid">
+            {securityBadges.map((badge, index) => {
+              const Icon = badge.icon;
+              return (
+                <div key={index} className="landing-security-badge" data-aos="fade-up" data-aos-delay={index * 80}>
+                  <div className="landing-security-badge-icon">
+                    <Icon size={28} />
                   </div>
+                  <p className="landing-security-badge-title">{badge.title}</p>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       </section>
 
       {/* CTA Section */}
       <section className="landing-cta-section">
-        <div className="landing-cta-container">
+        <div className="landing-cta-container" data-aos="zoom-in">
           <div className="landing-cta-card">
             <div className="landing-cta-pattern" />
             <div className="landing-cta-content">
               <h2 className="landing-cta-title">Ready to Transform Your School?</h2>
               <p className="landing-cta-description">
-                Join 500+ schools already using EduCare. Start your free 30-day trial today — no credit card required.
+                Start your free trial today — no credit card required. Set up your school in under 10 minutes.
               </p>
               <div className="landing-cta-buttons">
                 <button onClick={() => navigate('/register')} className="landing-cta-btn-primary">
@@ -548,8 +611,19 @@ function LandingPage() {
                 <span className="landing-footer-name">EduCare</span>
               </div>
               <p className="landing-footer-description">
-                The modern school management platform built for Nigerian schools.
+                The modern school management platform built for schools that want to do more with less.
               </p>
+              <div className="landing-footer-social">
+                <a href="#" className="landing-footer-social-link" aria-label="Twitter">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+                </a>
+                <a href="#" className="landing-footer-social-link" aria-label="LinkedIn">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
+                </a>
+                <a href="#" className="landing-footer-social-link" aria-label="Facebook">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+                </a>
+              </div>
             </div>
 
             <div className="landing-footer-column">

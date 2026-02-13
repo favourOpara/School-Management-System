@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { DollarSign, ChevronDown, ChevronUp } from 'lucide-react';
-import API_BASE_URL from '../config';
+import { useSchool } from '../contexts/SchoolContext';
 
 import './FeeStatus.css';
 
 const FeeStatus = () => {
+  const { buildApiUrl } = useSchool();
   const [feeData, setFeeData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -15,7 +16,7 @@ const FeeStatus = () => {
     setLoading(true);
     try {
       const token = localStorage.getItem('accessToken');
-      const response = await fetch(`${API_BASE_URL}/api/schooladmin/student/dashboard/fee-status/`, {
+      const response = await fetch(buildApiUrl('/schooladmin/student/dashboard/fee-status/'), {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'

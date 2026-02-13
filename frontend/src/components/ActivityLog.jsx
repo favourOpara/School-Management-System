@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import API_BASE_URL from '../config';
+import { useSchool } from '../contexts/SchoolContext';
 
 import './ActivityLog.css';
 
 const ActivityLog = () => {
+  const { buildApiUrl } = useSchool();
   const [notifications, setNotifications] = useState([]);
   const [directNotifications, setDirectNotifications] = useState([]);
   const [summary, setSummary] = useState({});
@@ -53,9 +55,9 @@ const ActivityLog = () => {
     try {
       let endpoint;
       if (user.role === 'admin' || user.role === 'principal') {
-        endpoint = `${API_BASE_URL}/api/logs/admin/notifications/`;
+        endpoint = buildApiUrl('/logs/admin/notifications/');
       } else if (user.role === 'student') {
-        endpoint = `${API_BASE_URL}/api/logs/student/notifications/`;
+        endpoint = buildApiUrl('/logs/student/notifications/');
       } else {
         setError('Notifications not available for your role');
         setLoading(false);
@@ -87,14 +89,13 @@ const ActivityLog = () => {
   const fetchDirectNotifications = async () => {
     try {
       const response = await axios.get(
-        `${API_BASE_URL}/api/logs/notifications/direct/`,
+        buildApiUrl('/logs/notifications/direct/'),
         {
           headers: {
             Authorization: `Bearer ${token}`,
           },
         }
       );
-      console.log('Direct notifications fetched:', response.data);
       setDirectNotifications(response.data.notifications || []);
     } catch (err) {
       console.error('Error fetching direct notifications:', err);
@@ -105,7 +106,7 @@ const ActivityLog = () => {
   const markDirectAsRead = async (notificationId) => {
     try {
       await axios.post(
-        `${API_BASE_URL}/api/logs/notifications/${notificationId}/read-direct/`,
+        buildApiUrl(`/logs/notifications/${notificationId}/read-direct/`),
         {},
         {
           headers: {
@@ -129,7 +130,7 @@ const ActivityLog = () => {
     setModalLoading(true);
     try {
       const response = await axios.get(
-        `${API_BASE_URL}/api/logs/notifications/${notificationId}/detail/`,
+        buildApiUrl(`/logs/notifications/${notificationId}/detail/`),
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -161,7 +162,7 @@ const ActivityLog = () => {
 
     try {
       await axios.post(
-        `${API_BASE_URL}/api/logs/notifications/${notificationId}/read/`,
+        buildApiUrl(`/logs/notifications/${notificationId}/read/`),
         {},
         {
           headers: {
@@ -191,7 +192,7 @@ const ActivityLog = () => {
 
     try {
       await axios.post(
-        `${API_BASE_URL}/api/logs/notifications/read-all/`,
+        buildApiUrl('/logs/notifications/read-all/'),
         {},
         {
           headers: {

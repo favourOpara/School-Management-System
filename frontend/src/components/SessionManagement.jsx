@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import API_BASE_URL from '../config';
+import { useSchool } from '../contexts/SchoolContext';
 
 import './SessionManagement.css';
 
 const SessionManagement = () => {
+  const { buildApiUrl } = useSchool();
   const [sessionInfo, setSessionInfo] = useState(null);
   const [loading, setLoading] = useState(false);
   const [showMoveTermDialog, setShowMoveTermDialog] = useState(false);
@@ -24,20 +26,16 @@ const SessionManagement = () => {
   const fetchSessionInfo = async () => {
     try {
       const token = localStorage.getItem('accessToken');
-      console.log('Fetching session info with token:', token ? 'exists' : 'missing');
 
-      const response = await fetch(`${API_BASE_URL}/api/schooladmin/session/info/`, {
+      const response = await fetch(buildApiUrl('/schooladmin/session/info/'), {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         }
       });
 
-      console.log('Session info response status:', response.status);
-
       if (response.ok) {
         const data = await response.json();
-        console.log('Session info data:', data);
         setSessionInfo(data);
       } else {
         const errorData = await response.text();
@@ -68,7 +66,7 @@ const SessionManagement = () => {
     setLoading(true);
     try {
       const token = localStorage.getItem('accessToken');
-      const response = await fetch(`${API_BASE_URL}/api/schooladmin/session/move-to-next-term/`, {
+      const response = await fetch(buildApiUrl('/schooladmin/session/move-to-next-term/'), {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -100,7 +98,7 @@ const SessionManagement = () => {
     setLoading(true);
     try {
       const token = localStorage.getItem('accessToken');
-      const response = await fetch(`${API_BASE_URL}/api/schooladmin/session/move-to-next-session/`, {
+      const response = await fetch(buildApiUrl('/schooladmin/session/move-to-next-session/'), {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -138,7 +136,7 @@ const SessionManagement = () => {
     setLoading(true);
     try {
       const token = localStorage.getItem('accessToken');
-      const response = await fetch(`${API_BASE_URL}/api/schooladmin/session/revert/`, {
+      const response = await fetch(buildApiUrl('/schooladmin/session/revert/'), {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,

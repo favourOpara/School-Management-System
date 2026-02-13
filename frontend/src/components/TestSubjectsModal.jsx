@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import API_BASE_URL from '../config';
+import { useSchool } from '../contexts/SchoolContext';
 
 import './TestSubjectsModal.css';
 
 const TestSubjectsModal = ({ classData, onClose, onSubjectClick }) => {
+  const { buildApiUrl } = useSchool();
   const [subjects, setSubjects] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -19,7 +21,7 @@ const TestSubjectsModal = ({ classData, onClose, onSubjectClick }) => {
         setError('');
 
         const response = await axios.get(
-          `${API_BASE_URL}/api/schooladmin/analytics/tests/class/${classData.session_id}/subjects/`,
+          buildApiUrl(`/schooladmin/analytics/tests/class/${classData.session_id}/subjects/`),
           { headers }
         );
 

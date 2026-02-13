@@ -3,21 +3,36 @@ import React, { useState, forwardRef, useImperativeHandle } from 'react';
 import {
   Menu, X, User, LayoutDashboard, LogOut, Settings, Shield,
   BookOpen, Users, Calendar, DollarSign, FileText, MessageCircle,
-  ClipboardCheck, GraduationCap, UserCheck, ClipboardList, Edit2, Bell
+  ClipboardCheck, GraduationCap, UserCheck, ClipboardList, Edit2, Bell, Clock,
+  HelpCircle
 } from 'lucide-react';
+import { useSchool } from '../contexts/SchoolContext';
 import './Sidebar.css';
 
 const RoleBasedSidebar = forwardRef(({ activeTab, setActiveTab, userRole }, ref) => {
   const [isOpen, setIsOpen] = useState(false);
   const [openDropdown, setOpenDropdown] = useState(null);
+  const { school, hasFeature } = useSchool();
 
   useImperativeHandle(ref, () => ({
     openSidebar: () => setIsOpen(true)
   }));
 
   const handleLogout = () => {
-    localStorage.clear();
-    window.location.href = '/';
+    // Get the school slug before clearing
+    const schoolSlug = school?.slug || localStorage.getItem('schoolSlug');
+
+    // Clear school-specific auth data
+    localStorage.removeItem('accessToken');
+    localStorage.removeItem('refreshToken');
+    localStorage.removeItem('schoolSlug');
+    localStorage.removeItem('userName');
+    localStorage.removeItem('userRole');
+    localStorage.removeItem('userId');
+    localStorage.removeItem('firstTimeSetup');
+
+    // Redirect to school login page
+    window.location.href = `/${schoolSlug}`;
   };
 
   const handleDropdownToggle = (key) => {
@@ -62,6 +77,14 @@ const RoleBasedSidebar = forwardRef(({ activeTab, setActiveTab, userRole }, ref)
             label: 'Attendance',
             submenu: [
               { key: 'my-attendance', icon: <UserCheck />, label: 'My Attendance' }
+            ]
+          },
+          {
+            key: 'help',
+            icon: <HelpCircle />,
+            label: 'Help',
+            submenu: [
+              { key: 'knowledge-base', icon: <BookOpen />, label: 'Knowledge Base' }
             ]
           }
         ];
@@ -109,6 +132,22 @@ const RoleBasedSidebar = forwardRef(({ activeTab, setActiveTab, userRole }, ref)
             submenu: [
               { key: 'announcements', icon: <Bell />, label: 'Announcements' }
             ]
+          },
+          ...(hasFeature('staff_management') ? [{
+            key: 'staff',
+            icon: <Clock />,
+            label: 'Book On/Off',
+            submenu: [
+              { key: 'book-on-off', icon: <Clock />, label: 'Book On/Off' }
+            ]
+          }] : []),
+          {
+            key: 'help',
+            icon: <HelpCircle />,
+            label: 'Help',
+            submenu: [
+              { key: 'knowledge-base', icon: <BookOpen />, label: 'Knowledge Base' }
+            ]
           }
         ];
 
@@ -146,6 +185,14 @@ const RoleBasedSidebar = forwardRef(({ activeTab, setActiveTab, userRole }, ref)
             submenu: [
               { key: 'announcements', icon: <FileText />, label: 'Announcements' }
             ]
+          },
+          {
+            key: 'help',
+            icon: <HelpCircle />,
+            label: 'Help',
+            submenu: [
+              { key: 'knowledge-base', icon: <BookOpen />, label: 'Knowledge Base' }
+            ]
           }
         ];
 
@@ -156,15 +203,28 @@ const RoleBasedSidebar = forwardRef(({ activeTab, setActiveTab, userRole }, ref)
 
   const menuItems = getMenuItems();
 
+  // Apply accent color as CSS variable
+  const sidebarStyle = school?.accent_color ? {
+    '--sidebar-accent': school.accent_color,
+    '--sidebar-accent-dark': school.secondary_color || school.accent_color,
+  } : {};
+
   return (
     <>
-      <div className={`sidebar ${isOpen ? 'open' : ''}`}>
+      <div className={`sidebar ${isOpen ? 'open' : ''}`} style={sidebarStyle}>
         <button className="close-btn" onClick={() => setIsOpen(false)}>
           <X />
         </button>
 
         <div className="sidebar-top">
-          <img src="/logo.png" alt="School Logo" className="sidebar-logo" />
+          {school?.logo ? (
+            <img src={school.logo} alt={school.name || 'School Logo'} className="sidebar-logo" />
+          ) : (
+            <div className="sidebar-logo-placeholder">
+              <GraduationCap size={32} />
+              <span>{school?.name || 'School'}</span>
+            </div>
+          )}
         </div>
 
         <nav className="sidebar-nav">

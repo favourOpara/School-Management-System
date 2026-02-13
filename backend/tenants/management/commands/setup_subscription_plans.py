@@ -18,8 +18,15 @@ class Command(BaseCommand):
                 'monthly_price': 0,
                 'annual_price': 0,
                 'max_admin_accounts': 1,
-                'max_daily_emails': 300,
+                'max_daily_emails': 20,
+                'max_students': 50,
+                'max_parents': 50,
+                'max_teachers': 5,
+                'max_principals': 1,
+                'max_proprietors': 0,
                 'has_import_feature': False,
+                'has_staff_management': False,
+                'max_import_rows': 0,
                 'trial_days': 30,
                 'is_active': True,
                 'is_public': True,
@@ -31,9 +38,16 @@ class Command(BaseCommand):
                 'description': 'For small schools getting started',
                 'monthly_price': 1500000,  # 15,000 NGN
                 'annual_price': 15000000,  # 150,000 NGN (2 months free)
-                'max_admin_accounts': 1,
-                'max_daily_emails': 300,
+                'max_admin_accounts': 2,
+                'max_daily_emails': 100,
+                'max_students': 300,
+                'max_parents': 300,
+                'max_teachers': 20,
+                'max_principals': 2,
+                'max_proprietors': 0,
                 'has_import_feature': False,
+                'has_staff_management': False,
+                'max_import_rows': 0,
                 'trial_days': 0,
                 'is_active': True,
                 'is_public': True,
@@ -43,11 +57,18 @@ class Command(BaseCommand):
                 'name': 'standard',
                 'display_name': 'Standard',
                 'description': 'For growing schools with multiple admins',
-                'monthly_price': 3000000,  # 30,000 NGN
-                'annual_price': 30000000,  # 300,000 NGN (2 months free)
+                'monthly_price': 3500000,  # 35,000 NGN
+                'annual_price': 35000000,  # 350,000 NGN
                 'max_admin_accounts': 4,
-                'max_daily_emails': 1000,
-                'has_import_feature': False,
+                'max_daily_emails': 500,
+                'max_students': 700,
+                'max_parents': 700,
+                'max_teachers': 70,
+                'max_principals': 4,
+                'max_proprietors': 1,
+                'has_import_feature': True,
+                'has_staff_management': False,
+                'max_import_rows': 100,
                 'trial_days': 0,
                 'is_active': True,
                 'is_public': True,
@@ -56,12 +77,19 @@ class Command(BaseCommand):
             {
                 'name': 'premium',
                 'display_name': 'Premium',
-                'description': 'For large schools with full features',
-                'monthly_price': 5000000,  # 50,000 NGN
-                'annual_price': 50000000,  # 500,000 NGN (2 months free)
-                'max_admin_accounts': 6,
-                'max_daily_emails': 0,  # Unlimited
+                'description': 'For large institutions with full features',
+                'monthly_price': 7500000,  # 75,000 NGN
+                'annual_price': 75000000,  # 750,000 NGN
+                'max_admin_accounts': 7,
+                'max_daily_emails': 1000,
+                'max_students': 1000,
+                'max_parents': 1000,
+                'max_teachers': 150,
+                'max_principals': 7,
+                'max_proprietors': 2,
                 'has_import_feature': True,
+                'has_staff_management': True,
+                'max_import_rows': 500,
                 'trial_days': 0,
                 'is_active': True,
                 'is_public': True,
@@ -75,7 +103,9 @@ class Command(BaseCommand):
                 'annual_price': 0,
                 'max_admin_accounts': 999,  # Effectively unlimited
                 'max_daily_emails': 0,  # Unlimited
+                'max_proprietors': 999,
                 'has_import_feature': True,
+                'has_staff_management': True,
                 'trial_days': 0,
                 'is_active': True,
                 'is_public': False,  # Not shown on public pricing page

@@ -21,11 +21,18 @@ class IsAdminRole(permissions.BasePermission):
 
 class ActivityLogListView(generics.ListAPIView):
     """Admin and Principal: View all activity logs"""
-    queryset = ActivityLog.objects.all().select_related(
-        'user', 'subject__class_session__classroom'
-    ).order_by('-timestamp')
     serializer_class = ActivityLogSerializer
     permission_classes = [IsAdminRole]
+
+    def get_queryset(self):
+        school = getattr(self.request, 'school', None)
+        if not school:
+            return ActivityLog.objects.none()
+        return ActivityLog.objects.filter(
+            user__school=school
+        ).select_related(
+            'user', 'subject__class_session__classroom'
+        ).order_by('-timestamp')
 
 
 class AdminNotificationsView(generics.ListAPIView):
@@ -34,10 +41,14 @@ class AdminNotificationsView(generics.ListAPIView):
     permission_classes = [IsAdminRole]
 
     def get_queryset(self):
-        """Return all content-related notifications"""
+        """Return all content-related notifications for this school"""
+        school = getattr(self.request, 'school', None)
+        if not school:
+            return ActivityLog.objects.none()
         return ActivityLog.objects.filter(
             is_notification=True,
-            activity_type__in=['content_created', 'content_updated', 'content_deleted']
+            activity_type__in=['content_created', 'content_updated', 'content_deleted'],
+            user__school=school
         ).select_related(
             'user', 'subject__class_session__classroom', 'subject__teacher'
         ).order_by('-timestamp')

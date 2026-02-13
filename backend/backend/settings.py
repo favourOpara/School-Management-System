@@ -207,13 +207,11 @@ SIMPLE_JWT = {
 }
 
 # Frontend URL for email verification links
-FRONTEND_URL = config('FRONTEND_URL', default='https://figilschools.com')
+FRONTEND_URL = config('FRONTEND_URL', default='http://localhost:5173')
 
 # CORS Configuration
 CORS_ALLOWED_ORIGINS = [
     'https://enchanting-luck-production.up.railway.app',
-    'https://figilschools.com',
-    'https://www.figilschools.com',
     'http://localhost:5173',
     'http://localhost:3000',
 ]
@@ -257,7 +255,7 @@ EMAIL_TIMEOUT = 30  # 30 second timeout for SMTP connections
 EMAIL_USE_LOCALTIME = False  # Use UTC for email timestamps
 
 # Automated Backup Settings
-BACKUP_EMAIL = config('BACKUP_EMAIL', default='office@figilschools.com')
+BACKUP_EMAIL = config('BACKUP_EMAIL', default='admin@yourschool.com')
 BACKUP_INTERVAL_DAYS = config('BACKUP_INTERVAL_DAYS', default=5, cast=int)
 
 # APScheduler Settings
@@ -273,4 +271,4 @@ PAYSTACK_PUBLIC_KEY = config('PAYSTACK_PUBLIC_KEY', default='pk_test_xxxxx')
 # MULTI-TENANCY SETTINGS
 # ============================================================================
 # Default school slug for backwards compatibility
-DEFAULT_SCHOOL_SLUG = config('DEFAULT_SCHOOL_SLUG', default='figilschools')
+DEFAULT_SCHOOL_SLUG = config('DEFAULT_SCHOOL_SLUG', default='')

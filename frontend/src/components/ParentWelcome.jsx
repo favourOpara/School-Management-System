@@ -1,8 +1,19 @@
 import React, { useState } from 'react';
 import { GraduationCap, Sparkles, Star, Zap } from 'lucide-react';
+import { useSchool } from '../contexts/SchoolContext';
 import './ParentWelcome.css';
 
 const ParentWelcome = ({ userName }) => {
+  const { school } = useSchool();
+
+  // Apply accent color using CSS variables (same approach as Sidebar)
+  const bannerStyle = {
+    '--banner-accent': school?.accent_color || '#3b82f6',
+    '--banner-accent-dark': school?.secondary_color || school?.accent_color || '#1d4ed8',
+  };
+
+  const iconColor = school?.accent_color || '#3b82f6';
+
   // Get time-based greeting
   const getGreeting = () => {
     const hour = new Date().getHours();
@@ -102,16 +113,16 @@ const ParentWelcome = ({ userName }) => {
   });
 
   return (
-    <div className="parent-welcome-section">
+    <div className="parent-welcome-section" style={bannerStyle}>
       <div className="parent-welcome-content-wrapper">
         <div className="parent-welcome-hearts">
           <div className="parent-heart-left">
-            <GraduationCap size={42} strokeWidth={1.5} />
+            <GraduationCap size={42} strokeWidth={1.5} color={iconColor} />
             <Sparkles className="parent-sparkle-icon parent-sparkle-left-1" size={14} />
             <Zap className="parent-sparkle-icon parent-sparkle-left-2" size={12} />
           </div>
           <div className="parent-heart-right">
-            <GraduationCap size={42} strokeWidth={1.5} />
+            <GraduationCap size={42} strokeWidth={1.5} color={iconColor} />
             <Star className="parent-sparkle-icon parent-sparkle-right-1" size={14} />
             <Sparkles className="parent-sparkle-icon parent-sparkle-right-2" size={12} />
           </div>

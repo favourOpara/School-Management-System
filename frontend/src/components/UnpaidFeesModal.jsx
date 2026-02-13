@@ -2,10 +2,13 @@
 import React, { useState, useEffect } from 'react';
 import { X, Users, ArrowLeft, Loader, Search, DollarSign, Bell, CheckCircle } from 'lucide-react';
 import API_BASE_URL from '../config';
+import { useSchool } from '../contexts/SchoolContext';
+import { checkEmailQuotaBeforeSend } from '../utils/emailQuota';
 
 import './UnpaidFeesModal.css';
 
 const UnpaidFeesModal = ({ isOpen, onClose }) => {
+  const { buildApiUrl } = useSchool();
   const [view, setView] = useState('classes'); // 'classes' or 'students'
   const [classes, setClasses] = useState([]);
   const [students, setStudents] = useState([]);
@@ -17,6 +20,15 @@ const UnpaidFeesModal = ({ isOpen, onClose }) => {
   const [searchLoading, setSearchLoading] = useState(false);
   const [notifyingStudent, setNotifyingStudent] = useState(null);
   const [notifiedStudents, setNotifiedStudents] = useState(new Set());
+
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => { document.body.style.overflow = ''; };
+  }, [isOpen]);
 
   useEffect(() => {
     if (isOpen) {
@@ -35,7 +47,7 @@ const UnpaidFeesModal = ({ isOpen, onClose }) => {
       setError(null);
       const token = localStorage.getItem('accessToken');
 
-      const response = await fetch(`${API_BASE_URL}/api/schooladmin/analytics/unpaid-fees/classes/`, {
+      const response = await fetch(buildApiUrl('/schooladmin/analytics/unpaid-fees/classes/'), {
         headers: { 'Authorization': `Bearer ${token}` }
       });
 
@@ -61,7 +73,7 @@ const UnpaidFeesModal = ({ isOpen, onClose }) => {
       const token = localStorage.getItem('accessToken');
 
       const response = await fetch(
-        `${API_BASE_URL}/api/schooladmin/analytics/unpaid-fees/class/${classSessionId}/students/`,
+        buildApiUrl(`/schooladmin/analytics/unpaid-fees/class/${classSessionId}/students/`),
         {
           headers: { 'Authorization': `Bearer ${token}` }
         }
@@ -97,7 +109,7 @@ const UnpaidFeesModal = ({ isOpen, onClose }) => {
       const token = localStorage.getItem('accessToken');
 
       const response = await fetch(
-        `${API_BASE_URL}/api/schooladmin/analytics/unpaid-fees/search/?q=${encodeURIComponent(query)}`,
+        buildApiUrl(`/schooladmin/analytics/unpaid-fees/search/?q=${encodeURIComponent(query)}`),
         {
           headers: { 'Authorization': `Bearer ${token}` }
         }
@@ -109,6 +121,7 @@ const UnpaidFeesModal = ({ isOpen, onClose }) => {
       }
     } catch (err) {
       console.error('Search error:', err);
+      setError('Failed to search. Please try again.');
     } finally {
       setSearchLoading(false);
     }
@@ -121,11 +134,14 @@ const UnpaidFeesModal = ({ isOpen, onClose }) => {
   };
 
   const handleNotifyStudent = async (studentId) => {
+    const canSend = await checkEmailQuotaBeforeSend(buildApiUrl);
+    if (!canSend) return;
+
     try {
       setNotifyingStudent(studentId);
       const token = localStorage.getItem('accessToken');
 
-      const response = await fetch(`${API_BASE_URL}/api/schooladmin/analytics/unpaid-fees/notify/`, {
+      const response = await fetch(buildApiUrl('/schooladmin/analytics/unpaid-fees/notify/'), {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,

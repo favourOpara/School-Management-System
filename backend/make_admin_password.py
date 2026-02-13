@@ -41,7 +41,7 @@ INSERT INTO users_customuser (
 ) VALUES (
     '{password_hash}',
     NULL, true, 'admin', 'Admin', 'User',
-    'admin@figilschools.com', true, true, NOW(), 'admin', '',
+    'admin@admin.local', true, true, NOW(), 'admin', '',
     '', '', '', NULL, '', '', NULL, '', ''
 );
 
@@ -55,5 +55,5 @@ print("\nLOGIN CREDENTIALS:")
 print("-"*80)
 print("Username: admin")
 print("Password: Admin@2024")
-print("Email: admin@figilschools.com")
+print("Email: admin@admin.local")
 print("="*80)

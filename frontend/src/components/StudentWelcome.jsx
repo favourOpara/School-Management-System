@@ -1,8 +1,19 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Bot, Sparkles, Zap, Star } from 'lucide-react';
+import { useSchool } from '../contexts/SchoolContext';
 import './StudentWelcome.css';
 
 const StudentWelcome = ({ userName }) => {
+  const { school } = useSchool();
+
+  // Apply accent color using CSS variables (same approach as Sidebar)
+  const bannerStyle = {
+    '--banner-accent': school?.accent_color || '#3b82f6',
+    '--banner-accent-dark': school?.secondary_color || school?.accent_color || '#1d4ed8',
+  };
+
+  const iconColor = school?.accent_color || '#3b82f6';
+
   // Fun welcome messages with DC/Marvel, Anime, and puns
   const welcomeMessages = [
     {
@@ -94,16 +105,16 @@ const StudentWelcome = ({ userName }) => {
   });
 
   return (
-    <div className="student-welcome-section">
+    <div className="student-welcome-section" style={bannerStyle}>
       <div className="student-welcome-content-wrapper">
         <div className="student-welcome-robots">
           <div className="student-robot-left">
-            <Bot size={42} strokeWidth={1.5} />
+            <Bot size={42} strokeWidth={1.5} color={iconColor} />
             <Sparkles className="student-sparkle-icon student-sparkle-left-1" size={14} />
             <Zap className="student-sparkle-icon student-sparkle-left-2" size={12} />
           </div>
           <div className="student-robot-right">
-            <Bot size={42} strokeWidth={1.5} />
+            <Bot size={42} strokeWidth={1.5} color={iconColor} />
             <Star className="student-sparkle-icon student-sparkle-right-1" size={14} />
             <Sparkles className="student-sparkle-icon student-sparkle-right-2" size={12} />
           </div>

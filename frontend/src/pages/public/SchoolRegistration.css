@@ -37,7 +37,7 @@
 .register-logo-icon {
   width: 40px;
   height: 40px;
-  background: linear-gradient(135deg, #2563eb, #4f46e5);
+  background: linear-gradient(135deg, var(--accent-color-dark, #2563eb), #4f46e5);
   border-radius: 12px;
   display: flex;
   align-items: center;
@@ -53,7 +53,7 @@
 .register-logo-text {
   font-size: 1.25rem;
   font-weight: 700;
-  background: linear-gradient(90deg, #2563eb, #4f46e5);
+  background: linear-gradient(90deg, var(--accent-color-dark, #2563eb), #4f46e5);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -187,7 +187,7 @@
 }
 
 .register-step-icon.active {
-  background: linear-gradient(135deg, #2563eb, #4f46e5);
+  background: linear-gradient(135deg, var(--accent-color-dark, #2563eb), #4f46e5);
   box-shadow: 0 4px 15px rgba(37, 99, 235, 0.3);
 }
 
@@ -211,7 +211,7 @@
 }
 
 .register-step-name.active {
-  color: #2563eb;
+  color: var(--accent-color-dark, #2563eb);
 }
 
 .register-step-connector {
@@ -272,7 +272,7 @@
   align-items: center;
   justify-content: center;
   gap: 8px;
-  color: #2563eb;
+  color: var(--accent-color-dark, #2563eb);
   margin-top: 1.5rem;
 }
 
@@ -301,7 +301,7 @@
 
 .register-progress-fill {
   height: 100%;
-  background: linear-gradient(90deg, #2563eb, #4f46e5);
+  background: linear-gradient(90deg, var(--accent-color-dark, #2563eb), #4f46e5);
   transition: width 0.5s ease;
 }
 
@@ -356,14 +356,14 @@
 .register-slug-preview {
   margin-top: 0.5rem;
   padding: 12px;
-  background: #eff6ff;
-  border: 1px solid #dbeafe;
+  background: var(--accent-color-lightest, #eff6ff);
+  border: 1px solid var(--accent-color-lightest, #dbeafe);
   border-radius: 8px;
 }
 
 .register-slug-preview p {
   font-size: 0.875rem;
-  color: #1d4ed8;
+  color: var(--accent-color-dark, #1d4ed8);
 }
 
 .register-slug-preview strong {
@@ -475,7 +475,7 @@
 }
 
 .register-input:focus {
-  border-color: #2563eb;
+  border-color: var(--accent-color-dark, #2563eb);
   box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1);
 }
 
@@ -511,14 +511,14 @@ textarea.register-input {
 .register-url-preview {
   margin-top: 0.5rem;
   padding: 12px;
-  background: #eff6ff;
-  border: 1px solid #dbeafe;
+  background: var(--accent-color-lightest, #eff6ff);
+  border: 1px solid var(--accent-color-lightest, #dbeafe);
   border-radius: 8px;
 }
 
 .register-url-preview p {
   font-size: 0.875rem;
-  color: #1d4ed8;
+  color: var(--accent-color-dark, #1d4ed8);
 }
 
 .register-url-preview strong {
@@ -635,8 +635,8 @@ textarea.register-input {
 }
 
 .register-plan-card.selected {
-  border-color: #2563eb;
-  background: linear-gradient(135deg, #eff6ff, #eef2ff);
+  border-color: var(--accent-color-dark, #2563eb);
+  background: linear-gradient(135deg, var(--accent-color-lightest, #eff6ff), var(--accent-color-lightest, #eef2ff));
   box-shadow: 0 4px 20px rgba(37, 99, 235, 0.1);
 }
 
@@ -648,7 +648,7 @@ textarea.register-input {
 }
 
 .register-plan-badge span {
-  background: linear-gradient(135deg, #2563eb, #4f46e5);
+  background: linear-gradient(135deg, var(--accent-color-dark, #2563eb), #4f46e5);
   color: white;
   font-size: 0.75rem;
   font-weight: 600;
@@ -719,7 +719,7 @@ textarea.register-input {
   right: 16px;
   width: 24px;
   height: 24px;
-  background: #2563eb;
+  background: var(--accent-color-dark, #2563eb);
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -768,8 +768,8 @@ textarea.register-input {
 }
 
 .register-billing-option.selected {
-  border-color: #2563eb;
-  background: #eff6ff;
+  border-color: var(--accent-color-dark, #2563eb);
+  background: var(--accent-color-lightest, #eff6ff);
 }
 
 .register-billing-option-title {
@@ -796,8 +796,8 @@ textarea.register-input {
 
 /* Trial Notice */
 .register-trial-notice {
-  background: linear-gradient(90deg, #eff6ff, #eef2ff);
-  border: 1px solid #dbeafe;
+  background: linear-gradient(90deg, var(--accent-color-lightest, #eff6ff), var(--accent-color-lightest, #eef2ff));
+  border: 1px solid var(--accent-color-lightest, #dbeafe);
   border-radius: 12px;
   padding: 1rem;
   margin-top: 1.5rem;
@@ -809,7 +809,7 @@ textarea.register-input {
 .register-trial-notice svg {
   width: 20px;
   height: 20px;
-  color: #2563eb;
+  color: var(--accent-color-dark, #2563eb);
   flex-shrink: 0;
   margin-top: 2px;
 }
@@ -821,7 +821,7 @@ textarea.register-input {
 
 .register-trial-notice-text {
   font-size: 0.875rem;
-  color: #1d4ed8;
+  color: var(--accent-color-dark, #1d4ed8);
 }
 
 /* Loading State */
@@ -834,7 +834,7 @@ textarea.register-input {
 .register-loading svg {
   width: 32px;
   height: 32px;
-  color: #2563eb;
+  color: var(--accent-color-dark, #2563eb);
   animation: spin 1s linear infinite;
 }
 
@@ -884,7 +884,7 @@ textarea.register-input {
   padding: 12px 24px;
   border-radius: 12px;
   font-weight: 600;
-  background: linear-gradient(135deg, #2563eb, #4f46e5);
+  background: linear-gradient(135deg, var(--accent-color-dark, #2563eb), #4f46e5);
   color: white;
   border: none;
   cursor: pointer;
@@ -917,7 +917,7 @@ textarea.register-input {
 }
 
 .register-login-link a {
-  color: #2563eb;
+  color: var(--accent-color-dark, #2563eb);
   font-weight: 500;
   text-decoration: none;
 }
@@ -952,7 +952,7 @@ textarea.register-input {
 .register-footer-logo {
   width: 32px;
   height: 32px;
-  background: linear-gradient(135deg, #2563eb, #4f46e5);
+  background: linear-gradient(135deg, var(--accent-color-dark, #2563eb), #4f46e5);
   border-radius: 8px;
   display: flex;
   align-items: center;

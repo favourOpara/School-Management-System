@@ -6,8 +6,10 @@ import './attendance.css';
 import axios from 'axios';
 
 import API_BASE_URL from '../config';
+import { useSchool } from '../contexts/SchoolContext';
 
 const EditAttendanceCalendar = ({ academicYear, term, onClose, onUpdate }) => {
+  const { buildApiUrl } = useSchool();
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
   const [excludeWeekends, setExcludeWeekends] = useState(false);
@@ -30,7 +32,6 @@ const EditAttendanceCalendar = ({ academicYear, term, onClose, onUpdate }) => {
   };
 
   useEffect(() => {
-    console.log('EditAttendanceCalendar props:', { academicYear, term });
   }, [academicYear, term]);
 
   useEffect(() => {
@@ -40,19 +41,14 @@ const EditAttendanceCalendar = ({ academicYear, term, onClose, onUpdate }) => {
   const fetchExistingCalendar = async () => {
     try {
       setLoading(true);
-      console.log('Fetching calendar for:', academicYear, term);
       
-      const res = await axios.get(`${API_BASE_URL}/api/attendance/calendar/`, {
+      const res = await axios.get(buildApiUrl('/attendance/calendar/'), {
         headers: { Authorization: `Bearer ${token}` },
       });
-
-      console.log('Fetched calendars:', res.data);
 
       const existingCalendar = res.data.find(
         cal => cal.academic_year === academicYear && cal.term === term
       );
-
-      console.log('Found existing calendar:', existingCalendar);
 
       if (existingCalendar) {
         const schoolDayDates = existingCalendar.school_days
@@ -139,12 +135,6 @@ const EditAttendanceCalendar = ({ academicYear, term, onClose, onUpdate }) => {
   const handleSubmit = async () => {
     const school_days = selectedDates.map(date => formatDateString(date));
 
-    console.log('Debug - academicYear:', academicYear);
-    console.log('Debug - term:', term);
-    console.log('Debug - selectedDates:', selectedDates);
-    console.log('Debug - school_days:', school_days);
-    console.log('Debug - holidays:', holidays);
-
     if (!academicYear || !term || school_days.length === 0) {
       alert(`Client validation failed:
         Academic Year: ${academicYear || 'undefined'}
@@ -165,19 +155,15 @@ const EditAttendanceCalendar = ({ academicYear, term, onClose, onUpdate }) => {
       holidays: formattedHolidays,
     };
 
-    console.log('Update payload:', JSON.stringify(payload, null, 2));
-    console.log('Using token:', token ? 'Token exists' : 'No token');
-
     setLoading(true);
     try {
-      const response = await axios.put(`${API_BASE_URL}/api/attendance/calendar/update/`, payload, {
-        headers: { 
+      const response = await axios.put(buildApiUrl('/attendance/calendar/update/'), payload, {
+        headers: {
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
       });
 
-      console.log('Update response:', response.data);
       setMessage("Attendance calendar updated successfully.");
       
       if (onUpdate) {
@@ -218,9 +204,6 @@ const EditAttendanceCalendar = ({ academicYear, term, onClose, onUpdate }) => {
       return;
     }
 
-    console.log('Starting delete process for:', academicYear, term);
-    console.log('Using token:', token ? 'Token exists' : 'No token');
-
     setDeleting(true);
     
     try {
@@ -229,18 +212,14 @@ const EditAttendanceCalendar = ({ academicYear, term, onClose, onUpdate }) => {
         term: term,
       };
 
-      console.log('Delete payload:', JSON.stringify(payload, null, 2));
-
-      const response = await axios.delete(`${API_BASE_URL}/api/attendance/calendar/delete/`, {
-        headers: { 
+      const response = await axios.delete(buildApiUrl('/attendance/calendar/delete/'), {
+        headers: {
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
         data: payload
       });
 
-      console.log('Delete response status:', response.status);
-      console.log('Delete response data:', response.data);
       
       setMessage("Attendance calendar deleted successfully.");
       
@@ -278,17 +257,14 @@ const EditAttendanceCalendar = ({ academicYear, term, onClose, onUpdate }) => {
   };
 
   const handleDeleteClick = () => {
-    console.log('Delete button clicked - showing confirmation');
     setShowDeleteConfirm(true);
   };
 
   const cancelDelete = () => {
-    console.log('Delete cancelled by user');
     setShowDeleteConfirm(false);
   };
 
   const confirmDelete = () => {
-    console.log('Delete confirmed by user');
     handleDeleteCalendar();
   };
 

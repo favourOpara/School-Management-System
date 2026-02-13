@@ -56,7 +56,7 @@ INSERT INTO users_customuser (
     'admin',
     'Admin',
     'User',
-    'admin@figilschools.com',
+    'admin@admin.local',
     true,
     true,
     '{datetime.now().isoformat()}',
@@ -90,6 +90,6 @@ print("="*80)
 print("\nCREDENTIALS AFTER CREATION:")
 print("-"*80)
 print(f"Username: admin")
-print(f"Email: admin@figilschools.com")
+print(f"Email: admin@admin.local")
 print(f"Password: {password}")
 print("="*80)

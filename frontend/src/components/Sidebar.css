@@ -31,7 +31,7 @@ body {
 
 /* Mobile Header */
 .mobile-header {
-  background: linear-gradient(90deg, #3b82f6 0%, #1d4ed8 100%);
+  background: linear-gradient(90deg, var(--accent-color, #3b82f6) 0%, var(--accent-color-dark, #1d4ed8) 100%);
   padding: 0.5rem 1rem;
   height: 48px;
   display: flex;
@@ -56,7 +56,7 @@ body {
   top: 0;
   left: 0;
   height: 100vh;
-  background: linear-gradient(180deg, #3b82f6 0%, #1d4ed8 100%);
+  background: linear-gradient(180deg, var(--accent-color, #3b82f6) 0%, var(--accent-color-dark, #1d4ed8) 100%);
   color: white;
   padding-top: 1rem;
   transition: transform 0.3s ease-in-out;
@@ -111,7 +111,7 @@ body {
 .sidebar-nav li:hover,
 .sidebar-nav li.active {
   background-color: rgba(255, 255, 255, 0.95);
-  color: #1d4ed8;
+  color: var(--accent-color-dark, #1d4ed8);
 }
 
 .sidebar-nav li svg {
@@ -147,7 +147,7 @@ body {
   .sidebar {
     width: 100%;
     transform: translateX(-100%);
-    background: linear-gradient(180deg, #3b82f6 0%, #1d4ed8 100%);
+    background: linear-gradient(180deg, var(--accent-color, #3b82f6) 0%, var(--accent-color-dark, #1d4ed8) 100%);
     color: #ffffff;
     padding: 2rem 1.5rem;
     align-items: flex-start;
@@ -185,7 +185,7 @@ body {
   .sidebar-submenu li:hover,
   .sidebar-submenu li.active {
     background-color: rgba(255, 255, 255, 0.95);
-    color: #1d4ed8;
+    color: var(--accent-color-dark, #1d4ed8);
   }
 
   .close-btn {
@@ -276,7 +276,7 @@ body {
 .sidebar-submenu li:hover,
 .sidebar-submenu li.active {
   background-color: rgba(255, 255, 255, 0.95);
-  color: #1d4ed8;
+  color: var(--accent-color-dark, #1d4ed8);
 }
 
 .sidebar-submenu li svg {

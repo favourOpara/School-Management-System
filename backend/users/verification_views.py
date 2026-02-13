@@ -3,7 +3,7 @@ Email verification and password reset views
 """
 from rest_framework import status
 from rest_framework.response import Response
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework.decorators import api_view, permission_classes, authentication_classes
 from rest_framework.permissions import AllowAny
 import secrets
 from datetime import timedelta
@@ -15,6 +15,28 @@ from logs.email_service import send_verification_email, send_password_reset_emai
 
 
 @api_view(['GET'])
+@authentication_classes([])
+@permission_classes([AllowAny])
+def get_token_school_branding(request, token):
+    """Return school branding for the user associated with this token."""
+    try:
+        user = CustomUser.objects.select_related('school').get(email_verification_token=token)
+    except CustomUser.DoesNotExist:
+        return Response({}, status=status.HTTP_200_OK)
+
+    school = user.school
+    if not school:
+        return Response({}, status=status.HTTP_200_OK)
+
+    return Response({
+        'name': school.name or '',
+        'logo': school.logo.url if school.logo else '',
+        'accent_color': school.accent_color or '#3b82f6',
+    }, status=status.HTTP_200_OK)
+
+
+@api_view(['GET'])
+@authentication_classes([])
 @permission_classes([AllowAny])
 def verify_email(request, token):
     """
@@ -52,6 +74,7 @@ def verify_email(request, token):
 
 
 @api_view(['POST'])
+@authentication_classes([])
 @permission_classes([AllowAny])
 def verify_and_change_password(request, token):
     """

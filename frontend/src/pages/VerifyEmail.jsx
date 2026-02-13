@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { API_BASE_URL } from '../config';
 import './VerifyEmail.css';
@@ -11,16 +11,29 @@ function VerifyEmail() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [branding, setBranding] = useState(null);
+
+  useEffect(() => {
+    const fetchBranding = async () => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/users/token-branding/${token}/`);
+        if (response.ok) {
+          const data = await response.json();
+          if (data.name) setBranding(data);
+        }
+      } catch (err) {
+        // Branding is optional, don't block the page
+      }
+    };
+    fetchBranding();
+  }, [token]);
+
+  const accentColor = branding?.accent_color || '#3b82f6';
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
 
-    console.log('Form submitted');
-    console.log('Token:', token);
-    console.log('API_BASE_URL:', API_BASE_URL);
-
-    // Validate passwords
     if (newPassword !== confirmPassword) {
       setError('Passwords do not match');
       return;
@@ -31,7 +44,6 @@ function VerifyEmail() {
       return;
     }
 
-    // Check password strength
     const hasUpper = /[A-Z]/.test(newPassword);
     const hasLower = /[a-z]/.test(newPassword);
     const hasDigit = /[0-9]/.test(newPassword);
@@ -45,7 +57,6 @@ function VerifyEmail() {
 
     try {
       const url = `${API_BASE_URL}/api/users/verify-and-change-password/${token}/`;
-      console.log('Sending request to:', url);
 
       const response = await fetch(url, {
         method: 'POST',
@@ -58,23 +69,17 @@ function VerifyEmail() {
         }),
       });
 
-      console.log('Response status:', response.status);
-
       const data = await response.json();
-      console.log('Response data:', data);
 
       if (response.ok) {
-        console.log('Verification successful!');
         setSuccess(true);
         setTimeout(() => {
           navigate('/');
         }, 3000);
       } else {
-        console.error('Verification failed:', data);
         setError(data.detail || data.message || JSON.stringify(data) || 'Verification failed. Please try again.');
       }
     } catch (err) {
-      console.error('Network error:', err);
       setError(`Network error: ${err.message}. Please check your connection and try again.`);
     } finally {
       setLoading(false);
@@ -86,7 +91,7 @@ function VerifyEmail() {
       <div className="verify-container">
         <div className="verify-card">
           <div className="success-container">
-            <div className="success-icon-wrapper">
+            <div className="success-icon-wrapper" style={{ backgroundColor: accentColor }}>
               <svg className="success-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
               </svg>
@@ -109,11 +114,14 @@ function VerifyEmail() {
       <div className="verify-card">
         {/* Logo Section */}
         <div className="verify-logo">
-          <img
-            src="https://figilschools.com/logo.png"
-            alt="FIGIL Schools Logo"
-          />
-          <h2 className="verify-title">Verify Your Email</h2>
+          {branding?.logo ? (
+            <img src={branding.logo} alt={branding.name} />
+          ) : (
+            <div className="verify-logo-placeholder" style={{ backgroundColor: accentColor }}>
+              <span>{branding?.name?.charAt(0) || 'E'}</span>
+            </div>
+          )}
+          <h2 className="verify-title" style={{ color: accentColor }}>Verify Your Email</h2>
           <p className="verify-subtitle">Set your password to activate your account</p>
         </div>
 
@@ -180,6 +188,7 @@ function VerifyEmail() {
             type="submit"
             disabled={loading}
             className="verify-button"
+            style={{ backgroundColor: accentColor }}
           >
             {loading ? (
               <span className="button-content">
@@ -195,10 +204,7 @@ function VerifyEmail() {
         {/* Footer */}
         <div className="verify-footer">
           <p>
-            Having trouble? Contact{' '}
-            <a href="mailto:office@figilschools.com">
-              office@figilschools.com
-            </a>
+            Having trouble? Contact your school administrator.
           </p>
         </div>
       </div>

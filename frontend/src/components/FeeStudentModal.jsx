@@ -5,6 +5,7 @@ import * as XLSX from 'xlsx';
 import { FileText } from 'lucide-react';
 import './feestudentmodal.css';
 import { useDialog } from '../contexts/DialogContext';
+import { useSchool } from '../contexts/SchoolContext';
 import GenerateReceiptModal from './GenerateReceiptModal';
 
 import API_BASE_URL from '../config';
@@ -39,6 +40,7 @@ const customSelectStyles = {
 
 const FeeStudentModal = ({ data = {}, onClose }) => {
   const { showAlert } = useDialog();
+  const { buildApiUrl } = useSchool();
   const {
     className = 'Class',
     students = [],
@@ -108,7 +110,7 @@ const FeeStudentModal = ({ data = {}, onClose }) => {
       // batch PATCH
       await Promise.all(toUpdate.map(([rid, amount_paid]) =>
         axios.patch(
-          `${API_BASE_URL}/api/schooladmin/fee-records/${rid}/update/`,
+          buildApiUrl(`/schooladmin/fee-records/${rid}/update/`),
           { amount_paid },
           { headers: { Authorization: `Bearer ${token}` } }
         )

@@ -99,8 +99,8 @@ function ResetPassword() {
         {/* Logo Section */}
         <div className="verify-logo">
           <img
-            src="https://figilschools.com/logo.png"
-            alt="FIGIL Schools Logo"
+            src="/logo.png"
+            alt="School Logo"
           />
           <h2 className="verify-title">Reset Your Password</h2>
           <p className="verify-subtitle">Enter your new password below</p>

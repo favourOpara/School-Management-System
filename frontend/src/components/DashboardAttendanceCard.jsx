@@ -4,6 +4,7 @@ import Select from 'react-select';
 import { CalendarCheck } from 'lucide-react';
 import AttendanceStudentModal from './AttendanceStudentModal';
 import API_BASE_URL from '../config';
+import { useSchool } from '../contexts/SchoolContext';
 
 import './DashboardAttendanceCard.css';
 
@@ -44,6 +45,7 @@ const selectStyles = {
 };
 
 const DashboardAttendanceCard = () => {
+  const { buildApiUrl } = useSchool();
   const [academicYears, setAcademicYears] = useState([]);
   const [selectedYear, setSelectedYear] = useState(null);
   const [selectedTerm, setSelectedTerm] = useState(termOptions[0]);
@@ -60,12 +62,12 @@ const DashboardAttendanceCard = () => {
     const fetchYears = async () => {
       try {
         // First, get the current active session
-        const sessionInfoRes = await axios.get(`${API_BASE_URL}/api/schooladmin/session/info/`, { headers });
+        const sessionInfoRes = await axios.get(buildApiUrl('/schooladmin/session/info/'), { headers });
         const currentYear = sessionInfoRes.data.academic_year;
         const currentTerm = sessionInfoRes.data.current_term;
 
         // Then get all available sessions
-        const res = await axios.get(`${API_BASE_URL}/api/academics/sessions/`, { headers });
+        const res = await axios.get(buildApiUrl('/academics/sessions/'), { headers });
         if (Array.isArray(res.data)) {
           const years = [...new Set(res.data.map(s => s.academic_year))].sort();
           const options = years.map(y => ({ value: y, label: y }));
@@ -101,22 +103,19 @@ const DashboardAttendanceCard = () => {
       
       try {
         // First, check if an attendance calendar exists for this academic year and term
-        const calendarsRes = await axios.get(`${API_BASE_URL}/api/attendance/calendar/`, { headers });
+        const calendarsRes = await axios.get(buildApiUrl('/attendance/calendar/'), { headers });
         const attendanceCalendar = calendarsRes.data.find(
           cal => cal.academic_year === selectedYear.value && cal.term === selectedTerm.value
         );
 
         if (!attendanceCalendar) {
-          console.log(`No attendance calendar found for ${selectedYear.value} - ${selectedTerm.value}`);
           setClassStats([]);
           setError(`No attendance calendar found for ${selectedYear.value} - ${selectedTerm.value}. Please create an attendance calendar first.`);
           return;
         }
 
-        console.log('Found attendance calendar:', attendanceCalendar);
-
         // Get all sessions for the selected year and term
-        const sessionsRes = await axios.get(`${API_BASE_URL}/api/academics/sessions/`, { headers });
+        const sessionsRes = await axios.get(buildApiUrl('/academics/sessions/'), { headers });
         const sessions = sessionsRes.data.filter(s => 
           s.academic_year === selectedYear.value && s.term === selectedTerm.value
         );
@@ -127,14 +126,12 @@ const DashboardAttendanceCard = () => {
           return;
         }
 
-        console.log(`Found ${sessions.length} sessions for ${selectedYear.value} - ${selectedTerm.value}`);
-
         // Get attendance data for each session
         const attendancePromises = sessions.map(async (session) => {
           try {
             // Get students for this session
             const studentsRes = await axios.get(
-              `${API_BASE_URL}/api/academics/session-students/${session.id}/`, 
+              buildApiUrl(`/academics/session-students/${session.id}/`),
               { headers }
             );
             const students = studentsRes.data;
@@ -155,12 +152,10 @@ const DashboardAttendanceCard = () => {
 
             // Get attendance records for this session
             const attendanceRes = await axios.get(
-              `${API_BASE_URL}/api/schooladmin/attendance/?class_session=${session.id}`,
+              buildApiUrl(`/schooladmin/attendance/?class_session=${session.id}`),
               { headers }
             );
             const attendanceRecords = attendanceRes.data;
-
-            console.log(`Session ${session.id} (${session.classroom.name}): ${attendanceRecords.length} attendance records`);
 
             // Calculate attendance statistics
             const studentStats = students.map(student => {

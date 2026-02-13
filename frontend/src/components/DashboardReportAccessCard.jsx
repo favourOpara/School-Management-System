@@ -7,6 +7,8 @@ import ReportAccessModal from './ReportAccessModal';
 import IncompleteGradesModal from './IncompleteGradesModal';
 import UnpaidFeesModal from './UnpaidFeesModal';
 import BothIssuesModal from './BothIssuesModal';
+import { useSchool } from '../contexts/SchoolContext';
+import { checkEmailQuotaBeforeSend } from '../utils/emailQuota';
 
 import API_BASE_URL from '../config';
 
@@ -49,6 +51,7 @@ const selectStyles = {
 };
 
 const DashboardReportAccessCard = () => {
+  const { buildApiUrl } = useSchool();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [stats, setStats] = useState(null);
@@ -87,7 +90,7 @@ const DashboardReportAccessCard = () => {
       const token = localStorage.getItem('accessToken');
 
       // First, get the current active session
-      const sessionInfoRes = await fetch(`${API_BASE_URL}/api/schooladmin/session/info/`, {
+      const sessionInfoRes = await fetch(buildApiUrl('/schooladmin/session/info/'), {
         headers: { 'Authorization': `Bearer ${token}` }
       });
 
@@ -101,7 +104,7 @@ const DashboardReportAccessCard = () => {
       }
 
       // Then get all available sessions
-      const response = await fetch(`${API_BASE_URL}/api/academics/sessions/`, {
+      const response = await fetch(buildApiUrl('/academics/sessions/'), {
         headers: { 'Authorization': `Bearer ${token}` }
       });
 
@@ -133,6 +136,7 @@ const DashboardReportAccessCard = () => {
       }
     } catch (err) {
       console.error('Error fetching academic years:', err);
+      setError('Failed to load academic years. Please refresh the page.');
     }
   };
 
@@ -146,7 +150,7 @@ const DashboardReportAccessCard = () => {
       if (selectedYear) params.append('academic_year', selectedYear.value);
       if (selectedTerm) params.append('term', selectedTerm.value);
 
-      const response = await fetch(`${API_BASE_URL}/api/schooladmin/analytics/report-access/?${params.toString()}`, {
+      const response = await fetch(buildApiUrl(`/schooladmin/analytics/report-access/?${params.toString()}`), {
         headers: { 'Authorization': `Bearer ${token}` }
       });
 
@@ -166,12 +170,15 @@ const DashboardReportAccessCard = () => {
   };
 
   const handleSendReports = async () => {
+    const canSend = await checkEmailQuotaBeforeSend(buildApiUrl);
+    if (!canSend) return;
+
     try {
       setSending(true);
       setSendResult(null);
       const token = localStorage.getItem('accessToken');
 
-      const response = await fetch(`${API_BASE_URL}/api/schooladmin/analytics/report-access/send/`, {
+      const response = await fetch(buildApiUrl('/schooladmin/analytics/report-access/send/'), {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -212,12 +219,15 @@ const DashboardReportAccessCard = () => {
   };
 
   const handleSendBulkNotifications = async () => {
+    const canSend = await checkEmailQuotaBeforeSend(buildApiUrl);
+    if (!canSend) return;
+
     try {
       setSendingNotifications(true);
       setNotificationResult(null);
       const token = localStorage.getItem('accessToken');
 
-      const response = await fetch(`${API_BASE_URL}/api/schooladmin/analytics/incomplete-grades/notify-all/`, {
+      const response = await fetch(buildApiUrl('/schooladmin/analytics/incomplete-grades/notify-all/'), {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -251,12 +261,15 @@ const DashboardReportAccessCard = () => {
   };
 
   const handleSendBulkFeeNotifications = async () => {
+    const canSend = await checkEmailQuotaBeforeSend(buildApiUrl);
+    if (!canSend) return;
+
     try {
       setSendingFeeNotifications(true);
       setFeeNotificationResult(null);
       const token = localStorage.getItem('accessToken');
 
-      const response = await fetch(`${API_BASE_URL}/api/schooladmin/analytics/unpaid-fees/notify-all/`, {
+      const response = await fetch(buildApiUrl('/schooladmin/analytics/unpaid-fees/notify-all/'), {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,

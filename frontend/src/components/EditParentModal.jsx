@@ -4,11 +4,13 @@ import axios from 'axios';
 import Select from 'react-select';
 import './EditUserModal.css';
 import { useDialog } from '../contexts/DialogContext';
+import { useSchool } from '../contexts/SchoolContext';
 
 import API_BASE_URL from '../config';
 
 const EditParentModal = ({ user, onClose, onUpdated }) => {
   const { showAlert } = useDialog();
+  const { buildApiUrl } = useSchool();
   const [allStudents, setAllStudents] = useState([]);
   const [formData, setFormData] = useState({
     first_name: '',
@@ -41,7 +43,7 @@ const EditParentModal = ({ user, onClose, onUpdated }) => {
   useEffect(() => {
     const fetchStudents = async () => {
       try {
-        const res = await axios.get(`${API_BASE_URL}/api/users/list-students/`, {
+        const res = await axios.get(buildApiUrl('/users/list-students/'), {
           headers: { Authorization: `Bearer ${token}` }
         });
         setAllStudents(res.data);
@@ -77,7 +79,7 @@ const EditParentModal = ({ user, onClose, onUpdated }) => {
         delete payload.confirm_password;
       }
 
-      const res = await axios.put(`${API_BASE_URL}/api/users/${user.id}/`, payload, {
+      const res = await axios.put(buildApiUrl(`/users/${user.id}/`), payload, {
         headers: { Authorization: `Bearer ${token}` }
       });
 

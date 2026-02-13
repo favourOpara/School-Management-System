@@ -11,7 +11,7 @@ python manage.py collectstatic --noinput
 echo "👤 Creating default admin user (if not exists)..."
 python manage.py create_default_admin \
     --username admin \
-    --email admin@figilschools.com \
+    --email admin@admin.local \
     --password "${ADMIN_PASSWORD:-Admin@2024}" || echo "⚠️  Admin user already exists or creation skipped"
 
 echo "✅ Setup complete!"

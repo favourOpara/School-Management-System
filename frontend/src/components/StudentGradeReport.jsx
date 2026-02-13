@@ -1,11 +1,12 @@
 // src/components/StudentGradeReport.jsx
 import React, { useState, useEffect } from 'react';
 import { FileText, BookOpen, Calendar, Printer, Loader } from 'lucide-react';
-import API_BASE_URL from '../config';
+import { useSchool } from '../contexts/SchoolContext';
 
 import './ParentGradeReport.css';
 
 const StudentGradeReport = () => {
+  const { buildApiUrl } = useSchool();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [reportData, setReportData] = useState(null);
@@ -31,7 +32,7 @@ const StudentGradeReport = () => {
       const token = localStorage.getItem('accessToken');
 
       // Build query params
-      let url = `${API_BASE_URL}/api/users/student/grade-report/`;
+      let url = buildApiUrl('/users/student/grade-report/');
       const params = new URLSearchParams();
       if (selectedYear) params.append('academic_year', selectedYear);
       if (selectedTerm) params.append('term', selectedTerm);
@@ -91,7 +92,7 @@ const StudentGradeReport = () => {
     try {
       const token = localStorage.getItem('accessToken');
       const response = await fetch(
-        `${API_BASE_URL}/api/schooladmin/reports/student/${reportData.student.id}/download/?academic_year=${selectedYear}&term=${selectedTerm}`,
+        buildApiUrl(`/schooladmin/reports/student/${reportData.student.id}/download/?academic_year=${selectedYear}&term=${selectedTerm}`),
         {
           headers: { 'Authorization': `Bearer ${token}` }
         }
@@ -257,7 +258,7 @@ const StudentGradeReport = () => {
           <div className="school-logo">
             <img src="/logo.png" alt="School Logo" />
           </div>
-          <h1 className="school-name">Figil High School</h1>
+          <h1 className="school-name">{reportData?.school_name || 'School Name'}</h1>
           <h2 className="report-title">Student Result Management System</h2>
           <p className="report-term">
             Term {session.term === 'First Term' ? 'ONE' : session.term === 'Second Term' ? 'TWO' : 'THREE'} ({session.academic_year} Academic Session Report)

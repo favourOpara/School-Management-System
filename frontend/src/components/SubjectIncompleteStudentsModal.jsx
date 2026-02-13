@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { X, Search, AlertCircle, User } from 'lucide-react';
 import API_BASE_URL from '../config';
+import { useSchool } from '../contexts/SchoolContext';
 
 import './SubjectIncompleteStudentsModal.css';
 
 const SubjectIncompleteStudentsModal = ({ subject, onClose }) => {
+  const { buildApiUrl } = useSchool();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [data, setData] = useState(null);
@@ -23,7 +25,7 @@ const SubjectIncompleteStudentsModal = ({ subject, onClose }) => {
       const token = localStorage.getItem('accessToken');
 
       const response = await fetch(
-        `${API_BASE_URL}/api/schooladmin/analytics/subject-grading/${subject.subject_id}/incomplete/`,
+        buildApiUrl(`/schooladmin/analytics/subject-grading/${subject.subject_id}/incomplete/`),
         {
           headers: { 'Authorization': `Bearer ${token}` }
         }

@@ -2,10 +2,13 @@
 import React, { useState, useEffect } from 'react';
 import { X, Users, Send, ArrowLeft, Loader, CheckCircle } from 'lucide-react';
 import API_BASE_URL from '../config';
+import { useSchool } from '../contexts/SchoolContext';
+import { checkEmailQuotaBeforeSend } from '../utils/emailQuota';
 
 import './ReportAccessModal.css';
 
 const ReportAccessModal = ({ isOpen, onClose, onRefreshStats }) => {
+  const { buildApiUrl } = useSchool();
   const [view, setView] = useState('classes'); // 'classes' or 'students'
   const [classes, setClasses] = useState([]);
   const [students, setStudents] = useState([]);
@@ -14,6 +17,15 @@ const ReportAccessModal = ({ isOpen, onClose, onRefreshStats }) => {
   const [error, setError] = useState(null);
   const [sendingStudent, setSendingStudent] = useState(null);
   const [sentStudents, setSentStudents] = useState(new Set());
+
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => { document.body.style.overflow = ''; };
+  }, [isOpen]);
 
   useEffect(() => {
     if (isOpen) {
@@ -30,7 +42,7 @@ const ReportAccessModal = ({ isOpen, onClose, onRefreshStats }) => {
       setError(null);
       const token = localStorage.getItem('accessToken');
 
-      const response = await fetch(`${API_BASE_URL}/api/schooladmin/analytics/report-access/classes/`, {
+      const response = await fetch(buildApiUrl('/schooladmin/analytics/report-access/classes/'), {
         headers: { 'Authorization': `Bearer ${token}` }
       });
 
@@ -56,7 +68,7 @@ const ReportAccessModal = ({ isOpen, onClose, onRefreshStats }) => {
       const token = localStorage.getItem('accessToken');
 
       const response = await fetch(
-        `${API_BASE_URL}/api/schooladmin/analytics/report-access/class/${classSessionId}/students/`,
+        buildApiUrl(`/schooladmin/analytics/report-access/class/${classSessionId}/students/`),
         {
           headers: { 'Authorization': `Bearer ${token}` }
         }
@@ -80,11 +92,14 @@ const ReportAccessModal = ({ isOpen, onClose, onRefreshStats }) => {
   };
 
   const handleSendIndividual = async (studentSessionId) => {
+    const canSend = await checkEmailQuotaBeforeSend(buildApiUrl);
+    if (!canSend) return;
+
     try {
       setSendingStudent(studentSessionId);
       const token = localStorage.getItem('accessToken');
 
-      const response = await fetch(`${API_BASE_URL}/api/schooladmin/analytics/report-access/send-individual/`, {
+      const response = await fetch(buildApiUrl('/schooladmin/analytics/report-access/send-individual/'), {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,

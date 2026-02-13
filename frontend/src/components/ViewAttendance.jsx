@@ -5,6 +5,7 @@ import axios from 'axios';
 import { Edit3 } from 'lucide-react';
 import EditAttendanceCalendar from './EditAttendanceCalendar';
 import API_BASE_URL from '../config';
+import { useSchool } from '../contexts/SchoolContext';
 
 import './attendance.css';
 
@@ -41,6 +42,7 @@ const selectStyles = {
 };
 
 const ViewAttendance = () => {
+  const { buildApiUrl } = useSchool();
   const [academicYears, setAcademicYears] = useState([]);
   const [terms, setTerms] = useState([]);
   const [selectedYear, setSelectedYear] = useState(null);
@@ -57,7 +59,7 @@ const ViewAttendance = () => {
   useEffect(() => {
     const fetchSessionOptions = async () => {
       try {
-        const res = await axios.get(`${API_BASE_URL}/api/academics/sessions/`, {
+        const res = await axios.get(buildApiUrl('/academics/sessions/'), {
           headers: { Authorization: `Bearer ${token}` },
         });
 
@@ -82,7 +84,7 @@ const ViewAttendance = () => {
     setHasAttemptedLoad(true);
 
     try {
-      const res = await axios.get(`${API_BASE_URL}/api/attendance/calendar/`, {
+      const res = await axios.get(buildApiUrl('/attendance/calendar/'), {
         headers: { Authorization: `Bearer ${token}` },
       });
 

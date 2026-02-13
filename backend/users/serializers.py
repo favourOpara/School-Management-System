@@ -10,7 +10,11 @@ import sys
 class UserCreateSerializer(serializers.ModelSerializer):
     confirm_password = serializers.CharField(write_only=True, required=False)
     classroom = serializers.PrimaryKeyRelatedField(queryset=Class.objects.all(), required=False, allow_null=True)
-    department = serializers.CharField(required=False, allow_blank=True)
+    department = serializers.ChoiceField(
+        choices=[('', '')] + list(CustomUser.DEPARTMENT_CHOICES),
+        required=False,
+        allow_blank=True
+    )
     profile_picture = serializers.ImageField(required=False, allow_null=True)
     children = serializers.PrimaryKeyRelatedField(
         queryset=CustomUser.objects.filter(role='student'),
@@ -92,6 +96,7 @@ class UserCreateSerializer(serializers.ModelSerializer):
         return value
 
     def validate(self, data):
+
         password = data.get('password')
         confirm_password = data.get('confirm_password')
 
@@ -145,6 +150,7 @@ class UserCreateSerializer(serializers.ModelSerializer):
         return user
 
     def update(self, instance, validated_data):
+
         validated_data.pop('confirm_password', None)
         children = validated_data.pop('children', None)
 
@@ -164,7 +170,6 @@ class UserCreateSerializer(serializers.ModelSerializer):
 
         instance.save()
         return instance
-
 
 # 🔹 Admin creates teacher (WITH email and phone - REQUIRED for email notifications)
 class TeacherSignupSerializer(serializers.ModelSerializer):
@@ -201,7 +206,6 @@ class TeacherSignupSerializer(serializers.ModelSerializer):
             send_verification_email(user, verification_url)
 
         return user
-
 
 # 🔹 Admin creates parent (WITH email, phone, and children)
 class ParentSignupSerializer(serializers.ModelSerializer):
@@ -251,7 +255,6 @@ class ParentSignupSerializer(serializers.ModelSerializer):
 
         return parent
 
-
 # 🔹 For dropdowns, views, and listing users
 class UserListSerializer(serializers.ModelSerializer):
     children = serializers.SerializerMethodField()
@@ -274,7 +277,6 @@ class UserListSerializer(serializers.ModelSerializer):
                 for child in obj.children.all()
             ]
         return []
-
 
 # 🔹 Student detail listing for ViewUsers table
 class StudentDetailSerializer(serializers.ModelSerializer):
@@ -334,7 +336,6 @@ class StudentDetailSerializer(serializers.ModelSerializer):
             # Cloudinary URLs are already absolute, no need to build_absolute_uri
             return obj.profile_picture.url
         return None
-
 
 # 🔹 NEW: Teacher detail listing for ViewUsers table
 class TeacherDetailSerializer(serializers.ModelSerializer):

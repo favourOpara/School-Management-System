@@ -2,10 +2,12 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import Select from 'react-select';
 import API_BASE_URL from '../config';
+import { useSchool } from '../contexts/SchoolContext';
 
 import './CreateParentForm.css';
 
 const CreateParentForm = () => {
+  const { buildApiUrl } = useSchool();
   const [formData, setFormData] = useState({
     username: '',
     password: '',
@@ -23,7 +25,7 @@ const CreateParentForm = () => {
   useEffect(() => {
     const fetchStudents = async () => {
       try {
-        const res = await axios.get(`${API_BASE_URL}/api/users/list-students/`, {
+        const res = await axios.get(buildApiUrl('/users/list-students/'), {
           headers: { Authorization: `Bearer ${token}` },
         });
 
@@ -35,6 +37,7 @@ const CreateParentForm = () => {
         setStudents(formatted);
       } catch (err) {
         console.error('Error fetching students:', err);
+        setMessage('Failed to load student list.');
       }
     };
 
@@ -53,12 +56,23 @@ const CreateParentForm = () => {
     }));
   };
 
+  const validatePassword = (password) => {
+    if (password.length < 8) return 'Password must be at least 8 characters.';
+    if (!/[A-Z]/.test(password)) return 'Password must contain at least one uppercase letter.';
+    if (!/[a-z]/.test(password)) return 'Password must contain at least one lowercase letter.';
+    if (!/[0-9]/.test(password)) return 'Password must contain at least one number.';
+    return null;
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setMessage('');
 
+    const pwError = validatePassword(formData.password);
+    if (pwError) { setMessage(pwError); return; }
+
     try {
-      const res = await axios.post(`${API_BASE_URL}/api/users/parent-signup/`, formData, {
+      const res = await axios.post(buildApiUrl('/users/parent-signup/'), formData, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -73,7 +87,9 @@ const CreateParentForm = () => {
         children: [],
       });
     } catch (err) {
-      if (err.response?.data) {
+      if (err.response?.data?.error) {
+        setMessage(err.response.data.error);
+      } else if (err.response?.data) {
         const errorDetails = Object.values(err.response.data).flat().join(' ');
         setMessage(`Error: ${errorDetails}`);
       } else {

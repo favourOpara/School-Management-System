@@ -1,4 +1,4 @@
-from rest_framework import generics, permissions, status
+from rest_framework import generics, permissions, status, serializers
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated, AllowAny
@@ -25,12 +25,10 @@ class IsAdminRole(permissions.BasePermission):
     def has_permission(self, request, view):
         return request.user.is_authenticated and request.user.role in ['admin', 'principal']
 
-
 # Principal-only permission
 class IsPrincipalRole(permissions.BasePermission):
     def has_permission(self, request, view):
         return request.user.is_authenticated and request.user.role == 'principal'
-
 
 # Principal or Admin permission (for shared endpoints)
 class IsPrincipalOrAdmin(permissions.BasePermission):
@@ -38,22 +36,42 @@ class IsPrincipalOrAdmin(permissions.BasePermission):
     def has_permission(self, request, view):
         return request.user.is_authenticated and request.user.role in ['admin', 'principal']
 
-
 # Custom JWT serializer to include user role and other info in token response
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
+    school_slug = serializers.CharField(required=False, allow_blank=True)
+
     @classmethod
     def get_token(cls, user):
         token = super().get_token(user)
-        
+
         # Add custom claims to token
         token['role'] = user.role
         token['username'] = user.username
         token['full_name'] = f"{user.first_name} {user.last_name}"
-        
+        # Add school info to token
+        if user.school:
+            token['school_id'] = str(user.school.id)
+            token['school_slug'] = user.school.slug
+
         return token
 
     def validate(self, attrs):
+        # Extract school_slug before parent validation
+        school_slug = attrs.pop('school_slug', None)
+
         data = super().validate(attrs)
+
+        # Verify user belongs to the school they're trying to log into
+        if school_slug and self.user.school:
+            if self.user.school.slug != school_slug:
+                raise serializers.ValidationError({
+                    'detail': 'Invalid credentials for this school.',
+                })
+        elif school_slug and not self.user.school:
+            # User has no school assigned
+            raise serializers.ValidationError({
+                'detail': 'Your account is not associated with any school.',
+            })
 
         # Check if user has verified their email (skip for admin users)
         if self.user.role != 'admin' and not self.user.email_verified:
@@ -147,12 +165,30 @@ class CustomTokenObtainPairView(TokenObtainPairView):
 
 # Admin creates student or parent - FIXED to always create StudentSession properly
 class CreateUserView(generics.CreateAPIView):
-    queryset = CustomUser.objects.all()
     serializer_class = UserCreateSerializer
     permission_classes = [IsAuthenticated, IsAdminRole]
 
+    def get_queryset(self):
+        school = getattr(self.request, 'school', None)
+        if school:
+            return CustomUser.objects.filter(school=school)
+        return CustomUser.objects.none()
+
+    def create(self, request, *args, **kwargs):
+        # Check user limit before creating
+        school = getattr(request, 'school', None)
+        role = request.data.get('role', '')
+        if school and role:
+            from tenants.permissions import check_user_limit
+            can_create, msg = check_user_limit(school, role)
+            if not can_create:
+                return Response({'error': msg}, status=status.HTTP_403_FORBIDDEN)
+        return super().create(request, *args, **kwargs)
+
     def perform_create(self, serializer):
-        user = serializer.save()
+        # Set the school from the request for multi-tenancy data isolation
+        school = getattr(self.request, 'school', None)
+        user = serializer.save(school=school)
         
         # If creating a student, automatically create StudentSession record
         if user.role == 'student' and user.classroom and user.academic_year and user.term:
@@ -186,9 +222,19 @@ class TeacherSignupView(APIView):
     permission_classes = [IsAuthenticated, IsAdminRole]
 
     def post(self, request):
+        # Check teacher limit
+        school = getattr(request, 'school', None)
+        if school:
+            from tenants.permissions import check_user_limit
+            can_create, msg = check_user_limit(school, 'teacher')
+            if not can_create:
+                return Response({'error': msg}, status=status.HTTP_403_FORBIDDEN)
+
         serializer = TeacherSignupSerializer(data=request.data)
         if serializer.is_valid():
-            user = serializer.save()
+            # Set the school from the request for multi-tenancy data isolation
+            school = getattr(request, 'school', None)
+            user = serializer.save(school=school)
             ActivityLog.objects.create(
                 user=request.user,
                 role='teacher',
@@ -205,9 +251,19 @@ class ParentSignupView(APIView):
     permission_classes = [IsAuthenticated, IsAdminRole]
 
     def post(self, request):
+        # Check parent limit
+        school = getattr(request, 'school', None)
+        if school:
+            from tenants.permissions import check_user_limit
+            can_create, msg = check_user_limit(school, 'parent')
+            if not can_create:
+                return Response({'error': msg}, status=status.HTTP_403_FORBIDDEN)
+
         serializer = ParentSignupSerializer(data=request.data)
         if serializer.is_valid():
-            user = serializer.save()
+            # Set the school from the request for multi-tenancy data isolation
+            school = getattr(request, 'school', None)
+            user = serializer.save(school=school)
             ActivityLog.objects.create(
                 user=request.user,
                 role='parent',
@@ -230,7 +286,12 @@ def me(request):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated, IsAdminRole])
 def list_teachers(request):
-    teachers = CustomUser.objects.filter(role='teacher')
+    # Filter by school for multi-tenancy data isolation
+    school = getattr(request, 'school', None)
+    if school:
+        teachers = CustomUser.objects.filter(role='teacher', school=school)
+    else:
+        teachers = CustomUser.objects.filter(role='teacher')
     serializer = TeacherDetailSerializer(teachers, many=True)
     return Response(serializer.data)
 
@@ -238,7 +299,12 @@ def list_teachers(request):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated, IsAdminRole])
 def list_principals(request):
-    principals = CustomUser.objects.filter(role='principal')
+    # Filter by school for multi-tenancy data isolation
+    school = getattr(request, 'school', None)
+    if school:
+        principals = CustomUser.objects.filter(role='principal', school=school)
+    else:
+        principals = CustomUser.objects.filter(role='principal')
     serializer = TeacherDetailSerializer(principals, many=True)
     return Response(serializer.data)
 
@@ -246,7 +312,12 @@ def list_principals(request):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated, IsAdminRole])
 def list_parents(request):
-    parents = CustomUser.objects.filter(role='parent')
+    # Filter by school for multi-tenancy data isolation
+    school = getattr(request, 'school', None)
+    if school:
+        parents = CustomUser.objects.filter(role='parent', school=school)
+    else:
+        parents = CustomUser.objects.filter(role='parent')
 
     response_data = []
     for parent in parents:
@@ -291,18 +362,28 @@ def list_students(request):
     academic_year = request.query_params.get('academic_year')
     term = request.query_params.get('term')
 
+    # Filter by school for multi-tenancy data isolation
+    school = getattr(request, 'school', None)
+
     if academic_year and term:
         # Filter students by session using StudentSession model
-        student_sessions = StudentSession.objects.filter(
+        student_sessions_query = StudentSession.objects.filter(
             class_session__academic_year=academic_year,
             class_session__term=term,
             is_active=True
-        ).select_related('student', 'class_session__classroom')
-        
+        )
+        # Apply school filter if available
+        if school:
+            student_sessions_query = student_sessions_query.filter(student__school=school)
+
+        student_sessions = student_sessions_query.select_related('student', 'class_session__classroom')
         students = [ss.student for ss in student_sessions]
     else:
-        # Get all students
-        students = CustomUser.objects.filter(role='student')
+        # Get all students filtered by school
+        if school:
+            students = CustomUser.objects.filter(role='student', school=school)
+        else:
+            students = CustomUser.objects.filter(role='student')
 
     serializer = StudentDetailSerializer(students, many=True)
     return Response(serializer.data)
@@ -317,17 +398,30 @@ def students_with_subjects(request):
     if not academic_year or not term:
         return Response({'error': 'academic_year and term are required'}, status=400)
 
+    # Filter by school for multi-tenancy data isolation
+    school = getattr(request, 'school', None)
+
     # Get students through StudentSession model instead of direct user fields
-    student_sessions = StudentSession.objects.filter(
+    student_sessions_query = StudentSession.objects.filter(
         class_session__academic_year=academic_year,
         class_session__term=term,
         is_active=True
-    ).select_related('student', 'class_session__classroom')
+    )
+    # Apply school filter
+    if school:
+        student_sessions_query = student_sessions_query.filter(student__school=school)
 
-    subjects = Subject.objects.filter(
+    student_sessions = student_sessions_query.select_related('student', 'class_session__classroom')
+
+    subjects_query = Subject.objects.filter(
         class_session__academic_year=academic_year,
         class_session__term=term
     )
+    # Apply school filter to subjects
+    if school:
+        subjects_query = subjects_query.filter(class_session__classroom__school=school)
+
+    subjects = subjects_query
 
     response_data = []
     for student_session in student_sessions:
@@ -339,7 +433,7 @@ def students_with_subjects(request):
 
         # Get subjects for class and filter by department
         student_subjects = subjects.filter(class_session__classroom=classroom)
-        if classroom.name.startswith('S.S.S.') and student.department:
+        if classroom.has_departments and student.department:
             student_subjects = student_subjects.filter(department__in=['General', student.department])
 
         # Calculate student's age
@@ -362,10 +456,15 @@ def students_with_subjects(request):
             'email': student.email,
             'gender': student.gender,
             'age': age,
-            'classroom': classroom.name if classroom else None,
+            'classroom': {
+                'id': classroom.id,
+                'name': classroom.name,
+                'has_departments': classroom.has_departments
+            } if classroom else None,
             'academic_year': academic_year,
             'term': term,
             'date_of_birth': student.date_of_birth,
+            'department': student.department,  # Student's own department
             'parent': {
                 'full_name': f"{parent.first_name} {parent.last_name}" if parent else None,
                 'phone_number': parent.phone_number if parent else None,
@@ -389,9 +488,17 @@ def student_history(request):
     """
     Returns complete academic history for all students showing all sessions they've been enrolled in
     """
+    # Filter by school for multi-tenancy data isolation
+    school = getattr(request, 'school', None)
+
     # Get all student sessions (both active and inactive) ordered by student and session
-    student_sessions = StudentSession.objects.all().select_related(
-        'student', 
+    if school:
+        student_sessions_query = StudentSession.objects.filter(student__school=school)
+    else:
+        student_sessions_query = StudentSession.objects.none()
+
+    student_sessions = student_sessions_query.select_related(
+        'student',
         'class_session__classroom'
     ).order_by('student__first_name', 'student__last_name', '-class_session__academic_year', 'class_session__term')
     
@@ -450,7 +557,6 @@ def student_history(request):
     response_data = list(students_history.values())
     
     return Response(response_data)
-
 
 # Individual Student History - Admin only: Shows complete history for a specific student
 @api_view(['GET'])
@@ -517,13 +623,23 @@ def individual_student_history(request, student_id):
     
     return Response(response_data)
 
-
 # Edit / Update / Delete individual user - Admin only - FIXED to handle StudentSession properly
 class UserRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
-    queryset = CustomUser.objects.all()
     serializer_class = UserCreateSerializer
     permission_classes = [IsAuthenticated, IsAdminRole]
     lookup_field = 'pk'
+
+    def get_queryset(self):
+        school = getattr(self.request, 'school', None)
+        if school:
+            return CustomUser.objects.filter(school=school)
+        return CustomUser.objects.none()
+
+    def update(self, request, *args, **kwargs):
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.info(f"[VIEW UPDATE] Request data: {request.data}")
+        return super().update(request, *args, **kwargs)
 
     def perform_update(self, serializer):
         password = self.request.data.get('password')
@@ -579,7 +695,6 @@ class UserRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
             except ClassSession.DoesNotExist:
                 # Don't deactivate existing sessions if target ClassSession doesn't exist
                 pass
-
 
 # ============================================================================
 # PARENT ATTENDANCE REPORT
@@ -751,7 +866,6 @@ def student_attendance_report(request):
         'available_sessions': sessions_list
     })
 
-
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def parent_attendance_report(request):
@@ -863,11 +977,8 @@ def parent_attendance_report(request):
             'type': holiday.get_holiday_type_display()
         } for holiday in holiday_days.order_by('date')]
 
-        print(f"DEBUG: Attendance calendar found - Total school days: {total_school_days}, Holidays: {total_holidays}")
-        print(f"DEBUG: Holidays list: {holidays_list}")
     except AttendanceCalendar.DoesNotExist:
         # No attendance calendar exists, that's okay - we'll show 0
-        print(f"DEBUG: No attendance calendar found for {academic_year} - {term}")
         pass
 
     # Get attendance records from grading system (schooladmin.AttendanceRecord)
@@ -875,11 +986,6 @@ def parent_attendance_report(request):
         student=child,
         class_session=class_session
     ).select_related('class_session').order_by('date')
-
-    # Debug: Print attendance records count
-    print(f"DEBUG: Total grading attendance records: {attendance_records.count()}")
-    print(f"DEBUG: Class session: {class_session}")
-    print(f"DEBUG: Student: {child.get_full_name()}")
 
     # Calculate attendance statistics
     # Get unique dates where student was present
@@ -891,10 +997,6 @@ def parent_attendance_report(request):
     absent_records = attendance_records.filter(is_present=False)
     absent_dates = absent_records.values('date').distinct()
     days_not_attended = absent_dates.count()
-
-    # Debug: Print unique dates
-    print(f"DEBUG: Days attended: {days_attended}")
-    print(f"DEBUG: Days absent: {days_not_attended}")
 
     # Calculate attendance percentage based on calendar school days
     attendance_percentage = (days_attended / total_school_days * 100) if total_school_days > 0 else 0
@@ -963,7 +1065,6 @@ def parent_attendance_report(request):
         'children': children_list,
         'available_sessions': sessions_list
     })
-
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
@@ -1707,7 +1808,6 @@ def student_grade_report(request):
         'available_sessions': sessions_list
     })
 
-
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def upload_avatar(request):
@@ -1756,7 +1856,6 @@ def upload_avatar(request):
         "avatar_url": avatar_url
     }, status=status.HTTP_200_OK)
 
-
 @api_view(['DELETE'])
 @permission_classes([IsAuthenticated])
 def remove_avatar(request):
@@ -1768,7 +1867,6 @@ def remove_avatar(request):
         return Response({"detail": "Avatar removed successfully"}, status=status.HTTP_200_OK)
 
     return Response({"detail": "No avatar to remove"}, status=status.HTTP_400_BAD_REQUEST)
-
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
@@ -1791,7 +1889,6 @@ def get_current_user_profile(request):
         'avatar_url': avatar_url,
         'profile_picture_url': profile_picture_url,  # Admin-controlled, for reports
     }, status=status.HTTP_200_OK)
-
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated, IsAdminRole])
@@ -1838,7 +1935,6 @@ def change_admin_username(request):
         'old_username': old_username,
         'new_username': new_username
     }, status=status.HTTP_200_OK)
-
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated, IsAdminRole])
@@ -1895,7 +1991,6 @@ def change_admin_password(request):
         'detail': 'Password updated successfully. Please login again with your new password.'
     }, status=status.HTTP_200_OK)
 
-
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def change_password(request):
@@ -1951,7 +2046,6 @@ def change_password(request):
         'detail': 'Password updated successfully. Please login again with your new password.'
     }, status=status.HTTP_200_OK)
 
-
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def initialize_admin(request):
@@ -1972,7 +2066,7 @@ def initialize_admin(request):
     try:
         admin_user = CustomUser.objects.create_user(
             username='admin',
-            email='admin@figilschools.com',
+            email='admin@admin.local',
             password='Admin@2024',
             first_name='Admin',
             last_name='User'
@@ -1987,7 +2081,7 @@ def initialize_admin(request):
             'message': '✅ Admin user created successfully!',
             'credentials': {
                 'username': 'admin',
-                'email': 'admin@figilschools.com',
+                'email': 'admin@admin.local',
                 'password': 'Admin@2024',
                 'warning': '⚠️ CHANGE THIS PASSWORD IMMEDIATELY after first login!'
             },
@@ -2005,7 +2099,6 @@ def initialize_admin(request):
             'message': f'Failed to create admin: {str(e)}'
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def initialize_admin_2(request):
@@ -2021,7 +2114,7 @@ def initialize_admin_2(request):
     try:
         admin_user = CustomUser.objects.create_user(
             username=username,
-            email='admin2@figilschools.com',
+            email='admin2@admin.local',
             password='Admin2@2024',
             first_name='Admin',
             last_name='Two'
@@ -2036,13 +2129,12 @@ def initialize_admin_2(request):
             'message': '✅ Admin 2 created successfully!',
             'credentials': {
                 'username': 'admin2',
-                'email': 'admin2@figilschools.com',
+                'email': 'admin2@admin.local',
                 'password': 'Admin2@2024'
             }
         }, status=status.HTTP_201_CREATED)
     except Exception as e:
         return Response({'status': 'error', 'message': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
@@ -2059,7 +2151,7 @@ def initialize_admin_3(request):
     try:
         admin_user = CustomUser.objects.create_user(
             username=username,
-            email='admin3@figilschools.com',
+            email='admin3@admin.local',
             password='Admin3@2024',
             first_name='Admin',
             last_name='Three'
@@ -2074,13 +2166,12 @@ def initialize_admin_3(request):
             'message': '✅ Admin 3 created successfully!',
             'credentials': {
                 'username': 'admin3',
-                'email': 'admin3@figilschools.com',
+                'email': 'admin3@admin.local',
                 'password': 'Admin3@2024'
             }
         }, status=status.HTTP_201_CREATED)
     except Exception as e:
         return Response({'status': 'error', 'message': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
@@ -2097,7 +2188,7 @@ def initialize_admin_4(request):
     try:
         admin_user = CustomUser.objects.create_user(
             username=username,
-            email='admin4@figilschools.com',
+            email='admin4@admin.local',
             password='Admin4@2024',
             first_name='Admin',
             last_name='Four'
@@ -2112,7 +2203,7 @@ def initialize_admin_4(request):
             'message': '✅ Admin 4 created successfully!',
             'credentials': {
                 'username': 'admin4',
-                'email': 'admin4@figilschools.com',
+                'email': 'admin4@admin.local',
                 'password': 'Admin4@2024'
             }
         }, status=status.HTTP_201_CREATED)

@@ -23,7 +23,7 @@ class FeeStructure(models.Model):
     name = models.CharField(max_length=100)
     amount = models.DecimalField(max_digits=10, decimal_places=2)
     academic_year = models.CharField(max_length=9)  # e.g. '2024/2025'
-    term = models.CharField(max_length=20, choices=TERM_CHOICES, default="First Term")
+    term = models.CharField(max_length=20, choices=TERM_CHOICES)
     classes = models.ManyToManyField(Class, related_name='fee_structures')
     date_created = models.DateTimeField(auto_now_add=True)
 
@@ -376,7 +376,6 @@ class GradingConfiguration(models.Model):
             # But keep it in the database for historical access
             existing_config.is_active = False
             existing_config.save()
-            print(f"Deactivated existing active config during copy: {existing_config.id} for {target_academic_year} - {target_term}")
 
         new_config = GradingConfiguration.objects.create(
             academic_year=target_academic_year,
@@ -836,7 +835,7 @@ class Announcement(models.Model):
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         related_name='created_announcements',
-        limit_choices_to={'role': 'admin'}
+        limit_choices_to={'role__in': ['admin', 'proprietor']}
     )
 
     created_at = models.DateTimeField(auto_now_add=True)
@@ -899,7 +898,7 @@ class Announcement(models.Model):
         from django.db.models import Avg, Q
         from datetime import datetime, timedelta
 
-        students = CustomUser.objects.filter(role='student', is_active=True)
+        students = CustomUser.objects.filter(role='student', is_active=True, school=self.school)
 
         # Apply class filter if specified
         if self.specific_classes.exists():
@@ -1017,7 +1016,7 @@ class Announcement(models.Model):
         from users.models import CustomUser
         from django.db.models import Q
 
-        parents = CustomUser.objects.filter(role='parent', is_active=True)
+        parents = CustomUser.objects.filter(role='parent', is_active=True, school=self.school)
 
         # Apply class filter if specified (parents with children in specific classes)
         if self.specific_classes.exists():
@@ -1088,7 +1087,7 @@ class Announcement(models.Model):
         from users.models import CustomUser
         from academics.models import Subject
 
-        teachers = CustomUser.objects.filter(role='teacher', is_active=True)
+        teachers = CustomUser.objects.filter(role='teacher', is_active=True, school=self.school)
 
         if self.teacher_filter == 'all':
             return teachers
@@ -1170,9 +1169,9 @@ class Announcement(models.Model):
         recipients = []
 
         if self.audience == 'specific':
-            recipients = list(self.specific_users.all())
+            recipients = list(self.specific_users.filter(school=self.school))
         elif self.audience == 'everyone':
-            recipients = list(CustomUser.objects.filter(is_active=True))
+            recipients = list(CustomUser.objects.filter(is_active=True, school=self.school))
         elif self.audience == 'students':
             recipients = list(self.get_filtered_students())
         elif self.audience == 'parents':
@@ -1181,7 +1180,6 @@ class Announcement(models.Model):
             recipients = list(self.get_filtered_teachers())
 
         logger.info(f"📧 Creating announcement for {len(recipients)} recipients")
-        print(f"📧 Creating announcement for {len(recipients)} recipients")
 
         # Create notifications in bulk
         notifications_to_create = []
@@ -1205,20 +1203,16 @@ class Announcement(models.Model):
         notifications_created = len(created_notifications)
         
         logger.info(f"✅ Created {notifications_created} notifications in database")
-        print(f"✅ Created {notifications_created} notifications in database")
 
         # ============================================================================
         # SEND EMAILS IMMEDIATELY (manually, since bulk_create doesn't trigger signals)
         # ============================================================================
-        print(f"📧 Attempting to send emails to {len(created_notifications)} recipients...")
         logger.info(f"📧 Attempting to send emails")
         
         try:
             from logs.email_service import send_notification_email
-            print("✅ Email service imported successfully")
             logger.info("✅ Email service imported")
         except ImportError as e:
-            print(f"❌ FAILED to import email_service: {e}")
             logger.error(f"❌ Failed to import email_service: {e}")
             # Update status and return without emails
             self.send_status = 'sent'
@@ -1229,8 +1223,13 @@ class Announcement(models.Model):
                 self.next_send_date = self.last_sent_date + timedelta(days=self.recurrence_days)
                 self.send_status = 'scheduled'
             self.save()
-            return notifications_created
-        
+            return {
+                'notifications_created': notifications_created,
+                'emails_sent': 0,
+                'emails_failed': 0,
+                'emails_skipped': notifications_created,
+            }
+
         emails_sent = 0
         emails_failed = 0
         emails_skipped = 0
@@ -1256,11 +1255,9 @@ class Announcement(models.Model):
                     
             except Exception as e:
                 logger.error(f"❌ Failed to send email to {notification.recipient.email}: {str(e)}")
-                print(f"❌ Failed to send email to {notification.recipient.email}: {str(e)}")
                 emails_failed += 1
         
         logger.info(f"📊 Email Summary: {emails_sent} sent, {emails_failed} failed, {emails_skipped} skipped")
-        print(f"📊 Email Summary: {emails_sent} sent, {emails_failed} failed, {emails_skipped} skipped")
 
         # Update send status and timing
         self.send_status = 'sent'
@@ -1275,4 +1272,149 @@ class Announcement(models.Model):
 
         self.save()
 
-        return notifications_created
+        return {
+            'notifications_created': notifications_created,
+            'emails_sent': emails_sent,
+            'emails_failed': emails_failed,
+            'emails_skipped': emails_skipped,
+        }
+
+
+# ============================================================================
+# STAFF MANAGEMENT MODELS
+# ============================================================================
+
+class StaffScheduleGroup(models.Model):
+    """Schedule template for staff (e.g., Full-time Mon-Fri 8am-4pm)."""
+    school = models.ForeignKey(
+        School,
+        on_delete=models.CASCADE,
+        related_name='staff_schedule_groups',
+        null=True,
+        blank=True
+    )
+    name = models.CharField(max_length=100)
+    days = models.JSONField(
+        help_text="List of weekday numbers: 0=Mon, 1=Tue, ..., 6=Sun"
+    )
+    start_time = models.TimeField(help_text="Scheduled start time")
+    end_time = models.TimeField(help_text="Scheduled end time")
+    grace_period_minutes = models.IntegerField(
+        default=30,
+        help_text="Minutes before/after scheduled time when booking is allowed"
+    )
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['name']
+        unique_together = ('school', 'name')
+
+    def __str__(self):
+        return f"{self.name} ({self.school})"
+
+
+class StaffScheduleAssignment(models.Model):
+    """Links a teacher to a schedule group."""
+    school = models.ForeignKey(
+        School,
+        on_delete=models.CASCADE,
+        related_name='staff_schedule_assignments',
+        null=True,
+        blank=True
+    )
+    teacher = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        limit_choices_to={'role': 'teacher'},
+        related_name='schedule_assignments'
+    )
+    schedule_group = models.ForeignKey(
+        StaffScheduleGroup,
+        on_delete=models.CASCADE,
+        related_name='assignments'
+    )
+    effective_from = models.DateField(help_text="Date from which this assignment is active")
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('teacher', 'schedule_group')
+        ordering = ['-effective_from']
+
+    def __str__(self):
+        return f"{self.teacher.get_full_name()} -> {self.schedule_group.name}"
+
+
+class StaffAttendanceRecord(models.Model):
+    """Daily booking record for a teacher."""
+    BOOKING_STATUS_CHOICES = [
+        ('ON_TIME', 'On Time'),
+        ('LATE', 'Late'),
+    ]
+
+    school = models.ForeignKey(
+        School,
+        on_delete=models.CASCADE,
+        related_name='staff_attendance_records',
+        null=True,
+        blank=True
+    )
+    teacher = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        limit_choices_to={'role': 'teacher'},
+        related_name='staff_attendance_records'
+    )
+    date = models.DateField()
+    schedule_group = models.ForeignKey(
+        StaffScheduleGroup,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='attendance_records',
+        help_text="Snapshot of which schedule was active"
+    )
+    scheduled_start = models.TimeField(help_text="Snapshot of scheduled start at time of booking")
+    scheduled_end = models.TimeField(help_text="Snapshot of scheduled end at time of booking")
+    book_on_time = models.DateTimeField(null=True, blank=True, help_text="Actual book-on timestamp")
+    book_off_time = models.DateTimeField(null=True, blank=True, help_text="Actual book-off timestamp")
+    book_on_status = models.CharField(
+        max_length=10,
+        choices=BOOKING_STATUS_CHOICES,
+        null=True,
+        blank=True
+    )
+    book_off_status = models.CharField(
+        max_length=10,
+        choices=BOOKING_STATUS_CHOICES,
+        null=True,
+        blank=True
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ('teacher', 'date')
+        ordering = ['-date', 'teacher__last_name']
+
+    def __str__(self):
+        return f"{self.teacher.get_full_name()} - {self.date}"
+
+
+class StaffManagementSettings(models.Model):
+    """Per-school settings for staff management."""
+    school = models.OneToOneField(
+        School,
+        on_delete=models.CASCADE,
+        related_name='staff_management_settings'
+    )
+    allow_late_booking = models.BooleanField(
+        default=True,
+        help_text="If False, block booking after grace period entirely"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"Staff Settings ({self.school.name})"

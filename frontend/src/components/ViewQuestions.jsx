@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Edit2, Eye } from 'lucide-react';
 import API_BASE_URL from '../config';
+import { useSchool } from '../contexts/SchoolContext';
 
 import './ViewQuestions.css';
 
 const ViewQuestions = () => {
+  const { buildApiUrl } = useSchool();
   const [sessions, setSessions] = useState([]);
   const [subjects, setSubjects] = useState([]);
   const [assessments, setAssessments] = useState([]);
@@ -38,7 +40,7 @@ const ViewQuestions = () => {
       setLoading(true);
       const token = localStorage.getItem('accessToken');
 
-      const response = await fetch(`${API_BASE_URL}/api/academics/teacher/assigned-subjects/`, {
+      const response = await fetch(buildApiUrl('/academics/teacher/assigned-subjects/'), {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -102,7 +104,7 @@ const ViewQuestions = () => {
       setError(null);
       const token = localStorage.getItem('accessToken');
 
-      const response = await fetch(`${API_BASE_URL}/api/academics/teacher/assessments/`, {
+      const response = await fetch(buildApiUrl('/academics/teacher/assessments/'), {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -240,7 +242,7 @@ const ViewQuestions = () => {
         body = JSON.stringify(updateData);
       }
 
-      const response = await fetch(`${API_BASE_URL}/api/academics/questions/${editingQuestion.id}/`, {
+      const response = await fetch(buildApiUrl(`/academics/questions/${editingQuestion.id}/`), {
         method: 'PATCH',
         headers: headers,
         body: body

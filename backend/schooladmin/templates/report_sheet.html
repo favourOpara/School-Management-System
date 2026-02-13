@@ -256,7 +256,7 @@
             <div class="school-logo">
                 <img src="{{ logo_url }}" alt="School Logo" />
             </div>
-            <h1 class="school-name">Figil High School</h1>
+            <h1 class="school-name">{{ school_name|default:"School Name" }}</h1>
             <h2 class="report-title">Student Result Management System</h2>
             <p class="report-term">
                 Term {{ term_text }} ({{ session.academic_year }} Academic Session Report)

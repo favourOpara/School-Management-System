@@ -1,5 +1,5 @@
 // src/pages/ParentDashboard.jsx
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, Suspense } from 'react';
 import { useLocation } from 'react-router-dom';
 import { DollarSign, Users, AlertCircle, CheckCircle, Clock, Trophy, Lock, TrendingDown, ClipboardList } from 'lucide-react';
 import RoleBasedSidebar from '../components/RoleBasedSidebar';
@@ -11,9 +11,11 @@ import NotificationPopup from '../components/NotificationPopup';
 import TopHeader from '../components/TopHeader';
 import PasswordChange from '../components/PasswordChange';
 import ParentWelcome from '../components/ParentWelcome';
-import API_BASE_URL from '../config';
+import { useSchool } from '../contexts/SchoolContext';
 
 import './ParentDashboard.css';
+
+const KnowledgeBase = React.lazy(() => import('../components/KnowledgeBase'));
 
 const getGreeting = () => {
   const hour = new Date().getHours();
@@ -24,6 +26,7 @@ const getGreeting = () => {
 
 const ParentDashboard = () => {
   const location = useLocation();
+  const { school, buildApiUrl } = useSchool();
   const [activeTab, setActiveTab] = useState('dashboard');
   const [userName, setUserName] = useState('');
   const [showPasswordChange, setShowPasswordChange] = useState(false);
@@ -68,7 +71,7 @@ const ParentDashboard = () => {
     try {
       setLoadingChildren(true);
       const token = localStorage.getItem('accessToken');
-      const response = await fetch(`${API_BASE_URL}/api/schooladmin/parent/children/`, {
+      const response = await fetch(buildApiUrl('/schooladmin/parent/children/'), {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -93,7 +96,7 @@ const ParentDashboard = () => {
     try {
       setLoadingFees(true);
       const token = localStorage.getItem('accessToken');
-      const response = await fetch(`${API_BASE_URL}/api/schooladmin/parent/child/${childId}/fees/`, {
+      const response = await fetch(buildApiUrl(`/schooladmin/parent/child/${childId}/fees/`), {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -115,7 +118,7 @@ const ParentDashboard = () => {
     try {
       setLoadingAcademic(true);
       const token = localStorage.getItem('accessToken');
-      const response = await fetch(`${API_BASE_URL}/api/schooladmin/parent/child/${childId}/academic/`, {
+      const response = await fetch(buildApiUrl(`/schooladmin/parent/child/${childId}/academic/`), {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -137,7 +140,7 @@ const ParentDashboard = () => {
     try {
       setLoadingSubjects(true);
       const token = localStorage.getItem('accessToken');
-      const response = await fetch(`${API_BASE_URL}/api/schooladmin/parent/child/${childId}/subjects/`, {
+      const response = await fetch(buildApiUrl(`/schooladmin/parent/child/${childId}/subjects/`), {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -159,7 +162,7 @@ const ParentDashboard = () => {
     try {
       setLoadingAssignments(true);
       const token = localStorage.getItem('accessToken');
-      const response = await fetch(`${API_BASE_URL}/api/schooladmin/parent/child/${childId}/assignments/`, {
+      const response = await fetch(buildApiUrl(`/schooladmin/parent/child/${childId}/assignments/`), {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -515,6 +518,12 @@ const ParentDashboard = () => {
             <p className="parent-dashboard-section-text">Adjust your account settings and notification preferences.</p>
           </div>
         );
+      case 'knowledge-base':
+        return (
+          <Suspense fallback={<div className="kb-loading">Loading...</div>}>
+            <KnowledgeBase userRole="parent" />
+          </Suspense>
+        );
       default:
         return (
           <div className="parent-dashboard-section">
@@ -524,8 +533,16 @@ const ParentDashboard = () => {
     }
   };
 
+  // Apply accent color as CSS variable at the container level
+  const containerStyle = school?.accent_color ? {
+    '--accent-color': school.accent_color,
+    '--accent-color-dark': school.secondary_color || school.accent_color,
+    '--sidebar-accent': school.accent_color,
+    '--sidebar-accent-dark': school.secondary_color || school.accent_color,
+  } : {};
+
   return (
-    <div className="parent-dashboard-container">
+    <div className="parent-dashboard-container" style={containerStyle}>
       <RoleBasedSidebar
         ref={sidebarRef}
         userRole="parent"

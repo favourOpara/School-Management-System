@@ -2,10 +2,12 @@
 import React, { useState, useEffect } from 'react';
 import { X, Loader, CheckCircle, XCircle, AlertTriangle, DollarSign, BookOpen, HelpCircle } from 'lucide-react';
 import API_BASE_URL from '../config';
+import { useSchool } from '../contexts/SchoolContext';
 
 import './ReportSentModal.css';
 
 const ReportSentModal = ({ classData, onClose }) => {
+  const { buildApiUrl } = useSchool();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [students, setStudents] = useState([]);
@@ -13,8 +15,12 @@ const ReportSentModal = ({ classData, onClose }) => {
 
   useEffect(() => {
     if (classData) {
+      document.body.style.overflow = 'hidden';
       fetchStudents();
+    } else {
+      document.body.style.overflow = '';
     }
+    return () => { document.body.style.overflow = ''; };
   }, [classData]);
 
   const fetchStudents = async () => {
@@ -24,7 +30,7 @@ const ReportSentModal = ({ classData, onClose }) => {
       const token = localStorage.getItem('accessToken');
 
       const response = await fetch(
-        `${API_BASE_URL}/api/schooladmin/analytics/reports-sent/class/${classData.class_session_id}/students/`,
+        buildApiUrl(`/schooladmin/analytics/reports-sent/class/${classData.class_session_id}/students/`),
         {
           headers: { 'Authorization': `Bearer ${token}` }
         }

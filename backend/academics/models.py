@@ -27,10 +27,16 @@ class Department(models.Model):
         ('Commercial', 'Commercial'),
     ]
 
+    school = models.ForeignKey(
+        School,
+        on_delete=models.CASCADE,
+        related_name='departments',
+        null=True,  # Temporarily nullable for migration
+        blank=True
+    )
     name = models.CharField(
         max_length=20,
         choices=DEPARTMENT_CHOICES,
-        unique=True,
         help_text="Department name"
     )
     description = models.TextField(blank=True)
@@ -41,6 +47,7 @@ class Department(models.Model):
 
     class Meta:
         ordering = ['name']
+        unique_together = ('school', 'name')
 
 
 class Class(models.Model):
@@ -70,7 +77,7 @@ class Class(models.Model):
 
 class ClassSession(models.Model):
     classroom = models.ForeignKey(Class, on_delete=models.CASCADE, related_name='sessions')
-    academic_year = models.CharField(max_length=9, default="2024/2025")
+    academic_year = models.CharField(max_length=9)
     term = models.CharField(
         max_length=20,
         choices=[
@@ -78,7 +85,6 @@ class ClassSession(models.Model):
             ("Second Term", "Second Term"),
             ("Third Term", "Third Term"),
         ],
-        default="First Term"
     )
 
     class Meta:

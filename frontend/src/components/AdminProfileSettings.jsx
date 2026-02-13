@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import API_BASE_URL from '../config';
+import { useSchool } from '../contexts/SchoolContext';
 
 import './AdminProfileSettings.css';
 
 const AdminProfileSettings = ({ onClose }) => {
+  const { buildApiUrl } = useSchool();
   const [activeTab, setActiveTab] = useState('username');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState(null);
@@ -32,7 +34,7 @@ const AdminProfileSettings = ({ onClose }) => {
     try {
       const token = localStorage.getItem('accessToken');
       const response = await axios.post(
-        `${API_BASE_URL}/api/users/admin/change-username/`,
+        buildApiUrl('/users/admin/change-username/'),
         usernameData,
         {
           headers: {
@@ -74,7 +76,7 @@ const AdminProfileSettings = ({ onClose }) => {
     try {
       const token = localStorage.getItem('accessToken');
       const response = await axios.post(
-        `${API_BASE_URL}/api/users/admin/change-password/`,
+        buildApiUrl('/users/admin/change-password/'),
         passwordData,
         {
           headers: {

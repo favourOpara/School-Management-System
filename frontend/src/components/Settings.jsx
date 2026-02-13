@@ -1,11 +1,14 @@
 // src/components/Settings.jsx
 import React, { useState, useEffect } from 'react';
-import { Save, AlertCircle, CheckCircle, Settings as SettingsIcon, Trash2, X } from 'lucide-react';
+import { Save, AlertCircle, CheckCircle, Settings as SettingsIcon, Trash2, X, Building2, GraduationCap } from 'lucide-react';
 import API_BASE_URL from '../config';
+import { useSchool } from '../contexts/SchoolContext';
+import SchoolConfiguration from './SchoolConfiguration';
 
 import './Settings.css';
 
 const Settings = () => {
+  const { buildApiUrl } = useSchool();
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [messageType, setMessageType] = useState('');
@@ -41,7 +44,7 @@ const Settings = () => {
   });
   
   // Tab State
-  const [activeTab, setActiveTab] = useState('grading-config');
+  const [activeTab, setActiveTab] = useState('school-branding');
 
   useEffect(() => {
     fetchAllData();
@@ -51,15 +54,15 @@ const Settings = () => {
     try {
       setLoading(true);
       const token = localStorage.getItem('accessToken');
-      
+
       // Fetch sessions to get academic years and terms
-      const sessionResponse = await fetch(`${API_BASE_URL}/api/academics/sessions/`, {
+      const sessionResponse = await fetch(buildApiUrl('/academics/sessions/'), {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (sessionResponse.ok) {
         const sessionData = await sessionResponse.json();
         setSessions(sessionData || []);
-        
+
         const uniqueYears = [...new Set(sessionData.map(s => s.academic_year))];
         const uniqueTerms = [...new Set(sessionData.map(s => s.term))];
         setAcademicYears(uniqueYears);
@@ -67,7 +70,7 @@ const Settings = () => {
       }
 
       // Fetch grading configurations
-      const configResponse = await fetch(`${API_BASE_URL}/api/schooladmin/grading/configurations/`, {
+      const configResponse = await fetch(buildApiUrl('/schooladmin/grading/configurations/'), {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (configResponse.ok) {
@@ -76,7 +79,7 @@ const Settings = () => {
       }
 
       // Fetch grading scales
-      const scaleResponse = await fetch(`${API_BASE_URL}/api/schooladmin/grading/scales/`, {
+      const scaleResponse = await fetch(buildApiUrl('/schooladmin/grading/scales/'), {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (scaleResponse.ok) {
@@ -110,12 +113,12 @@ const Settings = () => {
 
   const handleDeleteConfig = async () => {
     const { id } = deleteConfirm;
-    
+
     try {
       setLoading(true);
       const token = localStorage.getItem('accessToken');
-      
-      const response = await fetch(`${API_BASE_URL}/api/schooladmin/grading/configurations/${id}/`, {
+
+      const response = await fetch(buildApiUrl(`/schooladmin/grading/configurations/${id}/`), {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -139,12 +142,12 @@ const Settings = () => {
 
   const handleDeleteScale = async () => {
     const { id } = deleteConfirm;
-    
+
     try {
       setLoading(true);
       const token = localStorage.getItem('accessToken');
-      
-      const response = await fetch(`${API_BASE_URL}/api/schooladmin/grading/scales/${id}/`, {
+
+      const response = await fetch(buildApiUrl(`/schooladmin/grading/scales/${id}/`), {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -211,8 +214,8 @@ const Settings = () => {
     try {
       setLoading(true);
       const token = localStorage.getItem('accessToken');
-      
-      const response = await fetch(`${API_BASE_URL}/api/schooladmin/grading/configurations/`, {
+
+      const response = await fetch(buildApiUrl('/schooladmin/grading/configurations/'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -246,8 +249,8 @@ const Settings = () => {
   };
 
   const handleCreateScale = async () => {
-    if (newScale.a_min_score <= newScale.b_min_score || 
-        newScale.b_min_score <= newScale.c_min_score || 
+    if (newScale.a_min_score <= newScale.b_min_score ||
+        newScale.b_min_score <= newScale.c_min_score ||
         newScale.c_min_score <= newScale.d_min_score) {
       showMessage('Grade boundaries must be in descending order (A > B > C > D)', 'error');
       return;
@@ -256,8 +259,8 @@ const Settings = () => {
     try {
       setLoading(true);
       const token = localStorage.getItem('accessToken');
-      
-      const response = await fetch(`${API_BASE_URL}/api/schooladmin/grading/scales/`, {
+
+      const response = await fetch(buildApiUrl('/schooladmin/grading/scales/'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -310,21 +313,34 @@ const Settings = () => {
       )}
 
       <div className="settings-tabs">
-        <button 
+        <button
+          className={activeTab === 'school-branding' ? 'active' : ''}
+          onClick={() => setActiveTab('school-branding')}
+        >
+          <Building2 size={16} />
+          School Branding
+        </button>
+        <button
           className={activeTab === 'grading-config' ? 'active' : ''}
           onClick={() => setActiveTab('grading-config')}
         >
+          <GraduationCap size={16} />
           Grading Configuration
         </button>
-        <button 
+        <button
           className={activeTab === 'grading-scales' ? 'active' : ''}
           onClick={() => setActiveTab('grading-scales')}
         >
-          Grading Scales (A,B,C,D,F)
+          <GraduationCap size={16} />
+          Grading Scales
         </button>
       </div>
 
       <div className="settings-content">
+        {activeTab === 'school-branding' && (
+          <SchoolConfiguration />
+        )}
+
         {activeTab === 'grading-config' && (
           <>
             <div className="settings-section">

@@ -19,8 +19,9 @@ import {
   Phone,
   MapPin,
   Lock,
+  AlertCircle,
 } from 'lucide-react';
-import { API_ENDPOINTS } from '../../config';
+import { PUBLIC_ENDPOINTS, buildPublicApiUrl } from '../../config';
 import './SchoolRegistration.css';
 
 const steps = [
@@ -37,6 +38,7 @@ function SchoolRegistration() {
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [adminCredentials, setAdminCredentials] = useState(null); // School system admin credentials
   const [slugAvailable, setSlugAvailable] = useState(null);
   const [checkingSlug, setCheckingSlug] = useState(false);
   const [plans, setPlans] = useState([]);
@@ -76,7 +78,7 @@ function SchoolRegistration() {
 
   const fetchPlans = async () => {
     try {
-      const response = await fetch(`${API_ENDPOINTS.base}/api/public/plans/`);
+      const response = await fetch(PUBLIC_ENDPOINTS.plans);
       if (response.ok) {
         const data = await response.json();
         setPlans(data);
@@ -86,6 +88,8 @@ function SchoolRegistration() {
             setFormData((prev) => ({ ...prev, plan_id: freePlan.id }));
           }
         }
+      } else {
+        console.error('Failed to fetch plans, status:', response.status);
       }
     } catch (err) {
       console.error('Failed to fetch plans:', err);
@@ -110,7 +114,7 @@ function SchoolRegistration() {
     setCheckingSlug(true);
     try {
       const response = await fetch(
-        `${API_ENDPOINTS.base}/api/public/check-slug/${slug}/`
+        PUBLIC_ENDPOINTS.checkSlug(slug)
       );
       const data = await response.json();
       setSlugAvailable(data.available);
@@ -203,7 +207,7 @@ function SchoolRegistration() {
     setError(null);
 
     try {
-      const response = await fetch(`${API_ENDPOINTS.base}/api/public/register/`, {
+      const response = await fetch(PUBLIC_ENDPOINTS.register, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -233,13 +237,20 @@ function SchoolRegistration() {
         window.location.href = data.payment.authorization_url;
       } else {
         setSuccess(true);
-        setTimeout(() => {
-          const slug = formData.school_name
-            .toLowerCase()
-            .replace(/[^a-z0-9\s-]/g, '')
-            .replace(/\s+/g, '-');
-          navigate(`/${slug}`);
-        }, 3000);
+        // Store the admin credentials for display
+        if (data.admin_credentials) {
+          setAdminCredentials(data.admin_credentials);
+        }
+        // Store flag for first-time setup redirect
+        const slug = formData.school_name
+          .toLowerCase()
+          .replace(/[^a-z0-9\s-]/g, '')
+          .replace(/\s+/g, '-')
+          .replace(/-+/g, '-')
+          .trim();
+        localStorage.setItem('firstTimeSetup', 'true');
+        localStorage.setItem('schoolSlug', slug);
+        // Don't auto-redirect - let user copy credentials first
       }
     } catch (err) {
       setError(err.message);
@@ -382,15 +393,77 @@ function SchoolRegistration() {
                 <Check />
               </div>
               <h2 className="register-success-title">Registration Successful!</h2>
+
+              {adminCredentials && (
+                <div className="register-credentials-box">
+                  <div className="register-credentials-warning">
+                    <AlertCircle size={20} />
+                    <p><strong>Save these credentials!</strong> You'll need them to access your School Management System.</p>
+                  </div>
+                  <div className="register-credentials-content">
+                    <div className="register-credential-item">
+                      <span className="register-credential-label">Username:</span>
+                      <code className="register-credential-value">{adminCredentials.username}</code>
+                      <button
+                        type="button"
+                        className="register-copy-btn"
+                        onClick={() => {
+                          navigator.clipboard.writeText(adminCredentials.username);
+                        }}
+                      >
+                        Copy
+                      </button>
+                    </div>
+                    <div className="register-credential-item">
+                      <span className="register-credential-label">Password:</span>
+                      <code className="register-credential-value">{adminCredentials.password}</code>
+                      <button
+                        type="button"
+                        className="register-copy-btn"
+                        onClick={() => {
+                          navigator.clipboard.writeText(adminCredentials.password);
+                        }}
+                      >
+                        Copy
+                      </button>
+                    </div>
+                  </div>
+                  <p className="register-credentials-note">
+                    These credentials are for the <strong>School Management System</strong>, separate from your Admin Portal login.
+                  </p>
+                </div>
+              )}
+
               <p className="register-success-text">
-                We've sent a verification email to <strong>{formData.admin_email}</strong>
+                Your Admin Portal login: <strong>{formData.admin_email}</strong>
               </p>
               <p className="register-success-subtext">
-                Please verify your email to activate your account.
+                Use the Admin Portal to manage branding, subscriptions, and admin accounts.
               </p>
-              <div className="register-success-redirect">
-                <Loader2 className="register-spinner" />
-                <span>Redirecting to your dashboard...</span>
+
+              <div className="register-success-actions">
+                <button
+                  type="button"
+                  className="register-btn-portal"
+                  onClick={() => navigate('/portal')}
+                >
+                  Go to Admin Portal
+                </button>
+                <button
+                  type="button"
+                  className="register-btn-school"
+                  onClick={() => {
+                    const slug = formData.school_name
+                      .toLowerCase()
+                      .replace(/[^a-z0-9\s-]/g, '')
+                      .replace(/\s+/g, '-')
+                      .replace(/-+/g, '-')
+                      .trim();
+                    navigate(`/${slug}`);
+                  }}
+                >
+                  Go to School Login
+                </button>
               </div>
             </div>
           ) : (

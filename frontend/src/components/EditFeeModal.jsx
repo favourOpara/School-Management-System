@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Select from 'react-select';
 import axios from 'axios';
 import API_BASE_URL from '../config';
+import { useSchool } from '../contexts/SchoolContext';
 
 import './EditFeeModal.css';
 
@@ -43,6 +44,7 @@ const customSelectStyles = {
 };
 
 const EditFeeModal = ({ fee, onClose, onUpdated }) => {
+  const { buildApiUrl } = useSchool();
   const token = localStorage.getItem('accessToken');
   const [name, setName] = useState(fee.name);
   const [amount, setAmount] = useState(fee.amount);
@@ -57,10 +59,10 @@ const EditFeeModal = ({ fee, onClose, onUpdated }) => {
     const fetchInitialData = async () => {
       try {
         const [classRes, sessionRes] = await Promise.all([
-          axios.get(`${API_BASE_URL}/api/academics/classes/`, {
+          axios.get(buildApiUrl('/academics/classes/'), {
             headers: { Authorization: `Bearer ${token}` }
           }),
-          axios.get(`${API_BASE_URL}/api/academics/sessions/`, {
+          axios.get(buildApiUrl('/academics/sessions/'), {
             headers: { Authorization: `Bearer ${token}` }
           }),
         ]);
@@ -89,7 +91,7 @@ const EditFeeModal = ({ fee, onClose, onUpdated }) => {
 
     try {
       const response = await axios.put(
-        `${API_BASE_URL}/api/schooladmin/fees/${fee.id}/edit/`,
+        buildApiUrl(`/schooladmin/fees/${fee.id}/update/`),
         {
           name,
           amount,

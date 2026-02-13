@@ -15,9 +15,9 @@
   margin-bottom: 3rem;
   margin-top: -1rem;
   padding: 2rem;
-  background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+  background: linear-gradient(135deg, var(--accent-color, #3b82f6) 0%, var(--accent-color-dark, #1d4ed8) 100%);
   border-radius: 16px;
-  box-shadow: 0 10px 30px rgba(59, 130, 246, 0.25);
+  box-shadow: 0 10px 30px color-mix(in srgb, var(--accent-color, #3b82f6) 25%, transparent);
   position: relative;
   overflow: hidden;
 }
@@ -57,7 +57,7 @@
 }
 
 .welcome-robot-icon svg:first-child {
-  color: #3b82f6;
+  color: var(--accent-color, #3b82f6);
 }
 
 @keyframes robotFloat {
