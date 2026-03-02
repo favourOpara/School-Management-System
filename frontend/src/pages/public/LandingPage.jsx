@@ -563,6 +563,86 @@ function LandingPage() {
         </div>
       </section>
 
+      {/* AI Section */}
+      <section className="landing-ai-section">
+        <div className="landing-ai-container">
+          <div className="landing-ai-text" data-aos="fade-right">
+            <div className="landing-ai-badge">
+              <Sparkles size={14} />
+              <span>POWERED BY AI</span>
+            </div>
+            <h2 className="landing-ai-title">
+              AI Built Into<br />
+              <span className="landing-ai-title-accent">Every Classroom</span>
+            </h2>
+            <p className="landing-ai-subtitle">
+              EduCare brings AI directly into your school — helping students learn faster and giving teachers smarter, instant feedback on their lesson notes.
+            </p>
+            <div className="landing-ai-features">
+              <div className="landing-ai-feature">
+                <div className="landing-ai-feature-icon">
+                  <BookOpen size={20} />
+                </div>
+                <div>
+                  <strong>AI Academic Assistant for Students</strong>
+                  <p>Students get instant, subject-specific explanations — helping them understand topics outside the classroom, at any time of day.</p>
+                </div>
+              </div>
+              <div className="landing-ai-feature">
+                <div className="landing-ai-feature-icon">
+                  <FileText size={20} />
+                </div>
+                <div>
+                  <strong>AI Lesson Note Review for Teachers</strong>
+                  <p>Teachers submit their lesson notes and receive intelligent AI feedback — improving content quality and classroom preparation automatically.</p>
+                </div>
+              </div>
+            </div>
+            <div className="landing-ai-plan-note">
+              <Sparkles size={14} />
+              Available on Premium &amp; Custom plans
+            </div>
+          </div>
+
+          <div className="landing-ai-visual" data-aos="fade-left" data-aos-delay="100">
+            <div className="landing-ai-chat-card">
+              <div className="landing-ai-chat-header">
+                <div className="landing-ai-chat-header-icon">
+                  <Sparkles size={14} />
+                </div>
+                <span>AI Academic Assistant</span>
+                <span className="landing-ai-chat-live">● Live</span>
+              </div>
+              <div className="landing-ai-chat-body">
+                <div className="landing-ai-chat-msg user">
+                  <p>Can you explain photosynthesis in simple terms?</p>
+                </div>
+                <div className="landing-ai-chat-msg ai">
+                  <p>Sure! 🌱 Photosynthesis is how plants make food using sunlight. They take in <strong>water</strong> from roots and <strong>CO₂</strong> from air, then convert them into <strong>glucose</strong> and release oxygen — which we breathe!</p>
+                </div>
+                <div className="landing-ai-chat-msg user">
+                  <p>What's the chemical equation?</p>
+                </div>
+                <div className="landing-ai-typing">
+                  <span /><span /><span />
+                </div>
+              </div>
+            </div>
+
+            <div className="landing-ai-review-card">
+              <div className="landing-ai-review-header">
+                <FileText size={14} />
+                <span>Lesson Note Review</span>
+                <span className="landing-ai-review-score">Score: 87/100</span>
+              </div>
+              <p className="landing-ai-review-text">
+                "Well-structured introduction. Consider adding more real-world examples in section 3 to improve student engagement."
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Features Section */}
       <section id="features" className="landing-features">
         <div className="landing-features-container">
