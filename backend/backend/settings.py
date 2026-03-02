@@ -208,11 +208,12 @@ SIMPLE_JWT = {
 }
 
 # Frontend URL for email verification links
-FRONTEND_URL = config('FRONTEND_URL', default='http://localhost:5173')
+FRONTEND_URL = config('FRONTEND_URL', default='https://figilschools.com')
 
 # CORS Configuration
 CORS_ALLOWED_ORIGINS = [
-    'https://enchanting-luck-production.up.railway.app',
+    'https://figilschools.com',
+    'https://www.figilschools.com',
     'http://localhost:5173',
     'http://localhost:3000',
 ]
