@@ -309,28 +309,30 @@ class SendEmailOTPView(APIView):
         if not email:
             return Response({'error': 'Email is required.'}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Basic rate limit: block if an OTP was sent within the last 60 seconds
+        # Rate limit: only block if a *successfully sent* OTP exists within 60 seconds
+        # (verified=False AND created within 60s means it was just sent successfully)
         recent_cutoff = timezone.now() - timedelta(seconds=60)
-        if EmailOTP.objects.filter(email__iexact=email, created_at__gte=recent_cutoff).exists():
+        recent_otp = EmailOTP.objects.filter(email__iexact=email, created_at__gte=recent_cutoff).first()
+        if recent_otp and recent_otp.sent:
             return Response(
                 {'error': 'A code was just sent. Please wait 60 seconds before requesting another.'},
                 status=status.HTTP_429_TOO_MANY_REQUESTS
             )
 
-        # Delete all previous OTPs for this email
-        EmailOTP.objects.filter(email__iexact=email).delete()
-
-        # Generate and save a new OTP
+        # Generate the OTP value
         otp = f"{random.randint(100000, 999999)}"
-        EmailOTP.objects.create(email=email, otp=otp)
 
-        # Send the email
+        # Send the email FIRST — only save to DB if it succeeds
         try:
             from .educare_emails import send_otp_email
             send_otp_email(email=email, otp=otp, first_name=first_name)
         except Exception as e:
             logger.error(f"Failed to send OTP email to {email}: {e}")
             return Response({'error': 'Failed to send email. Please try again.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        # Email sent — now clean up old OTPs and save the new one
+        EmailOTP.objects.filter(email__iexact=email).delete()
+        EmailOTP.objects.create(email=email, otp=otp, sent=True)
 
         return Response({'message': 'Verification code sent. Check your inbox.'})
 

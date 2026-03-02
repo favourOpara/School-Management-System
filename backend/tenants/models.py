@@ -542,6 +542,7 @@ class EmailOTP(models.Model):
     otp = models.CharField(max_length=6)
     created_at = models.DateTimeField(auto_now_add=True)
     verified = models.BooleanField(default=False)
+    sent = models.BooleanField(default=False)  # True only if email was delivered
 
     class Meta:
         ordering = ['-created_at']
