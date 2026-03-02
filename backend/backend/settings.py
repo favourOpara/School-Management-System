@@ -89,6 +89,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'corsheaders',
     'django_apscheduler',
+    'anymail',
     # Project apps
     'tenants',  # Must come before other project apps
     'users',
@@ -243,18 +244,15 @@ CORS_ALLOW_METHODS = [
     'PUT',
 ]
 
-# Email Configuration (Brevo SMTP)
-EMAIL_BACKEND = config('EMAIL_BACKEND', default='django.core.mail.backends.smtp.EmailBackend')
-EMAIL_HOST = config('EMAIL_HOST')
-EMAIL_PORT = config('EMAIL_PORT', default=587, cast=int)
-EMAIL_USE_TLS = config('EMAIL_USE_TLS', default=True, cast=bool)
-EMAIL_HOST_USER = config('EMAIL_HOST_USER')
-EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD')
-DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL')
+# Email Configuration (Brevo HTTP API via django-anymail)
+# Uses HTTP instead of SMTP — works on Railway and all cloud platforms
+EMAIL_BACKEND = config('EMAIL_BACKEND', default='anymail.backends.brevo.EmailBackend')
+DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='office@figilschools.com')
+EMAIL_USE_LOCALTIME = False
 
-# Email timeout settings (IMPORTANT: prevents worker timeouts)
-EMAIL_TIMEOUT = 30  # 30 second timeout for SMTP connections
-EMAIL_USE_LOCALTIME = False  # Use UTC for email timestamps
+ANYMAIL = {
+    'BREVO_API_KEY': config('BREVO_API_KEY', default=''),
+}
 
 # Automated Backup Settings
 BACKUP_EMAIL = config('BACKUP_EMAIL', default='admin@yourschool.com')
