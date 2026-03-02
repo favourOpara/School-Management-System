@@ -501,6 +501,10 @@ class PortalUser(models.Model):
         help_text="Primary portal user (school owner)"
     )
 
+    # Email verification
+    email_verified = models.BooleanField(default=False)
+    email_verification_token = models.UUIDField(null=True, blank=True)
+
     # Timestamps
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -526,6 +530,29 @@ class PortalUser(models.Model):
 
     def get_full_name(self):
         return f"{self.first_name} {self.last_name}"
+
+
+class EmailOTP(models.Model):
+    """
+    One-time passcode for verifying an email address during registration.
+    Generated when a prospective school admin clicks "Send Code" in Step 2.
+    Expires after 15 minutes.
+    """
+    email = models.EmailField(db_index=True)
+    otp = models.CharField(max_length=6)
+    created_at = models.DateTimeField(auto_now_add=True)
+    verified = models.BooleanField(default=False)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"OTP for {self.email} ({'verified' if self.verified else 'pending'})"
+
+    def is_expired(self):
+        from django.utils import timezone
+        from datetime import timedelta
+        return timezone.now() > self.created_at + timedelta(minutes=15)
 
 
 class OnboardingAgent(models.Model):

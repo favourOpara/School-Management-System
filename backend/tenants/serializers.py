@@ -258,10 +258,24 @@ class SchoolRegistrationSerializer(serializers.Serializer):
         return value
 
     def validate_admin_email(self, value):
-        """Check if admin email is already in use for portal."""
+        """Check if admin email is already in use for portal, and that OTP was verified."""
         if PortalUser.objects.filter(email=value).exists():
             raise serializers.ValidationError(
                 "This email is already registered to another portal account."
+            )
+        # Ensure the email was verified via OTP before registration
+        from .models import EmailOTP
+        from django.utils import timezone
+        from datetime import timedelta
+        cutoff = timezone.now() - timedelta(minutes=30)
+        verified = EmailOTP.objects.filter(
+            email__iexact=value,
+            verified=True,
+            created_at__gte=cutoff,
+        ).exists()
+        if not verified:
+            raise serializers.ValidationError(
+                "Please verify your email address before registering."
             )
         return value
 
@@ -366,13 +380,15 @@ class SchoolRegistrationSerializer(serializers.Serializer):
             )
 
             # Create portal user (for Admin Portal authentication)
+            # Email is already verified via OTP before reaching this step
             portal_user = PortalUser.objects.create(
                 school=school,
                 email=validated_data['admin_email'],
                 first_name=validated_data['admin_first_name'],
                 last_name=validated_data['admin_last_name'],
                 is_active=True,
-                is_primary=True  # This is the primary portal user (school owner)
+                is_primary=True,  # This is the primary portal user (school owner)
+                email_verified=True,  # Verified via OTP during Step 2
             )
             portal_user.set_password(validated_data['admin_password'])
             portal_user.save()

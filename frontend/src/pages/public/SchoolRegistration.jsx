@@ -47,6 +47,15 @@ function SchoolRegistration() {
   const [trialCheckDone, setTrialCheckDone] = useState(false);
   const [trialIneligibleReason, setTrialIneligibleReason] = useState('');
 
+  // OTP state for Step 2 email verification
+  const [otpSent, setOtpSent] = useState(false);
+  const [otpVerified, setOtpVerified] = useState(false);
+  const [otpValue, setOtpValue] = useState('');
+  const [sendingOtp, setSendingOtp] = useState(false);
+  const [verifyingOtp, setVerifyingOtp] = useState(false);
+  const [otpError, setOtpError] = useState('');
+  const [otpCooldown, setOtpCooldown] = useState(0); // seconds left before resend allowed
+
   const [formData, setFormData] = useState({
     school_name: '',
     school_email: '',
@@ -161,11 +170,75 @@ function SchoolRegistration() {
     }
   };
 
+  const handleSendOtp = async () => {
+    const email = formData.admin_email.trim();
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return;
+    setSendingOtp(true);
+    setOtpError('');
+    try {
+      const response = await fetch(buildPublicApiUrl('/send-email-otp/'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, first_name: formData.admin_first_name || 'there' }),
+      });
+      const data = await response.json();
+      if (response.ok) {
+        setOtpSent(true);
+        setOtpValue('');
+        // Start 60-second cooldown
+        setOtpCooldown(60);
+        const interval = setInterval(() => {
+          setOtpCooldown((prev) => {
+            if (prev <= 1) { clearInterval(interval); return 0; }
+            return prev - 1;
+          });
+        }, 1000);
+      } else {
+        setOtpError(data.error || 'Failed to send code. Please try again.');
+      }
+    } catch {
+      setOtpError('Failed to send code. Please try again.');
+    } finally {
+      setSendingOtp(false);
+    }
+  };
+
+  const handleVerifyOtp = async () => {
+    if (otpValue.length !== 6) return;
+    setVerifyingOtp(true);
+    setOtpError('');
+    try {
+      const response = await fetch(buildPublicApiUrl('/verify-email-otp/'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: formData.admin_email.trim(), otp: otpValue }),
+      });
+      const data = await response.json();
+      if (response.ok && data.verified) {
+        setOtpVerified(true);
+        setErrors((prev) => ({ ...prev, admin_email: null }));
+      } else {
+        setOtpError(data.error || 'Incorrect code. Please try again.');
+      }
+    } catch {
+      setOtpError('Verification failed. Please try again.');
+    } finally {
+      setVerifyingOtp(false);
+    }
+  };
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
     if (errors[name]) {
       setErrors((prev) => ({ ...prev, [name]: null }));
+    }
+    // Reset OTP if email changes
+    if (name === 'admin_email') {
+      setOtpSent(false);
+      setOtpVerified(false);
+      setOtpValue('');
+      setOtpError('');
     }
   };
 
@@ -199,6 +272,8 @@ function SchoolRegistration() {
         newErrors.admin_email = 'Email is required';
       } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.admin_email)) {
         newErrors.admin_email = 'Invalid email address';
+      } else if (!otpVerified) {
+        newErrors.admin_email = 'Please verify your email address before continuing';
       }
       if (!formData.admin_password) {
         newErrors.admin_password = 'Password is required';
@@ -432,6 +507,7 @@ function SchoolRegistration() {
                 <Check />
               </div>
               <h2 className="register-success-title">Registration Successful!</h2>
+
 
               {adminCredentials && (
                 <div className="register-credentials-box">
@@ -701,8 +777,78 @@ function SchoolRegistration() {
                           onChange={handleChange}
                           placeholder="admin@yourschool.edu"
                           className={`register-input ${errors.admin_email ? 'error' : ''}`}
+                          disabled={otpVerified}
                         />
+                        {otpVerified && (
+                          <div className="register-input-status">
+                            <Check className="status-success" />
+                          </div>
+                        )}
                       </div>
+
+                      {/* OTP section */}
+                      {otpVerified ? (
+                        <p className="register-field-hint" style={{ color: '#10b981', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          <Check size={14} /> Email verified
+                        </p>
+                      ) : (
+                        <>
+                          <button
+                            type="button"
+                            className="register-send-otp-btn"
+                            onClick={handleSendOtp}
+                            disabled={
+                              sendingOtp ||
+                              otpCooldown > 0 ||
+                              !formData.admin_email ||
+                              !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.admin_email)
+                            }
+                          >
+                            {sendingOtp ? <Loader2 size={14} className="register-spinner" /> : <Mail size={14} />}
+                            {otpSent
+                              ? (otpCooldown > 0 ? `Resend in ${otpCooldown}s` : 'Resend Code')
+                              : 'Send Verification Code'}
+                          </button>
+
+                          {otpSent && (
+                            <div className="register-otp-section">
+                              <p className="register-otp-hint">
+                                Enter the 6-digit code sent to <strong>{formData.admin_email}</strong>
+                              </p>
+                              <div className="register-otp-row">
+                                <input
+                                  type="text"
+                                  inputMode="numeric"
+                                  maxLength={6}
+                                  value={otpValue}
+                                  onChange={(e) => {
+                                    setOtpValue(e.target.value.replace(/\D/g, ''));
+                                    setOtpError('');
+                                  }}
+                                  placeholder="000000"
+                                  className="register-otp-input"
+                                />
+                                <button
+                                  type="button"
+                                  className="register-verify-otp-btn"
+                                  onClick={handleVerifyOtp}
+                                  disabled={verifyingOtp || otpValue.length !== 6}
+                                >
+                                  {verifyingOtp
+                                    ? <Loader2 size={14} className="register-spinner" />
+                                    : 'Verify'}
+                                </button>
+                              </div>
+                              {otpError && (
+                                <p className="register-field-error">
+                                  <X size={14} /> {otpError}
+                                </p>
+                              )}
+                            </div>
+                          )}
+                        </>
+                      )}
+
                       {errors.admin_email && (
                         <p className="register-field-error">
                           <X />

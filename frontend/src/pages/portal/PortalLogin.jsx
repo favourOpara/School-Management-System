@@ -9,6 +9,7 @@ import {
   Lock,
   ArrowRight,
   Settings,
+  CheckCircle,
 } from 'lucide-react';
 import API_BASE_URL from '../../config';
 import './PortalLogin.css';
@@ -18,6 +19,9 @@ function PortalLogin() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [unverifiedEmail, setUnverifiedEmail] = useState(null); // set when server returns email_not_verified
+  const [resendLoading, setResendLoading] = useState(false);
+  const [resendSent, setResendSent] = useState(false);
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -27,6 +31,25 @@ function PortalLogin() {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
     setError('');
+    setUnverifiedEmail(null);
+    setResendSent(false);
+  };
+
+  const handleResendVerification = async () => {
+    if (!unverifiedEmail) return;
+    setResendLoading(true);
+    try {
+      await fetch(`${API_BASE_URL}/api/public/resend-verification/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: unverifiedEmail }),
+      });
+      setResendSent(true);
+    } catch {
+      // silently ignore
+    } finally {
+      setResendLoading(false);
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -57,6 +80,11 @@ function PortalLogin() {
       const data = await response.json();
 
       if (!response.ok) {
+        if (data.code === 'email_not_verified') {
+          setUnverifiedEmail(data.email || formData.email);
+          setError(data.error || 'Please verify your email before logging in.');
+          return;
+        }
         throw new Error(data.error || data.detail || 'Invalid credentials');
       }
 
@@ -104,8 +132,31 @@ function PortalLogin() {
           </div>
 
           {error && (
-            <div className="portal-login-error">
+            <div className="portal-login-error" style={unverifiedEmail ? { background: '#eff6ff', borderColor: '#93c5fd', color: '#1e40af' } : {}}>
               {error}
+              {unverifiedEmail && (
+                <div style={{ marginTop: '10px' }}>
+                  {resendSent ? (
+                    <p style={{ color: '#10b981', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px', margin: 0 }}>
+                      <CheckCircle size={15} /> Verification email sent! Check your inbox.
+                    </p>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={handleResendVerification}
+                      disabled={resendLoading}
+                      style={{
+                        background: '#2563eb', color: '#fff', border: 'none',
+                        borderRadius: '6px', padding: '7px 14px', fontSize: '13px',
+                        cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px',
+                      }}
+                    >
+                      {resendLoading ? <Loader2 size={13} style={{ animation: 'spin 1s linear infinite' }} /> : <Mail size={13} />}
+                      Resend Verification Email
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
           )}
 

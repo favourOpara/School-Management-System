@@ -27,7 +27,7 @@ import {
 } from './pages/public';
 
 // Portal pages
-import { PortalLogin, PortalDashboard } from './pages/portal';
+import { PortalLogin, PortalDashboard, PortalVerifyEmail } from './pages/portal';
 
 // Platform admin pages
 import { PlatformLogin, PlatformDashboard } from './pages/platform';
@@ -275,6 +275,7 @@ function App() {
 
           {/* Admin Portal */}
           <Route path="/portal" element={<PortalLogin />} />
+          <Route path="/portal/verify-email" element={<PortalVerifyEmail />} />
           <Route path="/portal/dashboard" element={<PortalDashboard />} />
 
           {/* Platform Admin Routes */}

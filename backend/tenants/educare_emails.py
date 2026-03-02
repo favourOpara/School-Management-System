@@ -153,6 +153,71 @@ def _get_pricing_url():
 
 
 # ---------------------------------------------------------------------------
+# Email Verification
+# ---------------------------------------------------------------------------
+
+def send_otp_email(email, otp, first_name='there'):
+    """
+    Send a 6-digit OTP to verify an email address during registration (Step 2).
+    """
+    body_html = f'''
+        <p>Hi {first_name},</p>
+        <p>Use the code below to verify your email address for your EduCare school registration.</p>
+        <div style="text-align:center; margin:28px 0;">
+            <div style="display:inline-block; background:#f0f9ff; border:2px solid #bae6fd;
+                        border-radius:12px; padding:18px 36px;">
+                <span style="font-size:36px; font-weight:800; letter-spacing:10px;
+                             color:#0369a1; font-family:monospace;">{otp}</span>
+            </div>
+        </div>
+        <p style="color:#6b7280; font-size:14px;">
+            This code expires in <strong>15 minutes</strong>.
+            If you did not request this, you can safely ignore this email.
+        </p>
+    '''
+
+    send_educare_email(
+        recipient_email=email,
+        recipient_name=first_name,
+        subject='Your EduCare verification code',
+        heading='Email Verification Code',
+        body_html=body_html,
+    )
+
+
+def send_verification_email(portal_user):
+    """
+    Send an email verification link to a newly registered portal user.
+    Called immediately after school registration.
+    """
+    verify_url = f"{EDUCARE_FRONTEND_URL}/portal/verify-email?token={portal_user.email_verification_token}"
+    first_name = portal_user.first_name or 'there'
+
+    body_html = f'''
+        <p>Hi {first_name},</p>
+        <p>Thank you for registering your school on <strong>EduCare</strong>!</p>
+        <p>Before you can log in to your Admin Portal, please verify your email address by clicking the button below.</p>
+        <div style="background:#eff6ff; border-left:4px solid #2563eb; padding:16px 20px;
+                    border-radius:0 8px 8px 0; margin:24px 0;">
+            <p style="margin:0; color:#374151; font-size:14px;">
+                This verification link will expire in <strong>24 hours</strong>.
+                If you did not register for EduCare, you can safely ignore this email.
+            </p>
+        </div>
+    '''
+
+    send_educare_email(
+        recipient_email=portal_user.email,
+        recipient_name=portal_user.get_full_name(),
+        subject='Verify your EduCare email address',
+        heading='Verify Your Email Address',
+        body_html=body_html,
+        cta_text='Verify Email Address',
+        cta_url=verify_url,
+    )
+
+
+# ---------------------------------------------------------------------------
 # Onboarding Email
 # ---------------------------------------------------------------------------
 

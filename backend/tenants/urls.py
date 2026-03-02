@@ -27,6 +27,10 @@ public_urlpatterns = [
     path('check-trial/', views.CheckTrialEligibilityView.as_view(), name='check-trial'),
     path('contact-sales/', views.ContactSalesView.as_view(), name='contact-sales'),
     path('verify-payment/<str:reference>/', views.PublicVerifyPaymentView.as_view(), name='public-verify-payment'),
+    path('verify-email/', views.PortalVerifyEmailView.as_view(), name='portal-verify-email'),
+    path('resend-verification/', views.PortalResendVerificationView.as_view(), name='portal-resend-verification'),
+    path('send-email-otp/', views.SendEmailOTPView.as_view(), name='send-email-otp'),
+    path('verify-email-otp/', views.VerifyEmailOTPView.as_view(), name='verify-email-otp'),
 ]
 
 # Webhook URLs

@@ -1,8 +1,11 @@
 """
 Views for tenant/subscription management.
 """
+import logging
 import uuid
 from datetime import timedelta
+
+logger = logging.getLogger(__name__)
 from django.utils import timezone
 from django.utils.text import slugify
 from django.db import transaction
@@ -286,6 +289,157 @@ class ContactSalesView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+class SendEmailOTPView(APIView):
+    """
+    Send a 6-digit OTP to an email to verify it before school registration.
+    POST /api/public/send-email-otp/
+    Body: { "email": "...", "first_name": "..." }
+    """
+    authentication_classes = []
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        import random
+        from datetime import timedelta
+        from .models import EmailOTP
+
+        email = request.data.get('email', '').strip().lower()
+        first_name = request.data.get('first_name', 'there').strip()
+
+        if not email:
+            return Response({'error': 'Email is required.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Basic rate limit: block if an OTP was sent within the last 60 seconds
+        recent_cutoff = timezone.now() - timedelta(seconds=60)
+        if EmailOTP.objects.filter(email__iexact=email, created_at__gte=recent_cutoff).exists():
+            return Response(
+                {'error': 'A code was just sent. Please wait 60 seconds before requesting another.'},
+                status=status.HTTP_429_TOO_MANY_REQUESTS
+            )
+
+        # Delete all previous OTPs for this email
+        EmailOTP.objects.filter(email__iexact=email).delete()
+
+        # Generate and save a new OTP
+        otp = f"{random.randint(100000, 999999)}"
+        EmailOTP.objects.create(email=email, otp=otp)
+
+        # Send the email
+        try:
+            from .educare_emails import send_otp_email
+            send_otp_email(email=email, otp=otp, first_name=first_name)
+        except Exception as e:
+            logger.error(f"Failed to send OTP email to {email}: {e}")
+            return Response({'error': 'Failed to send email. Please try again.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        return Response({'message': 'Verification code sent. Check your inbox.'})
+
+
+class VerifyEmailOTPView(APIView):
+    """
+    Verify the OTP entered by the user during registration Step 2.
+    POST /api/public/verify-email-otp/
+    Body: { "email": "...", "otp": "123456" }
+    """
+    authentication_classes = []
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        from datetime import timedelta
+        from .models import EmailOTP
+
+        email = request.data.get('email', '').strip().lower()
+        otp = request.data.get('otp', '').strip()
+
+        if not email or not otp:
+            return Response({'error': 'Email and code are required.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Find the latest OTP for this email
+        otp_record = EmailOTP.objects.filter(email__iexact=email).first()
+
+        if not otp_record:
+            return Response({'error': 'No verification code found. Please request a new one.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if otp_record.is_expired():
+            return Response({'error': 'This code has expired. Please request a new one.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if otp_record.otp != otp:
+            return Response({'error': 'Incorrect code. Please try again.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Mark as verified
+        otp_record.verified = True
+        otp_record.save(update_fields=['verified'])
+
+        return Response({'verified': True, 'message': 'Email verified successfully.'})
+
+
+class PortalVerifyEmailView(APIView):
+    """
+    Verify a portal user's email address via token.
+    GET /api/public/verify-email/?token=<uuid>
+    """
+    authentication_classes = []
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        token = request.query_params.get('token')
+        if not token:
+            return Response({'error': 'Verification token is required.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            import uuid as _uuid
+            token_uuid = _uuid.UUID(str(token))
+            portal_user = PortalUser.objects.get(email_verification_token=token_uuid)
+        except (ValueError, PortalUser.DoesNotExist):
+            return Response({'error': 'Invalid or expired verification link.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if portal_user.email_verified:
+            return Response({'message': 'Email already verified. You can log in.'})
+
+        portal_user.email_verified = True
+        portal_user.email_verification_token = None  # Invalidate token after use
+        portal_user.save(update_fields=['email_verified', 'email_verification_token'])
+
+        return Response({'message': 'Email verified successfully! You can now log in to your Admin Portal.'})
+
+
+class PortalResendVerificationView(APIView):
+    """
+    Resend email verification link.
+    POST /api/public/resend-verification/
+    Body: { "email": "..." }
+    """
+    authentication_classes = []
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        import uuid as _uuid
+        email = request.data.get('email', '').strip().lower()
+        if not email:
+            return Response({'error': 'Email is required.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            portal_user = PortalUser.objects.get(email__iexact=email)
+        except PortalUser.DoesNotExist:
+            # Don't reveal whether the email exists
+            return Response({'message': 'If that email is registered, a new verification link has been sent.'})
+
+        if portal_user.email_verified:
+            return Response({'message': 'Your email is already verified. You can log in.'})
+
+        # Generate a fresh token
+        portal_user.email_verification_token = _uuid.uuid4()
+        portal_user.save(update_fields=['email_verification_token'])
+
+        try:
+            from .educare_emails import send_verification_email
+            send_verification_email(portal_user)
+        except Exception:
+            pass
+
+        return Response({'message': 'If that email is registered, a new verification link has been sent.'})
+
+
 class PortalLoginView(APIView):
     """
     Admin Portal login endpoint.
@@ -376,6 +530,17 @@ class PortalLoginView(APIView):
             return Response(
                 {'error': 'Account is disabled'},
                 status=status.HTTP_401_UNAUTHORIZED
+            )
+
+        # Check email verification
+        if not portal_user.email_verified:
+            return Response(
+                {
+                    'error': 'Please verify your email address before logging in. Check your inbox for a verification link.',
+                    'code': 'email_not_verified',
+                    'email': portal_user.email,
+                },
+                status=status.HTTP_403_FORBIDDEN
             )
 
         # Check if school is active
