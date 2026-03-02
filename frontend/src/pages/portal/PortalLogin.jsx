@@ -95,6 +95,8 @@ function PortalLogin() {
       localStorage.setItem('portalSchoolSlug', data.school.slug);
       localStorage.setItem('portalSchoolName', data.school.name);
       localStorage.setItem('portalMode', 'true');
+      // Also store as schoolSlug so shared components (SchoolConfiguration etc.) can find it
+      localStorage.setItem('schoolSlug', data.school.slug);
 
       // Navigate to portal dashboard
       navigate('/portal/dashboard');
