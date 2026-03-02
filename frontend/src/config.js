@@ -24,7 +24,7 @@ export function getSchoolSlug() {
     const nonSchoolRoutes = [
       'pricing', 'register', 'contact-sales', 'login', 'admin', 'student',
       'teacher', 'parent', 'principal', 'proprietor', 'dashboard', 'portal',
-      'platform'
+      'platform', 'onboarding'
     ];
     if (!nonSchoolRoutes.includes(slug)) {
       // Store it for future use
@@ -68,6 +68,7 @@ export const PUBLIC_ENDPOINTS = {
   plans: `${API_BASE_URL}/api/public/plans/`,
   register: `${API_BASE_URL}/api/public/register/`,
   checkSlug: (slug) => `${API_BASE_URL}/api/public/check-slug/${slug}/`,
+  checkTrial: `${API_BASE_URL}/api/public/check-trial/`,
   contactSales: `${API_BASE_URL}/api/public/contact-sales/`,
 };
 

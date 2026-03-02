@@ -99,7 +99,7 @@ function ResetPassword() {
         {/* Logo Section */}
         <div className="verify-logo">
           <img
-            src="/logo.png"
+            src="/logo.svg"
             alt="School Logo"
           />
           <h2 className="verify-title">Reset Your Password</h2>

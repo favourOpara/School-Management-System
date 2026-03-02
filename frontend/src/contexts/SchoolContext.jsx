@@ -75,6 +75,34 @@ export function SchoolProvider({ children }) {
       setSchool(schoolData);
       setStoredSchoolSlug(slug);
 
+      // Update browser tab title
+      if (schoolData.name) {
+        document.title = schoolData.name;
+      }
+
+      // Update favicon to school's logo, or a generated initial-based icon
+      {
+        let link = document.querySelector("link[rel~='icon']");
+        if (!link) {
+          link = document.createElement('link');
+          link.rel = 'icon';
+          document.head.appendChild(link);
+        }
+        if (schoolData.logo) {
+          link.type = 'image/png';
+          link.href = schoolData.logo;
+        } else {
+          const initial = (schoolData.name || 'S').charAt(0).toUpperCase();
+          const color = schoolData.accent_color || '#2563eb';
+          const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+            <rect width="64" height="64" rx="12" fill="${color}"/>
+            <text x="32" y="45" font-family="Arial,sans-serif" font-size="36" font-weight="bold" fill="white" text-anchor="middle">${initial}</text>
+          </svg>`;
+          link.type = 'image/svg+xml';
+          link.href = 'data:image/svg+xml,' + encodeURIComponent(svg);
+        }
+      }
+
       // If user is authenticated, fetch subscription details
       if (token) {
         try {
@@ -209,13 +237,25 @@ export function SchoolProvider({ children }) {
   // Check subscription status
   const isSubscriptionActive = useCallback(() => {
     if (!subscription) return false;
-    return ['trial', 'active'].includes(subscription.status);
+    return ['trial', 'active', 'grace_period'].includes(subscription.status);
   }, [subscription]);
 
   // Check if in trial period
   const isTrialPeriod = useCallback(() => {
     if (!subscription) return false;
     return subscription.status === 'trial';
+  }, [subscription]);
+
+  // Check if in grace period
+  const isInGracePeriod = useCallback(() => {
+    if (!subscription) return false;
+    return subscription.status === 'grace_period';
+  }, [subscription]);
+
+  // Get days remaining in grace period
+  const getGraceDaysRemaining = useCallback(() => {
+    if (!subscription?.grace_days_remaining) return 0;
+    return subscription.grace_days_remaining;
   }, [subscription]);
 
   // Get days left in trial
@@ -255,6 +295,8 @@ export function SchoolProvider({ children }) {
     hasFeature,
     isSubscriptionActive,
     isTrialPeriod,
+    isInGracePeriod,
+    getGraceDaysRemaining,
     getTrialDaysLeft,
   };
 

@@ -13,12 +13,13 @@ from datetime import datetime
 import os
 
 
-def generate_fee_receipt_pdf(receipt, payment_history):
+def generate_fee_receipt_pdf(receipt, payment_history, school=None):
     """
     Generate a professional PDF receipt with payment history
 
     Args:
         receipt: FeeReceipt object
+        school: School object (optional — falls back to receipt.student.school)
         payment_history: List of FeePaymentHistory objects
 
     Returns:
@@ -71,51 +72,50 @@ def generate_fee_receipt_pdf(receipt, payment_history):
         spaceAfter=3
     )
 
-    # Header - School Logo (Centered at top)
+    # Resolve school from parameter or receipt
+    if school is None:
+        try:
+            school = receipt.student.school
+        except Exception:
+            school = None
+
+    school_name_text = school.name if school and school.name else 'School'
+    school_address_text = school.address if school and school.address else ''
+
+    # Header — School Logo (Centered at top)
     logo_loaded = False
     try:
-        # Try to load the school logo
         import os
-        from django.conf import settings
         from PIL import Image as PILImage
         from reportlab.lib.utils import ImageReader
 
-        # Try multiple possible logo locations
-        logo_paths = [
-            os.path.join(settings.BASE_DIR, '..', 'frontend', 'public', 'logo.png'),
-            os.path.join(settings.BASE_DIR, 'static', 'logo.png'),
-            '/Users/newuser/Downloads/School-Management-System/frontend/public/logo.png',
-        ]
-
-        for logo_path in logo_paths:
-            abs_path = os.path.abspath(logo_path)
-            if os.path.exists(abs_path):
-                # Use PIL to load and verify the image first
-                pil_img = PILImage.open(abs_path)
-                # Convert to RGB if needed (in case it's RGBA)
+        logo_file = school.logo if school else None
+        if logo_file:
+            # ImageField: use .path for local file access
+            logo_path = logo_file.path
+            if os.path.exists(logo_path):
+                pil_img = PILImage.open(logo_path)
                 if pil_img.mode in ('RGBA', 'LA', 'P'):
                     pil_img = pil_img.convert('RGB')
-
-                # Use ImageReader for better compatibility
                 img_reader = ImageReader(pil_img)
                 logo = Image(img_reader, width=1.2*inch, height=1.2*inch, kind='proportional')
                 logo.hAlign = 'CENTER'
                 elements.append(logo)
                 elements.append(Spacer(1, 0.08*inch))
                 logo_loaded = True
-                break
-    except Exception as e:
-        # Silently fail and use fallback
+    except Exception:
         pass
 
     if not logo_loaded:
-        # Fallback - just add minimal space
         elements.append(Spacer(1, 0.1*inch))
 
     # School Name (Centered)
-    school_name_text = context.get('school_name', 'School Name')
     school_name = Paragraph(f"<b>{school_name_text.upper()}</b>", title_style)
     elements.append(school_name)
+
+    if school_address_text:
+        address_para = Paragraph(school_address_text, subtitle_style)
+        elements.append(address_para)
 
     school_info = Paragraph("Official Fee Receipt", subtitle_style)
     elements.append(school_info)

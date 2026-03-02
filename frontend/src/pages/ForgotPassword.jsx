@@ -77,7 +77,7 @@ function ForgotPassword() {
         {/* Logo Section */}
         <div className="forgot-password-logo">
           <img
-            src="/logo.png"
+            src="/logo.svg"
             alt="School Logo"
           />
           <h2 className="forgot-password-title">Forgot Password?</h2>

@@ -13,7 +13,7 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .models import School, SubscriptionPlan, Subscription, PaymentHistory, PortalUser
+from .models import School, SubscriptionPlan, Subscription, PaymentHistory, PortalUser, SupportTicket, OnboardingAgent
 from .serializers import (
     SchoolSerializer,
     SchoolPublicSerializer,
@@ -144,9 +144,10 @@ class SchoolRegistrationView(APIView):
                 }
             }
 
-            # If it's a paid plan, initialize payment
-            if plan.monthly_price > 0:
-                # Determine amount based on billing cycle
+            registration_type = serializer.validated_data.get('registration_type', 'trial')
+
+            if registration_type == 'subscribe':
+                # Direct subscription — initialize Paystack payment
                 billing_cycle = serializer.validated_data.get('billing_cycle', 'monthly')
                 if billing_cycle == 'annual':
                     amount = plan.annual_price
@@ -198,12 +199,60 @@ class SchoolRegistrationView(APIView):
                 return Response(response_data, status=status.HTTP_201_CREATED)
 
             else:
-                # Free plan - no payment needed
-                response_data['message'] = 'School registered successfully! You can now sign in to the Admin Portal.'
+                # Free trial — no payment needed, instant activation
+                response_data['message'] = 'School registered successfully! Your 30-day free trial has started.'
 
                 return Response(response_data, status=status.HTTP_201_CREATED)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class CheckTrialEligibilityView(APIView):
+    """
+    Check if a school is eligible for a free trial.
+    POST /api/public/check-trial/
+
+    Checks email domain and phone number against existing schools
+    to prevent trial abuse.
+    """
+    authentication_classes = []
+    permission_classes = [AllowAny]
+
+    GENERIC_DOMAINS = {
+        'gmail.com', 'yahoo.com', 'hotmail.com', 'outlook.com',
+        'yahoo.co.uk', 'aol.com', 'icloud.com', 'mail.com',
+        'protonmail.com', 'live.com', 'msn.com', 'ymail.com',
+    }
+
+    def post(self, request):
+        school_email = request.data.get('school_email', '').strip()
+        school_phone = request.data.get('school_phone', '').strip()
+
+        # Check email domain
+        if '@' in school_email:
+            domain = school_email.split('@')[-1].lower()
+            if domain not in self.GENERIC_DOMAINS:
+                if School.objects.filter(email__iendswith='@' + domain).exists():
+                    return Response({
+                        'eligible': False,
+                        'reason': (
+                            'A free trial has already been used with this email domain. '
+                            'You can subscribe directly to get started.'
+                        )
+                    })
+
+        # Check phone number
+        if school_phone:
+            if School.objects.filter(phone=school_phone).exists():
+                return Response({
+                    'eligible': False,
+                    'reason': (
+                        'A free trial has already been used with this phone number. '
+                        'You can subscribe directly to get started.'
+                    )
+                })
+
+        return Response({'eligible': True, 'reason': ''})
 
 
 class ContactSalesView(APIView):
@@ -218,11 +267,20 @@ class ContactSalesView(APIView):
         serializer = ContactSalesSerializer(data=request.data)
 
         if serializer.is_valid():
-            # In production, this would send an email to the sales team
-            # For now, just acknowledge receipt
+            d = serializer.validated_data
+            from .models import ContactInquiry
+            ContactInquiry.objects.create(
+                school_name=d.get('school_name', ''),
+                contact_name=d.get('contact_name', ''),
+                email=d.get('email', ''),
+                phone=d.get('phone', ''),
+                message=d.get('message', ''),
+                expected_students=d.get('expected_students'),
+                expected_staff=d.get('expected_staff'),
+                source='contact_sales',
+            )
             return Response({
                 'message': 'Thank you for your interest! Our sales team will contact you shortly.',
-                'data': serializer.validated_data
             })
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -500,6 +558,38 @@ class SubscriptionPlansView(APIView):
         })
 
 
+def _calculate_upgrade_proration(subscription, new_plan_price_kobo):
+    """
+    Calculate prorated charge when upgrading mid-billing-period.
+
+    Returns (charge_kobo, credit_kobo, remaining_days, total_days).
+    If there is no active billing period, returns the full price with 0 credit.
+    """
+    now = timezone.now()
+    start = subscription.current_period_start
+    end = subscription.current_period_end
+
+    if not start or not end or end <= now:
+        return new_plan_price_kobo, 0, 0.0, 0.0
+
+    if subscription.billing_cycle == 'annual':
+        current_plan_price = subscription.plan.annual_price
+    else:
+        current_plan_price = subscription.plan.monthly_price
+
+    total_seconds = (end - start).total_seconds()
+    remaining_seconds = (end - now).total_seconds()
+
+    if total_seconds <= 0:
+        return new_plan_price_kobo, 0, 0.0, 0.0
+
+    fraction_remaining = remaining_seconds / total_seconds
+    credit_kobo = int(current_plan_price * fraction_remaining)
+    charge_kobo = max(0, new_plan_price_kobo - credit_kobo)
+
+    return charge_kobo, credit_kobo, remaining_seconds / 86400, total_seconds / 86400
+
+
 class UpgradePlanView(APIView):
     """
     Upgrade subscription plan.
@@ -523,20 +613,49 @@ class UpgradePlanView(APIView):
         new_plan = SubscriptionPlan.objects.get(id=serializer.validated_data['plan_id'])
         billing_cycle = serializer.validated_data.get('billing_cycle', subscription.billing_cycle)
 
-        # Determine amount
-        if billing_cycle == 'annual':
-            amount = new_plan.annual_price
-        else:
-            amount = new_plan.monthly_price
+        # Block downgrade while current plan period is still active
+        if (
+            new_plan.display_order < subscription.plan.display_order
+            and subscription.current_period_end
+            and subscription.current_period_end > timezone.now()
+        ):
+            return Response(
+                {
+                    'error': 'Downgrade not allowed',
+                    'detail': 'You cannot switch to a lower plan while your current plan is still active. '
+                              'Your plan expires on '
+                              + subscription.current_period_end.strftime('%B %d, %Y') + '.',
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
-        if amount == 0:
-            # Downgrade to free plan
+        # Determine full plan price then apply proration
+        if billing_cycle == 'annual':
+            full_price = new_plan.annual_price
+        else:
+            full_price = new_plan.monthly_price
+
+        amount, credit, remaining_days, total_days = _calculate_upgrade_proration(subscription, full_price)
+
+        if full_price == 0:
+            # Custom/enterprise plan (contact sales) - switch directly
             subscription.plan = new_plan
             subscription.billing_cycle = billing_cycle
             subscription.save()
 
             return Response({
                 'message': 'Plan changed successfully',
+                'subscription': SubscriptionSerializer(subscription).data
+            })
+
+        if amount == 0:
+            # Credit covers full cost — upgrade immediately without payment
+            subscription.plan = new_plan
+            subscription.billing_cycle = billing_cycle
+            subscription.save()
+
+            return Response({
+                'message': 'Plan upgraded successfully (covered by unused credit)',
                 'subscription': SubscriptionSerializer(subscription).data
             })
 
@@ -554,6 +673,9 @@ class UpgradePlanView(APIView):
                 'school_id': str(request.school.id),
                 'upgrade_from': subscription.plan.name,
                 'upgrade_to': new_plan.name,
+                'proration_full_price': full_price,
+                'proration_credit': credit,
+                'proration_remaining_days': round(remaining_days, 2),
             }
         )
 
@@ -561,6 +683,8 @@ class UpgradePlanView(APIView):
             'callback_url',
             f"{request.build_absolute_uri('/')[:-1]}/{request.school.slug}/billing/callback"
         )
+
+        save_card = bool(request.data.get('save_card', False))
 
         payment_result = initialize_transaction(
             email=request.school.email,
@@ -571,6 +695,7 @@ class UpgradePlanView(APIView):
                 'school_id': str(request.school.id),
                 'type': 'upgrade',
                 'new_plan': new_plan.name,
+                'save_card': save_card,
             }
         )
 
@@ -587,6 +712,41 @@ class UpgradePlanView(APIView):
                 'error': 'Payment initialization failed',
                 'detail': payment_result.get('error')
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class UpgradeProrationPreviewView(APIView):
+    """
+    Preview the prorated charge for upgrading to a new plan.
+    GET /api/<school_slug>/subscription/upgrade/preview/?plan_id=X&billing_cycle=monthly
+    """
+    permission_classes = [IsAuthenticated, IsSchoolAdmin]
+
+    def get(self, request):
+        plan_id = request.query_params.get('plan_id')
+        if not plan_id:
+            return Response({'error': 'plan_id is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+        subscription = request.subscription
+        if not subscription:
+            return Response({'error': 'No subscription found'}, status=status.HTTP_404_NOT_FOUND)
+
+        billing_cycle = request.query_params.get('billing_cycle', subscription.billing_cycle)
+
+        new_plan = SubscriptionPlan.objects.filter(id=plan_id, is_active=True).first()
+        if not new_plan:
+            return Response({'error': 'Plan not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        full_price = new_plan.annual_price if billing_cycle == 'annual' else new_plan.monthly_price
+        charge, credit, remaining_days, total_days = _calculate_upgrade_proration(subscription, full_price)
+
+        return Response({
+            'full_price_kobo': full_price,
+            'credit_kobo': credit,
+            'charge_kobo': charge,
+            'remaining_days': round(remaining_days, 1),
+            'total_days': round(total_days, 1),
+            'current_period_end': subscription.current_period_end,
+        })
 
 
 class CancelSubscriptionView(APIView):
@@ -663,10 +823,20 @@ class VerifyPaymentView(APIView):
             if auth_code:
                 subscription.paystack_authorization_code = auth_code
 
+            # Store billing email for future charge_authorization calls
+            billing_email = result['data']['customer'].get('email')
+            if billing_email:
+                subscription.paystack_billing_email = billing_email
+
             # Set customer code
             customer_code = result['data']['customer'].get('customer_code')
             if customer_code:
                 subscription.paystack_customer_code = customer_code
+
+            # Enable auto-debit if user opted in via save_card metadata
+            tx_metadata = result['data'].get('metadata') or {}
+            if tx_metadata.get('save_card') is True:
+                subscription.auto_debit_enabled = True
 
             # Extend period
             if payment.billing_cycle == 'monthly':
@@ -755,6 +925,8 @@ class InitializePaymentView(APIView):
             f"{request.build_absolute_uri('/')[:-1]}/{request.school.slug}/billing/callback"
         )
 
+        save_card = bool(request.data.get('save_card', False))
+
         payment_result = initialize_transaction(
             email=request.school.email,
             amount=amount,
@@ -763,6 +935,7 @@ class InitializePaymentView(APIView):
             metadata={
                 'school_id': str(request.school.id),
                 'plan': plan.name,
+                'save_card': save_card,
             }
         )
 
@@ -911,7 +1084,7 @@ class PortalAdminAccountsView(APIView):
         subscription = portal_user.school.subscription if hasattr(portal_user.school, 'subscription') else None
         max_admins = subscription.plan.max_admin_accounts if subscription else 1
         current_count = admin_accounts.count()
-        can_create = current_count < max_admins and subscription and subscription.plan.name != 'free'
+        can_create = current_count < max_admins and subscription is not None
 
         return Response({
             'admin_accounts': serializer.data,
@@ -919,7 +1092,7 @@ class PortalAdminAccountsView(APIView):
                 'max_admins': max_admins,
                 'current_count': current_count,
                 'can_create': can_create,
-                'plan_name': subscription.plan.display_name if subscription else 'Free Trial'
+                'plan_name': subscription.plan.display_name if subscription else 'No Plan'
             }
         })
 
@@ -928,8 +1101,6 @@ class PortalCreateAdminAccountView(APIView):
     """
     Create a new admin account for the School Management System.
     POST /api/portal/admin-accounts/
-
-    Only available for paid plans (not free trial).
     """
     authentication_classes = []  # Skip default auth - we handle it manually via portal token
     permission_classes = [AllowAny]
@@ -948,13 +1119,6 @@ class PortalCreateAdminAccountView(APIView):
             return Response(
                 {'error': 'No subscription found'},
                 status=status.HTTP_400_BAD_REQUEST
-            )
-
-        # Check if plan allows creating more admins
-        if subscription.plan.name == 'free':
-            return Response(
-                {'error': 'Upgrade to a paid plan to create additional admin accounts'},
-                status=status.HTTP_403_FORBIDDEN
             )
 
         if not subscription.can_create_admin():
@@ -1157,7 +1321,7 @@ class PortalProprietorAccountsView(APIView):
                 'max_proprietors': max_proprietors,
                 'current_count': current_count,
                 'can_create': can_create,
-                'plan_name': subscription.plan.display_name if subscription else 'Free Trial'
+                'plan_name': subscription.plan.display_name if subscription else 'No Plan'
             }
         })
 
@@ -1428,14 +1592,40 @@ class PortalUpgradePlanView(APIView):
         except SubscriptionPlan.DoesNotExist:
             return Response({'error': 'Plan not found'}, status=status.HTTP_404_NOT_FOUND)
 
-        amount = new_plan.annual_price if billing_cycle == 'annual' else new_plan.monthly_price
+        # Block downgrade while current plan period is still active
+        if (
+            new_plan.display_order < subscription.plan.display_order
+            and subscription.current_period_end
+            and subscription.current_period_end > timezone.now()
+        ):
+            return Response(
+                {
+                    'error': 'Downgrade not allowed',
+                    'detail': 'You cannot switch to a lower plan while your current plan is still active. '
+                              'Your plan expires on '
+                              + subscription.current_period_end.strftime('%B %d, %Y') + '.',
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        full_price = new_plan.annual_price if billing_cycle == 'annual' else new_plan.monthly_price
+        amount, credit, remaining_days, _ = _calculate_upgrade_proration(subscription, full_price)
+
+        if full_price == 0:
+            subscription.plan = new_plan
+            subscription.billing_cycle = billing_cycle
+            subscription.save()
+            return Response({
+                'message': 'Plan changed successfully',
+                'subscription': SubscriptionSerializer(subscription).data,
+            })
 
         if amount == 0:
             subscription.plan = new_plan
             subscription.billing_cycle = billing_cycle
             subscription.save()
             return Response({
-                'message': 'Plan changed successfully',
+                'message': 'Plan upgraded successfully (covered by unused credit)',
                 'subscription': SubscriptionSerializer(subscription).data,
             })
 
@@ -1452,6 +1642,9 @@ class PortalUpgradePlanView(APIView):
                 'school_id': str(school.id),
                 'upgrade_from': subscription.plan.name,
                 'upgrade_to': new_plan.name,
+                'proration_full_price': full_price,
+                'proration_credit': credit,
+                'proration_remaining_days': round(remaining_days, 2),
             },
         )
 
@@ -1459,6 +1652,8 @@ class PortalUpgradePlanView(APIView):
             'callback_url',
             f"{request.build_absolute_uri('/')[:-1]}/{school.slug}/billing/callback",
         )
+
+        save_card = bool(request.data.get('save_card', False))
 
         payment_result = initialize_transaction(
             email=school.email,
@@ -1469,6 +1664,7 @@ class PortalUpgradePlanView(APIView):
                 'school_id': str(school.id),
                 'type': 'upgrade',
                 'new_plan': new_plan.name,
+                'save_card': save_card,
             },
         )
 
@@ -1485,6 +1681,44 @@ class PortalUpgradePlanView(APIView):
                 {'error': 'Payment initialization failed', 'detail': payment_result.get('error')},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
+
+
+class PortalUpgradeProrationPreviewView(APIView):
+    """Preview the prorated charge for upgrading to a new plan (portal auth)."""
+    authentication_classes = []
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        portal_user = get_portal_user_from_token(request)
+        if not portal_user:
+            return Response({'error': 'Authentication required'}, status=status.HTTP_401_UNAUTHORIZED)
+
+        plan_id = request.query_params.get('plan_id')
+        if not plan_id:
+            return Response({'error': 'plan_id is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+        school = portal_user.school
+        subscription = getattr(school, 'subscription', None)
+        if not subscription:
+            return Response({'error': 'No subscription found'}, status=status.HTTP_404_NOT_FOUND)
+
+        billing_cycle = request.query_params.get('billing_cycle', subscription.billing_cycle)
+
+        new_plan = SubscriptionPlan.objects.filter(id=plan_id, is_active=True).first()
+        if not new_plan:
+            return Response({'error': 'Plan not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        full_price = new_plan.annual_price if billing_cycle == 'annual' else new_plan.monthly_price
+        charge, credit, remaining_days, total_days = _calculate_upgrade_proration(subscription, full_price)
+
+        return Response({
+            'full_price_kobo': full_price,
+            'credit_kobo': credit,
+            'charge_kobo': charge,
+            'remaining_days': round(remaining_days, 1),
+            'total_days': round(total_days, 1),
+            'current_period_end': subscription.current_period_end,
+        })
 
 
 class PortalDownloadDatabaseView(APIView):
@@ -1618,3 +1852,208 @@ class PublicVerifyPaymentView(APIView):
             'school_slug': school.slug,
             'plan_name': subscription.plan.display_name,
         })
+
+
+# ============== AUTO-DEBIT MANAGEMENT ==============
+
+class ToggleAutoDebitView(APIView):
+    """
+    Toggle auto-debit on/off for portal users.
+    POST /api/portal/billing/auto-debit/toggle/
+    """
+    authentication_classes = []
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        portal_user = get_portal_user_from_token(request)
+        if not portal_user:
+            return Response({'error': 'Authentication required'}, status=status.HTTP_401_UNAUTHORIZED)
+
+        subscription = getattr(portal_user.school, 'subscription', None)
+        if not subscription:
+            return Response({'error': 'No subscription found'}, status=status.HTTP_404_NOT_FOUND)
+
+        # Cannot enable without a saved card
+        if not subscription.auto_debit_enabled and not subscription.paystack_authorization_code:
+            return Response(
+                {'error': 'No saved card on file. Pay with "Save card" checked to enable auto-renewal.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        subscription.auto_debit_enabled = not subscription.auto_debit_enabled
+        subscription.save(update_fields=['auto_debit_enabled'])
+
+        return Response({
+            'auto_debit_enabled': subscription.auto_debit_enabled,
+            'has_saved_card': bool(subscription.paystack_authorization_code),
+        })
+
+
+class RemoveSavedCardView(APIView):
+    """
+    Remove saved card token and disable auto-debit for portal users.
+    POST /api/portal/billing/saved-card/remove/
+    """
+    authentication_classes = []
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        portal_user = get_portal_user_from_token(request)
+        if not portal_user:
+            return Response({'error': 'Authentication required'}, status=status.HTTP_401_UNAUTHORIZED)
+
+        subscription = getattr(portal_user.school, 'subscription', None)
+        if not subscription:
+            return Response({'error': 'No subscription found'}, status=status.HTTP_404_NOT_FOUND)
+
+        subscription.paystack_authorization_code = ''
+        subscription.paystack_billing_email = ''
+        subscription.auto_debit_enabled = False
+        subscription.save(update_fields=['paystack_authorization_code', 'paystack_billing_email', 'auto_debit_enabled'])
+
+        return Response({
+            'has_saved_card': False,
+            'auto_debit_enabled': False,
+        })
+
+
+class SchoolToggleAutoDebitView(APIView):
+    """
+    Toggle auto-debit on/off for school admin users.
+    POST /api/<school_slug>/billing/auto-debit/toggle/
+    """
+    permission_classes = [IsAuthenticated, IsSchoolAdmin]
+
+    def post(self, request):
+        subscription = request.subscription
+        if not subscription:
+            return Response({'error': 'No subscription found'}, status=status.HTTP_404_NOT_FOUND)
+
+        if not subscription.auto_debit_enabled and not subscription.paystack_authorization_code:
+            return Response(
+                {'error': 'No saved card on file. Pay with "Save card" checked to enable auto-renewal.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        subscription.auto_debit_enabled = not subscription.auto_debit_enabled
+        subscription.save(update_fields=['auto_debit_enabled'])
+
+        return Response({
+            'auto_debit_enabled': subscription.auto_debit_enabled,
+            'has_saved_card': bool(subscription.paystack_authorization_code),
+        })
+
+
+class SchoolRemoveSavedCardView(APIView):
+    """
+    Remove saved card token and disable auto-debit for school admin users.
+    POST /api/<school_slug>/billing/saved-card/remove/
+    """
+    permission_classes = [IsAuthenticated, IsSchoolAdmin]
+
+    def post(self, request):
+        subscription = request.subscription
+        if not subscription:
+            return Response({'error': 'No subscription found'}, status=status.HTTP_404_NOT_FOUND)
+
+        subscription.paystack_authorization_code = ''
+        subscription.paystack_billing_email = ''
+        subscription.auto_debit_enabled = False
+        subscription.save(update_fields=['paystack_authorization_code', 'paystack_billing_email', 'auto_debit_enabled'])
+
+        return Response({
+            'has_saved_card': False,
+            'auto_debit_enabled': False,
+        })
+
+
+# ─────────────────────────────────────────────────────────────
+# Support Ticket Views (school-scoped, admin only)
+# ─────────────────────────────────────────────────────────────
+
+class SupportTicketListView(APIView):
+    """
+    GET  /api/<slug>/support/        — list tickets for this school
+    POST /api/<slug>/support/        — submit a new ticket (admin only)
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        tickets = SupportTicket.objects.filter(school=request.school).order_by('-created_at')
+        data = [_serialize_ticket(t) for t in tickets]
+        return Response({'tickets': data, 'total': len(data)})
+
+    def post(self, request):
+        if request.user.role != 'admin':
+            return Response({'error': 'Only school admins can submit support tickets.'}, status=status.HTTP_403_FORBIDDEN)
+
+        subject = str(request.data.get('subject', '')).strip()
+        message = str(request.data.get('message', '')).strip()
+
+        if not subject or not message:
+            return Response({'error': 'Subject and message are required.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        ticket = SupportTicket.objects.create(
+            school=request.school,
+            submitted_by_name=f"{request.user.first_name} {request.user.last_name}".strip() or request.user.username,
+            submitted_by_email=request.user.email,
+            subject=subject,
+            message=message,
+        )
+
+        return Response({
+            'message': 'Your request has been received. A support specialist will reach out to you within 24 hours via your registered email.',
+            'ticket_id': str(ticket.id),
+        }, status=status.HTTP_201_CREATED)
+
+
+def _serialize_ticket(t, include_school=False):
+    d = {
+        'id': str(t.id),
+        'subject': t.subject,
+        'message': t.message,
+        'status': t.status,
+        'submitted_by_name': t.submitted_by_name,
+        'submitted_by_email': t.submitted_by_email,
+        'assigned_agent': {
+            'id': str(t.assigned_agent.id),
+            'name': t.assigned_agent.get_full_name(),
+            'email': t.assigned_agent.email,
+        } if t.assigned_agent else None,
+        'agent_notes': t.agent_notes,
+        'admin_notes': t.admin_notes,
+        'created_at': t.created_at.isoformat(),
+        'assigned_at': t.assigned_at.isoformat() if t.assigned_at else None,
+        'resolved_at': t.resolved_at.isoformat() if t.resolved_at else None,
+    }
+    if include_school:
+        d['school_name'] = t.school.name
+        d['school_slug'] = t.school.slug
+    return d
+
+
+class SupportTicketReopenView(APIView):
+    """
+    PATCH /api/<slug>/support/<ticket_id>/reopen/
+    School admin can reopen a resolved ticket.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def patch(self, request, ticket_id):
+        if request.user.role != 'admin':
+            return Response({'error': 'Only school admins can reopen tickets.'}, status=status.HTTP_403_FORBIDDEN)
+
+        try:
+            ticket = SupportTicket.objects.get(id=ticket_id, school=request.school)
+        except SupportTicket.DoesNotExist:
+            return Response({'error': 'Ticket not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        if ticket.status != 'resolved':
+            return Response({'error': 'Only resolved tickets can be reopened.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # If still assigned to an agent, move back to assigned; otherwise open
+        ticket.status = 'assigned' if ticket.assigned_agent else 'open'
+        ticket.resolved_at = None
+        ticket.save(update_fields=['status', 'resolved_at', 'updated_at'])
+
+        return Response({'message': 'Ticket reopened.', 'ticket': _serialize_ticket(ticket)})

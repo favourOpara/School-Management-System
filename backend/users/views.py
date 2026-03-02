@@ -175,7 +175,6 @@ class CreateUserView(generics.CreateAPIView):
         return CustomUser.objects.none()
 
     def create(self, request, *args, **kwargs):
-        # Check user limit before creating
         school = getattr(request, 'school', None)
         role = request.data.get('role', '')
         if school and role:
@@ -183,14 +182,41 @@ class CreateUserView(generics.CreateAPIView):
             can_create, msg = check_user_limit(school, role)
             if not can_create:
                 return Response({'error': msg}, status=status.HTTP_403_FORBIDDEN)
+
+        # For students, block creation if no ClassSession exists for the selected
+        # classroom + academic year + term. This prevents ghost students that appear
+        # in fees/attendance but are invisible to the session system.
+        if role == 'student':
+            classroom_id = request.data.get('classroom')
+            academic_year = request.data.get('academic_year')
+            term = request.data.get('term')
+            if classroom_id and academic_year and term:
+                if not ClassSession.objects.filter(
+                    classroom_id=classroom_id,
+                    academic_year=academic_year,
+                    term=term
+                ).exists():
+                    try:
+                        from academics.models import Class as Classroom
+                        classroom_name = Classroom.objects.get(id=classroom_id).name
+                    except Exception:
+                        classroom_name = f'the selected class'
+                    return Response(
+                        {'error': (
+                            f'No class session exists for {classroom_name} in '
+                            f'{academic_year} {term}. Please set up the class session '
+                            f'for this class before adding students to it.'
+                        )},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+
         return super().create(request, *args, **kwargs)
 
     def perform_create(self, serializer):
-        # Set the school from the request for multi-tenancy data isolation
         school = getattr(self.request, 'school', None)
         user = serializer.save(school=school)
-        
-        # If creating a student, automatically create StudentSession record
+
+        # Create StudentSession — ClassSession is guaranteed to exist (checked in create())
         if user.role == 'student' and user.classroom and user.academic_year and user.term:
             try:
                 class_session = ClassSession.objects.get(
@@ -204,13 +230,14 @@ class CreateUserView(generics.CreateAPIView):
                     defaults={'is_active': True}
                 )
             except ClassSession.DoesNotExist:
-                # Log this error so we know ClassSession is missing
+                # Should not reach here — blocked in create() — but log if it does
                 ActivityLog.objects.create(
                     user=self.request.user,
                     role='error',
-                    action=f"ClassSession not found for {user.username}: {user.classroom.name} - {user.academic_year} - {user.term}"
+                    action=f"Unexpected: ClassSession missing for {user.username}: "
+                           f"{user.classroom.name} - {user.academic_year} - {user.term}"
                 )
-        
+
         ActivityLog.objects.create(
             user=self.request.user,
             role=user.role,
@@ -282,6 +309,48 @@ def me(request):
     serializer = UserCreateSerializer(request.user)
     return Response(serializer.data)
 
+# List graduated students - Admin only
+@api_view(['GET'])
+@permission_classes([IsAuthenticated, IsAdminRole])
+def list_graduated_students(request):
+    school = getattr(request, 'school', None)
+    graduated = CustomUser.objects.filter(
+        role='student',
+        is_graduated=True,
+        school=school
+    ).order_by('-graduation_date')
+
+    data = []
+    for student in graduated:
+        last_session = StudentSession.objects.filter(
+            student=student
+        ).select_related('class_session__classroom').order_by(
+            '-class_session__academic_year', '-class_session__term'
+        ).first()
+
+        parents = student.parents.all()
+        parent_info = ', '.join(
+            f"{p.first_name} {p.last_name}" for p in parents
+        ) if parents.exists() else None
+
+        data.append({
+            'id': student.id,
+            'first_name': student.first_name,
+            'last_name': student.last_name,
+            'middle_name': getattr(student, 'middle_name', ''),
+            'username': student.username,
+            'email': student.email,
+            'gender': student.gender,
+            'department': student.department,
+            'graduation_date': student.graduation_date,
+            'last_class': last_session.class_session.classroom.name if last_session else None,
+            'last_academic_year': last_session.class_session.academic_year if last_session else None,
+            'parent': parent_info,
+        })
+
+    return Response(data)
+
+
 # List teachers - Admin only - UPDATED to show full details
 @api_view(['GET'])
 @permission_classes([IsAuthenticated, IsAdminRole])
@@ -351,6 +420,7 @@ def list_parents(request):
             'email': parent.email,
             'phone_number': parent.phone_number,
             'children': child_list,
+            'last_login': parent.last_login.strftime('%Y-%m-%d %H:%M') if parent.last_login else None,
         })
 
     return Response(response_data)
@@ -398,45 +468,54 @@ def students_with_subjects(request):
     if not academic_year or not term:
         return Response({'error': 'academic_year and term are required'}, status=400)
 
-    # Filter by school for multi-tenancy data isolation
     school = getattr(request, 'school', None)
 
-    # Get students through StudentSession model instead of direct user fields
-    student_sessions_query = StudentSession.objects.filter(
+    # Build a lookup of student_id -> session for students who have a StudentSession
+    # for this specific term. Used to resolve subjects.
+    sessions_qs = StudentSession.objects.filter(
         class_session__academic_year=academic_year,
         class_session__term=term,
-        is_active=True
-    )
-    # Apply school filter
+    ).select_related('student', 'class_session__classroom')
     if school:
-        student_sessions_query = student_sessions_query.filter(student__school=school)
+        sessions_qs = sessions_qs.filter(student__school=school)
 
-    student_sessions = student_sessions_query.select_related('student', 'class_session__classroom')
+    session_by_student = {}
+    for ss in sessions_qs:
+        if ss.student_id not in session_by_student:
+            session_by_student[ss.student_id] = ss
 
-    subjects_query = Subject.objects.filter(
+    # Subjects for this term (used when we can resolve a class session)
+    subjects_qs = Subject.objects.filter(
         class_session__academic_year=academic_year,
-        class_session__term=term
+        class_session__term=term,
     )
-    # Apply school filter to subjects
     if school:
-        subjects_query = subjects_query.filter(class_session__classroom__school=school)
+        subjects_qs = subjects_qs.filter(class_session__classroom__school=school)
 
-    subjects = subjects_query
+    # Primary source: all active students in the school with a classroom assigned.
+    # This matches how fees and attendance work, so no student is invisible.
+    students_qs = CustomUser.objects.filter(
+        role='student',
+        classroom__isnull=False,
+    ).select_related('classroom').prefetch_related('parents')
+    if school:
+        students_qs = students_qs.filter(school=school)
 
     response_data = []
-    for student_session in student_sessions:
-        student = student_session.student
-        classroom = student_session.class_session.classroom
+    for student in students_qs:
+        classroom = student.classroom
 
-        if not classroom:
-            continue
+        # Resolve subjects via StudentSession if one exists, otherwise use classroom directly
+        ss = session_by_student.get(student.id)
+        if ss and ss.class_session.classroom:
+            subject_classroom = ss.class_session.classroom
+        else:
+            subject_classroom = classroom
 
-        # Get subjects for class and filter by department
-        student_subjects = subjects.filter(class_session__classroom=classroom)
-        if classroom.has_departments and student.department:
+        student_subjects = subjects_qs.filter(class_session__classroom=subject_classroom)
+        if subject_classroom.has_departments and student.department:
             student_subjects = student_subjects.filter(department__in=['General', student.department])
 
-        # Calculate student's age
         age = None
         if student.date_of_birth:
             today = date.today()
@@ -444,7 +523,7 @@ def students_with_subjects(request):
                 (today.month, today.day) < (student.date_of_birth.month, student.date_of_birth.day)
             )
 
-        parent = student.parents.first() if hasattr(student, 'parents') and student.parents.exists() else None
+        parent = student.parents.first() if student.parents.exists() else None
 
         response_data.append({
             'id': student.id,
@@ -459,24 +538,22 @@ def students_with_subjects(request):
             'classroom': {
                 'id': classroom.id,
                 'name': classroom.name,
-                'has_departments': classroom.has_departments
-            } if classroom else None,
+                'has_departments': classroom.has_departments,
+            },
             'academic_year': academic_year,
             'term': term,
             'date_of_birth': student.date_of_birth,
-            'department': student.department,  # Student's own department
+            'department': student.department,
             'parent': {
                 'full_name': f"{parent.first_name} {parent.last_name}" if parent else None,
                 'phone_number': parent.phone_number if parent else None,
-                'email': parent.email if parent else None
+                'email': parent.email if parent else None,
             } if parent else None,
+            'last_login': student.last_login.strftime('%Y-%m-%d %H:%M') if student.last_login else None,
             'subjects': [
-                {
-                    'name': subject.name,
-                    'department': subject.department
-                }
-                for subject in student_subjects
-            ]
+                {'name': s.name, 'department': s.department}
+                for s in student_subjects
+            ],
         })
 
     return Response(response_data)
@@ -642,59 +719,78 @@ class UserRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
         return super().update(request, *args, **kwargs)
 
     def perform_update(self, serializer):
+        from rest_framework.exceptions import ValidationError as DRFValidationError
+
+        instance = serializer.instance
         password = self.request.data.get('password')
+
+        # For students, validate that a ClassSession exists for the target
+        # classroom + year + term BEFORE saving — same guard as on creation.
+        if instance.role == 'student' or serializer.validated_data.get('role') == 'student':
+            classroom  = serializer.validated_data.get('classroom',      instance.classroom)
+            acad_year  = serializer.validated_data.get('academic_year',  instance.academic_year)
+            term       = serializer.validated_data.get('term',           instance.term)
+            if classroom and acad_year and term:
+                if not ClassSession.objects.filter(
+                    classroom=classroom,
+                    academic_year=acad_year,
+                    term=term
+                ).exists():
+                    raise DRFValidationError({
+                        'error': (
+                            f'No class session exists for {classroom.name} in '
+                            f'{acad_year} {term}. Please set up the class session '
+                            f'for this class before moving a student into it.'
+                        )
+                    })
+
         instance = serializer.save()
 
         if password:
             instance.set_password(password)
             instance.save()
-        
-        # If updating a student's session info, update StudentSession accordingly
-        if (instance.role == 'student' and 
-            hasattr(instance, 'classroom') and instance.classroom and
-            hasattr(instance, 'academic_year') and instance.academic_year and
-            hasattr(instance, 'term') and instance.term):
-            
+
+        # Update StudentSession — ClassSession is guaranteed to exist (checked above)
+        if (instance.role == 'student' and
+                instance.classroom and instance.academic_year and instance.term):
             try:
                 class_session = ClassSession.objects.get(
                     classroom=instance.classroom,
                     academic_year=instance.academic_year,
                     term=instance.term
                 )
-                
-                # Check if student already has this session active
+
                 existing_session = StudentSession.objects.filter(
                     student=instance,
                     class_session=class_session
                 ).first()
-                
+
                 if existing_session:
-                    # Just ensure it's active
                     if not existing_session.is_active:
-                        # Mark other sessions inactive first
                         StudentSession.objects.filter(
                             student=instance,
                             is_active=True
                         ).exclude(id=existing_session.id).update(is_active=False)
-                        
                         existing_session.is_active = True
                         existing_session.save()
                 else:
-                    # Mark previous sessions as inactive
                     StudentSession.objects.filter(
                         student=instance,
                         is_active=True
                     ).update(is_active=False)
-                    
-                    # Create new session
                     StudentSession.objects.create(
                         student=instance,
                         class_session=class_session,
                         is_active=True
                     )
             except ClassSession.DoesNotExist:
-                # Don't deactivate existing sessions if target ClassSession doesn't exist
-                pass
+                # Should not reach here — blocked above — but log if it does
+                ActivityLog.objects.create(
+                    user=self.request.user,
+                    role='error',
+                    action=f"Unexpected: ClassSession missing on update for {instance.username}: "
+                           f"{instance.classroom.name} - {instance.academic_year} - {instance.term}"
+                )
 
 # ============================================================================
 # PARENT ATTENDANCE REPORT
@@ -1389,7 +1485,14 @@ def parent_grade_report(request):
         'term': session['class_session__term']
     } for session in available_sessions]
 
+    school = parent.school
+    school_logo_url = None
+    if school and school.logo:
+        school_logo_url = request.build_absolute_uri(school.logo.url)
+
     return Response({
+        'school_name': school.name if school else '',
+        'school_logo': school_logo_url,
         'student': {
             'id': child.id,
             'student_id': child.username,
@@ -1779,7 +1882,14 @@ def student_grade_report(request):
         'term': session['class_session__term']
     } for session in available_sessions]
 
+    school = student.school
+    school_logo_url = None
+    if school and school.logo:
+        school_logo_url = request.build_absolute_uri(school.logo.url)
+
     return Response({
+        'school_name': school.name if school else '',
+        'school_logo': school_logo_url,
         'student': {
             'id': student.id,
             'student_id': student.username,
@@ -2209,3 +2319,140 @@ def initialize_admin_4(request):
         }, status=status.HTTP_201_CREATED)
     except Exception as e:
         return Response({'status': 'error', 'message': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+# ---------------------------------------------------------------------------
+# NEVER LOGGED IN
+# ---------------------------------------------------------------------------
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated, IsAdminRole])
+def list_never_logged_in(request):
+    """
+    GET /api/<school_slug>/users/never-logged-in/?role=student
+    Returns users in this school who have never logged in (last_login is null).
+    """
+    school = getattr(request, 'school', None)
+    if not school:
+        return Response({'error': 'School not found'}, status=status.HTTP_400_BAD_REQUEST)
+
+    role = request.query_params.get('role', '').strip()
+    valid_roles = {'student', 'teacher', 'parent', 'principal'}
+
+    qs = CustomUser.objects.filter(school=school, last_login__isnull=True, is_active=True)
+    if role and role in valid_roles:
+        qs = qs.filter(role=role)
+
+    data = []
+    for user in qs.order_by('first_name', 'last_name'):
+        data.append({
+            'id': user.id,
+            'first_name': user.first_name,
+            'last_name': user.last_name,
+            'username': user.username,
+            'email': user.email or '',
+            'role': user.role,
+            'date_joined': user.date_joined.strftime('%Y-%m-%d') if user.date_joined else '',
+            'has_email': bool(user.email),
+        })
+
+    return Response(data)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated, IsAdminRole])
+def send_login_reminder(request):
+    """
+    POST /api/<school_slug>/users/send-login-reminder/
+    Sends (or re-sends) the verification/welcome email to one or more users.
+    Body: { "user_id": 1 }  OR  { "user_ids": [1, 2, 3] }
+    """
+    import secrets as _secrets
+    from django.utils import timezone as _tz
+    from django.conf import settings as _settings
+    from logs.email_service import send_verification_email
+
+    school = getattr(request, 'school', None)
+    if not school:
+        return Response({'error': 'School not found'}, status=status.HTTP_400_BAD_REQUEST)
+
+    user_id = request.data.get('user_id')
+    user_ids = request.data.get('user_ids')
+
+    if user_id:
+        user_ids = [user_id]
+    elif not user_ids:
+        return Response({'error': 'user_id or user_ids is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+    users = list(CustomUser.objects.filter(id__in=user_ids, school=school, is_active=True))
+    users_with_email = [u for u in users if u.email]
+
+    # Upfront quota check
+    subscription = getattr(school, 'subscription', None)
+    if subscription:
+        plan = subscription.plan
+        if plan.max_daily_emails > 0:
+            remaining = max(0, plan.max_daily_emails - subscription.emails_sent_today)
+            requested = len(users_with_email)
+            if remaining == 0:
+                return Response({
+                    'error': (
+                        f"You have reached your daily email limit of {plan.max_daily_emails} emails. "
+                        f"Your quota resets tomorrow. Upgrade your plan for higher limits."
+                    ),
+                    'quota_exceeded': True,
+                    'daily_limit': plan.max_daily_emails,
+                    'emails_remaining': 0,
+                }, status=status.HTTP_403_FORBIDDEN)
+            if requested > remaining:
+                return Response({
+                    'error': (
+                        f"You are trying to send {requested} reminder emails, but you only have "
+                        f"{remaining} email(s) remaining in your daily quota of {plan.max_daily_emails}. "
+                        f"Send {remaining} now, or wait until tomorrow when your quota resets."
+                    ),
+                    'quota_exceeded': True,
+                    'daily_limit': plan.max_daily_emails,
+                    'emails_remaining': remaining,
+                    'requested': requested,
+                }, status=status.HTTP_403_FORBIDDEN)
+
+    sent = []
+    skipped = []
+
+    for user in users:
+        if not user.email:
+            skipped.append({'id': user.id, 'name': f"{user.first_name} {user.last_name}", 'reason': 'No email address'})
+            continue
+
+        try:
+            from tenants.permissions import check_email_limit
+            if not check_email_limit(school):
+                skipped.append({'id': user.id, 'name': f"{user.first_name} {user.last_name}", 'reason': 'Daily email quota reached mid-send'})
+                continue
+
+            token = _secrets.token_urlsafe(32)
+            user.email_verification_token = token
+            user.email_verification_sent_at = _tz.now()
+            user.must_change_password = True
+            user.save(update_fields=['email_verification_token', 'email_verification_sent_at', 'must_change_password'])
+
+            verification_url = f"{_settings.FRONTEND_URL}/verify-email/{token}"
+            send_verification_email(user, verification_url)
+
+            sent.append({'id': user.id, 'name': f"{user.first_name} {user.last_name}", 'email': user.email})
+        except Exception as e:
+            skipped.append({'id': user.id, 'name': f"{user.first_name} {user.last_name}", 'reason': str(e)})
+
+    ActivityLog.objects.create(
+        user=request.user,
+        role='admin',
+        action=f"{request.user.username} sent login reminders to {len(sent)} user(s)"
+    )
+
+    return Response({
+        'sent_count': len(sent),
+        'skipped_count': len(skipped),
+        'sent': sent,
+        'skipped': skipped,
+    })

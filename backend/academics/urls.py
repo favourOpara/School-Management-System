@@ -35,7 +35,8 @@ from .views import (
     DepartmentListCreateView,
     DepartmentDetailView,
     assign_classes_to_department,
-    remove_class_from_department
+    remove_class_from_department,
+    class_progression_chain
 )
 
 urlpatterns = [
@@ -47,6 +48,7 @@ urlpatterns = [
 
     # Base class (e.g., "J.S.S.1")
     path('classes/', ClassListCreateView.as_view(), name='class-list-create'),
+    path('classes/progression/', class_progression_chain, name='class-progression-chain'),
     path('classes/<int:id>/', ClassDetailView.as_view(), name='class-detail'),
 
     # Class sessions (e.g., "J.S.S.1 - 2024/2025 - First Term")

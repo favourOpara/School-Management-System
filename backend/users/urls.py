@@ -7,6 +7,7 @@ from .views import (
     list_teachers,
     list_principals,
     list_students,
+    list_graduated_students,
     students_with_subjects,
     list_parents,
     UserRetrieveUpdateDestroyView,
@@ -26,12 +27,20 @@ from .views import (
     initialize_admin,
     initialize_admin_2,
     initialize_admin_3,
-    initialize_admin_4
+    initialize_admin_4,
+    list_never_logged_in,
+    send_login_reminder,
 )
 from .import_views import (
     import_student_info,
     validate_import,
     confirm_import,
+    import_teacher_info,
+    validate_import_teachers,
+    confirm_import_teachers,
+    import_parent_info,
+    validate_import_parents,
+    confirm_import_parents,
 )
 from .verification_views import (
     verify_email,
@@ -53,6 +62,7 @@ urlpatterns = [
     path('list-parents/', list_parents, name='list-parents'),
     path('list-teachers/', list_teachers, name='list-teachers'),
     path('list-principals/', list_principals, name='list-principals'),
+    path('list-graduated/', list_graduated_students, name='list-graduated'),
     path('students-with-subjects/', students_with_subjects, name='students-with-subjects'),
     path('<int:pk>/', UserRetrieveUpdateDestroyView.as_view(), name='user-detail'),
     path('login/', CustomTokenObtainPairView.as_view(), name='token_obtain_pair'),
@@ -74,10 +84,24 @@ urlpatterns = [
     path('initialize-admin-3/', initialize_admin_3, name='initialize_admin_3'),
     path('initialize-admin-4/', initialize_admin_4, name='initialize_admin_4'),
 
+    # Never logged in
+    path('never-logged-in/', list_never_logged_in, name='never_logged_in'),
+    path('send-login-reminder/', send_login_reminder, name='send_login_reminder'),
+
     # Student XLSX import endpoints
     path('import-students/info/', import_student_info, name='import_student_info'),
     path('import-students/validate/', validate_import, name='validate_import'),
     path('import-students/confirm/', confirm_import, name='confirm_import'),
+
+    # Teacher XLSX import endpoints
+    path('import-teachers/info/', import_teacher_info, name='import_teacher_info'),
+    path('import-teachers/validate/', validate_import_teachers, name='validate_import_teachers'),
+    path('import-teachers/confirm/', confirm_import_teachers, name='confirm_import_teachers'),
+
+    # Parent XLSX import endpoints
+    path('import-parents/info/', import_parent_info, name='import_parent_info'),
+    path('import-parents/validate/', validate_import_parents, name='validate_import_parents'),
+    path('import-parents/confirm/', confirm_import_parents, name='confirm_import_parents'),
 
     # Email verification endpoints
     path('verify-email/<str:token>/', verify_email, name='verify_email'),

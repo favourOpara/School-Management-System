@@ -12,11 +12,12 @@ import NotificationPopup from '../components/NotificationPopup';
 import TopHeader from '../components/TopHeader';
 import PasswordChange from '../components/PasswordChange';
 import StaffBookOnOff from '../components/StaffBookOnOff';
+import LessonNotes from '../components/LessonNotes';
 import { useSchool } from '../contexts/SchoolContext';
 
 import './TeacherDashboard.css';
 
-const KnowledgeBase = React.lazy(() => import('../components/KnowledgeBase'));
+const UserGuide = React.lazy(() => import('../components/UserGuide'));
 
 const getGreeting = () => {
   const hour = new Date().getHours();
@@ -382,6 +383,8 @@ const TeacherDashboard = () => {
         return <ViewQuestions />;
       case 'manual-grading':
         return <ManualGrading />;
+      case 'lesson-notes':
+        return <LessonNotes />;
       case 'announcements':
         return <TeacherAnnouncements />;
       case 'book-on-off':
@@ -428,10 +431,10 @@ const TeacherDashboard = () => {
             <p className="teacher-dashboard-section-text">Adjust your account settings and preferences.</p>
           </div>
         );
-      case 'knowledge-base':
+      case 'user-guide':
         return (
           <Suspense fallback={<div className="kb-loading">Loading...</div>}>
-            <KnowledgeBase userRole="teacher" />
+            <UserGuide userRole="teacher" />
           </Suspense>
         );
       default:

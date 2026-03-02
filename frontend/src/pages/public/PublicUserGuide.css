@@ -7,7 +7,7 @@
 
 .pub-kb-content {
   flex: 1;
-  padding-top: 80px;
+  padding-top: 70px;
 }
 
 /* Role selector bar */
@@ -16,7 +16,7 @@
   border-bottom: 1px solid #e2e8f0;
   padding: 12px 24px;
   position: sticky;
-  top: 72px;
+  top: 70px;
   z-index: 40;
 }
 

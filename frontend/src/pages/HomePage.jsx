@@ -5,6 +5,30 @@ import { getSchoolSlug, buildPublicApiUrl } from '../config';
 import { useSchool } from '../contexts/SchoolContext';
 import './HomePage.css';
 
+function setSchoolFavicon(school) {
+  let link = document.querySelector("link[rel~='icon']");
+  if (!link) {
+    link = document.createElement('link');
+    link.rel = 'icon';
+    document.head.appendChild(link);
+  }
+
+  if (school.logo) {
+    link.type = 'image/png';
+    link.href = school.logo;
+  } else {
+    // Generate a coloured square with the school's first initial
+    const initial = (school.name || 'S').charAt(0).toUpperCase();
+    const color = school.accent_color || '#2563eb';
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+      <rect width="64" height="64" rx="12" fill="${color}"/>
+      <text x="32" y="45" font-family="Arial,sans-serif" font-size="36" font-weight="bold" fill="white" text-anchor="middle">${initial}</text>
+    </svg>`;
+    link.type = 'image/svg+xml';
+    link.href = 'data:image/svg+xml,' + encodeURIComponent(svg);
+  }
+}
+
 const HomePage = () => {
   const [formData, setFormData] = useState({ username: '', password: '' });
   const [error, setError] = useState('');
@@ -26,10 +50,14 @@ const HomePage = () => {
       try {
         const response = await axios.get(buildPublicApiUrl(`school/${slug}/`));
         setSchoolInfo(response.data);
-        // Update document title
+
+        // Update browser tab title
         if (response.data.name) {
           document.title = response.data.name;
         }
+
+        // Update favicon to school's logo, or a generated initial-based icon
+        setSchoolFavicon(response.data);
       } catch (err) {
         console.error('Failed to fetch school info:', err);
       } finally {

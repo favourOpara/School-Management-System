@@ -23,14 +23,17 @@ import ReportSheet from '../components/ReportSheet';
 import AdminFeeReceipts from '../components/AdminFeeReceipts';
 import Announcements from '../components/Announcements';
 import TopHeader from '../components/TopHeader';
+import { GracePeriodBanner } from '../components/subscription';
 import SessionManagement from '../components/SessionManagement';
 import AdminProfileSettings from '../components/AdminProfileSettings';
 import DashboardWelcome from '../components/DashboardWelcome';
 import ManageStaff from '../components/ManageStaff';
+import LessonNoteReview from '../components/LessonNoteReview';
 import { useSchool } from '../contexts/SchoolContext';
 import './AdminDashboard.css';
 
-const KnowledgeBase = React.lazy(() => import('../components/KnowledgeBase'));
+const UserGuide = React.lazy(() => import('../components/UserGuide'));
+import SupportContact from '../components/SupportContact';
 
 const getGreeting = () => {
   const hour = new Date().getHours();
@@ -132,14 +135,18 @@ const AdminDashboard = () => {
         return <ViewResults />;
       case 'review-questions':
         return <ReviewQuestions />;
+      case 'lesson-note-review':
+        return <LessonNoteReview />;
       case 'announcements':
         return <Announcements />;
-      case 'knowledge-base':
+      case 'user-guide':
         return (
           <Suspense fallback={<div className="kb-loading">Loading...</div>}>
-            <KnowledgeBase userRole="admin" />
+            <UserGuide userRole="admin" />
           </Suspense>
         );
+      case 'contact-support':
+        return <SupportContact />;
       default:
         return <DashboardWelcome userName={userName} />;
     }
@@ -160,6 +167,7 @@ const AdminDashboard = () => {
         onMenuClick={() => sidebarRef.current?.openSidebar()}
         onSettingsClick={() => setShowProfileSettings(true)}
       />
+      <GracePeriodBanner />
       <main className="admin-dashboard-main">
         <div className="admin-dashboard-header-container">
           <div className="admin-dashboard-header-left">

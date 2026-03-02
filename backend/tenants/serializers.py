@@ -7,7 +7,7 @@ import re
 import secrets
 import string
 
-from .models import School, SubscriptionPlan, Subscription, PaymentHistory, SchoolInvitation, PortalUser
+from .models import School, SubscriptionPlan, Subscription, PaymentHistory, SchoolInvitation, PortalUser, OnboardingRecord
 
 User = get_user_model()
 
@@ -50,7 +50,7 @@ class SubscriptionPlanSerializer(serializers.ModelSerializer):
             'id', 'name', 'display_name', 'description',
             'monthly_price', 'annual_price', 'monthly_price_naira', 'annual_price_naira',
             'annual_savings', 'max_admin_accounts', 'max_daily_emails',
-            'has_import_feature', 'has_staff_management', 'trial_days', 'display_order'
+            'has_import_feature', 'has_staff_management', 'trial_days', 'termly_trial_days', 'display_order'
         ]
 
     def get_monthly_price_naira(self, obj):
@@ -79,7 +79,7 @@ class SchoolSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'name', 'slug', 'email', 'phone', 'address', 'logo',
             'accent_color', 'secondary_color', 'email_sender_name', 'tagline', 'website',
-            'current_academic_year', 'current_term',
+            'current_academic_year', 'current_term', 'lesson_note_weeks_per_term',
             'is_active', 'is_verified', 'trial_start_date', 'trial_end_date',
             'subscription_status', 'plan_name', 'days_left_in_trial',
             'created_at', 'updated_at'
@@ -143,6 +143,10 @@ class SubscriptionSerializer(serializers.ModelSerializer):
     can_create_admin = serializers.SerializerMethodField()
     can_send_email = serializers.SerializerMethodField()
     emails_remaining_today = serializers.SerializerMethodField()
+    is_in_grace_period = serializers.SerializerMethodField()
+    grace_period_end = serializers.SerializerMethodField()
+    grace_days_remaining = serializers.SerializerMethodField()
+    has_saved_card = serializers.SerializerMethodField()
 
     class Meta:
         model = Subscription
@@ -151,6 +155,8 @@ class SubscriptionSerializer(serializers.ModelSerializer):
             'current_period_start', 'current_period_end',
             'admin_count', 'can_create_admin', 'can_send_email',
             'emails_sent_today', 'emails_remaining_today',
+            'is_in_grace_period', 'grace_period_end', 'grace_days_remaining',
+            'auto_debit_enabled', 'has_saved_card',
             'created_at', 'updated_at'
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
@@ -168,6 +174,19 @@ class SubscriptionSerializer(serializers.ModelSerializer):
         if obj.plan.max_daily_emails == 0:
             return -1  # Unlimited
         return max(0, obj.plan.max_daily_emails - obj.emails_sent_today)
+
+    def get_is_in_grace_period(self, obj):
+        return obj.is_in_grace_period()
+
+    def get_grace_period_end(self, obj):
+        gp_end = obj.get_grace_period_end()
+        return gp_end.isoformat() if gp_end else None
+
+    def get_grace_days_remaining(self, obj):
+        return obj.get_grace_days_remaining()
+
+    def get_has_saved_card(self, obj):
+        return bool(obj.paystack_authorization_code)
 
 
 class PaymentHistorySerializer(serializers.ModelSerializer):
@@ -216,6 +235,10 @@ class SchoolRegistrationSerializer(serializers.Serializer):
         choices=[('monthly', 'Monthly'), ('annual', 'Annual')],
         default='monthly'
     )
+    registration_type = serializers.ChoiceField(
+        choices=[('trial', 'Free Trial'), ('termly_trial', 'Termly Free Trial'), ('subscribe', 'Subscribe')],
+        default='trial'
+    )
 
     def validate_school_name(self, value):
         """Generate and validate slug from school name."""
@@ -262,11 +285,52 @@ class SchoolRegistrationSerializer(serializers.Serializer):
             raise serializers.ValidationError("Invalid or inactive subscription plan.")
         return value
 
+    def validate(self, data):
+        """Cross-field validation — trial abuse prevention."""
+        if data.get('registration_type') in ('trial', 'termly_trial'):
+            school_email = data.get('school_email', '')
+            school_phone = data.get('school_phone', '').strip()
+
+            GENERIC_DOMAINS = {
+                'gmail.com', 'yahoo.com', 'hotmail.com', 'outlook.com',
+                'yahoo.co.uk', 'aol.com', 'icloud.com', 'mail.com',
+                'protonmail.com', 'live.com', 'msn.com', 'ymail.com',
+            }
+
+            # Check email domain
+            if '@' in school_email:
+                domain = school_email.split('@')[-1].lower()
+                if domain not in GENERIC_DOMAINS:
+                    if School.objects.filter(email__iendswith='@' + domain).exists():
+                        raise serializers.ValidationError({
+                            'registration_type': (
+                                'A free trial has already been used with this email domain. '
+                                'You can subscribe directly to get started.'
+                            )
+                        })
+
+            # Check phone number
+            if school_phone:
+                if School.objects.filter(phone=school_phone).exists():
+                    raise serializers.ValidationError({
+                        'registration_type': (
+                            'A free trial has already been used with this phone number. '
+                            'You can subscribe directly to get started.'
+                        )
+                    })
+
+        return data
+
     def create(self, validated_data):
         """Create school, subscription, portal user, and initial admin user."""
         from django.db import transaction
 
         plan = SubscriptionPlan.objects.get(id=validated_data['plan_id'])
+        registration_type = validated_data.get('registration_type', 'trial')
+        is_trial = registration_type in ('trial', 'termly_trial')
+        trial_duration_days = (
+            plan.termly_trial_days if registration_type == 'termly_trial' else plan.trial_days
+        )
 
         with transaction.atomic():
             # Create school
@@ -278,19 +342,26 @@ class SchoolRegistrationSerializer(serializers.Serializer):
                 address=validated_data.get('school_address', ''),
                 is_active=True,
                 is_verified=False,
-                trial_start_date=timezone.now(),
-                trial_end_date=timezone.now() + timedelta(days=plan.trial_days)
+                trial_start_date=timezone.now() if is_trial else None,
+                trial_end_date=(timezone.now() + timedelta(days=trial_duration_days)) if is_trial else None,
             )
 
             # Create or update subscription (signal may have created a default one)
+            if is_trial:
+                sub_status = 'trial'
+                period_end = timezone.now() + timedelta(days=trial_duration_days if trial_duration_days > 0 else 30)
+            else:
+                sub_status = 'pending'
+                period_end = None  # Set by Paystack webhook on payment success
+
             subscription, _ = Subscription.objects.update_or_create(
                 school=school,
                 defaults={
                     'plan': plan,
-                    'status': 'trial',
+                    'status': sub_status,
                     'billing_cycle': validated_data.get('billing_cycle', 'monthly'),
                     'current_period_start': timezone.now(),
-                    'current_period_end': timezone.now() + timedelta(days=plan.trial_days if plan.trial_days > 0 else 30)
+                    'current_period_end': period_end,
                 }
             )
 
@@ -323,6 +394,21 @@ class SchoolRegistrationSerializer(serializers.Serializer):
                 email_verified=True,  # No verification needed, created by portal
                 must_change_password=False
             )
+
+        # Create onboarding record so the EduCare team can track setup progress
+        OnboardingRecord.objects.get_or_create(
+            school=school,
+            defaults={'registration_type': registration_type},
+        )
+
+        # Send onboarding welcome email for trial registrations.
+        # For paid subscriptions, the email is triggered by the Paystack webhook on payment success.
+        if is_trial:
+            try:
+                from .educare_emails import send_onboarding_welcome_email
+                send_onboarding_welcome_email(subscription, registration_type)
+            except Exception:
+                pass  # Never block registration due to email failure
 
         return {
             'school': school,
@@ -376,7 +462,7 @@ class InitializePaymentSerializer(serializers.Serializer):
         try:
             plan = SubscriptionPlan.objects.get(id=value, is_active=True)
             if plan.monthly_price == 0:
-                raise serializers.ValidationError("Cannot initiate payment for free plan.")
+                raise serializers.ValidationError("Cannot initiate payment for this plan. Please contact sales.")
         except SubscriptionPlan.DoesNotExist:
             raise serializers.ValidationError("Invalid or inactive subscription plan.")
         return value

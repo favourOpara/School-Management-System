@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import {
-  GraduationCap,
   Eye,
   EyeOff,
   Check,
@@ -44,6 +43,9 @@ function SchoolRegistration() {
   const [plans, setPlans] = useState([]);
   const [loadingPlans, setLoadingPlans] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [trialEligible, setTrialEligible] = useState(null);
+  const [trialCheckDone, setTrialCheckDone] = useState(false);
+  const [trialIneligibleReason, setTrialIneligibleReason] = useState('');
 
   const [formData, setFormData] = useState({
     school_name: '',
@@ -57,6 +59,7 @@ function SchoolRegistration() {
     admin_password_confirm: '',
     plan_id: location.state?.planId || '',
     billing_cycle: location.state?.annual ? 'annual' : 'monthly',
+    registration_type: location.state?.registrationType || 'trial',
   });
 
   const [errors, setErrors] = useState({});
@@ -81,12 +84,19 @@ function SchoolRegistration() {
       const response = await fetch(PUBLIC_ENDPOINTS.plans);
       if (response.ok) {
         const data = await response.json();
-        setPlans(data);
-        if (!formData.plan_id && data.length > 0) {
-          const freePlan = data.find((p) => p.name === 'free');
-          if (freePlan) {
-            setFormData((prev) => ({ ...prev, plan_id: freePlan.id }));
+        // Filter out the free/inactive plans — only show paid public plans
+        const activePlans = data.filter((p) => p.name !== 'free' && p.monthly_price > 0);
+        setPlans(activePlans);
+        // If plan was pre-selected from pricing page, match by name
+        if (formData.plan_id && typeof formData.plan_id === 'string') {
+          const matched = activePlans.find((p) => p.name === formData.plan_id);
+          if (matched) {
+            setFormData((prev) => ({ ...prev, plan_id: matched.id }));
           }
+        }
+        // Default to first plan if none selected
+        if (!formData.plan_id && activePlans.length > 0) {
+          setFormData((prev) => ({ ...prev, plan_id: activePlans[0].id }));
         }
       } else {
         console.error('Failed to fetch plans, status:', response.status);
@@ -95,6 +105,32 @@ function SchoolRegistration() {
       console.error('Failed to fetch plans:', err);
     } finally {
       setLoadingPlans(false);
+    }
+  };
+
+  const checkTrialEligibility = async () => {
+    try {
+      const response = await fetch(PUBLIC_ENDPOINTS.checkTrial || buildPublicApiUrl('/check-trial/'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          school_email: formData.school_email,
+          school_phone: formData.school_phone,
+        }),
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setTrialEligible(data.eligible);
+        setTrialIneligibleReason(data.reason || '');
+        if (!data.eligible) {
+          setFormData((prev) => ({ ...prev, registration_type: 'subscribe' }));
+        }
+      }
+    } catch (err) {
+      // If check fails, allow trial by default
+      setTrialEligible(true);
+    } finally {
+      setTrialCheckDone(true);
     }
   };
 
@@ -192,7 +228,12 @@ function SchoolRegistration() {
 
   const handleNext = () => {
     if (validateStep(activeStep)) {
-      setActiveStep((prev) => prev + 1);
+      const nextStep = activeStep + 1;
+      setActiveStep(nextStep);
+      // Check trial eligibility when entering step 3
+      if (nextStep === 2 && (formData.registration_type === 'trial' || formData.registration_type === 'termly_trial') && !trialCheckDone) {
+        checkTrialEligibility();
+      }
     }
   };
 
@@ -223,6 +264,7 @@ function SchoolRegistration() {
           admin_password: formData.admin_password,
           plan_id: formData.plan_id,
           billing_cycle: formData.billing_cycle,
+          registration_type: formData.registration_type,
           callback_url: `${window.location.origin}/payment/callback`,
         }),
       });
@@ -260,7 +302,7 @@ function SchoolRegistration() {
   };
 
   const formatPrice = (kobo) => {
-    if (kobo === 0) return 'Free';
+    if (kobo === 0) return 'Contact Sales';
     return `₦${(kobo / 100).toLocaleString()}`;
   };
 
@@ -305,10 +347,7 @@ function SchoolRegistration() {
       <nav className="register-nav">
         <div className="register-nav-container">
           <Link to="/" className="register-logo">
-            <div className="register-logo-icon">
-              <GraduationCap />
-            </div>
-            <span className="register-logo-text">EduCare</span>
+            <img src="/logo.svg" alt="EduCare" style={{height: '60px', width: 'auto'}} />
           </Link>
 
           <div className="register-nav-links">
@@ -433,6 +472,20 @@ function SchoolRegistration() {
                   </p>
                 </div>
               )}
+
+              {/* Onboarding promise */}
+              <div className="register-onboarding-notice">
+                <div className="register-onboarding-notice-icon">
+                  <Shield size={22} />
+                </div>
+                <div>
+                  <p className="register-onboarding-notice-title">Your Onboarding Expert Will Reach Out Within 24 Hours</p>
+                  <p className="register-onboarding-notice-text">
+                    A dedicated EduCare specialist will contact you at <strong>{formData.admin_email}</strong> to personally
+                    help set up your students, teachers, classes, subjects, and more — completely free.
+                  </p>
+                </div>
+              </div>
 
               <p className="register-success-text">
                 Your Admin Portal login: <strong>{formData.admin_email}</strong>
@@ -749,6 +802,53 @@ function SchoolRegistration() {
                       </div>
                     ) : (
                       <>
+                        {/* Registration type toggle */}
+                        <div className="register-type-toggle">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (trialEligible === false) return;
+                              setFormData((prev) => ({ ...prev, registration_type: 'trial' }));
+                            }}
+                            className={`register-type-btn ${formData.registration_type === 'trial' ? 'active' : ''} ${trialEligible === false ? 'disabled' : ''}`}
+                            disabled={trialEligible === false}
+                          >
+                            <Shield size={16} />
+                            30-Day Trial
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (trialEligible === false) return;
+                              setFormData((prev) => ({ ...prev, registration_type: 'termly_trial' }));
+                            }}
+                            className={`register-type-btn ${formData.registration_type === 'termly_trial' ? 'active' : ''} ${trialEligible === false ? 'disabled' : ''}`}
+                            disabled={trialEligible === false}
+                          >
+                            <Shield size={16} />
+                            Termly Trial
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setFormData((prev) => ({ ...prev, registration_type: 'subscribe' }))}
+                            className={`register-type-btn ${formData.registration_type === 'subscribe' ? 'active' : ''}`}
+                          >
+                            <CreditCard size={16} />
+                            Subscribe Now
+                          </button>
+                        </div>
+
+                        {/* Trial ineligibility notice */}
+                        {trialEligible === false && (
+                          <div className="register-trial-ineligible">
+                            <AlertCircle size={18} />
+                            <div>
+                              <p style={{ fontWeight: 600, margin: '0 0 0.25rem' }}>Free trial unavailable</p>
+                              <p style={{ margin: 0, fontSize: '0.875rem' }}>{trialIneligibleReason}</p>
+                            </div>
+                          </div>
+                        )}
+
                         <div className="register-plans-grid">
                           {plans.map((plan) => (
                             <div
@@ -766,21 +866,30 @@ function SchoolRegistration() {
 
                               <div className="register-plan-header">
                                 <h4>{plan.display_name}</h4>
-                                {plan.name === 'free' && (
-                                  <span className="register-plan-free-badge">30 days free</span>
-                                )}
                               </div>
 
                               <p className="register-plan-price">
-                                {formatPrice(
-                                  formData.billing_cycle === 'annual'
-                                    ? plan.annual_price
-                                    : plan.monthly_price
-                                )}
-                                {plan.monthly_price > 0 && (
-                                  <span className="register-plan-period">
-                                    /{formData.billing_cycle === 'annual' ? 'year' : 'month'}
-                                  </span>
+                                {formData.registration_type === 'trial' ? (
+                                  <>
+                                    <span style={{ fontSize: '1.5rem', fontWeight: 700, color: '#047857' }}>Free</span>
+                                    <span className="register-plan-period"> for 30 days</span>
+                                  </>
+                                ) : formData.registration_type === 'termly_trial' ? (
+                                  <>
+                                    <span style={{ fontSize: '1.5rem', fontWeight: 700, color: '#047857' }}>Free</span>
+                                    <span className="register-plan-period"> for {plan.termly_trial_days || 120} days</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    {formatPrice(
+                                      formData.billing_cycle === 'annual'
+                                        ? plan.annual_price
+                                        : plan.monthly_price
+                                    )}
+                                    <span className="register-plan-period">
+                                      /{formData.billing_cycle === 'annual' ? 'year' : 'month'}
+                                    </span>
+                                  </>
                                 )}
                               </p>
 
@@ -791,12 +900,16 @@ function SchoolRegistration() {
                                 </div>
                                 <div className="register-plan-feature">
                                   <Check />
+                                  <span>{plan.max_students} students</span>
+                                </div>
+                                <div className="register-plan-feature">
+                                  <Check />
                                   <span>{plan.max_daily_emails === 0 ? 'Unlimited' : plan.max_daily_emails} emails/day</span>
                                 </div>
                                 {plan.has_import_feature && (
                                   <div className="register-plan-feature">
                                     <Check />
-                                    <span>CSV Import</span>
+                                    <span>XLSX Import</span>
                                   </div>
                                 )}
                               </div>
@@ -810,7 +923,8 @@ function SchoolRegistration() {
                           ))}
                         </div>
 
-                        {selectedPlan && selectedPlan.monthly_price > 0 && (
+                        {/* Billing cycle — only show for subscribe mode */}
+                        {formData.registration_type === 'subscribe' && selectedPlan && (
                           <div className="register-billing-section">
                             <label className="register-label">Billing Cycle</label>
                             <div className="register-billing-options">
@@ -855,10 +969,28 @@ function SchoolRegistration() {
                         <div className="register-trial-notice">
                           <Shield />
                           <div>
-                            <p className="register-trial-notice-title">30-Day Free Trial</p>
-                            <p className="register-trial-notice-text">
-                              All plans include a free trial. No payment required to start.
-                            </p>
+                            {formData.registration_type === 'trial' ? (
+                              <>
+                                <p className="register-trial-notice-title">30-Day Free Trial</p>
+                                <p className="register-trial-notice-text">
+                                  No payment required. Try all features for 30 days. After your trial, you'll be invited to subscribe to continue.
+                                </p>
+                              </>
+                            ) : formData.registration_type === 'termly_trial' ? (
+                              <>
+                                <p className="register-trial-notice-title">Termly Free Trial — 4 Months</p>
+                                <p className="register-trial-notice-text">
+                                  No payment required. Experience a full school term on us. After your trial, you'll be invited to subscribe to continue.
+                                </p>
+                              </>
+                            ) : (
+                              <>
+                                <p className="register-trial-notice-title">Secure Payment</p>
+                                <p className="register-trial-notice-text">
+                                  Payment processed securely via Paystack. Your subscription starts immediately.
+                                </p>
+                              </>
+                            )}
                           </div>
                         </div>
                       </>
@@ -890,14 +1022,14 @@ function SchoolRegistration() {
                           <Loader2 className="register-spinner" />
                           Processing...
                         </>
-                      ) : selectedPlan?.monthly_price > 0 ? (
+                      ) : formData.registration_type === 'subscribe' ? (
                         <>
                           Continue to Payment
                           <ArrowRight />
                         </>
                       ) : (
                         <>
-                          Create Account
+                          Start Free Trial
                           <ArrowRight />
                         </>
                       )}
@@ -929,10 +1061,7 @@ function SchoolRegistration() {
       <footer className="register-footer">
         <div className="register-footer-container">
           <div className="register-footer-brand">
-            <div className="register-footer-logo">
-              <GraduationCap />
-            </div>
-            <span className="register-footer-name">EduCare</span>
+            <img src="/logo.svg" alt="EduCare" style={{height: '60px', width: 'auto'}} />
           </div>
           <div className="register-footer-links">
             <Link to="/pricing">Pricing</Link>

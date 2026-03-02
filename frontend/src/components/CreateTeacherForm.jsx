@@ -2,11 +2,13 @@ import React, { useState } from 'react';
 import axios from 'axios';
 import API_BASE_URL from '../config';
 import { useSchool } from '../contexts/SchoolContext';
+import ImportTeachersModal from './ImportTeachersModal';
 
 import './CreateTeacherForm.css';
 
 const CreateTeacherForm = ({ onSuccess }) => {
-  const { buildApiUrl } = useSchool();
+  const { buildApiUrl, featureLimits } = useSchool();
+  const [showImportModal, setShowImportModal] = useState(false);
   const [formData, setFormData] = useState({
     username: '',
     password: '',
@@ -70,7 +72,25 @@ const CreateTeacherForm = ({ onSuccess }) => {
   return (
     <div className="create-teacher-wrapper">
       <div className="create-teacher-container">
-        <h3>Create Teacher</h3>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
+          <h3 style={{ margin: 0 }}>Create Teacher</h3>
+          <button type="button" className="import-students-btn" onClick={() => setShowImportModal(true)}>
+            Import Teachers
+          </button>
+        </div>
+        {featureLimits?.max_teachers > 0 && featureLimits.current_teachers / featureLimits.max_teachers >= 0.8 && (
+          <div style={{
+            padding: '0.6rem 0.9rem', borderRadius: '8px', marginBottom: '1rem',
+            fontSize: '0.85rem',
+            background: featureLimits.current_teachers >= featureLimits.max_teachers ? '#fee2e2' : '#fef3c7',
+            color: featureLimits.current_teachers >= featureLimits.max_teachers ? '#991b1b' : '#92400e',
+            border: `1px solid ${featureLimits.current_teachers >= featureLimits.max_teachers ? '#fca5a5' : '#fde68a'}`,
+          }}>
+            {featureLimits.current_teachers >= featureLimits.max_teachers
+              ? `Teacher limit reached (${featureLimits.current_teachers}/${featureLimits.max_teachers}). Upgrade your plan to add more.`
+              : `Approaching teacher limit: ${featureLimits.current_teachers} of ${featureLimits.max_teachers} used.`}
+          </div>
+        )}
         <form onSubmit={handleSubmit} className="create-teacher-form">
           <input
             type="text"
@@ -129,6 +149,13 @@ const CreateTeacherForm = ({ onSuccess }) => {
           </p>
         )}
       </div>
+
+      {showImportModal && (
+        <ImportTeachersModal
+          onClose={() => setShowImportModal(false)}
+          onSuccess={() => setShowImportModal(false)}
+        />
+      )}
     </div>
   );
 };

@@ -186,8 +186,8 @@ const Settings = () => {
       total: total,
       remaining: 100 - total,
       errors: [
-        ...(config.attendance_percentage < 5 || config.attendance_percentage > 20 
-          ? ['Attendance must be between 5% and 20%'] : []),
+        ...(config.attendance_percentage < 0 || config.attendance_percentage > 20
+          ? ['Attendance must be between 0% and 20%'] : []),
         ...(config.assignment_percentage < 5 || config.assignment_percentage > 20 
           ? ['Assignment must be between 5% and 20%'] : [])
       ]
@@ -381,12 +381,12 @@ const Settings = () => {
                     <label>Attendance (%)</label>
                     <input
                       type="number"
-                      min="5"
+                      min="0"
                       max="20"
                       value={currentConfig.attendance_percentage}
                       onChange={(e) => handleConfigChange('attendance_percentage', e.target.value)}
                     />
-                    <small>5% - 20%</small>
+                    <small>0% - 20% (set to 0 to disable)</small>
                   </div>
 
                   <div className="percentage-item">

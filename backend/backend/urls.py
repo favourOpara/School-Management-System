@@ -23,6 +23,7 @@ from tenants.urls import (
     admin_urlpatterns as tenant_admin_urls,
     portal_urlpatterns as tenant_portal_urls,
     proprietor_urlpatterns as tenant_proprietor_urls,
+    onboarding_urlpatterns as tenant_onboarding_urls,
 )
 
 
@@ -64,6 +65,9 @@ urlpatterns = [
 
     # Admin Portal routes (for school admin configuration)
     path('api/portal/', include(tenant_portal_urls)),
+
+    # Onboarding agent routes (for EduCare internal onboarding staff)
+    path('api/onboarding/', include(tenant_onboarding_urls)),
 
     # School-scoped routes (authentication required)
     # The TenantMiddleware will extract school_slug and attach to request

@@ -16,10 +16,11 @@ import {
 import { useSchool } from '../contexts/SchoolContext';
 import { buildApiUrl } from '../config';
 import TopHeader from '../components/TopHeader';
+import { GracePeriodBanner } from '../components/subscription';
 import Announcements from '../components/Announcements';
 import './ProprietorDashboard.css';
 
-const KnowledgeBase = React.lazy(() => import('../components/KnowledgeBase'));
+const UserGuide = React.lazy(() => import('../components/UserGuide'));
 
 const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4', '#84cc16'];
 
@@ -57,7 +58,7 @@ function ProprietorDashboard() {
     { id: 'staff', label: 'Staff', icon: Briefcase },
     { id: 'enrollment', label: 'Enrollment', icon: Users },
     { id: 'announcements', label: 'Announcements', icon: Megaphone },
-    { id: 'knowledge-base', label: 'Knowledge Base', icon: HelpCircle },
+    { id: 'user-guide', label: 'User Guide', icon: HelpCircle },
   ];
 
   const getGreeting = () => {
@@ -110,6 +111,7 @@ function ProprietorDashboard() {
       {/* Main */}
       <main className="proprietor-main">
         <TopHeader onMenuClick={() => setSidebarOpen(true)} />
+        <GracePeriodBanner />
         <div className="proprietor-content">
           <div className="proprietor-header">
             <h2>{getGreeting()}, {userName}</h2>
@@ -121,7 +123,7 @@ function ProprietorDashboard() {
               {activeTab === 'staff' && 'Staff overview and management'}
               {activeTab === 'enrollment' && 'Student enrollment analytics'}
               {activeTab === 'announcements' && 'School-wide announcements'}
-              {activeTab === 'knowledge-base' && 'Help and documentation'}
+              {activeTab === 'user-guide' && 'Help and documentation'}
             </p>
           </div>
           {activeTab === 'overview' && <OverviewTab />}
@@ -131,9 +133,9 @@ function ProprietorDashboard() {
           {activeTab === 'staff' && <StaffTab />}
           {activeTab === 'enrollment' && <EnrollmentTab />}
           {activeTab === 'announcements' && <AnnouncementsTab />}
-          {activeTab === 'knowledge-base' && (
+          {activeTab === 'user-guide' && (
             <Suspense fallback={<div className="kb-loading">Loading...</div>}>
-              <KnowledgeBase userRole="proprietor" />
+              <UserGuide userRole="proprietor" />
             </Suspense>
           )}
         </div>

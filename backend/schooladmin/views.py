@@ -1808,8 +1808,8 @@ def validate_grading_configuration(request):
     is_valid = total == 100
     
     errors = []
-    if not (5 <= attendance <= 20):
-        errors.append("Attendance percentage must be between 5% and 20%")
+    if not (0 <= attendance <= 20):
+        errors.append("Attendance percentage must be between 0% and 20%")
     if not (5 <= assignment <= 20):
         errors.append("Assignment percentage must be between 5% and 20%")
     
@@ -2467,6 +2467,23 @@ def save_manual_grades(request, subject_id):
         'updated_count': updated_count,
         'errors': errors if errors else None
     }, status=status.HTTP_200_OK if not errors else status.HTTP_207_MULTI_STATUS)
+
+
+def _test1_is_entered(grade_summary, attendance_score, assignment_score):
+    """
+    Returns True if the Test 1 slot (attendance + assignment) is considered
+    filled/complete for this grade summary.
+
+    When BOTH attendance_percentage and assignment_percentage are set to 0 in
+    the grading config, 0 is the *correct* value for both scores — the school
+    has intentionally disabled those components, so the check must not flag
+    them as missing.
+    """
+    config_test1_max = (
+        grade_summary.grading_config.attendance_percentage
+        + grade_summary.grading_config.assignment_percentage
+    )
+    return config_test1_max == 0 or (attendance_score + assignment_score) != 0
 
 
 @api_view(['GET'])
@@ -3607,7 +3624,13 @@ def get_report_sheet(request, student_id):
         if hasattr(student, 'profile_picture') and student.profile_picture:
             photo_url = request.build_absolute_uri(student.profile_picture.url)
 
+        school_logo_url = None
+        if school.logo:
+            school_logo_url = request.build_absolute_uri(school.logo.url)
+
         return Response({
+            'school_name': school.name,
+            'school_logo': school_logo_url,
             'student': {
                 'id': student.id,
                 'student_id': student.username,  # Student ID like FHS026
@@ -4722,7 +4745,7 @@ def get_report_access_stats(request):
                     total_score = float(grade_summary.total_score) if grade_summary.total_score else 0
 
                     # Test 1 = attendance + assignment (must be > 0)
-                    test1_complete = (attendance_score + assignment_score) > 0
+                    test1_complete = _test1_is_entered(grade_summary, attendance_score, assignment_score)
 
                     # Test 2 = test score (must be > 0)
                     test2_complete = test_score > 0
@@ -4906,7 +4929,7 @@ def send_report_sheets(request):
                 total_score = float(grade_summary.total_score) if grade_summary.total_score else 0
 
                 # Check all components are filled
-                test1_complete = (attendance_score + assignment_score) > 0
+                test1_complete = _test1_is_entered(grade_summary, attendance_score, assignment_score)
                 test2_complete = test_score > 0
                 exam_complete = exam_score > 0
                 total_complete = total_score > 0
@@ -5047,7 +5070,7 @@ def get_eligible_classes_for_reports(request):
                 exam_score = float(grade_summary.exam_score) if grade_summary.exam_score else 0
                 total_score = float(grade_summary.total_score) if grade_summary.total_score else 0
 
-                if not ((attendance_score + assignment_score) > 0 and test_score > 0 and exam_score > 0 and total_score > 0):
+                if not (_test1_is_entered(grade_summary, attendance_score, assignment_score) and test_score > 0 and exam_score > 0 and total_score > 0):
                     grades_complete = False
                     break
             except GradeSummary.DoesNotExist:
@@ -5153,7 +5176,7 @@ def get_eligible_students_in_class(request, class_session_id):
                 exam_score = float(grade_summary.exam_score) if grade_summary.exam_score else 0
                 total_score = float(grade_summary.total_score) if grade_summary.total_score else 0
 
-                if not ((attendance_score + assignment_score) > 0 and test_score > 0 and exam_score > 0 and total_score > 0):
+                if not (_test1_is_entered(grade_summary, attendance_score, assignment_score) and test_score > 0 and exam_score > 0 and total_score > 0):
                     grades_complete = False
                     break
             except GradeSummary.DoesNotExist:
@@ -5255,7 +5278,7 @@ def get_incomplete_grades_classes(request):
                     exam_score = float(grade_summary.exam_score) if grade_summary.exam_score else 0
                     total_score = float(grade_summary.total_score) if grade_summary.total_score else 0
 
-                    if not ((attendance_score + assignment_score) > 0 and test_score > 0 and exam_score > 0 and total_score > 0):
+                    if not (_test1_is_entered(grade_summary, attendance_score, assignment_score) and test_score > 0 and exam_score > 0 and total_score > 0):
                         grades_complete = False
                         break
                 except GradeSummary.DoesNotExist:
@@ -5373,7 +5396,7 @@ def get_incomplete_grades_students(request, class_session_id):
 
                     # Determine which components are missing
                     missing_components = []
-                    if not ((attendance_score + assignment_score) > 0):
+                    if not (_test1_is_entered(grade_summary, attendance_score, assignment_score)):
                         missing_components.append('Test 1')
                     if not (test_score > 0):
                         missing_components.append('Test 2')
@@ -5503,7 +5526,7 @@ def search_incomplete_grades_students(request):
 
                     # Determine which components are missing
                     missing_components = []
-                    if not ((attendance_score + assignment_score) > 0):
+                    if not (_test1_is_entered(grade_summary, attendance_score, assignment_score)):
                         missing_components.append('Test 1')
                     if not (test_score > 0):
                         missing_components.append('Test 2')
@@ -5620,7 +5643,7 @@ def send_incomplete_grade_notification(request):
             total_score = float(grade_summary.total_score) if grade_summary.total_score else 0
 
             missing_components = []
-            if not ((attendance_score + assignment_score) > 0):
+            if not (_test1_is_entered(grade_summary, attendance_score, assignment_score)):
                 missing_components.append('Test 1')
             if not (test_score > 0):
                 missing_components.append('Test 2')
@@ -5777,7 +5800,7 @@ def send_bulk_incomplete_grade_notifications(request):
                 exam_score = float(grade_summary.exam_score) if grade_summary.exam_score else 0
 
                 missing_components = []
-                if not ((attendance_score + assignment_score) > 0):
+                if not (_test1_is_entered(grade_summary, attendance_score, assignment_score)):
                     missing_components.append('Test 1')
                 if not (test_score > 0):
                     missing_components.append('Test 2')
@@ -5949,7 +5972,7 @@ def get_unpaid_fees_classes(request):
                         exam_score = float(grade_summary.exam_score) if grade_summary.exam_score else 0
                         total_score = float(grade_summary.total_score) if grade_summary.total_score else 0
 
-                        if not ((attendance_score + assignment_score) > 0 and test_score > 0 and exam_score > 0 and total_score > 0):
+                        if not (_test1_is_entered(grade_summary, attendance_score, assignment_score) and test_score > 0 and exam_score > 0 and total_score > 0):
                             grades_complete = False
                             break
                     except GradeSummary.DoesNotExist:
@@ -6066,7 +6089,7 @@ def get_unpaid_fees_students(request, class_session_id):
                     exam_score = float(grade_summary.exam_score) if grade_summary.exam_score else 0
                     total_score = float(grade_summary.total_score) if grade_summary.total_score else 0
 
-                    if not ((attendance_score + assignment_score) > 0 and test_score > 0 and exam_score > 0 and total_score > 0):
+                    if not (_test1_is_entered(grade_summary, attendance_score, assignment_score) and test_score > 0 and exam_score > 0 and total_score > 0):
                         grades_complete = False
                         break
                 except GradeSummary.DoesNotExist:
@@ -6195,7 +6218,7 @@ def search_unpaid_fees_students(request):
                     exam_score = float(grade_summary.exam_score) if grade_summary.exam_score else 0
                     total_score = float(grade_summary.total_score) if grade_summary.total_score else 0
 
-                    if not ((attendance_score + assignment_score) > 0 and test_score > 0 and exam_score > 0 and total_score > 0):
+                    if not (_test1_is_entered(grade_summary, attendance_score, assignment_score) and test_score > 0 and exam_score > 0 and total_score > 0):
                         grades_complete = False
                         break
                 except GradeSummary.DoesNotExist:
@@ -6432,7 +6455,7 @@ def send_bulk_unpaid_fee_notifications(request):
                 test_score = float(grade_summary.test_score) if grade_summary.test_score else 0
                 exam_score = float(grade_summary.exam_score) if grade_summary.exam_score else 0
 
-                if not ((attendance_score + assignment_score) > 0 and test_score > 0 and exam_score > 0):
+                if not (_test1_is_entered(grade_summary, attendance_score, assignment_score) and test_score > 0 and exam_score > 0):
                     grades_complete = False
                     break
             except GradeSummary.DoesNotExist:
@@ -6682,7 +6705,7 @@ def get_both_issues_classes(request):
                     exam_score = float(grade_summary.exam_score) if grade_summary.exam_score else 0
                     total_score = float(grade_summary.total_score) if grade_summary.total_score else 0
 
-                    if not ((attendance_score + assignment_score) > 0 and test_score > 0 and exam_score > 0 and total_score > 0):
+                    if not (_test1_is_entered(grade_summary, attendance_score, assignment_score) and test_score > 0 and exam_score > 0 and total_score > 0):
                         grades_incomplete = True
                         break
                 except GradeSummary.DoesNotExist:
@@ -6807,7 +6830,7 @@ def get_both_issues_students(request, class_session_id):
                     total_score = float(grade_summary.total_score) if grade_summary.total_score else 0
 
                     missing = []
-                    if not (attendance_score + assignment_score) > 0:
+                    if not _test1_is_entered(grade_summary, attendance_score, assignment_score):
                         missing.append('Test 1')
                     if not test_score > 0:
                         missing.append('Test 2')
@@ -6934,7 +6957,7 @@ def send_both_issues_notification(request):
                 test_score = float(grade_summary.test_score) if grade_summary.test_score else 0
                 exam_score = float(grade_summary.exam_score) if grade_summary.exam_score else 0
 
-                if not ((attendance_score + assignment_score) > 0 and test_score > 0 and exam_score > 0):
+                if not (_test1_is_entered(grade_summary, attendance_score, assignment_score) and test_score > 0 and exam_score > 0):
                     incomplete_count += 1
             except GradeSummary.DoesNotExist:
                 incomplete_count += 1
@@ -7048,7 +7071,7 @@ def send_bulk_both_issues_notifications(request):
                 test_score = float(grade_summary.test_score) if grade_summary.test_score else 0
                 exam_score = float(grade_summary.exam_score) if grade_summary.exam_score else 0
 
-                if not ((attendance_score + assignment_score) > 0 and test_score > 0 and exam_score > 0):
+                if not (_test1_is_entered(grade_summary, attendance_score, assignment_score) and test_score > 0 and exam_score > 0):
                     incomplete_count += 1
             except GradeSummary.DoesNotExist:
                 incomplete_count += 1
@@ -7260,7 +7283,7 @@ def get_class_report_sent_students(request, class_session_id):
                     test_score = float(grade_summary.test_score) if grade_summary.test_score else 0
                     exam_score = float(grade_summary.exam_score) if grade_summary.exam_score else 0
 
-                    if not ((attendance_score + assignment_score) > 0 and test_score > 0 and exam_score > 0):
+                    if not (_test1_is_entered(grade_summary, attendance_score, assignment_score) and test_score > 0 and exam_score > 0):
                         grades_incomplete = True
                         break
                 except GradeSummary.DoesNotExist:
@@ -7421,7 +7444,7 @@ def get_subject_grading_stats(request):
                 exam_score = float(grade_summary.exam_score) if grade_summary.exam_score else 0
 
                 # A grade is complete if it has (attendance OR assignment) AND test AND exam scores
-                if (attendance_score + assignment_score) > 0 and test_score > 0 and exam_score > 0:
+                if _test1_is_entered(grade_summary, attendance_score, assignment_score) and test_score > 0 and exam_score > 0:
                     complete_count += 1
                 else:
                     incomplete_count += 1
@@ -7522,7 +7545,7 @@ def get_subject_incomplete_students(request, subject_id):
             exam_score = float(grade_summary.exam_score) if grade_summary.exam_score else 0
 
             # Check what's missing
-            if (attendance_score + assignment_score) == 0:
+            if not _test1_is_entered(grade_summary, attendance_score, assignment_score):
                 missing_scores.append('Attendance/Assignment')
             if test_score == 0:
                 missing_scores.append('Test')
@@ -7657,7 +7680,7 @@ def notify_teachers_incomplete_grades(request):
                 test_score = float(grade_summary.test_score) if grade_summary.test_score else 0
                 exam_score = float(grade_summary.exam_score) if grade_summary.exam_score else 0
 
-                if not ((attendance_score + assignment_score) > 0 and test_score > 0 and exam_score > 0):
+                if not (_test1_is_entered(grade_summary, attendance_score, assignment_score) and test_score > 0 and exam_score > 0):
                     incomplete_count += 1
             except GradeSummary.DoesNotExist:
                 incomplete_count += 1
@@ -8738,23 +8761,23 @@ def download_fee_receipt(request, receipt_id):
                 )
         # Admins and principals can access any receipt (no additional check needed)
 
-        # Get the student's fee record to fetch payment history
+        # Get the student's fee records to fetch payment history.
+        # A student may have multiple fee records for the same term (different fee structures).
         from schooladmin.models import StudentFeeRecord
-        try:
-            fee_record = StudentFeeRecord.objects.get(
-                student=receipt.student,
-                fee_structure__academic_year=receipt.academic_year,
-                fee_structure__term=receipt.term
-            )
-            # Get payment history
+        fee_records = StudentFeeRecord.objects.filter(
+            student=receipt.student,
+            fee_structure__academic_year=receipt.academic_year,
+            fee_structure__term=receipt.term
+        )
+        if fee_records.exists():
             payment_history = FeePaymentHistory.objects.filter(
-                fee_record=fee_record
+                fee_record__in=fee_records
             ).select_related('recorded_by').order_by('transaction_date')
-        except StudentFeeRecord.DoesNotExist:
+        else:
             payment_history = []
 
         # Generate PDF
-        pdf = generate_fee_receipt_pdf(receipt, payment_history)
+        pdf = generate_fee_receipt_pdf(receipt, payment_history, school=getattr(request, "school", None))
 
         # Create HTTP response with PDF
         response = HttpResponse(pdf, content_type='application/pdf')
@@ -8872,22 +8895,22 @@ def download_admin_fee_receipt(request, receipt_id):
             'student', 'student__classroom', 'issued_by'
         ).get(id=receipt_id)
 
-        # Get the student's fee record to fetch payment history
-        try:
-            fee_record = StudentFeeRecord.objects.get(
-                student=receipt.student,
-                fee_structure__academic_year=receipt.academic_year,
-                fee_structure__term=receipt.term
-            )
-            # Get payment history
+        # Get the student's fee records to fetch payment history.
+        # A student may have multiple fee records for the same term (different fee structures).
+        fee_records = StudentFeeRecord.objects.filter(
+            student=receipt.student,
+            fee_structure__academic_year=receipt.academic_year,
+            fee_structure__term=receipt.term
+        )
+        if fee_records.exists():
             payment_history = FeePaymentHistory.objects.filter(
-                fee_record=fee_record
+                fee_record__in=fee_records
             ).select_related('recorded_by').order_by('transaction_date')
-        except StudentFeeRecord.DoesNotExist:
+        else:
             payment_history = []
 
         # Generate PDF
-        pdf = generate_fee_receipt_pdf(receipt, payment_history)
+        pdf = generate_fee_receipt_pdf(receipt, payment_history, school=getattr(request, "school", None))
 
         # Create HTTP response with PDF
         response = HttpResponse(pdf, content_type='application/pdf')
@@ -10153,6 +10176,110 @@ def move_to_next_term(request):
         )
 
 
+@api_view(['GET'])
+@permission_classes([IsAuthenticated, IsAdminRole])
+def graduation_email_preview(request):
+    """
+    Returns a preview of graduation emails that will be sent when moving to a new session.
+    Used by the frontend to determine if the daily email quota is sufficient and to
+    present options to the admin (send all / send now + queue rest / queue all).
+    Only meaningful when current term is Third Term.
+    """
+    from django.utils import timezone
+    from users.models import CustomUser
+
+    school = getattr(request, 'school', None)
+    if not school:
+        return Response({'detail': 'No school context.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    current_config = _school_grading_configs(request).filter(is_active=True).first()
+    if not current_config or current_config.term != 'Third Term':
+        return Response({
+            'has_graduating_students': False,
+            'graduating_count': 0,
+            'graduating_class_names': [],
+            'emails_needed': 0,
+            'quota_remaining': 0,
+            'quota_sufficient': True,
+            'can_send_now': 0,
+            'deferred_count': 0,
+        })
+
+    current_year = current_config.academic_year
+    current_term = current_config.term
+
+    graduating_sessions = StudentSession.objects.filter(
+        class_session__academic_year=current_year,
+        class_session__term=current_term,
+        class_session__classroom__is_final_class=True,
+        is_active=True,
+    ).select_related('student', 'class_session__classroom')
+
+    graduating_class_names = sorted(set(
+        s.class_session.classroom.name for s in graduating_sessions
+    ))
+    graduating_students = [s.student for s in graduating_sessions]
+    graduating_count = len(graduating_students)
+
+    if graduating_count == 0:
+        return Response({
+            'has_graduating_students': False,
+            'graduating_count': 0,
+            'graduating_class_names': graduating_class_names,
+            'emails_needed': 0,
+            'quota_remaining': 0,
+            'quota_sufficient': True,
+            'can_send_now': 0,
+            'deferred_count': 0,
+        })
+
+    # Count emails needed:
+    # 1 per graduating student + 1 per (parent, student) pair + 1 per parent whose all children graduate
+    emails_needed = graduating_count  # student emails
+    parent_grad_count = {}  # parent_id -> number of their children graduating in this run
+    for student in graduating_students:
+        if hasattr(student, 'parents'):
+            for parent in student.parents.all():
+                emails_needed += 1  # per-child parent email
+                parent_grad_count[parent.id] = parent_grad_count.get(parent.id, 0) + 1
+
+    for parent_id, grad_count in parent_grad_count.items():
+        try:
+            parent = CustomUser.objects.get(id=parent_id)
+        except CustomUser.DoesNotExist:
+            continue
+        active_non_graduated = parent.children.filter(is_graduated=False, is_active=True).count()
+        if active_non_graduated - grad_count <= 0:
+            emails_needed += 1  # "all children graduated" email
+
+    # Determine quota
+    subscription = getattr(school, 'subscription', None)
+    if subscription is None or getattr(getattr(subscription, 'plan', None), 'max_daily_emails', 0) == 0:
+        quota_remaining = -1  # unlimited
+    else:
+        today = timezone.now().date()
+        if subscription.email_counter_reset_date < today:
+            subscription.emails_sent_today = 0
+            subscription.email_counter_reset_date = today
+            subscription.save(update_fields=['emails_sent_today', 'email_counter_reset_date'])
+        quota_remaining = subscription.plan.max_daily_emails - subscription.emails_sent_today
+
+    quota_sufficient = quota_remaining == -1 or quota_remaining >= emails_needed
+    can_send_now = emails_needed if quota_remaining == -1 else min(max(quota_remaining, 0), emails_needed)
+    deferred_count = 0 if quota_sufficient else emails_needed - can_send_now
+
+    return Response({
+        'has_graduating_students': True,
+        'graduating_count': graduating_count,
+        'graduating_class_names': graduating_class_names,
+        'emails_needed': emails_needed,
+        'quota_remaining': quota_remaining,
+        'quota_sufficient': quota_sufficient,
+        'can_send_now': can_send_now,
+        'deferred_count': deferred_count,
+    })
+
+
 @api_view(['POST'])
 @permission_classes([IsAuthenticated, IsAdminRole])
 def move_to_next_session(request):
@@ -10162,6 +10289,7 @@ def move_to_next_session(request):
     Promotes students to the next class (JSS1->JSS2, etc.) and graduates SSS3 students.
     """
     from django.contrib.auth import get_user_model
+    from django.utils import timezone
     from logs.models import Notification
     User = get_user_model()
 
@@ -10171,16 +10299,8 @@ def move_to_next_session(request):
     copy_subjects = request.data.get('copy_subjects', True)
     copy_fees = request.data.get('copy_fees', True)
     copy_grading_config = request.data.get('copy_grading_config', True)
-
-    # Class progression mapping (JSS1 -> JSS2, etc.)
-    CLASS_PROGRESSION = {
-        'J.S.S.1': 'J.S.S.2',
-        'J.S.S.2': 'J.S.S.3',
-        'J.S.S.3': 'S.S.S.1',
-        'S.S.S.1': 'S.S.S.2',
-        'S.S.S.2': 'S.S.S.3',
-        'S.S.S.3': 'GRADUATED'  # Special marker for graduating students
-    }
+    # 'send_all' | 'send_now_queue_rest' | 'queue_all'
+    graduation_email_mode = request.data.get('graduation_email_mode', 'send_all')
 
     try:
         with transaction.atomic():
@@ -10273,6 +10393,9 @@ def move_to_next_session(request):
 
             class_mapping = {}  # Map old class to promoted class session
             graduated_students = []  # Track graduating students
+            emails_sent_names = []      # Display names of students whose emails were sent
+            emails_deferred_names = []  # Display names whose emails are deferred
+            emails_failed_names = []    # Display names where sending failed
 
             # Copy class sessions and prepare for student promotion
             for old_class_session in current_class_sessions:
@@ -10304,29 +10427,39 @@ def move_to_next_session(request):
                 )
 
                 for old_student_session in current_student_sessions:
-                    current_class_name = old_student_session.class_session.classroom.name
-                    next_class_name = CLASS_PROGRESSION.get(current_class_name)
+                    current_classroom = old_student_session.class_session.classroom
+                    current_class_name = current_classroom.name
 
-                    if next_class_name == 'GRADUATED':
-                        # Mark SSS3 students as graduated
+                    if current_classroom.is_final_class:
+                        # Final class — graduate the student
                         graduated_students.append(old_student_session.student)
-                        # Deactivate their student session
                         old_student_session.is_active = False
                         old_student_session.save()
-                    elif next_class_name and next_class_name in class_mapping:
+                    elif current_classroom.next_class:
                         # Promote to next class
-                        promoted_class_session = class_mapping[next_class_name]
-                        StudentSession.objects.create(
-                            student=old_student_session.student,
-                            class_session=promoted_class_session,
-                            is_active=True
-                        )
-                        # Deactivate old session
-                        old_student_session.is_active = False
-                        old_student_session.save()
+                        next_class_name = current_classroom.next_class.name
+                        if next_class_name in class_mapping:
+                            promoted_class_session = class_mapping[next_class_name]
+                            StudentSession.objects.create(
+                                student=old_student_session.student,
+                                class_session=promoted_class_session,
+                                is_active=True
+                            )
+                            old_student_session.is_active = False
+                            old_student_session.save()
+                        else:
+                            # Next class exists but no session for it — keep in same class
+                            if current_class_name in class_mapping:
+                                same_class_session = class_mapping[current_class_name]
+                                StudentSession.objects.create(
+                                    student=old_student_session.student,
+                                    class_session=same_class_session,
+                                    is_active=True
+                                )
+                                old_student_session.is_active = False
+                                old_student_session.save()
                     else:
-                        # Class not in progression map or next class doesn't exist
-                        # Keep student in same class (edge case)
+                        # No progression configured — keep in same class
                         if current_class_name in class_mapping:
                             same_class_session = class_mapping[current_class_name]
                             StudentSession.objects.create(
@@ -10337,38 +10470,204 @@ def move_to_next_session(request):
                             old_student_session.is_active = False
                             old_student_session.save()
 
-            # Send graduation notifications to SSS3 students and their parents
+            # Send graduation notifications and update student accounts
+            school = getattr(request, 'school', None)
+            parents_to_check = set()
+
+            from datetime import timedelta
+            from django.conf import settings as django_settings
+            from logs.email_service import (
+                send_graduation_email_student,
+                send_graduation_email_parent,
+                send_parent_all_children_graduated_email,
+            )
+            from schooladmin.models import DeferredGraduationEmail
+            grace_period_days = 30
+            parent_grace_period_days = 90
+            login_url = django_settings.FRONTEND_URL
+
+            # ── Quota tracking for graduation_email_mode ─────────────────────
+            subscription = getattr(school, 'subscription', None)
+            _is_unlimited = (
+                subscription is None
+                or getattr(getattr(subscription, 'plan', None), 'max_daily_emails', 0) == 0
+            )
+            if _is_unlimited:
+                _initial_quota = -1
+            else:
+                _today = timezone.now().date()
+                if subscription.email_counter_reset_date < _today:
+                    subscription.emails_sent_today = 0
+                    subscription.email_counter_reset_date = _today
+                    subscription.save(update_fields=['emails_sent_today', 'email_counter_reset_date'])
+                _initial_quota = subscription.plan.max_daily_emails - subscription.emails_sent_today
+            _quota_used_this_run = 0
+
+            def _send_or_defer(email_func, recipient, student_obj, email_type,
+                               deactivation_dt, display_name):
+                nonlocal _quota_used_this_run
+                if graduation_email_mode == 'queue_all':
+                    should_defer = True
+                elif graduation_email_mode == 'send_now_queue_rest':
+                    should_defer = not (_initial_quota == -1 or _initial_quota - _quota_used_this_run > 0)
+                else:  # 'send_all' — quota was confirmed sufficient by frontend
+                    should_defer = False
+
+                if should_defer:
+                    DeferredGraduationEmail.objects.create(
+                        school=school,
+                        recipient=recipient,
+                        student=student_obj,
+                        email_type=email_type,
+                        deactivation_date=deactivation_dt,
+                        login_url=login_url,
+                    )
+                    emails_deferred_names.append(display_name)
+                else:
+                    try:
+                        email_func()
+                        _quota_used_this_run += 1
+                        emails_sent_names.append(display_name)
+                    except Exception as _exc:
+                        import logging as _logging
+                        _logging.getLogger(__name__).error(
+                            f'Graduation email failed for {display_name}: {_exc}'
+                        )
+                        emails_failed_names.append(display_name)
+            # ─────────────────────────────────────────────────────────────────
+
+            now = timezone.now()
+
             for student in graduated_students:
-                # Create notification for student
+                graduation_date = now
+                deactivation_date = graduation_date + timedelta(days=grace_period_days)
+                student_display = f'{student.first_name} {student.last_name}'
+
+                # In-app notification for student (always sent regardless of email quota)
                 Notification.objects.create(
                     recipient=student,
+                    school=school,
                     notification_type='graduation',
                     priority='high',
                     title='Congratulations on Your Graduation!',
-                    message=f'Dear {student.first_name} {student.last_name}, '
-                            f'Congratulations on successfully completing your secondary education! '
-                            f'You have graduated from {current_year}. We wish you all the best in your future endeavors. '
-                            f'Your academic records will remain available for your reference.',
+                    message=(
+                        f'Dear {student.first_name} {student.last_name}, '
+                        f'congratulations on successfully completing your education! '
+                        f'You have graduated from the {current_year} academic year. '
+                        f'Your account will remain active for {grace_period_days} days — please log in and '
+                        f'download your report cards and academic records before your account is deactivated. '
+                        f'We wish you all the best in your future endeavors!'
+                    ),
                     is_read=False,
                     is_popup_shown=False
                 )
 
-                # Create notification for parent(s) if they exist
+                # Graduation email to student — send or defer
+                _send_or_defer(
+                    email_func=lambda s=student, d=deactivation_date: send_graduation_email_student(s, d, login_url),
+                    recipient=student,
+                    student_obj=student,
+                    email_type=DeferredGraduationEmail.EMAIL_TYPE_STUDENT,
+                    deactivation_dt=deactivation_date,
+                    display_name=student_display,
+                )
+
+                # In-app notifications and emails for parent(s)
                 if hasattr(student, 'parents'):
-                    parents = student.parents.all()
-                    for parent in parents:
+                    for parent in student.parents.all():
                         Notification.objects.create(
                             recipient=parent,
+                            school=school,
                             notification_type='graduation',
                             priority='high',
                             title=f'{student.first_name} {student.last_name} Has Graduated!',
-                            message=f'Dear Parent, we are pleased to inform you that your child, '
-                                    f'{student.first_name} {student.last_name}, has successfully graduated '
-                                    f'from our institution in the {current_year} academic year. '
-                                    f'Congratulations on this achievement! Their academic records remain accessible.',
+                            message=(
+                                f'Dear {parent.first_name}, we are pleased to inform you that your child, '
+                                f'{student.first_name} {student.last_name}, has successfully graduated '
+                                f'from our institution in the {current_year} academic year. '
+                                f'Their account will remain active for {grace_period_days} days — please remind them '
+                                f'to download their report cards before the account is deactivated. '
+                                f'Congratulations on this achievement!'
+                            ),
                             is_read=False,
                             is_popup_shown=False
                         )
+                        _send_or_defer(
+                            email_func=lambda p=parent, s=student, d=deactivation_date: send_graduation_email_parent(p, s, d, login_url),
+                            recipient=parent,
+                            student_obj=student,
+                            email_type=DeferredGraduationEmail.EMAIL_TYPE_PARENT_PER_CHILD,
+                            deactivation_dt=deactivation_date,
+                            display_name=f'{parent.first_name} {parent.last_name} (re: {student_display})',
+                        )
+                        parents_to_check.add(parent)
+
+                # Mark student as graduated — do NOT deactivate yet (30-day grace period)
+                student.is_graduated = True
+                student.graduation_date = graduation_date
+                student.save(update_fields=['is_graduated', 'graduation_date'])
+
+            # Notify parents whose ALL children have now graduated
+            for parent in parents_to_check:
+                active_children = parent.children.filter(
+                    is_graduated=False, is_active=True
+                ).count()
+                if active_children == 0:
+                    parent_deactivation_date = now + timedelta(days=parent_grace_period_days)
+                    Notification.objects.create(
+                        recipient=parent,
+                        school=school,
+                        notification_type='graduation',
+                        priority='high',
+                        title='All Children Have Graduated — Account Notice',
+                        message=(
+                            f'Dear {parent.first_name} {parent.last_name}, '
+                            f'all of your children have now graduated from our institution. Congratulations! '
+                            f'Your parent account will remain active for {parent_grace_period_days} days so you can '
+                            f'access historical records. After that period, your account will be automatically deactivated. '
+                            f'Please download any records you need before then.'
+                        ),
+                        is_read=False,
+                        is_popup_shown=False
+                    )
+                    _send_or_defer(
+                        email_func=lambda p=parent, d=parent_deactivation_date: send_parent_all_children_graduated_email(p, d, login_url),
+                        recipient=parent,
+                        student_obj=None,
+                        email_type=DeferredGraduationEmail.EMAIL_TYPE_PARENT_ALL_GRADUATED,
+                        deactivation_dt=parent_deactivation_date,
+                        display_name=f'{parent.first_name} {parent.last_name} (all children graduated)',
+                    )
+
+            # Send admin in-app summary of graduation email results
+            if graduated_students and school:
+                summary_lines = [
+                    f'{len(graduated_students)} student(s) graduated from {current_year}.',
+                    f'Graduation emails: {len(emails_sent_names)} sent, '
+                    f'{len(emails_deferred_names)} queued for later, '
+                    f'{len(emails_failed_names)} failed.',
+                ]
+                if emails_failed_names:
+                    summary_lines.append('Failed: ' + ', '.join(emails_failed_names))
+                if emails_deferred_names:
+                    deferred_preview = emails_deferred_names[:10]
+                    summary_lines.append(
+                        f'Queued ({len(emails_deferred_names)}): '
+                        + ', '.join(deferred_preview)
+                        + (' ...' if len(emails_deferred_names) > 10 else '')
+                    )
+                summary_msg = ' '.join(summary_lines)
+                for admin_user in school.users.filter(role='admin', is_active=True):
+                    Notification.objects.create(
+                        recipient=admin_user,
+                        school=school,
+                        notification_type='system',
+                        priority='normal',
+                        title='Graduation Email Summary',
+                        message=summary_msg,
+                        is_read=False,
+                        is_popup_shown=False
+                    )
 
             # Copy fee structure if requested
             if copy_fees:
@@ -10415,7 +10714,15 @@ def move_to_next_session(request):
                 "academic_year": next_year,
                 "config_id": new_config.id,
                 "graduated_students_count": len(graduated_students),
-                "graduated_students": [f"{s.first_name} {s.last_name}" for s in graduated_students]
+                "graduated_students": [f"{s.first_name} {s.last_name}" for s in graduated_students],
+                "graduation_email_summary": {
+                    "sent_count": len(emails_sent_names),
+                    "deferred_count": len(emails_deferred_names),
+                    "failed_count": len(emails_failed_names),
+                    "sent_names": emails_sent_names,
+                    "deferred_names": emails_deferred_names,
+                    "failed_names": emails_failed_names,
+                },
             }, status=status.HTTP_200_OK)
 
     except Exception as e:
@@ -10682,3 +10989,1440 @@ def get_all_available_sessions(request):
             {"detail": f"Error getting available sessions: {str(e)}"},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
+
+
+# ============================================================================
+# LESSON NOTES — TEACHER, ADMIN, AND STUDENT VIEWS
+# ============================================================================
+
+def _groq_review_lesson_note(topic, subject_name, content_text):
+    """
+    Call Groq API (Llama 3.3 70B) to review a lesson note.
+    Returns dict with 'rating' and 'feedback', or raises on error.
+    Available only for standard/premium/custom plan schools.
+    """
+    import json
+    import requests
+    from django.conf import settings
+
+    url = "https://api.groq.com/openai/v1/chat/completions"
+    headers = {
+        "Authorization": f"Bearer {settings.GROQ_API_KEY}",
+        "Content-Type": "application/json",
+    }
+    prompt = (
+        f"You are an educational quality reviewer. Review the following lesson note "
+        f"for a {subject_name} class on the topic \"{topic}\".\n\n"
+        f"Lesson Note Content:\n{content_text}\n\n"
+        f"Please evaluate:\n"
+        f"1. Whether the content is appropriate and relevant to the topic\n"
+        f"2. Clarity and organisation\n"
+        f"3. Completeness — does it cover the essential aspects of the topic?\n"
+        f"4. Any specific areas that need improvement\n\n"
+        f"Provide:\n"
+        f"- A rating: exactly one of \"good\", \"needs_improvement\", or \"poor\"\n"
+        f"- Specific, constructive feedback for the teacher (2-3 paragraphs)\n\n"
+        f"Respond with ONLY valid JSON in this exact format:\n"
+        f"{{\"rating\": \"good\", \"feedback\": \"your detailed feedback here\"}}"
+    )
+    payload = {
+        "model": "llama-3.3-70b-versatile",
+        "messages": [{"role": "user", "content": prompt}],
+        "temperature": 0.3,
+        "max_tokens": 600,
+        "response_format": {"type": "json_object"},
+    }
+    resp = requests.post(url, json=payload, headers=headers, timeout=45)
+    resp.raise_for_status()
+    raw = resp.json()["choices"][0]["message"]["content"].strip()
+    result = json.loads(raw)
+    # Normalise rating value
+    rating = result.get("rating", "needs_improvement").lower().replace(" ", "_")
+    if rating not in ("good", "needs_improvement", "poor"):
+        rating = "needs_improvement"
+    result["rating"] = rating
+    return result
+
+
+def _plan_has_ai_review(school):
+    """Return True if the school's plan allows AI features (premium/custom only)."""
+    try:
+        plan_name = school.subscription.plan.name
+        return plan_name in ('premium', 'custom')
+    except Exception:
+        return False
+
+
+def _email_limit_reached(school):
+    """
+    Return True if the school has already hit their daily email limit.
+    Calls can_send_email() which handles the daily reset automatically.
+    Does NOT increment the counter — that is still done by the signal.
+    """
+    try:
+        sub = getattr(school, 'subscription', None)
+        if not sub:
+            return False
+        return not sub.can_send_email()
+    except Exception:
+        return False
+
+
+EMAIL_LIMIT_WARNING = (
+    'Daily email limit reached — the teacher will receive an in-app notification only. '
+    'No email will be sent today.'
+)
+
+
+@api_view(['GET', 'POST'])
+@permission_classes([IsAuthenticated])
+def teacher_lesson_notes(request):
+    """
+    GET  — list this teacher's own lesson notes.
+    POST — create a new lesson note (draft or immediately submit).
+    """
+    from .models import LessonNote
+    from academics.models import Subject, ClassSession
+    from django.utils import timezone
+
+    school = request.school
+    user = request.user
+
+    if user.role not in ('teacher', 'admin', 'principal'):
+        return Response({'detail': 'Forbidden.'}, status=status.HTTP_403_FORBIDDEN)
+
+    if request.method == 'GET':
+        notes = LessonNote.objects.filter(school=school, teacher=user).select_related(
+            'subject', 'class_session', 'reviewed_by', 'approved_by', 'sent_by'
+        )
+        status_filter = request.query_params.get('status')
+        if status_filter:
+            notes = notes.filter(status=status_filter)
+        data = []
+        for note in notes:
+            data.append({
+                'id': note.id,
+                'topic': note.topic,
+                'subject_id': note.subject_id,
+                'subject_name': note.subject.name if note.subject else '',
+                'class_session_id': note.class_session_id,
+                'class_session_name': str(note.class_session) if note.class_session else None,
+                'status': note.status,
+                'content': note.content,
+                'file_url': request.build_absolute_uri(note.file.url) if note.file else None,
+                'admin_feedback': note.admin_feedback,
+                'ai_feedback': note.ai_feedback if note.ai_feedback_sent_to_teacher else '',
+                'ai_rating': note.ai_rating if note.ai_feedback_sent_to_teacher else '',
+                'submitted_at': note.submitted_at,
+                'approved_at': note.approved_at,
+                'sent_at': note.sent_at,
+                'created_at': note.created_at,
+                'updated_at': note.updated_at,
+            })
+        return Response(data)
+
+    # POST — create
+    topic = request.data.get('topic', '').strip()
+    subject_id = request.data.get('subject_id')
+    class_session_id = request.data.get('class_session_id')
+    content = request.data.get('content', '').strip()
+    file_obj = request.FILES.get('file')
+    submit_now = request.data.get('submit', False)
+    topic_plan_id = request.data.get('topic_plan_id')
+
+    if not topic:
+        return Response({'detail': 'Topic is required.'}, status=status.HTTP_400_BAD_REQUEST)
+    if not subject_id:
+        return Response({'detail': 'Subject is required.'}, status=status.HTTP_400_BAD_REQUEST)
+    if not content and not file_obj:
+        return Response({'detail': 'Provide content text or upload a file.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        subject = Subject.objects.get(id=subject_id, class_session__classroom__school=school)
+    except Subject.DoesNotExist:
+        return Response({'detail': 'Subject not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+    class_session = subject.class_session  # derive from subject
+    if class_session_id:
+        try:
+            class_session = ClassSession.objects.get(id=class_session_id, classroom__school=school)
+        except ClassSession.DoesNotExist:
+            pass  # fall back to subject's session
+
+    # Link to topic plan if provided
+    topic_plan = None
+    if topic_plan_id:
+        from .models import LessonTopicPlan
+        try:
+            topic_plan = LessonTopicPlan.objects.get(id=topic_plan_id, school=school, teacher=user)
+        except LessonTopicPlan.DoesNotExist:
+            pass
+
+    note_status = LessonNote.STATUS_PENDING if submit_now else LessonNote.STATUS_DRAFT
+    submitted_at = timezone.now() if submit_now else None
+
+    note = LessonNote.objects.create(
+        school=school,
+        teacher=user,
+        subject=subject,
+        class_session=class_session,
+        topic_plan=topic_plan,
+        topic=topic,
+        content=content,
+        file=file_obj,
+        status=note_status,
+        submitted_at=submitted_at,
+    )
+
+    # Notify admins if submitted
+    if submit_now:
+        from logs.models import Notification
+        for admin_user in school.users.filter(role__in=['admin', 'principal'], is_active=True):
+            Notification.objects.create(
+                recipient=admin_user,
+                school=school,
+                notification_type='general',
+                priority='normal',
+                title='New Lesson Note Submitted',
+                message=(
+                    f"{user.get_full_name() or user.username} submitted a lesson note: "
+                    f"\"{topic}\" for {subject.name}"
+                    + (f" ({class_session})" if class_session else '') + '.',
+                ),
+                is_read=False,
+                is_popup_shown=False,
+            )
+
+    return Response({'id': note.id, 'status': note.status}, status=status.HTTP_201_CREATED)
+
+
+@api_view(['GET', 'PUT', 'DELETE'])
+@permission_classes([IsAuthenticated])
+def teacher_lesson_note_detail(request, note_id):
+    """
+    GET    — fetch a single note (teacher sees own; admin/principal sees all).
+    PUT    — update a draft or needs_revision note (teacher only).
+    DELETE — delete a draft note (teacher only).
+    """
+    from .models import LessonNote
+    from academics.models import Subject, ClassSession
+    from django.utils import timezone
+
+    school = request.school
+    user = request.user
+
+    try:
+        if user.role in ('admin', 'principal'):
+            note = LessonNote.objects.get(id=note_id, school=school)
+        else:
+            note = LessonNote.objects.get(id=note_id, school=school, teacher=user)
+    except LessonNote.DoesNotExist:
+        return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+    if request.method == 'GET':
+        return Response({
+            'id': note.id,
+            'topic': note.topic,
+            'subject_id': note.subject_id,
+            'subject_name': note.subject.name if note.subject else '',
+            'class_session_id': note.class_session_id,
+            'class_session_name': str(note.class_session) if note.class_session else None,
+            'status': note.status,
+            'content': note.content,
+            'file_url': request.build_absolute_uri(note.file.url) if note.file else None,
+            'admin_feedback': note.admin_feedback,
+            'ai_feedback': note.ai_feedback if note.ai_feedback_sent_to_teacher else '',
+            'ai_rating': note.ai_rating if note.ai_feedback_sent_to_teacher else '',
+            'submitted_at': note.submitted_at,
+            'approved_at': note.approved_at,
+            'sent_at': note.sent_at,
+            'created_at': note.created_at,
+            'updated_at': note.updated_at,
+        })
+
+    if request.method == 'DELETE':
+        if user.role not in ('teacher',) or note.status != LessonNote.STATUS_DRAFT:
+            return Response({'detail': 'Only draft notes can be deleted by the teacher.'}, status=status.HTTP_400_BAD_REQUEST)
+        note.delete()
+        return Response({'detail': 'Deleted.'}, status=status.HTTP_204_NO_CONTENT)
+
+    # PUT — update
+    if user.role == 'teacher' and note.status not in (LessonNote.STATUS_DRAFT, LessonNote.STATUS_NEEDS_REVISION):
+        return Response({'detail': 'Only draft or needs-revision notes can be edited.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    topic = request.data.get('topic', note.topic).strip()
+    content = request.data.get('content', note.content).strip()
+    subject_id = request.data.get('subject_id', note.subject_id)
+    class_session_id = request.data.get('class_session_id', note.class_session_id)
+    file_obj = request.FILES.get('file')
+    submit_now = request.data.get('submit', False)
+
+    if not topic:
+        return Response({'detail': 'Topic is required.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    if str(subject_id) != str(note.subject_id):
+        try:
+            note.subject = Subject.objects.get(id=subject_id, class_session__classroom__school=school)
+        except Subject.DoesNotExist:
+            return Response({'detail': 'Subject not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+    if class_session_id and str(class_session_id) != str(note.class_session_id):
+        try:
+            note.class_session = ClassSession.objects.get(id=class_session_id, classroom__school=school)
+        except ClassSession.DoesNotExist:
+            return Response({'detail': 'Class session not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+    note.topic = topic
+    note.content = content
+    if file_obj:
+        note.file = file_obj
+
+    if submit_now and note.status in (LessonNote.STATUS_DRAFT, LessonNote.STATUS_NEEDS_REVISION):
+        note.status = LessonNote.STATUS_PENDING
+        note.submitted_at = timezone.now()
+        note.save()
+        # Notify admins
+        from logs.models import Notification
+        for admin_user in school.users.filter(role__in=['admin', 'principal'], is_active=True):
+            Notification.objects.create(
+                recipient=admin_user,
+                school=school,
+                notification_type='general',
+                priority='normal',
+                title='Lesson Note Resubmitted for Review',
+                message=(
+                    f"{user.get_full_name() or user.username} resubmitted the lesson note: "
+                    f"\"{note.topic}\" for {note.subject.name}."
+                ),
+                is_read=False,
+                is_popup_shown=False,
+            )
+    else:
+        note.save()
+
+    return Response({'id': note.id, 'status': note.status})
+
+
+# ---- Admin views ----
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated, IsPrincipalOrAdmin])
+def admin_lesson_notes_list(request):
+    """
+    List all lesson notes for this school (admin/principal).
+    Supports ?status=, ?teacher_id=, ?subject_id= filters.
+    """
+    from .models import LessonNote
+
+    school = request.school
+    notes = LessonNote.objects.filter(school=school).select_related(
+        'teacher', 'subject', 'class_session', 'reviewed_by', 'approved_by', 'sent_by'
+    )
+
+    status_filter = request.query_params.get('status')
+    teacher_filter = request.query_params.get('teacher_id')
+    subject_filter = request.query_params.get('subject_id')
+
+    if status_filter:
+        notes = notes.filter(status=status_filter)
+    if teacher_filter:
+        notes = notes.filter(teacher_id=teacher_filter)
+    if subject_filter:
+        notes = notes.filter(subject_id=subject_filter)
+
+    data = []
+    for note in notes:
+        data.append({
+            'id': note.id,
+            'topic': note.topic,
+            'subject_id': note.subject_id,
+            'subject_name': note.subject.name if note.subject else '',
+            'class_session_id': note.class_session_id,
+            'class_session_name': str(note.class_session) if note.class_session else None,
+            'teacher_id': note.teacher_id,
+            'teacher_name': note.teacher.get_full_name() or note.teacher.username,
+            'status': note.status,
+            'content': note.content,
+            'file_url': request.build_absolute_uri(note.file.url) if note.file else None,
+            'admin_feedback': note.admin_feedback,
+            'ai_feedback': note.ai_feedback,
+            'ai_rating': note.ai_rating,
+            'ai_reviewed_at': note.ai_reviewed_at,
+            'ai_feedback_sent_to_teacher': note.ai_feedback_sent_to_teacher,
+            'reviewed_by_name': note.reviewed_by.get_full_name() if note.reviewed_by else None,
+            'reviewed_at': note.reviewed_at,
+            'approved_by_name': note.approved_by.get_full_name() if note.approved_by else None,
+            'approved_at': note.approved_at,
+            'sent_by_name': note.sent_by.get_full_name() if note.sent_by else None,
+            'sent_at': note.sent_at,
+            'submitted_at': note.submitted_at,
+            'created_at': note.created_at,
+            'updated_at': note.updated_at,
+            'has_ai_review': _plan_has_ai_review(school),
+        })
+
+    return Response(data)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated, IsPrincipalOrAdmin])
+def admin_lesson_note_ai_review(request, note_id):
+    """
+    Trigger AI review via Groq for a lesson note.
+    Available only for standard/premium/custom plan schools.
+    Optionally pass ?send_to_teacher=true to immediately set as feedback and move status to needs_revision.
+    """
+    from .models import LessonNote
+    from django.utils import timezone
+
+    school = request.school
+
+    if not _plan_has_ai_review(school):
+        return Response(
+            {'detail': 'AI review is available on Standard, Premium, and Custom plans only.'},
+            status=status.HTTP_403_FORBIDDEN
+        )
+
+    try:
+        note = LessonNote.objects.get(id=note_id, school=school)
+    except LessonNote.DoesNotExist:
+        return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+    # Build reviewable text — combine typed content + extracted file text
+    parts = []
+
+    if note.content and note.content.strip():
+        parts.append(note.content.strip())
+
+    if note.file:
+        try:
+            import os
+            import io
+            import requests as http_requests
+
+            file_url = note.file.url
+
+            # Download file bytes from Cloudinary (or wherever it's stored)
+            dl = http_requests.get(file_url, timeout=30)
+            dl.raise_for_status()
+            raw_bytes = dl.content
+            file_bytes = io.BytesIO(raw_bytes)
+
+            # Detect file type using magic bytes (most reliable — Cloudinary public IDs
+            # often lack extensions and Content-Type can be generic).
+            # PDF: starts with %PDF  |  DOCX/DOC: ZIP signature PK\x03\x04
+            header = raw_bytes[:8]
+            is_pdf  = header[:4] == b'%PDF'
+            is_docx = header[:4] == b'PK\x03\x04'
+
+            # Fall back to Content-Type header then file-name extension
+            if not is_pdf and not is_docx:
+                content_type = dl.headers.get('Content-Type', '').lower().split(';')[0].strip()
+                file_name = note.file.name.split('?')[0]
+                ext = os.path.splitext(file_name)[1].lower()
+                is_pdf  = content_type == 'application/pdf' or ext == '.pdf'
+                is_docx = content_type in (
+                    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                    'application/msword',
+                ) or ext in ('.docx', '.doc')
+
+            file_text = ''
+            if is_docx:
+                # DOCX is a ZIP archive — extract text using built-in libraries only,
+                # no python-docx dependency needed.
+                import zipfile
+                import xml.etree.ElementTree as ET
+                W = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main'
+                with zipfile.ZipFile(file_bytes) as z:
+                    with z.open('word/document.xml') as doc_xml:
+                        root = ET.parse(doc_xml).getroot()
+                paragraphs = []
+                for para in root.iter(f'{{{W}}}p'):
+                    texts = [t.text for t in para.iter(f'{{{W}}}t') if t.text]
+                    if texts:
+                        paragraphs.append(''.join(texts))
+                file_text = '\n'.join(paragraphs)
+            elif is_pdf:
+                # Use pdfminer.six for PDF text extraction — lighter dependency,
+                # installed automatically with many packages.
+                from pdfminer.high_level import extract_text as pdfminer_extract
+                file_text = pdfminer_extract(file_bytes).strip()
+
+            if file_text:
+                parts.append(f"[From attached file]\n{file_text}")
+            elif note.file and not file_text:
+                # File was downloaded but no text could be extracted (e.g. scanned image PDF)
+                import logging
+                logging.getLogger(__name__).warning(
+                    f'AI review: file downloaded but no text extracted for note {note_id} '
+                    f'(is_pdf={is_pdf}, is_docx={is_docx}, header={header!r})'
+                )
+        except Exception as extract_err:
+            import logging
+            logging.getLogger(__name__).warning(
+                f'AI review: could not extract text from file for note {note_id}: {extract_err}'
+            )
+
+    content_text = '\n\n'.join(parts)
+
+    if not content_text:
+        has_file = bool(note.file)
+        msg = (
+            'The attached file could not be read (it may be a scanned image or unsupported format). '
+            'Ask the teacher to re-upload as a text-based PDF or DOCX.'
+            if has_file else
+            'No content found in this lesson note. The teacher has not typed any text or attached a readable file.'
+        )
+        return Response({'detail': msg}, status=status.HTTP_400_BAD_REQUEST)
+
+    subject_name = note.subject.name if note.subject else 'the subject'
+
+    try:
+        result = _groq_review_lesson_note(note.topic, subject_name, content_text)
+    except Exception as exc:
+        return Response(
+            {'detail': f'AI review failed: {str(exc)}'},
+            status=status.HTTP_502_BAD_GATEWAY
+        )
+
+    rating = result.get('rating', '').lower()
+    if rating not in ('good', 'needs_improvement', 'poor'):
+        rating = 'needs_improvement'
+    feedback = result.get('feedback', '')
+
+    note.ai_rating = rating
+    note.ai_feedback = feedback
+    note.ai_reviewed_at = timezone.now()
+
+    send_to_teacher = str(request.data.get('send_to_teacher', 'false')).lower() == 'true'
+    email_warning = None
+    if send_to_teacher:
+        note.admin_feedback = feedback
+        note.ai_feedback_sent_to_teacher = True
+        note.status = LessonNote.STATUS_NEEDS_REVISION
+        note.reviewed_by = request.user
+        note.reviewed_at = timezone.now()
+        note.save()
+        # Notify teacher
+        from logs.models import Notification
+        email_warning = EMAIL_LIMIT_WARNING if _email_limit_reached(school) else None
+        Notification.objects.create(
+            recipient=note.teacher,
+            school=school,
+            notification_type='general',
+            priority='normal',
+            title='Lesson Note Needs Revision',
+            message=(
+                f"Your lesson note \"{note.topic}\" for {subject_name} has been reviewed. "
+                f"Please check the feedback and resubmit."
+            ),
+            is_read=False,
+            is_popup_shown=False,
+        )
+    else:
+        note.save()
+
+    return Response({
+        'ai_rating': note.ai_rating,
+        'ai_feedback': note.ai_feedback,
+        'ai_reviewed_at': note.ai_reviewed_at,
+        'status': note.status,
+        'email_warning': email_warning,
+    })
+
+
+def _delete_superseded_lesson_notes(approved_note):
+    """
+    When a lesson note is approved or sent, delete all other notes from the same
+    teacher for the same subject + topic that are in 'needs_revision' status.
+    Deletes Cloudinary files first to free storage, then removes the DB records.
+    """
+    from .models import LessonNote
+    superseded = LessonNote.objects.filter(
+        school=approved_note.school,
+        teacher=approved_note.teacher,
+        subject=approved_note.subject,
+        topic__iexact=approved_note.topic,
+        status=LessonNote.STATUS_NEEDS_REVISION,
+    ).exclude(id=approved_note.id)
+
+    for old_note in superseded:
+        if old_note.file:
+            try:
+                old_note.file.delete(save=False)
+            except Exception:
+                pass
+        old_note.delete()
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated, IsPrincipalOrAdmin])
+def admin_lesson_note_update_status(request, note_id):
+    """
+    Admin changes the status of a lesson note.
+    Body: { "status": "approved"|"needs_revision"|"pending_review"|"draft",
+             "feedback": "optional text" }
+    Admin can freely move the note between statuses.
+    """
+    from .models import LessonNote
+    from django.utils import timezone
+
+    school = request.school
+
+    try:
+        note = LessonNote.objects.get(id=note_id, school=school)
+    except LessonNote.DoesNotExist:
+        return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+    new_status = request.data.get('status', '').strip()
+    feedback = request.data.get('feedback', '').strip()
+
+    valid_statuses = [s[0] for s in LessonNote.STATUS_CHOICES if s[0] != 'sent']
+    if new_status not in valid_statuses:
+        return Response(
+            {'detail': f'Invalid status. Choose from: {", ".join(valid_statuses)}'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    note.status = new_status
+    note.reviewed_by = request.user
+    note.reviewed_at = timezone.now()
+
+    if feedback:
+        note.admin_feedback = feedback
+
+    if new_status == LessonNote.STATUS_APPROVED:
+        note.approved_by = request.user
+        note.approved_at = timezone.now()
+
+    note.save()
+
+    # Clean up superseded revision copies on approval
+    if new_status == LessonNote.STATUS_APPROVED:
+        _delete_superseded_lesson_notes(note)
+
+    # Notify teacher if feedback is sent or status changed to needs_revision
+    email_warning = None
+    if new_status == LessonNote.STATUS_NEEDS_REVISION or feedback:
+        from logs.models import Notification
+        email_warning = EMAIL_LIMIT_WARNING if _email_limit_reached(school) else None
+        msg = f"Your lesson note \"{note.topic}\" for {note.subject.name} "
+        if new_status == LessonNote.STATUS_NEEDS_REVISION:
+            msg += "has been reviewed and requires revision. Please check the feedback and resubmit."
+        elif new_status == LessonNote.STATUS_APPROVED:
+            msg += "has been approved."
+        else:
+            msg += f"status has been updated to {note.get_status_display()}."
+        Notification.objects.create(
+            recipient=note.teacher,
+            school=school,
+            notification_type='general',
+            priority='normal',
+            title=f'Lesson Note — {note.get_status_display()}',
+            message=msg,
+            is_read=False,
+            is_popup_shown=False,
+        )
+
+    return Response({'id': note.id, 'status': note.status, 'email_warning': email_warning})
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def teacher_lesson_note_send(request, note_id):
+    """
+    Teacher sends their own approved lesson note to students in the class session.
+    Only the teacher who owns the note can call this, and only when status = approved.
+    """
+    from .models import LessonNote
+    from django.utils import timezone
+    from logs.models import Notification
+
+    school = request.school
+    user = request.user
+
+    if user.role not in ('teacher',):
+        return Response({'detail': 'Only teachers can send notes to students.'}, status=status.HTTP_403_FORBIDDEN)
+
+    try:
+        note = LessonNote.objects.get(id=note_id, school=school, teacher=user)
+    except LessonNote.DoesNotExist:
+        return Response({'detail': 'Note not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+    if note.status == LessonNote.STATUS_SENT:
+        return Response({'detail': 'This note has already been sent to students.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    if note.status != LessonNote.STATUS_APPROVED:
+        return Response(
+            {'detail': 'Only approved notes can be sent to students. Wait for admin approval first.'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    note.status = LessonNote.STATUS_SENT
+    note.sent_by = user
+    note.sent_at = timezone.now()
+    _delete_superseded_lesson_notes(note)
+    note.save()
+
+    subject_name = note.subject.name if note.subject else 'a subject'
+    class_session = note.class_session
+
+    students_notified = 0
+    if class_session:
+        from academics.models import StudentSession
+        from logs.email_service import send_notification_email
+        active_student_sessions = StudentSession.objects.filter(
+            class_session=class_session, is_active=True
+        ).select_related('student')
+
+        for ss in active_student_sessions:
+            student = ss.student
+            Notification.objects.create(
+                recipient=student,
+                school=school,
+                notification_type='general',
+                priority='normal',
+                title=f'New Lesson Note: {note.topic}',
+                message=(
+                    f"A new lesson note has been shared for {subject_name}: \"{note.topic}\". "
+                    f"You can find it in your class under My Classes or AI Academic Assistant."
+                ),
+                is_read=False,
+                is_popup_shown=False,
+            )
+            students_notified += 1
+
+            if student.email:
+                try:
+                    send_notification_email(
+                        school=school,
+                        recipient=student,
+                        subject=f"New Lesson Note: {note.topic}",
+                        heading="New Lesson Note Available",
+                        body_lines=[
+                            f"A new lesson note has been posted for <strong>{subject_name}</strong>.",
+                            f"<strong>Topic:</strong> {note.topic}",
+                            "Log in to your student portal to read the full note under My Classes.",
+                        ],
+                    )
+                except Exception:
+                    pass
+
+    return Response({
+        'id': note.id,
+        'status': note.status,
+        'sent_at': note.sent_at,
+        'students_notified': students_notified,
+    })
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated, IsPrincipalOrAdmin])
+def admin_lesson_note_send(request, note_id):
+    """
+    Send an approved lesson note to students in the class_session.
+    Sends in-app notifications and school email to enrolled students.
+    """
+    from .models import LessonNote
+    from django.utils import timezone
+    from logs.models import Notification
+
+    school = request.school
+
+    try:
+        note = LessonNote.objects.get(id=note_id, school=school)
+    except LessonNote.DoesNotExist:
+        return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+    if note.status == LessonNote.STATUS_SENT:
+        return Response({'detail': 'This note has already been sent.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    # Allow sending from approved OR directly from pending_review (admin decision)
+    if note.status not in (LessonNote.STATUS_APPROVED, LessonNote.STATUS_PENDING):
+        # Auto-approve if admin is sending
+        note.approved_by = request.user
+        note.approved_at = timezone.now()
+
+    note.status = LessonNote.STATUS_SENT
+    note.sent_by = request.user
+    note.sent_at = timezone.now()
+    if not note.approved_by:
+        note.approved_by = request.user
+        note.approved_at = timezone.now()
+    # Clean up superseded revision copies now that this note is being sent
+    _delete_superseded_lesson_notes(note)
+    note.save()
+
+    subject_name = note.subject.name if note.subject else 'a subject'
+    class_session = note.class_session
+
+    # Gather students to notify
+    students_notified = 0
+    if class_session:
+        from academics.models import StudentSession
+        active_student_sessions = StudentSession.objects.filter(
+            class_session=class_session,
+            is_active=True
+        ).select_related('student')
+
+        from logs.email_service import send_notification_email
+        for ss in active_student_sessions:
+            student = ss.student
+            Notification.objects.create(
+                recipient=student,
+                school=school,
+                notification_type='general',
+                priority='normal',
+                title=f'New Lesson Note: {note.topic}',
+                message=(
+                    f"A new lesson note has been shared for {subject_name}: \"{note.topic}\". "
+                    f"You can find it in your class under Lesson Notes."
+                ),
+                is_read=False,
+                is_popup_shown=False,
+            )
+            students_notified += 1
+
+            # Email notification
+            if student.email:
+                try:
+                    send_notification_email(
+                        school=school,
+                        recipient=student,
+                        subject=f"New Lesson Note: {note.topic}",
+                        heading="New Lesson Note Available",
+                        body_lines=[
+                            f"A new lesson note has been posted for <strong>{subject_name}</strong>.",
+                            f"<strong>Topic:</strong> {note.topic}",
+                            "Log in to your student portal to read the full lesson note under your class.",
+                        ],
+                    )
+                except Exception:
+                    pass  # Don't block send if email fails
+
+    # Notify the teacher that the note was sent
+    Notification.objects.create(
+        recipient=note.teacher,
+        school=school,
+        notification_type='general',
+        priority='normal',
+        title='Lesson Note Sent to Students',
+        message=(
+            f"Your lesson note \"{note.topic}\" for {subject_name} has been approved and "
+            f"sent to {students_notified} student(s) in the class."
+        ),
+        is_read=False,
+        is_popup_shown=False,
+    )
+
+    return Response({
+        'id': note.id,
+        'status': note.status,
+        'sent_at': note.sent_at,
+        'students_notified': students_notified,
+    })
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def student_lesson_notes(request):
+    """
+    Returns sent lesson notes for subjects the student is enrolled in.
+    Students access this to view notes in their class.
+    Also usable by parents to view their child's notes (?student_id=).
+    """
+    from .models import LessonNote
+    from academics.models import StudentSession
+
+    school = request.school
+    user = request.user
+
+    if user.role == 'student':
+        target_student = user
+    elif user.role == 'parent':
+        student_id = request.query_params.get('student_id')
+        if not student_id:
+            return Response({'detail': 'student_id is required for parents.'}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            target_student = CustomUser.objects.get(id=student_id, school=school, role='student')
+        except CustomUser.DoesNotExist:
+            return Response({'detail': 'Student not found.'}, status=status.HTTP_404_NOT_FOUND)
+    else:
+        return Response({'detail': 'Forbidden.'}, status=status.HTTP_403_FORBIDDEN)
+
+    # Get enrolled class sessions
+    enrolled_sessions = StudentSession.objects.filter(
+        student=target_student, is_active=True
+    ).values_list('class_session_id', flat=True)
+
+    notes = LessonNote.objects.filter(
+        school=school,
+        status=LessonNote.STATUS_SENT,
+        class_session_id__in=enrolled_sessions,
+    ).select_related('teacher', 'subject', 'class_session', 'topic_plan').order_by('-sent_at')
+
+    subject_filter = request.query_params.get('subject_id')
+    if subject_filter:
+        notes = notes.filter(subject_id=subject_filter)
+
+    data = [{
+        'id': note.id,
+        'topic': note.topic,
+        'week_number': note.topic_plan.week_number if note.topic_plan_id else None,
+        'subject_id': note.subject_id,
+        'subject_name': note.subject.name if note.subject else '',
+        'class_session_name': str(note.class_session) if note.class_session else None,
+        'teacher_name': note.teacher.get_full_name() or note.teacher.username,
+        'content': note.content,
+        'file_url': request.build_absolute_uri(note.file.url) if note.file else None,
+        'sent_at': note.sent_at,
+    } for note in notes]
+
+    return Response(data)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def student_lesson_note_ai_explain(request, note_id):
+    """
+    Student (or parent) requests an AI explanation of a sent lesson note.
+    The AI breaks down the content in simple, kid-friendly language.
+    Available only for standard/premium/custom plan schools.
+    """
+    from .models import LessonNote
+    from academics.models import StudentSession
+
+    school = request.school
+    user = request.user
+
+    if not _plan_has_ai_review(school):
+        return Response(
+            {'detail': 'AI features are available on Standard, Premium, and Custom plans only.'},
+            status=status.HTTP_403_FORBIDDEN
+        )
+
+    if user.role == 'student':
+        target_student = user
+    elif user.role == 'parent':
+        student_id = request.data.get('student_id') or request.query_params.get('student_id')
+        if not student_id:
+            return Response({'detail': 'student_id is required for parents.'}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            target_student = CustomUser.objects.get(id=student_id, school=school, role='student')
+        except CustomUser.DoesNotExist:
+            return Response({'detail': 'Student not found.'}, status=status.HTTP_404_NOT_FOUND)
+    else:
+        return Response({'detail': 'Forbidden.'}, status=status.HTTP_403_FORBIDDEN)
+
+    # Verify student is enrolled in the class session that this note belongs to
+    enrolled_sessions = StudentSession.objects.filter(
+        student=target_student, is_active=True
+    ).values_list('class_session_id', flat=True)
+
+    try:
+        note = LessonNote.objects.get(
+            id=note_id,
+            school=school,
+            status=LessonNote.STATUS_SENT,
+            class_session_id__in=enrolled_sessions,
+        )
+    except LessonNote.DoesNotExist:
+        return Response({'detail': 'Note not found or not accessible.'}, status=status.HTTP_404_NOT_FOUND)
+
+    # Build content text from note
+    parts = []
+    if note.content and note.content.strip():
+        parts.append(note.content.strip())
+
+    if note.file:
+        try:
+            import io
+            import requests as http_requests
+
+            dl = http_requests.get(note.file.url, timeout=30)
+            dl.raise_for_status()
+            raw_bytes = dl.content
+            file_bytes = io.BytesIO(raw_bytes)
+
+            header = raw_bytes[:8]
+            is_pdf = header[:4] == b'%PDF'
+            is_docx = header[:4] == b'PK\x03\x04'
+
+            if is_pdf:
+                from pdfminer.high_level import extract_text as pdf_extract
+                extracted = pdf_extract(file_bytes)
+                if extracted and extracted.strip():
+                    parts.append(extracted.strip())
+            elif is_docx:
+                import zipfile
+                from xml.etree import ElementTree as ET
+                with zipfile.ZipFile(file_bytes) as z:
+                    if 'word/document.xml' in z.namelist():
+                        xml_content = z.read('word/document.xml')
+                        root = ET.fromstring(xml_content)
+                        ns = {'w': 'http://schemas.openxmlformats.org/wordprocessingml/2006/main'}
+                        texts = [node.text for node in root.findall('.//w:t', ns) if node.text]
+                        extracted = ' '.join(texts)
+                        if extracted.strip():
+                            parts.append(extracted.strip())
+        except Exception:
+            pass  # If extraction fails, use only content field
+
+    if not parts:
+        return Response({'detail': 'No content available in this note to explain.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    content_text = '\n\n'.join(parts)[:4000]
+
+    # Call Groq for student-friendly explanation
+    try:
+        import json
+        import requests as http_requests
+        from django.conf import settings
+
+        subject_name = note.subject.name if note.subject else 'this subject'
+        topic = note.topic or 'this topic'
+
+        url = "https://api.groq.com/openai/v1/chat/completions"
+        headers = {
+            "Authorization": f"Bearer {settings.GROQ_API_KEY}",
+            "Content-Type": "application/json",
+        }
+        prompt = (
+            f"You are a friendly, patient tutor explaining a school lesson to a student. "
+            f"The subject is {subject_name} and the topic is \"{topic}\".\n\n"
+            f"Here is the original lesson note:\n{content_text}\n\n"
+            f"Please explain this lesson note clearly so that any student can easily understand it. "
+            f"Follow these rules:\n"
+            f"1. Use simple, everyday language — avoid complicated jargon\n"
+            f"2. Break the explanation into short, easy sections with clear headings\n"
+            f"3. Give a real-life example for any concept that might be hard to understand\n"
+            f"4. End with 3 quick revision questions the student can use to test themselves\n"
+            f"5. Be encouraging and friendly in tone\n\n"
+            f"Respond with valid JSON in this exact format:\n"
+            f"{{\"summary\": \"1-2 sentence overview of the topic\", "
+            f"\"sections\": [{{\"heading\": \"...\", \"explanation\": \"...\", \"example\": \"...\"}}], "
+            f"\"revision_questions\": [\"question 1\", \"question 2\", \"question 3\"]}}"
+        )
+        payload = {
+            "model": "llama-3.3-70b-versatile",
+            "messages": [{"role": "user", "content": prompt}],
+            "temperature": 0.4,
+            "max_tokens": 1200,
+            "response_format": {"type": "json_object"},
+        }
+        resp = http_requests.post(url, json=payload, headers=headers, timeout=45)
+        resp.raise_for_status()
+        raw = resp.json()["choices"][0]["message"]["content"].strip()
+        result = json.loads(raw)
+
+        # Ensure expected keys exist
+        if 'summary' not in result:
+            result['summary'] = ''
+        if 'sections' not in result or not isinstance(result['sections'], list):
+            result['sections'] = []
+        if 'revision_questions' not in result or not isinstance(result['revision_questions'], list):
+            result['revision_questions'] = []
+
+        return Response({
+            'note_id': note.id,
+            'topic': note.topic,
+            'subject_name': subject_name,
+            'explanation': result,
+        })
+
+    except Exception as e:
+        return Response(
+            {'detail': f'AI explanation failed: {str(e)}'},
+            status=status.HTTP_503_SERVICE_UNAVAILABLE
+        )
+
+
+# ============================================================================
+# LESSON NOTES — TOPIC PLAN VIEWS (TEACHER)
+# ============================================================================
+
+@api_view(['GET', 'POST'])
+@permission_classes([IsAuthenticated])
+def teacher_topic_plans(request):
+    """
+    GET  — list this teacher's topic plans, grouped by subject.
+    POST — create a topic plan for a specific week in a subject.
+    Body: { subject_id, week_number, topic }
+    """
+    from .models import LessonTopicPlan
+    from academics.models import Subject
+
+    school = request.school
+    user = request.user
+
+    if user.role not in ('teacher', 'admin', 'principal'):
+        return Response({'detail': 'Forbidden.'}, status=status.HTTP_403_FORBIDDEN)
+
+    if request.method == 'GET':
+        plans = LessonTopicPlan.objects.filter(
+            school=school, teacher=user
+        ).select_related('subject', 'subject__class_session__classroom', 'lesson_note')
+
+        subject_id = request.query_params.get('subject_id')
+        if subject_id:
+            plans = plans.filter(subject_id=subject_id)
+
+        # Group by subject
+        grouped = {}
+        for plan in plans:
+            sid = plan.subject_id
+            if sid not in grouped:
+                cs = plan.subject.class_session
+                grouped[sid] = {
+                    'subject_id': sid,
+                    'subject_name': plan.subject.name,
+                    'class_session_id': cs.id if cs else None,
+                    'class_session_name': str(cs) if cs else None,
+                    'plans': [],
+                }
+            note = getattr(plan, 'lesson_note', None)
+            grouped[sid]['plans'].append({
+                'id': plan.id,
+                'week_number': plan.week_number,
+                'topic': plan.topic,
+                'note_id': note.id if note else None,
+                'note_status': note.status if note else None,
+                'note_file_url': request.build_absolute_uri(note.file.url) if note and note.file else None,
+                'admin_feedback': note.admin_feedback if note else '',
+                'ai_rating': note.ai_rating if (note and note.ai_feedback_sent_to_teacher) else '',
+            })
+        return Response(list(grouped.values()))
+
+    # POST — create
+    subject_id = request.data.get('subject_id')
+    week_number = request.data.get('week_number')
+    topic = request.data.get('topic', '').strip()
+
+    if not subject_id or not week_number or not topic:
+        return Response({'detail': 'subject_id, week_number, and topic are required.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        week_number = int(week_number)
+    except (TypeError, ValueError):
+        return Response({'detail': 'week_number must be an integer.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    max_weeks = school.lesson_note_weeks_per_term
+    if week_number < 1 or week_number > max_weeks:
+        return Response(
+            {'detail': f'week_number must be between 1 and {max_weeks}.'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    try:
+        subject = Subject.objects.get(id=subject_id, class_session__classroom__school=school)
+    except Subject.DoesNotExist:
+        return Response({'detail': 'Subject not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+    # Ensure the teacher is assigned to this subject
+    if subject.teacher_id != user.id and user.role not in ('admin', 'principal'):
+        return Response({'detail': 'You are not assigned to this subject.'}, status=status.HTTP_403_FORBIDDEN)
+
+    plan, created = LessonTopicPlan.objects.get_or_create(
+        teacher=user,
+        subject=subject,
+        week_number=week_number,
+        defaults={'school': school, 'topic': topic},
+    )
+    if not created:
+        plan.topic = topic
+        plan.save(update_fields=['topic', 'updated_at'])
+
+    return Response({'id': plan.id, 'week_number': plan.week_number, 'topic': plan.topic},
+                    status=status.HTTP_201_CREATED if created else status.HTTP_200_OK)
+
+
+@api_view(['PUT', 'DELETE'])
+@permission_classes([IsAuthenticated])
+def teacher_topic_plan_detail(request, plan_id):
+    """
+    PUT    — update the topic text of a plan (only if no approved/sent note is attached).
+    DELETE — delete a plan and its draft note (only if no approved/sent note).
+    """
+    from .models import LessonTopicPlan, LessonNote
+
+    school = request.school
+    user = request.user
+
+    try:
+        plan = LessonTopicPlan.objects.select_related('lesson_note').get(
+            id=plan_id, school=school, teacher=user
+        )
+    except LessonTopicPlan.DoesNotExist:
+        return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+    note = getattr(plan, 'lesson_note', None)
+    locked = note and note.status in (LessonNote.STATUS_APPROVED, LessonNote.STATUS_SENT)
+
+    if locked:
+        return Response(
+            {'detail': 'Cannot modify a topic plan that has an approved or sent lesson note.'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    if request.method == 'DELETE':
+        if note:
+            if note.file:
+                try:
+                    note.file.delete(save=False)
+                except Exception:
+                    pass
+            note.delete()
+        plan.delete()
+        return Response({'detail': 'Deleted.'}, status=status.HTTP_204_NO_CONTENT)
+
+    # PUT
+    topic = request.data.get('topic', '').strip()
+    if not topic:
+        return Response({'detail': 'topic is required.'}, status=status.HTTP_400_BAD_REQUEST)
+    plan.topic = topic
+    plan.save(update_fields=['topic', 'updated_at'])
+    return Response({'id': plan.id, 'week_number': plan.week_number, 'topic': plan.topic})
+
+
+# ============================================================================
+# LESSON NOTES — ADMIN TEACHER TRACKING VIEWS
+# ============================================================================
+
+@api_view(['GET', 'POST'])
+@permission_classes([IsAuthenticated, IsPrincipalOrAdmin])
+def admin_lesson_note_weeks_setting(request):
+    """
+    GET  — return current term_week_count for this school.
+    POST — update it. Body: { weeks: 12 }
+    """
+    school = request.school
+
+    if request.method == 'GET':
+        return Response({'lesson_note_weeks_per_term': school.lesson_note_weeks_per_term})
+
+    weeks = request.data.get('weeks')
+    try:
+        weeks = int(weeks)
+        if weeks < 1 or weeks > 52:
+            raise ValueError
+    except (TypeError, ValueError):
+        return Response({'detail': 'weeks must be an integer between 1 and 52.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    school.lesson_note_weeks_per_term = weeks
+    school.save(update_fields=['lesson_note_weeks_per_term'])
+    return Response({'lesson_note_weeks_per_term': school.lesson_note_weeks_per_term})
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated, IsPrincipalOrAdmin])
+def admin_lesson_note_teacher_list(request):
+    """
+    List all teachers with their lesson note completion stats per subject.
+    Returns: [ { teacher_id, teacher_name, subjects: [ { subject_id, name, plans_count, notes_count, expected } ] } ]
+    """
+    from .models import LessonTopicPlan, LessonNote
+    from academics.models import Subject
+
+    school = request.school
+    expected = school.lesson_note_weeks_per_term
+
+    teachers = school.users.filter(role='teacher', is_active=True).order_by('first_name', 'last_name')
+
+    result = []
+    for teacher in teachers:
+        # Get all subjects this teacher is assigned to in this school
+        subjects = Subject.objects.filter(
+            teacher=teacher,
+            class_session__classroom__school=school
+        ).select_related('class_session__classroom')
+
+        subject_stats = []
+        teacher_total_plans = 0
+        teacher_total_notes = 0
+
+        for subj in subjects:
+            plans_count = LessonTopicPlan.objects.filter(
+                teacher=teacher, subject=subj, school=school
+            ).count()
+
+            notes_count = LessonNote.objects.filter(
+                teacher=teacher, subject=subj, school=school,
+                topic_plan__isnull=False,
+                status__in=[LessonNote.STATUS_PENDING, LessonNote.STATUS_NEEDS_REVISION,
+                            LessonNote.STATUS_APPROVED, LessonNote.STATUS_SENT]
+            ).count()
+
+            teacher_total_plans += plans_count
+            teacher_total_notes += notes_count
+
+            subject_stats.append({
+                'subject_id': subj.id,
+                'subject_name': subj.name,
+                'class_session_id': subj.class_session_id,
+                'class_session_name': str(subj.class_session),
+                'plans_count': plans_count,
+                'notes_count': notes_count,
+                'expected': expected,
+                'complete': notes_count >= expected,
+            })
+
+        result.append({
+            'teacher_id': teacher.id,
+            'teacher_name': teacher.get_full_name() or teacher.username,
+            'teacher_email': teacher.email,
+            'total_plans': teacher_total_plans,
+            'total_notes': teacher_total_notes,
+            'total_expected': expected * len(subject_stats),
+            'subjects': subject_stats,
+        })
+
+    return Response({'teachers': result, 'weeks_per_term': expected})
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated, IsPrincipalOrAdmin])
+def admin_lesson_note_teacher_detail(request, teacher_id):
+    """
+    Full breakdown for one teacher: all subjects → all week slots → topic + note status.
+    """
+    from .models import LessonTopicPlan, LessonNote
+    from academics.models import Subject
+
+    school = request.school
+    expected = school.lesson_note_weeks_per_term
+
+    try:
+        teacher = school.users.get(id=teacher_id, role='teacher', is_active=True)
+    except Exception:
+        return Response({'detail': 'Teacher not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+    subjects = Subject.objects.filter(
+        teacher=teacher,
+        class_session__classroom__school=school
+    ).select_related('class_session__classroom')
+
+    subject_data = []
+    for subj in subjects:
+        plans = LessonTopicPlan.objects.filter(
+            teacher=teacher, subject=subj, school=school
+        ).select_related('lesson_note').order_by('week_number')
+
+        planned_weeks = {p.week_number: p for p in plans}
+
+        weeks = []
+        for w in range(1, expected + 1):
+            plan = planned_weeks.get(w)
+            note = getattr(plan, 'lesson_note', None) if plan else None
+            weeks.append({
+                'week_number': w,
+                'plan_id': plan.id if plan else None,
+                'topic': plan.topic if plan else None,
+                'note_id': note.id if note else None,
+                'note_status': note.status if note else None,
+                'note_file_url': request.build_absolute_uri(note.file.url) if note and note.file else None,
+                'admin_feedback': note.admin_feedback if note else '',
+                'ai_rating': note.ai_rating if note else '',
+                'ai_feedback': note.ai_feedback if note else '',
+                'submitted_at': note.submitted_at if note else None,
+                'sent_at': note.sent_at if note else None,
+            })
+
+        notes_uploaded = sum(1 for w in weeks if w['note_status'] is not None)
+        subject_data.append({
+            'subject_id': subj.id,
+            'subject_name': subj.name,
+            'class_session_name': str(subj.class_session),
+            'notes_uploaded': notes_uploaded,
+            'expected': expected,
+            'weeks': weeks,
+        })
+
+    return Response({
+        'teacher_id': teacher.id,
+        'teacher_name': teacher.get_full_name() or teacher.username,
+        'teacher_email': teacher.email,
+        'weeks_per_term': expected,
+        'subjects': subject_data,
+    })
+
+
+def _notify_teacher_incomplete(school, teacher, weeks_per_term):
+    """Send in-app + email notification to a teacher about incomplete lesson notes."""
+    from logs.models import Notification
+    from logs.email_service import send_notification_email
+    from academics.models import Subject
+
+    subjects = Subject.objects.filter(
+        teacher=teacher,
+        class_session__classroom__school=school
+    )
+    from schooladmin.models import LessonNote
+    incomplete = []
+    for subj in subjects:
+        count = LessonNote.objects.filter(
+            teacher=teacher, subject=subj, school=school,
+            topic_plan__isnull=False,
+            status__in=[LessonNote.STATUS_PENDING, LessonNote.STATUS_NEEDS_REVISION,
+                        LessonNote.STATUS_APPROVED, LessonNote.STATUS_SENT]
+        ).count()
+        if count < weeks_per_term:
+            incomplete.append(f"{subj.name}: {count}/{weeks_per_term} submitted")
+
+    if not incomplete:
+        return False  # teacher is complete
+
+    subject_lines = '\n'.join(f"• {line}" for line in incomplete)
+    message = (
+        f"You have incomplete lesson notes for this term. "
+        f"Please ensure you submit {weeks_per_term} lesson note(s) per subject.\n\n"
+        f"{subject_lines}"
+    )
+    Notification.objects.create(
+        recipient=teacher,
+        school=school,
+        notification_type='general',
+        priority='high',
+        title='Incomplete Lesson Notes — Action Required',
+        message=message,
+        is_read=False,
+        is_popup_shown=False,
+    )
+    if teacher.email:
+        try:
+            send_notification_email(
+                recipient_user=teacher,
+                notification_title='Incomplete Lesson Notes — Action Required',
+                notification_message=message,
+            )
+        except Exception:
+            pass
+    return True
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated, IsPrincipalOrAdmin])
+def admin_notify_all_incomplete(request):
+    """Notify all teachers in this school who have incomplete lesson notes."""
+    school = request.school
+    weeks = school.lesson_note_weeks_per_term
+    teachers = school.users.filter(role='teacher', is_active=True)
+    notified = 0
+    for teacher in teachers:
+        if _notify_teacher_incomplete(school, teacher, weeks):
+            notified += 1
+    return Response({'detail': f'{notified} teacher(s) notified.'})
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated, IsPrincipalOrAdmin])
+def admin_notify_teacher_incomplete(request, teacher_id):
+    """Notify a single teacher about their incomplete lesson notes."""
+    school = request.school
+    try:
+        teacher = school.users.get(id=teacher_id, role='teacher', is_active=True)
+    except Exception:
+        return Response({'detail': 'Teacher not found.'}, status=status.HTTP_404_NOT_FOUND)
+    notified = _notify_teacher_incomplete(school, teacher, school.lesson_note_weeks_per_term)
+    if notified:
+        return Response({'detail': f'{teacher.get_full_name() or teacher.username} has been notified.'})
+    return Response({'detail': 'This teacher has submitted all required lesson notes — no notification sent.'})

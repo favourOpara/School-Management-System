@@ -179,6 +179,43 @@ class ClassDetailView(generics.RetrieveUpdateDestroyAPIView):
         return Class.objects.none()
 
 
+@api_view(['GET'])
+@permission_classes([permissions.IsAuthenticated, IsPrincipalOrAdmin])
+def class_progression_chain(request):
+    """Return the ordered class progression chain for the school."""
+    school = getattr(request, 'school', None)
+    if not school:
+        return Response({'error': 'No school context'}, status=status.HTTP_400_BAD_REQUEST)
+
+    classes = list(Class.objects.filter(school=school).select_related('next_class'))
+    all_classes = {c.id: c for c in classes}
+
+    # Find which classes are pointed to by another class (have a predecessor)
+    has_predecessor = set()
+    for c in classes:
+        if c.next_class_id:
+            has_predecessor.add(c.next_class_id)
+
+    chains = []
+    for c in classes:
+        if c.id not in has_predecessor:
+            chain = []
+            current = c
+            visited = set()
+            while current and current.id not in visited:
+                visited.add(current.id)
+                chain.append({
+                    'id': current.id,
+                    'name': current.name,
+                    'is_final_class': current.is_final_class,
+                    'next_class_id': current.next_class_id,
+                })
+                current = all_classes.get(current.next_class_id)
+            chains.append(chain)
+
+    return Response({'chains': chains})
+
+
 # ========================
 # CLASS SESSION MANAGEMENT VIEWS (ADMIN ONLY)
 # ========================
@@ -1295,17 +1332,11 @@ class SessionInheritanceView(APIView):
     permission_classes = [permissions.IsAuthenticated, IsPrincipalOrAdmin]
 
     @staticmethod
-    def get_next_class(current_class_name):
-        """Maps current class to next class for promotion"""
-        promotion_map = {
-            'J.S.S.1': 'J.S.S.2',
-            'J.S.S.2': 'J.S.S.3',
-            'J.S.S.3': 'S.S.S.1',
-            'S.S.S.1': 'S.S.S.2',
-            'S.S.S.2': 'S.S.S.3',
-            'S.S.S.3': None  # Graduated
-        }
-        return promotion_map.get(current_class_name)
+    def get_next_class(classroom):
+        """Get the next class from the database-driven progression chain."""
+        if classroom.is_final_class:
+            return None  # Graduated
+        return classroom.next_class
 
     def post(self, request):
         data = request.data
@@ -1380,28 +1411,30 @@ class SessionInheritanceView(APIView):
                     for source_student_session in source_student_sessions:
                         student = source_student_session.student
                         source_class_session = source_student_session.class_session
-                        current_class_name = source_class_session.classroom.name
+                        current_classroom = source_class_session.classroom
 
                         if promote_students:
-                            # Get the next class for promotion
-                            next_class_name = self.get_next_class(current_class_name)
+                            next_classroom = self.get_next_class(current_classroom)
 
-                            if next_class_name is None:
-                                # S.S.S.3 students - mark as graduated
+                            if next_classroom is None and current_classroom.is_final_class:
+                                # Final class — graduate the student
                                 graduated_students += 1
                                 source_student_session.is_active = False
                                 source_student_session.save()
+                                student.is_graduated = True
+                                student.is_active = False
+                                student.graduation_date = timezone.now()
+                                student.save(update_fields=['is_graduated', 'is_active', 'graduation_date'])
+                                continue
+
+                            if next_classroom is None:
+                                # No progression configured, skip
                                 continue
 
                             # Find target session with promoted class
-                            try:
-                                target_classroom = Class.objects.get(name=next_class_name)
-                                target_class_session = target_sessions.filter(
-                                    classroom=target_classroom
-                                ).first()
-                            except Class.DoesNotExist:
-                                # Next class doesn't exist, skip this student
-                                continue
+                            target_class_session = target_sessions.filter(
+                                classroom=next_classroom
+                            ).first()
                         else:
                             # Keep same class
                             target_class_session = target_sessions.filter(
@@ -2714,11 +2747,18 @@ def get_student_class_info(request):
     subjects_data = []
     for subject in subjects_query.order_by('name'):
         # Get content counts
+        from schooladmin.models import LessonNote
+        lesson_notes_count = LessonNote.objects.filter(
+            school=user.school,
+            subject=subject,
+            class_session=class_session,
+            status=LessonNote.STATUS_SENT,
+        ).count()
         notes_count = SubjectContent.objects.filter(
             subject=subject,
             content_type='note',
             is_active=True
-        ).count()
+        ).count() + lesson_notes_count
 
         announcements_count = SubjectContent.objects.filter(
             subject=subject,
@@ -2787,6 +2827,27 @@ def get_student_class_info(request):
 
             assignment_grades.append(assignment_data)
 
+        # Lesson notes (LessonNote model, status=sent) for this subject + class session
+        from schooladmin.models import LessonNote
+        sent_lesson_notes = LessonNote.objects.filter(
+            school=user.school,
+            subject=subject,
+            class_session=class_session,
+            status=LessonNote.STATUS_SENT,
+        ).select_related('teacher', 'topic_plan').order_by('topic_plan__week_number', '-sent_at')
+
+        lesson_notes_data = []
+        for ln in sent_lesson_notes:
+            lesson_notes_data.append({
+                'id': ln.id,
+                'topic': ln.topic,
+                'week_number': ln.topic_plan.week_number if ln.topic_plan_id else None,
+                'teacher_name': ln.teacher.get_full_name() or ln.teacher.username,
+                'content': ln.content,
+                'file_url': request.build_absolute_uri(ln.file.url) if ln.file else None,
+                'sent_at': ln.sent_at,
+            })
+
         subjects_data.append({
             'id': subject.id,
             'name': subject.name,
@@ -2798,9 +2859,11 @@ def get_student_class_info(request):
             'content_summary': {
                 'notes': notes_count,
                 'announcements': announcements_count,
-                'assignments': assignments_count
+                'assignments': assignments_count,
+                'lesson_notes': len(lesson_notes_data),
             },
             'recent_notes': list(recent_notes),
+            'lesson_notes': lesson_notes_data,
             'recent_announcements': list(recent_announcements),
             'assignments_with_grades': assignment_grades
         })

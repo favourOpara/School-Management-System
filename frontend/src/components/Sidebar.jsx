@@ -5,7 +5,7 @@ import {
   User, LayoutDashboard, Users, BookOpen,
   LogOut, Settings, Shield, PlusCircle, Eye, Book,
   ClipboardList, CalendarCheck, DollarSign, BarChart3, FileText, Megaphone,
-  GraduationCap, Briefcase, HelpCircle
+  GraduationCap, Briefcase, HelpCircle, HeartHandshake
 } from 'lucide-react';
 import { useSchool } from '../contexts/SchoolContext';
 import './Sidebar.css';
@@ -13,7 +13,8 @@ import './Sidebar.css';
 const Sidebar = forwardRef(({ activeTab, setActiveTab, userRole = 'admin' }, ref) => {
   const [isOpen, setIsOpen] = useState(false);
   const [openDropdown, setOpenDropdown] = useState(null);
-  const { school } = useSchool();
+  const { school, subscription } = useSchool();
+  const hasLessonNotes = ['premium', 'custom'].includes(subscription?.plan?.name);
 
   useImperativeHandle(ref, () => ({
     openSidebar: () => setIsOpen(true)
@@ -204,6 +205,14 @@ const Sidebar = forwardRef(({ activeTab, setActiveTab, userRole = 'admin' }, ref
               <span>Mark Attendance</span>
             </li>
 
+            {/* LESSON NOTE REVIEW - Admin/Principal, premium/custom plans only */}
+            {hasLessonNotes && (userRole === 'admin' || userRole === 'principal') && (
+              <li onClick={() => handleTabClick('lesson-note-review')}>
+                <FileText />
+                <span>Lesson Notes</span>
+              </li>
+            )}
+
             {/* ANNOUNCEMENTS SECTION - Admin only */}
             {userRole === 'admin' && (
               <li onClick={() => handleTabClick('announcements')}>
@@ -212,10 +221,17 @@ const Sidebar = forwardRef(({ activeTab, setActiveTab, userRole = 'admin' }, ref
               </li>
             )}
 
-            <li onClick={() => handleTabClick('knowledge-base')}>
+            <li onClick={() => handleTabClick('user-guide')}>
               <HelpCircle />
-              <span>Knowledge Base</span>
+              <span>User Guide</span>
             </li>
+
+            {userRole === 'admin' && (
+              <li onClick={() => handleTabClick('contact-support')}>
+                <HeartHandshake />
+                <span>Contact Support</span>
+              </li>
+            )}
           </ul>
         </nav>
       </div>

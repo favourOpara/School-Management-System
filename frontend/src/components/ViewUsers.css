@@ -106,12 +106,23 @@
   background-color: transparent;
   border: none;
   border-radius: 0;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
+  scrollbar-width: thin;
+  scrollbar-color: #d1d5db transparent;
+  -ms-overflow-style: auto;
 }
 
 .view-users-container .user-table::-webkit-scrollbar {
-  display: none;
+  display: block;
+  height: 6px;
+}
+
+.view-users-container .user-table::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.view-users-container .user-table::-webkit-scrollbar-thumb {
+  background-color: #d1d5db;
+  border-radius: 999px;
 }
 
 /* Table Styling - Clean & Minimal */
@@ -190,6 +201,20 @@
   background-color: #ffffff;
   z-index: 2;
   box-shadow: 2px 0 5px rgba(0, 0, 0, 0.02);
+}
+
+/* Sticky Actions column — always visible on the right */
+.view-users-container .user-table th.sticky-right,
+.view-users-container .user-table td.sticky-right {
+  position: sticky;
+  right: 0;
+  background-color: #ffffff;
+  z-index: 2;
+  box-shadow: -2px 0 5px rgba(0, 0, 0, 0.04);
+}
+
+.view-users-container .user-table tbody tr:hover td.sticky-right {
+  background-color: #f9fafb;
 }
 
 /* Row Hover Effect - Subtle */

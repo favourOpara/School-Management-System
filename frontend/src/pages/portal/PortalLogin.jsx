@@ -2,7 +2,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
-  GraduationCap,
   Eye,
   EyeOff,
   Loader2,
@@ -89,10 +88,7 @@ function PortalLogin() {
       {/* Navigation */}
       <nav className="portal-login-nav">
         <Link to="/" className="portal-login-logo">
-          <div className="portal-login-logo-icon">
-            <GraduationCap />
-          </div>
-          <span className="portal-login-logo-text">EduCare</span>
+          <img src="/logo-white.svg" alt="EduCare" style={{height: '60px', width: 'auto'}} />
         </Link>
       </nav>
 

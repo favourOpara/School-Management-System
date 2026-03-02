@@ -6,6 +6,8 @@ import EditParentModal from './EditParentModal';
 import EditTeacherModal from './EditTeacherModal';
 import EditPrincipalModal from './EditPrincipalModal';
 import ImportStudentsModal from './ImportStudentsModal';
+import ImportTeachersModal from './ImportTeachersModal';
+import ImportParentsModal from './ImportParentsModal';
 import './ViewUsers.css';
 import { useDialog } from '../contexts/DialogContext';
 import { useSchool } from '../contexts/SchoolContext';
@@ -27,6 +29,8 @@ const ViewUsers = () => {
   const [selectedUser, setSelectedUser] = useState(null);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
+  const [showImportTeachersModal, setShowImportTeachersModal] = useState(false);
+  const [showImportParentsModal, setShowImportParentsModal] = useState(false);
   const [loading, setLoading] = useState(false);
   const [hasFetched, setHasFetched] = useState(false);
 
@@ -35,6 +39,15 @@ const ViewUsers = () => {
   const [studentHistory, setStudentHistory] = useState([]);
   const [selectedStudentHistory, setSelectedStudentHistory] = useState(null);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
+
+  // Graduated students state
+  const [graduatedStudents, setGraduatedStudents] = useState([]);
+
+  // Never logged in state
+  const [neverLoggedIn, setNeverLoggedIn] = useState([]);
+  const [reminderSending, setReminderSending] = useState({}); // { userId: true/false }
+  const [allReminderSending, setAllReminderSending] = useState(false);
+  const [reminderFeedback, setReminderFeedback] = useState(null); // { type, message }
 
   const token = localStorage.getItem('accessToken');
 
@@ -69,13 +82,111 @@ const ViewUsers = () => {
     }
   };
 
+  const fetchGraduatedStudents = async () => {
+    try {
+      const res = await axios.get(buildApiUrl('/users/list-graduated/'), {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setGraduatedStudents(res.data);
+      setUsers([]);
+      setFilteredUsers([]);
+      setStudentHistory([]);
+    } catch (err) {
+      console.error('Error fetching graduated students:', err);
+      showAlert({
+        type: 'error',
+        message: 'Failed to load graduated students.'
+      });
+    }
+  };
+
+  const fetchNeverLoggedIn = async (role) => {
+    try {
+      const res = await axios.get(buildApiUrl(`/users/never-logged-in/?role=${role}`), {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setNeverLoggedIn(res.data);
+      setUsers([]);
+      setFilteredUsers([]);
+      setStudentHistory([]);
+      setGraduatedStudents([]);
+    } catch (err) {
+      console.error('Error fetching never logged in users:', err);
+      showAlert({ type: 'error', message: 'Failed to load users.' });
+    }
+  };
+
+  const sendReminder = async (userId) => {
+    setReminderSending(prev => ({ ...prev, [userId]: true }));
+    setReminderFeedback(null);
+    try {
+      const res = await axios.post(buildApiUrl('/users/send-login-reminder/'), { user_id: userId }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = res.data;
+      if (data.sent_count > 0) {
+        setReminderFeedback({ type: 'success', message: `Reminder sent to ${data.sent[0]?.name}.` });
+      } else {
+        const reason = data.skipped[0]?.reason || 'Unknown error';
+        setReminderFeedback({ type: 'error', message: `Could not send: ${reason}` });
+      }
+    } catch (err) {
+      const msg = err.response?.data?.error || 'Failed to send reminder.';
+      setReminderFeedback({ type: 'error', message: msg });
+    } finally {
+      setReminderSending(prev => ({ ...prev, [userId]: false }));
+    }
+  };
+
+  const sendReminderToAll = async () => {
+    const usersWithEmail = neverLoggedIn.filter(u => u.has_email);
+    if (usersWithEmail.length === 0) {
+      setReminderFeedback({ type: 'error', message: 'No users with email addresses to send to.' });
+      return;
+    }
+    setAllReminderSending(true);
+    setReminderFeedback(null);
+    try {
+      const res = await axios.post(
+        buildApiUrl('/users/send-login-reminder/'),
+        { user_ids: usersWithEmail.map(u => u.id) },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      const data = res.data;
+      setReminderFeedback({
+        type: 'success',
+        message: `Reminders sent to ${data.sent_count} user(s).${data.skipped_count > 0 ? ` ${data.skipped_count} skipped.` : ''}`
+      });
+    } catch (err) {
+      const msg = err.response?.data?.error || 'Failed to send reminders.';
+      setReminderFeedback({ type: 'error', message: msg });
+    } finally {
+      setAllReminderSending(false);
+    }
+  };
+
   const handleFilter = async () => {
     setLoading(true);
     setHasFetched(true);
     try {
+      // Never logged in — applies to all user types
+      if (viewMode === 'never-logged-in') {
+        setNeverLoggedIn([]);
+        setReminderFeedback(null);
+        await fetchNeverLoggedIn(userType);
+        setLoading(false);
+        return;
+      }
+
       if (userType === 'student') {
         if (viewMode === 'history') {
           await fetchStudentHistory();
+          setLoading(false);
+          return;
+        }
+
+        if (viewMode === 'graduated') {
+          await fetchGraduatedStudents();
           setLoading(false);
           return;
         }
@@ -89,13 +200,11 @@ const ViewUsers = () => {
         });
         setUsers(res.data);
       } else if (userType === 'teacher') {
-        // Fetch teachers
         const res = await axios.get(buildApiUrl('/users/list-teachers/'), {
           headers: { Authorization: `Bearer ${token}` }
         });
         setUsers(res.data);
       } else if (userType === 'principal') {
-        // Fetch principals
         const res = await axios.get(buildApiUrl('/users/list-principals/'), {
           headers: { Authorization: `Bearer ${token}` }
         });
@@ -138,8 +247,8 @@ const ViewUsers = () => {
         : true;
       const matchesClass = classFilter
         ? userType === 'student'
-          ? user.classroom === classFilter
-          : user.children?.some(child => child.classroom === classFilter)
+          ? (user.classroom?.name || user.classroom) === classFilter
+          : user.children?.some(child => (child.classroom?.name || child.classroom) === classFilter)
         : true;
       const matchesSubject = userType === 'student' && subjectFilter
         ? user.subjects?.some(sub => sub.name === subjectFilter)
@@ -154,6 +263,18 @@ const ViewUsers = () => {
       const matchesSearch = searchTerm.trim()
         ? student.student_info.first_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
           student.student_info.username.toLowerCase().includes(searchTerm.toLowerCase())
+        : true;
+      return matchesSearch;
+    });
+    setFilteredUsers(result);
+  };
+
+  const applyGraduatedFilters = () => {
+    const result = graduatedStudents.filter(student => {
+      const fullName = `${student.first_name} ${student.last_name}`.toLowerCase();
+      const matchesSearch = searchTerm.trim()
+        ? fullName.includes(searchTerm.toLowerCase()) ||
+          student.username.toLowerCase().includes(searchTerm.toLowerCase())
         : true;
       return matchesSearch;
     });
@@ -213,8 +334,8 @@ const ViewUsers = () => {
   const uniqueSubjects = Array.from(new Set(users.flatMap(u => u.subjects?.map(s => s.name))));
   const uniqueClasses = Array.from(new Set(
     userType === 'student'
-      ? users.map(u => u.classroom)
-      : users.flatMap(p => p.children?.map(c => c.classroom))
+      ? users.map(u => u.classroom?.name || u.classroom)
+      : users.flatMap(p => p.children?.map(c => c.classroom?.name || c.classroom))
   )).filter(Boolean);
 
   return (
@@ -237,6 +358,9 @@ const ViewUsers = () => {
               setUsers([]);
               setFilteredUsers([]);
               setStudentHistory([]);
+              setGraduatedStudents([]);
+              setNeverLoggedIn([]);
+              setReminderFeedback(null);
               setViewMode('current');
             }}
             options={[
@@ -249,24 +373,41 @@ const ViewUsers = () => {
             isClearable
           />
 
-          {/* View Mode Toggle for Students */}
-          {userType === 'student' && (
+          {/* View Mode Toggle */}
+          {userType && (
             <Select
               classNamePrefix="react-select"
-              value={{ value: viewMode, label: viewMode === 'current' ? 'Current Students' : 'Student History' }}
+              value={(() => {
+                if (viewMode === 'never-logged-in') return { value: 'never-logged-in', label: 'Never Logged In' };
+                if (userType === 'student') {
+                  if (viewMode === 'history') return { value: 'history', label: 'Student History' };
+                  if (viewMode === 'graduated') return { value: 'graduated', label: 'Graduated Students' };
+                  return { value: 'current', label: 'Current Students' };
+                }
+                return { value: 'current', label: `All ${userType.charAt(0).toUpperCase() + userType.slice(1)}s` };
+              })()}
               onChange={(option) => {
                 setViewMode(option.value);
                 setUsers([]);
                 setFilteredUsers([]);
                 setStudentHistory([]);
+                setGraduatedStudents([]);
+                setNeverLoggedIn([]);
+                setReminderFeedback(null);
                 if (option.value === 'current') {
                   setAcademicYear('');
                   setTerm('');
                 }
               }}
               options={[
-                { value: 'current', label: 'Current Students' },
-                { value: 'history', label: 'Student History' }
+                ...(userType === 'student' ? [
+                  { value: 'current', label: 'Current Students' },
+                  { value: 'history', label: 'Student History' },
+                  { value: 'graduated', label: 'Graduated Students' },
+                ] : [
+                  { value: 'current', label: `All ${userType.charAt(0).toUpperCase() + userType.slice(1)}s` },
+                ]),
+                { value: 'never-logged-in', label: 'Never Logged In' },
               ]}
               placeholder="Select View Mode"
             />
@@ -325,6 +466,16 @@ const ViewUsers = () => {
               Import Students
             </button>
           )}
+          {userType === 'teacher' && (
+            <button className="import-students-btn" onClick={() => setShowImportTeachersModal(true)}>
+              Import Teachers
+            </button>
+          )}
+          {userType === 'parent' && (
+            <button className="import-students-btn" onClick={() => setShowImportParentsModal(true)}>
+              Import Parents
+            </button>
+          )}
         </div>
 
         {/* Loading State */}
@@ -343,7 +494,7 @@ const ViewUsers = () => {
         )}
 
         {/* Empty State — fetched but no results */}
-        {!loading && hasFetched && userType && users.length === 0 && studentHistory.length === 0 && (
+        {!loading && hasFetched && userType && viewMode !== 'never-logged-in' && users.length === 0 && studentHistory.length === 0 && graduatedStudents.length === 0 && (
           <div style={{textAlign:'center',padding:'48px 20px',color:'#94a3b8'}}>
             <p style={{fontSize:'1rem',fontWeight:500,color:'#64748b',margin:'0 0 4px'}}>No {userType}s found</p>
             <p style={{fontSize:'0.875rem',margin:0}}>Try adjusting your filters or create a new {userType}.</p>
@@ -367,6 +518,7 @@ const ViewUsers = () => {
                     <th>Email</th>
                     <th>Phone Number</th>
                     <th>Assigned Subjects</th>
+                    <th>Last Login</th>
                     <th>Actions</th>
                   </tr>
                 </thead>
@@ -392,6 +544,7 @@ const ViewUsers = () => {
                           'No subjects assigned'
                         )}
                       </td>
+                      <td>{teacher.last_login || <span style={{color:'#94a3b8'}}>Never</span>}</td>
                       <td>
                         <button onClick={() => handleEdit(teacher)}>Edit</button>
                         <button onClick={() => handleDelete(teacher.id)} className="delete-btn">Delete</button>
@@ -420,6 +573,7 @@ const ViewUsers = () => {
                     <th>Gender</th>
                     <th>Email</th>
                     <th>Phone Number</th>
+                    <th>Last Login</th>
                     <th>Actions</th>
                   </tr>
                 </thead>
@@ -431,6 +585,7 @@ const ViewUsers = () => {
                       <td>{principal.gender || '—'}</td>
                       <td>{principal.email || '—'}</td>
                       <td>{principal.phone_number || '—'}</td>
+                      <td>{principal.last_login || <span style={{color:'#94a3b8'}}>Never</span>}</td>
                       <td>
                         <button onClick={() => handleEdit(principal)}>Edit</button>
                         <button onClick={() => handleDelete(principal.id)} className="delete-btn">Delete</button>
@@ -501,6 +656,137 @@ const ViewUsers = () => {
           </>
         )}
 
+        {/* Graduated Students Table */}
+        {userType === 'student' && viewMode === 'graduated' && graduatedStudents.length > 0 && (
+          <>
+            <div className="filters table-subfilters">
+              <button onClick={applyGraduatedFilters}>Apply Filters</button>
+            </div>
+
+            <div className="user-table">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Full Name</th>
+                    <th>Username</th>
+                    <th>Gender</th>
+                    <th>Department</th>
+                    <th>Last Class</th>
+                    <th>Graduation Year</th>
+                    <th>Graduation Date</th>
+                    <th>Parent</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(filteredUsers.length > 0 ? filteredUsers : graduatedStudents).map(student => (
+                    <tr key={student.id}>
+                      <td>{student.first_name} {student.last_name}</td>
+                      <td>{student.username}</td>
+                      <td>{student.gender || '—'}</td>
+                      <td>{student.department || '—'}</td>
+                      <td>{student.last_class || '—'}</td>
+                      <td>{student.last_academic_year || '—'}</td>
+                      <td>{student.graduation_date ? new Date(student.graduation_date).toLocaleDateString() : '—'}</td>
+                      <td>{student.parent?.full_name || '—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
+
+        {/* Graduated Students Empty State */}
+        {userType === 'student' && viewMode === 'graduated' && hasFetched && graduatedStudents.length === 0 && !loading && (
+          <div style={{textAlign:'center',padding:'48px 20px',color:'#94a3b8'}}>
+            <p style={{fontSize:'1rem',fontWeight:500,color:'#64748b',margin:'0 0 4px'}}>No graduated students found</p>
+            <p style={{fontSize:'0.875rem',margin:0}}>There are no graduated students in the system yet.</p>
+          </div>
+        )}
+
+        {/* Never Logged In Table */}
+        {viewMode === 'never-logged-in' && hasFetched && !loading && (
+          <>
+            {/* Feedback banner */}
+            {reminderFeedback && (
+              <div style={{
+                margin: '0 0 12px',
+                padding: '10px 16px',
+                borderRadius: '6px',
+                fontSize: '0.875rem',
+                fontWeight: 500,
+                background: reminderFeedback.type === 'success' ? '#f0fdf4' : '#fef2f2',
+                color: reminderFeedback.type === 'success' ? '#16a34a' : '#dc2626',
+                border: `1px solid ${reminderFeedback.type === 'success' ? '#bbf7d0' : '#fecaca'}`,
+              }}>
+                {reminderFeedback.message}
+              </div>
+            )}
+
+            {neverLoggedIn.length > 0 ? (
+              <>
+                <div className="filters table-subfilters" style={{ justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: '0.875rem', color: '#64748b' }}>
+                    <strong>{neverLoggedIn.length}</strong> user{neverLoggedIn.length !== 1 ? 's' : ''} have never logged in
+                  </span>
+                  <button
+                    className="import-students-btn"
+                    onClick={sendReminderToAll}
+                    disabled={allReminderSending}
+                    style={{ opacity: allReminderSending ? 0.6 : 1 }}
+                  >
+                    {allReminderSending ? 'Sending...' : `Send Reminder to All (${neverLoggedIn.filter(u => u.has_email).length})`}
+                  </button>
+                </div>
+
+                <div className="user-table">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Full Name</th>
+                        <th>Username</th>
+                        <th>Role</th>
+                        <th>Email</th>
+                        <th>Account Created</th>
+                        <th>Action</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {neverLoggedIn.map(user => (
+                        <tr key={user.id}>
+                          <td>{user.first_name} {user.last_name}</td>
+                          <td>{user.username}</td>
+                          <td style={{ textTransform: 'capitalize' }}>{user.role}</td>
+                          <td>{user.email || <span style={{ color: '#94a3b8' }}>No email</span>}</td>
+                          <td>{user.date_joined}</td>
+                          <td>
+                            {user.has_email ? (
+                              <button
+                                onClick={() => sendReminder(user.id)}
+                                disabled={reminderSending[user.id]}
+                                style={{ opacity: reminderSending[user.id] ? 0.6 : 1 }}
+                              >
+                                {reminderSending[user.id] ? 'Sending...' : 'Send Reminder'}
+                              </button>
+                            ) : (
+                              <span style={{ color: '#94a3b8', fontSize: '0.8rem' }}>No email</span>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </>
+            ) : (
+              <div style={{textAlign:'center',padding:'48px 20px',color:'#94a3b8'}}>
+                <p style={{fontSize:'1rem',fontWeight:500,color:'#64748b',margin:'0 0 4px'}}>All users have logged in</p>
+                <p style={{fontSize:'0.875rem',margin:0}}>No accounts found that have never been accessed.</p>
+              </div>
+            )}
+          </>
+        )}
+
         {/* Current Student Table */}
         {userType === 'student' && viewMode === 'current' && users.length > 0 && (
           <>
@@ -548,7 +834,8 @@ const ViewUsers = () => {
                       <th>Parent</th>
                       <th>Phone</th>
                       <th>Department</th>
-                      <th>Actions</th>
+                      <th>Last Login</th>
+                      <th className="sticky-right">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -570,7 +857,8 @@ const ViewUsers = () => {
                               ? [...new Set(user.subjects.map(sub => sub.department).filter(Boolean))].join(', ') || '—'
                               : '—')}
                         </td>
-                        <td>
+                        <td>{user.last_login || <span style={{color:'#94a3b8'}}>Never</span>}</td>
+                        <td className="sticky-right">
                           <button onClick={() => handleEdit(user)}>Edit</button>
                           <button onClick={() => handleDelete(user.id)} className="delete-btn">Delete</button>
                         </td>
@@ -600,6 +888,7 @@ const ViewUsers = () => {
                       <th>Phone</th>
                       <th>Email</th>
                       <th>Children</th>
+                      <th>Last Login</th>
                       <th>Actions</th>
                     </tr>
                   </thead>
@@ -617,6 +906,7 @@ const ViewUsers = () => {
                             </div>
                           )) || '—'}
                         </td>
+                        <td>{parent.last_login || <span style={{color:'#94a3b8'}}>Never</span>}</td>
                         <td>
                           <button onClick={() => handleEdit(parent)}>Edit</button>
                           <button onClick={() => handleDelete(parent.id)} className="delete-btn">Delete</button>
@@ -744,6 +1034,26 @@ const ViewUsers = () => {
             onClose={() => setShowImportModal(false)}
             onSuccess={() => {
               setShowImportModal(false);
+              handleFilter();
+            }}
+          />
+        )}
+
+        {showImportTeachersModal && (
+          <ImportTeachersModal
+            onClose={() => setShowImportTeachersModal(false)}
+            onSuccess={() => {
+              setShowImportTeachersModal(false);
+              handleFilter();
+            }}
+          />
+        )}
+
+        {showImportParentsModal && (
+          <ImportParentsModal
+            onClose={() => setShowImportParentsModal(false)}
+            onSuccess={() => {
+              setShowImportParentsModal(false);
               handleFilter();
             }}
           />

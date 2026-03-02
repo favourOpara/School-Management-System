@@ -103,9 +103,17 @@ def handle_charge_success(data):
             if authorization.get('authorization_code'):
                 subscription.paystack_authorization_code = authorization['authorization_code']
 
+            # Always store the billing email for future charge_authorization calls
+            if customer.get('email'):
+                subscription.paystack_billing_email = customer['email']
+
             # Set customer code if not already set
             if customer.get('customer_code') and not subscription.paystack_customer_code:
                 subscription.paystack_customer_code = customer['customer_code']
+
+            # Enable auto-debit if user opted in (but don't touch it for scheduler-initiated charges)
+            if metadata.get('save_card') is True:
+                subscription.auto_debit_enabled = True
 
             # Extend subscription period based on billing cycle
             if payment.billing_cycle == 'monthly':
@@ -114,6 +122,9 @@ def handle_charge_success(data):
                 subscription.current_period_end = timezone.now() + timedelta(days=365)
 
             subscription.current_period_start = timezone.now()
+            subscription.last_expiry_warning_sent = ''  # Reset warning tracker on renewal
+            subscription.auto_debit_retry_count = 0     # Reset retry state on any successful payment
+            subscription.auto_debit_next_retry = None
             subscription.save()
 
             logger.info(f"Updated subscription for school: {subscription.school.name}")
@@ -157,8 +168,12 @@ def handle_charge_success(data):
 
                     if authorization.get('authorization_code'):
                         subscription.paystack_authorization_code = authorization['authorization_code']
+                    if customer.get('email'):
+                        subscription.paystack_billing_email = customer['email']
                     if customer.get('customer_code'):
                         subscription.paystack_customer_code = customer['customer_code']
+                    if metadata.get('save_card') is True:
+                        subscription.auto_debit_enabled = True
                     subscription.current_period_start = timezone.now()
                     if subscription.billing_cycle == 'monthly':
                         subscription.current_period_end = timezone.now() + timedelta(days=30)
@@ -167,6 +182,13 @@ def handle_charge_success(data):
                     subscription.save()
 
                     logger.info(f"Activated new subscription for school: {school.name}")
+
+                    # Send onboarding welcome email for brand-new paid subscriptions
+                    try:
+                        from .educare_emails import send_onboarding_welcome_email
+                        send_onboarding_welcome_email(subscription, registration_type='subscribe')
+                    except Exception as e:
+                        logger.error(f"Error sending onboarding email: {str(e)}")
 
                 except School.DoesNotExist:
                     logger.error(f"School not found for payment: {school_id}")
@@ -307,31 +329,13 @@ def handle_invoice_update(data):
     logger.info(f"Invoice updated: {data.get('id')}")
 
 
-# Helper functions for notifications
+# Helper functions for notifications — use EduCare-branded emails
 
 def _send_payment_confirmation(subscription, payment):
-    """Send payment confirmation email."""
+    """Send payment confirmation email via EduCare branding."""
     try:
-        from logs.email_service import send_notification_email
-        from users.models import CustomUser
-
-        admins = CustomUser.objects.filter(
-            school=subscription.school,
-            role='admin',
-            is_active=True
-        )
-
-        for admin in admins:
-            send_notification_email(
-                recipient_user=admin,
-                title="Payment Confirmed",
-                message=f"Your payment of ₦{payment.amount_in_naira():,.2f} for "
-                        f"{subscription.plan.display_name} plan has been confirmed. "
-                        f"Your subscription is now active until "
-                        f"{subscription.current_period_end.strftime('%B %d, %Y')}.",
-                notification_type='payment_confirmation',
-                priority='medium'
-            )
+        from .educare_emails import send_educare_payment_confirmation
+        send_educare_payment_confirmation(subscription, payment)
     except Exception as e:
         logger.error(f"Error sending payment confirmation: {str(e)}")
 
@@ -339,25 +343,13 @@ def _send_payment_confirmation(subscription, payment):
 def _send_subscription_ending_notification(subscription):
     """Send notification that subscription won't renew."""
     try:
-        from logs.email_service import send_notification_email
-        from users.models import CustomUser
-
-        admins = CustomUser.objects.filter(
-            school=subscription.school,
-            role='admin',
-            is_active=True
-        )
-
-        for admin in admins:
-            send_notification_email(
-                recipient_user=admin,
-                title="Subscription Ending Soon",
-                message=f"Your {subscription.plan.display_name} subscription is set to end on "
-                        f"{subscription.current_period_end.strftime('%B %d, %Y')}. "
-                        f"Please renew to continue using all features.",
-                notification_type='subscription_ending',
-                priority='high'
-            )
+        from .educare_emails import send_expiry_warning_email
+        # Calculate days remaining
+        if subscription.current_period_end:
+            days = (subscription.current_period_end - timezone.now()).days
+            send_expiry_warning_email(subscription, max(1, days))
+        else:
+            send_expiry_warning_email(subscription, 1)
     except Exception as e:
         logger.error(f"Error sending subscription ending notification: {str(e)}")
 
@@ -365,24 +357,8 @@ def _send_subscription_ending_notification(subscription):
 def _send_cancellation_notification(subscription):
     """Send subscription cancellation confirmation."""
     try:
-        from logs.email_service import send_notification_email
-        from users.models import CustomUser
-
-        admins = CustomUser.objects.filter(
-            school=subscription.school,
-            role='admin',
-            is_active=True
-        )
-
-        for admin in admins:
-            send_notification_email(
-                recipient_user=admin,
-                title="Subscription Cancelled",
-                message=f"Your {subscription.plan.display_name} subscription has been cancelled. "
-                        f"You can still access your data, but premium features will be limited.",
-                notification_type='subscription_cancelled',
-                priority='high'
-            )
+        from .educare_emails import send_educare_cancellation_email
+        send_educare_cancellation_email(subscription)
     except Exception as e:
         logger.error(f"Error sending cancellation notification: {str(e)}")
 
@@ -390,23 +366,7 @@ def _send_cancellation_notification(subscription):
 def _send_payment_failed_notification(subscription):
     """Send payment failed notification."""
     try:
-        from logs.email_service import send_notification_email
-        from users.models import CustomUser
-
-        admins = CustomUser.objects.filter(
-            school=subscription.school,
-            role='admin',
-            is_active=True
-        )
-
-        for admin in admins:
-            send_notification_email(
-                recipient_user=admin,
-                title="Payment Failed",
-                message=f"We were unable to process your subscription payment. "
-                        f"Please update your payment method to avoid service interruption.",
-                notification_type='payment_failed',
-                priority='high'
-            )
+        from .educare_emails import send_educare_payment_failed_email
+        send_educare_payment_failed_email(subscription)
     except Exception as e:
         logger.error(f"Error sending payment failed notification: {str(e)}")

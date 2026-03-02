@@ -4,7 +4,7 @@ import {
   Menu, X, User, LayoutDashboard, LogOut, Settings, Shield,
   BookOpen, Users, Calendar, DollarSign, FileText, MessageCircle,
   ClipboardCheck, GraduationCap, UserCheck, ClipboardList, Edit2, Bell, Clock,
-  HelpCircle
+  HelpCircle, Sparkles
 } from 'lucide-react';
 import { useSchool } from '../contexts/SchoolContext';
 import './Sidebar.css';
@@ -12,7 +12,8 @@ import './Sidebar.css';
 const RoleBasedSidebar = forwardRef(({ activeTab, setActiveTab, userRole }, ref) => {
   const [isOpen, setIsOpen] = useState(false);
   const [openDropdown, setOpenDropdown] = useState(null);
-  const { school, hasFeature } = useSchool();
+  const { school, hasFeature, subscription } = useSchool();
+  const hasLessonNotes = ['premium', 'custom'].includes(subscription?.plan?.name);
 
   useImperativeHandle(ref, () => ({
     openSidebar: () => setIsOpen(true)
@@ -68,7 +69,8 @@ const RoleBasedSidebar = forwardRef(({ activeTab, setActiveTab, userRole }, ref)
               { key: 'my-classes', icon: <BookOpen />, label: 'My Classes' },
               { key: 'my-grades', icon: <FileText />, label: 'My Grades' },
               { key: 'assignments', icon: <ClipboardCheck />, label: 'Assignments' },
-              { key: 'assessments', icon: <GraduationCap />, label: 'Tests & Exams' }
+              { key: 'assessments', icon: <GraduationCap />, label: 'Tests & Exams' },
+              ...(hasLessonNotes ? [{ key: 'lesson-notes', icon: <Sparkles />, label: 'AI Academic Assistant' }] : [])
             ]
           },
           {
@@ -84,7 +86,7 @@ const RoleBasedSidebar = forwardRef(({ activeTab, setActiveTab, userRole }, ref)
             icon: <HelpCircle />,
             label: 'Help',
             submenu: [
-              { key: 'knowledge-base', icon: <BookOpen />, label: 'Knowledge Base' }
+              { key: 'user-guide', icon: <BookOpen />, label: 'User Guide' }
             ]
           }
         ];
@@ -125,6 +127,14 @@ const RoleBasedSidebar = forwardRef(({ activeTab, setActiveTab, userRole }, ref)
               { key: 'manual-grading', icon: <Edit2 />, label: 'Manual Grading' }
             ]
           },
+          ...(hasLessonNotes ? [{
+            key: 'lesson-notes-section',
+            icon: <FileText />,
+            label: 'Lesson Notes',
+            submenu: [
+              { key: 'lesson-notes', icon: <FileText />, label: 'My Lesson Notes' }
+            ]
+          }] : []),
           {
             key: 'communication',
             icon: <Bell />,
@@ -146,7 +156,7 @@ const RoleBasedSidebar = forwardRef(({ activeTab, setActiveTab, userRole }, ref)
             icon: <HelpCircle />,
             label: 'Help',
             submenu: [
-              { key: 'knowledge-base', icon: <BookOpen />, label: 'Knowledge Base' }
+              { key: 'user-guide', icon: <BookOpen />, label: 'User Guide' }
             ]
           }
         ];
@@ -191,7 +201,7 @@ const RoleBasedSidebar = forwardRef(({ activeTab, setActiveTab, userRole }, ref)
             icon: <HelpCircle />,
             label: 'Help',
             submenu: [
-              { key: 'knowledge-base', icon: <BookOpen />, label: 'Knowledge Base' }
+              { key: 'user-guide', icon: <BookOpen />, label: 'User Guide' }
             ]
           }
         ];

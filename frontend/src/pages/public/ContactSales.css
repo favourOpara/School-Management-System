@@ -24,7 +24,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  height: 64px;
+  height: 70px;
 }
 
 .contact-logo {
@@ -553,7 +553,7 @@
 
 textarea.contact-form-input {
   resize: none;
-  min-height: 120px;
+  min-height: 70px;
 }
 
 .contact-form-field-error {

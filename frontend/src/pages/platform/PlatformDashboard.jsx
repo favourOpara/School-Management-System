@@ -16,6 +16,23 @@ import {
   ChevronDown,
   Menu,
   GraduationCap,
+  UserCheck,
+  PlusCircle,
+  Trash2,
+  ToggleLeft,
+  ToggleRight,
+  ClipboardList,
+  MessageSquare,
+  CheckCircle2,
+  Clock,
+  AlertCircle,
+  StickyNote,
+  ChevronUp,
+  HeartHandshake,
+  Send,
+  RefreshCw,
+  MessageCircle,
+  Reply,
 } from 'lucide-react';
 import API_BASE_URL from '../../config';
 import './PlatformDashboard.css';
@@ -34,6 +51,7 @@ const formatDate = (iso) => {
 const STATUS_COLORS = {
   active: { bg: '#d1fae5', color: '#065f46' },
   trial: { bg: '#dbeafe', color: '#1e40af' },
+  grace_period: { bg: '#ffedd5', color: '#9a3412' },
   expired: { bg: '#fee2e2', color: '#991b1b' },
   cancelled: { bg: '#f1f5f9', color: '#475569' },
   past_due: { bg: '#fef3c7', color: '#92400e' },
@@ -130,7 +148,7 @@ function OverviewTab() {
       <div className="platform-section-card">
         <h3>Subscription Status</h3>
         <div className="platform-status-grid">
-          {['active', 'trial', 'expired', 'cancelled', 'past_due'].map((s) => (
+          {['active', 'trial', 'grace_period', 'expired', 'cancelled', 'past_due'].map((s) => (
             <div key={s} className="platform-status-item">
               <span
                 className="platform-status-badge"
@@ -319,6 +337,7 @@ function SchoolsTab() {
                   <th>School</th>
                   <th>Plan</th>
                   <th>Status</th>
+                  <th>Expires In</th>
                   <th>Users</th>
                   <th>Created</th>
                   <th>Actions</th>
@@ -352,6 +371,24 @@ function SchoolsTab() {
                           </span>
                         ) : (
                           '-'
+                        )}
+                      </td>
+                      <td>
+                        {s.days_left === null || s.days_left === undefined ? (
+                          <span style={{ color: '#94a3b8', fontSize: '0.82rem' }}>—</span>
+                        ) : ['expired', 'grace_period', 'cancelled'].includes(s.subscription_status) ? (
+                          <span style={{ background: '#fee2e2', color: '#991b1b', padding: '0.2rem 0.55rem', borderRadius: '20px', fontSize: '0.75rem', fontWeight: 600 }}>
+                            Expired
+                          </span>
+                        ) : (
+                          <span style={{
+                            padding: '0.2rem 0.55rem', borderRadius: '20px',
+                            fontSize: '0.75rem', fontWeight: 700,
+                            background: s.days_left > 30 ? '#d1fae5' : s.days_left > 10 ? '#fef3c7' : '#fee2e2',
+                            color: s.days_left > 30 ? '#065f46' : s.days_left > 10 ? '#92400e' : '#991b1b',
+                          }}>
+                            {s.days_left}d
+                          </span>
                         )}
                       </td>
                       <td>{s.user_count}</td>
@@ -668,6 +705,1073 @@ function RevenueTab() {
 }
 
 /* ══════════════════════════════════════════════════════════
+   ONBOARDING MANAGEMENT TAB
+   ══════════════════════════════════════════════════════════ */
+const OB_STATUS_COLORS = {
+  pending:     { bg: '#dbeafe', color: '#1e40af' },
+  in_progress: { bg: '#fef3c7', color: '#92400e' },
+  completed:   { bg: '#d1fae5', color: '#065f46' },
+  skipped:     { bg: '#f1f5f9', color: '#475569' },
+};
+
+const CHECKLIST_LABELS = {
+  students_imported:     'Students imported',
+  teachers_added:        'Teachers added',
+  classes_setup:         'Classes set up',
+  subjects_setup:        'Subjects configured',
+  parents_added:         'Parents linked',
+  attendance_configured: 'Attendance configured',
+  grading_configured:    'Grading configured',
+};
+
+/** Parse "[DD Mon YYYY HH:MM]\ntext" entries separated by \n\n */
+const parseNotes = (str) => {
+  if (!str || !str.trim()) return [];
+  return str.split('\n\n').filter(Boolean).map((entry) => {
+    const match = entry.match(/^\[([^\]]+)\]\n([\s\S]*)$/);
+    if (match) return { ts: match[1], text: match[2].trim() };
+    return { ts: null, text: entry.trim() };
+  }).reverse(); // newest first
+};
+
+/* ══════════════════════════════════════════════════════════
+   SHARED REPLY THREAD COMPONENT (platform admin)
+   ══════════════════════════════════════════════════════════ */
+function ReplyThread({ replies = [], replyEndpoint, onNewReply, senderName }) {
+  const [message, setMessage] = useState('');
+  const [sending, setSending] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleSend = async () => {
+    if (!message.trim()) return;
+    setSending(true);
+    setError('');
+    const data = await platformFetch(replyEndpoint, {
+      method: 'POST',
+      body: JSON.stringify({ message: message.trim(), sender_name: senderName }),
+    });
+    if (data) {
+      setMessage('');
+      onNewReply(data.reply);
+    } else {
+      setError('Failed to send reply. Please try again.');
+    }
+    setSending(false);
+  };
+
+  return (
+    <div style={{ marginTop: '1rem' }}>
+      <div style={{ fontSize: '0.78rem', fontWeight: 700, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+        <MessageCircle size={13} /> Conversation with School
+      </div>
+
+      {/* Thread */}
+      {replies.length === 0 ? (
+        <p style={{ fontSize: '0.82rem', color: '#94a3b8', fontStyle: 'italic', margin: '0 0 0.75rem' }}>No replies yet. Send the first message below.</p>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '0.75rem', maxHeight: '220px', overflowY: 'auto', padding: '2px' }}>
+          {[...replies].sort((a, b) => new Date(a.created_at) - new Date(b.created_at)).map(r => (
+            <div key={r.id} style={{
+              background: r.sent_by_admin ? '#eff6ff' : '#f0fdf4',
+              border: `1px solid ${r.sent_by_admin ? '#bfdbfe' : '#86efac'}`,
+              borderRadius: '8px', padding: '0.55rem 0.85rem',
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.2rem' }}>
+                <span style={{ fontSize: '0.72rem', fontWeight: 700, color: r.sent_by_admin ? '#1d4ed8' : '#15803d' }}>
+                  {r.sent_by_admin ? '🛡 Admin' : `👤 ${r.sender_name}`}
+                </span>
+                <span style={{ fontSize: '0.68rem', color: '#94a3b8' }}>
+                  {new Date(r.created_at).toLocaleDateString('en-NG', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                  {r.sent_by_admin && (
+                    <span style={{ marginLeft: '0.4rem', color: r.email_sent ? '#16a34a' : '#dc2626', fontSize: '0.65rem' }}>
+                      {r.email_sent ? '✓ emailed' : '⚠ not sent'}
+                    </span>
+                  )}
+                </span>
+              </div>
+              <p style={{ margin: 0, fontSize: '0.83rem', color: '#374151', whiteSpace: 'pre-wrap', lineHeight: 1.5 }}>{r.message}</p>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Compose */}
+      <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-end' }}>
+        <textarea
+          value={message}
+          onChange={e => setMessage(e.target.value)}
+          placeholder="Type your reply to the school…"
+          rows={2}
+          style={{ flex: 1, border: '1.5px solid #e2e8f0', borderRadius: '7px', padding: '0.45rem 0.7rem', fontSize: '0.83rem', fontFamily: 'inherit', resize: 'vertical', outline: 'none', boxSizing: 'border-box' }}
+          onKeyDown={e => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) handleSend(); }}
+        />
+        <button
+          onClick={handleSend}
+          disabled={sending || !message.trim()}
+          style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', padding: '0.45rem 0.9rem', background: sending || !message.trim() ? '#e2e8f0' : '#2563eb', color: sending || !message.trim() ? '#94a3b8' : '#fff', border: 'none', borderRadius: '7px', fontWeight: 600, fontSize: '0.82rem', cursor: sending || !message.trim() ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap', height: 'fit-content' }}
+        >
+          <Reply size={14} />
+          {sending ? 'Sending…' : 'Send'}
+        </button>
+      </div>
+      {error && <p style={{ color: '#dc2626', fontSize: '0.78rem', margin: '0.35rem 0 0' }}>{error}</p>}
+    </div>
+  );
+}
+
+function OnboardingMgmtTab() {
+  const [agents, setAgents] = useState([]);
+  const [queue, setQueue] = useState([]);
+  const [loadingAgents, setLoadingAgents] = useState(true);
+  const [loadingQueue, setLoadingQueue] = useState(true);
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [queueFilter, setQueueFilter] = useState('');
+  const [expandedRow, setExpandedRow] = useState(null);
+  const [form, setForm] = useState({ email: '', password: '', first_name: '', last_name: '', phone: '' });
+  const [creating, setCreating] = useState(false);
+  const [createError, setCreateError] = useState('');
+  const [createSuccess, setCreateSuccess] = useState('');
+  const [assigning, setAssigning] = useState({});      // { [recordId]: true }
+  const [reassignOpen, setReassignOpen] = useState({}); // { [recordId]: { agentId, note } }
+  const [localReplies, setLocalReplies] = useState({});  // { [recordId]: [reply, ...] }
+  const adminName = localStorage.getItem('platformUserName') || 'EduCare Admin';
+
+  const loadAgents = useCallback(async () => {
+    setLoadingAgents(true);
+    const data = await platformFetch('onboarding-agents/');
+    if (data) setAgents(data.agents || []);
+    setLoadingAgents(false);
+  }, []);
+
+  const loadQueue = useCallback(async () => {
+    setLoadingQueue(true);
+    const url = queueFilter ? `onboarding-queue/?status=${queueFilter}` : 'onboarding-queue/';
+    const data = await platformFetch(url);
+    if (data) setQueue(data.records || []);
+    setLoadingQueue(false);
+  }, [queueFilter]);
+
+  useEffect(() => { loadAgents(); }, [loadAgents]);
+  useEffect(() => { loadQueue(); }, [loadQueue]);
+
+  const handleCreate = async (e) => {
+    e.preventDefault();
+    setCreating(true);
+    setCreateError('');
+    setCreateSuccess('');
+    const data = await platformFetch('onboarding-agents/create/', {
+      method: 'POST',
+      body: JSON.stringify(form),
+    });
+    if (data?.message) {
+      setCreateSuccess(data.message);
+      setForm({ email: '', password: '', first_name: '', last_name: '', phone: '' });
+      setShowCreateForm(false);
+      loadAgents();
+    } else if (data?.error) {
+      setCreateError(data.error);
+    }
+    setCreating(false);
+  };
+
+  const handleToggleActive = async (agent) => {
+    await platformFetch(`onboarding-agents/${agent.id}/`, {
+      method: 'PATCH',
+      body: JSON.stringify({ is_active: !agent.is_active }),
+    });
+    loadAgents();
+  };
+
+  const handleDelete = async (agent) => {
+    if (!window.confirm(`Delete agent ${agent.full_name}? This cannot be undone.`)) return;
+    await platformFetch(`onboarding-agents/${agent.id}/`, { method: 'DELETE' });
+    loadAgents();
+  };
+
+  const handleAssign = async (recordId, agentId, note = '') => {
+    setAssigning((prev) => ({ ...prev, [recordId]: true }));
+    await platformFetch(`onboarding-queue/${recordId}/assign/`, {
+      method: 'POST',
+      body: JSON.stringify({ agent_id: agentId || null, note }),
+    });
+    setAssigning((prev) => ({ ...prev, [recordId]: false }));
+    setReassignOpen((prev) => { const n = { ...prev }; delete n[recordId]; return n; });
+    loadQueue();
+    loadAgents();
+  };
+
+  const openReassign = (r) => setReassignOpen((prev) => ({
+    ...prev,
+    [r.id]: { agentId: r.agent ? (agents.find((a) => a.full_name === r.agent)?.id || '') : '', note: '' },
+  }));
+  const closeReassign = (id) => setReassignOpen((prev) => { const n = { ...prev }; delete n[id]; return n; });
+  const updateReassign = (id, field, value) => setReassignOpen((prev) => ({
+    ...prev, [id]: { ...prev[id], [field]: value },
+  }));
+
+  const activeAgents = agents.filter((a) => a.is_active);
+
+  const inputStyle = { width: '100%', border: '1.5px solid #e2e8f0', borderRadius: '6px', padding: '0.5rem 0.75rem', fontSize: '0.875rem', boxSizing: 'border-box' };
+  const labelStyle = { display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#374151', marginBottom: '0.3rem' };
+
+  return (
+    <div className="platform-tab-content">
+
+      {/* ── Onboarding Queue (top — this is the primary action area) ── */}
+      <div className="platform-section-card">
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+          <h3 style={{ margin: 0 }}>Assign Schools to Onboarding Staff</h3>
+          <select
+            value={queueFilter}
+            onChange={(e) => setQueueFilter(e.target.value)}
+            style={{ border: '1.5px solid #e2e8f0', borderRadius: '6px', padding: '0.4rem 0.75rem', fontSize: '0.85rem', background: '#fff', cursor: 'pointer' }}
+          >
+            <option value="">All Schools</option>
+            <option value="pending">Unassigned</option>
+            <option value="in_progress">In Progress</option>
+            <option value="completed">Completed</option>
+          </select>
+        </div>
+
+        {loadingQueue ? (
+          <p className="platform-empty">Loading queue…</p>
+        ) : queue.length === 0 ? (
+          <p className="platform-empty">No schools match this filter.</p>
+        ) : (
+          <div className="platform-table-wrapper">
+            <table className="platform-table">
+              <thead>
+                <tr>
+                  <th>School</th>
+                  <th>Plan</th>
+                  <th>Registered</th>
+                  <th>Status</th>
+                  <th>Progress</th>
+                  <th style={{ minWidth: '200px' }}>Assign To</th>
+                </tr>
+              </thead>
+              <tbody>
+                {queue.map((r) => {
+                  const sc = OB_STATUS_COLORS[r.onboarding_status] || OB_STATUS_COLORS.pending;
+                  const isExpanded = expandedRow === r.id;
+                  const hasDetail = r.onboarding_status === 'completed' || r.onboarding_status === 'in_progress';
+                  return (
+                    <React.Fragment key={r.id}>
+                      <tr
+                        style={{ cursor: hasDetail ? 'pointer' : 'default', background: isExpanded ? '#f8fafc' : undefined }}
+                        onClick={() => hasDetail && setExpandedRow(isExpanded ? null : r.id)}
+                      >
+                        <td>
+                          <div className="platform-td-bold">{r.school_name}</div>
+                          <div style={{ fontSize: '0.75rem', color: '#64748b' }}>{r.school_email}</div>
+                        </td>
+                        <td>{r.plan_name}</td>
+                        <td>{formatDate(r.registered_at)}</td>
+                        <td>
+                          <span style={{
+                            background: sc.bg, color: sc.color,
+                            padding: '0.2rem 0.55rem', borderRadius: '20px',
+                            fontSize: '0.75rem', fontWeight: 600, textTransform: 'capitalize',
+                          }}>
+                            {r.onboarding_status?.replace('_', ' ')}
+                          </span>
+                        </td>
+                        <td>
+                          <span style={{ fontWeight: 600, color: r.progress.completed === r.progress.total ? '#059669' : '#374151' }}>
+                            {r.progress.completed}/{r.progress.total}
+                          </span>
+                          {hasDetail && (
+                            <span style={{ marginLeft: '0.4rem', fontSize: '0.7rem', color: '#94a3b8' }}>
+                              {isExpanded ? '▲' : '▼'}
+                            </span>
+                          )}
+                        </td>
+                        <td onClick={(e) => e.stopPropagation()}>
+                          {reassignOpen[r.id] ? (
+                            /* ── Inline reassign form ── */
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', minWidth: '220px' }}>
+                              <select
+                                value={reassignOpen[r.id].agentId}
+                                onChange={(e) => updateReassign(r.id, 'agentId', e.target.value)}
+                                style={{ border: '1.5px solid #e2e8f0', borderRadius: '6px', padding: '0.35rem 0.6rem', fontSize: '0.82rem', background: '#fff', cursor: 'pointer' }}
+                              >
+                                <option value="">— Unassign —</option>
+                                {activeAgents.map((a) => (
+                                  <option key={a.id} value={a.id}>{a.full_name}</option>
+                                ))}
+                              </select>
+                              <textarea
+                                placeholder="Reason for reassignment (optional)…"
+                                value={reassignOpen[r.id].note}
+                                onChange={(e) => updateReassign(r.id, 'note', e.target.value)}
+                                rows={2}
+                                style={{ border: '1.5px solid #e2e8f0', borderRadius: '6px', padding: '0.35rem 0.6rem', fontSize: '0.78rem', resize: 'vertical', fontFamily: 'inherit', boxSizing: 'border-box', width: '100%' }}
+                              />
+                              <div style={{ display: 'flex', gap: '0.4rem' }}>
+                                <button
+                                  onClick={() => handleAssign(r.id, reassignOpen[r.id].agentId, reassignOpen[r.id].note)}
+                                  disabled={assigning[r.id]}
+                                  className="platform-action-btn"
+                                  style={{ background: '#2563eb', color: '#fff', fontSize: '0.78rem', padding: '0.3rem 0.7rem' }}
+                                >
+                                  {assigning[r.id] ? 'Saving…' : 'Confirm'}
+                                </button>
+                                <button
+                                  onClick={() => closeReassign(r.id)}
+                                  className="platform-action-btn"
+                                  style={{ fontSize: '0.78rem', padding: '0.3rem 0.7rem' }}
+                                >
+                                  Cancel
+                                </button>
+                              </div>
+                            </div>
+                          ) : r.onboarding_status === 'completed' ? (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+                              <span style={{ fontSize: '0.8rem', color: '#059669', fontWeight: 600 }}>
+                                ✓ Done{r.agent ? ` by ${r.agent}` : ''}
+                              </span>
+                              <button
+                                onClick={() => openReassign(r)}
+                                className="platform-action-btn"
+                                style={{ fontSize: '0.75rem', padding: '0.25rem 0.6rem' }}
+                              >
+                                Reassign
+                              </button>
+                            </div>
+                          ) : (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+                              {r.agent && (
+                                <span style={{ fontSize: '0.78rem', color: '#374151', fontWeight: 600 }}>{r.agent}</span>
+                              )}
+                              <button
+                                onClick={() => openReassign(r)}
+                                className="platform-action-btn"
+                                style={{ fontSize: '0.75rem', padding: '0.25rem 0.6rem', alignSelf: 'flex-start' }}
+                              >
+                                {r.agent ? 'Reassign' : 'Assign'}
+                              </button>
+                            </div>
+                          )}
+                        </td>
+                      </tr>
+
+                      {/* ── Expanded detail row ── */}
+                      {isExpanded && (
+                        <tr style={{ background: '#f8fafc' }}>
+                          <td colSpan={6} style={{ padding: '0.75rem 1.25rem 1rem', borderTop: '1px solid #e2e8f0' }}>
+                            <div style={{ display: 'flex', gap: '2rem', flexWrap: 'wrap' }}>
+
+                              {/* Checklist */}
+                              <div style={{ flex: '1', minWidth: '220px' }}>
+                                <div style={{ fontSize: '0.78rem', fontWeight: 700, color: '#374151', marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                                  Setup Checklist
+                                </div>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+                                  {Object.entries(CHECKLIST_LABELS).map(([key, label]) => {
+                                    const done = r.checklist?.[key];
+                                    return (
+                                      <div key={key} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.83rem' }}>
+                                        <span style={{
+                                          width: '16px', height: '16px', borderRadius: '4px', flexShrink: 0,
+                                          background: done ? '#d1fae5' : '#f1f5f9',
+                                          border: `1.5px solid ${done ? '#6ee7b7' : '#e2e8f0'}`,
+                                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                          fontSize: '0.65rem', color: done ? '#059669' : '#94a3b8',
+                                        }}>
+                                          {done ? '✓' : ''}
+                                        </span>
+                                        <span style={{ color: done ? '#374151' : '#94a3b8', textDecoration: done ? 'none' : 'none' }}>
+                                          {label}
+                                        </span>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+
+                              {/* Notes + Meta */}
+                              <div style={{ flex: '2', minWidth: '240px' }}>
+                                {/* Staff notes history */}
+                                <div style={{ fontSize: '0.78rem', fontWeight: 700, color: '#374151', marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                                  Staff Notes
+                                </div>
+                                {parseNotes(r.notes).length > 0 ? (
+                                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                    {parseNotes(r.notes).map((entry, i) => (
+                                      <div key={i} style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '0.55rem 0.85rem' }}>
+                                        {entry.ts && <div style={{ fontSize: '0.72rem', color: '#94a3b8', fontWeight: 600, marginBottom: '0.2rem' }}>{entry.ts}</div>}
+                                        <div style={{ fontSize: '0.85rem', color: '#374151', lineHeight: '1.6', whiteSpace: 'pre-wrap' }}>{entry.text}</div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                ) : (
+                                  <div style={{ fontSize: '0.83rem', color: '#94a3b8', fontStyle: 'italic' }}>No notes from staff yet.</div>
+                                )}
+
+                                {/* Admin notes history */}
+                                <div style={{ fontSize: '0.78rem', fontWeight: 700, color: '#374151', margin: '0.75rem 0 0.4rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                                  Admin Notes
+                                </div>
+                                {parseNotes(r.admin_notes).length > 0 ? (
+                                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                    {parseNotes(r.admin_notes).map((entry, i) => (
+                                      <div key={i} style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '8px', padding: '0.55rem 0.85rem' }}>
+                                        {entry.ts && <div style={{ fontSize: '0.72rem', color: '#b45309', fontWeight: 600, marginBottom: '0.2rem' }}>{entry.ts}</div>}
+                                        <div style={{ fontSize: '0.85rem', color: '#374151', lineHeight: '1.6', whiteSpace: 'pre-wrap' }}>{entry.text}</div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                ) : (
+                                  <div style={{ fontSize: '0.83rem', color: '#94a3b8', fontStyle: 'italic' }}>No admin notes yet.</div>
+                                )}
+
+                                <div style={{ marginTop: '0.75rem', display: 'flex', gap: '1.5rem', flexWrap: 'wrap' }}>
+                                  {r.agent && (
+                                    <div style={{ fontSize: '0.78rem', color: '#64748b' }}>
+                                      <span style={{ fontWeight: 600 }}>Staff:</span> {r.agent}
+                                      {r.agent_email && <span style={{ color: '#94a3b8' }}> ({r.agent_email})</span>}
+                                    </div>
+                                  )}
+                                  {r.assigned_at && (
+                                    <div style={{ fontSize: '0.78rem', color: '#64748b' }}>
+                                      <span style={{ fontWeight: 600 }}>Assigned:</span> {formatDate(r.assigned_at)}
+                                    </div>
+                                  )}
+                                  {r.completed_at && (
+                                    <div style={{ fontSize: '0.78rem', color: '#059669' }}>
+                                      <span style={{ fontWeight: 600 }}>Completed:</span> {formatDate(r.completed_at)}
+                                    </div>
+                                  )}
+                                </div>
+
+                                {/* Reply thread */}
+                                <div style={{ marginTop: '1rem', borderTop: '1px solid #f1f5f9', paddingTop: '0.75rem' }}>
+                                  <ReplyThread
+                                    replies={localReplies[r.id] ?? (r.replies || [])}
+                                    replyEndpoint={`onboarding-queue/${r.id}/reply/`}
+                                    senderName={adminName}
+                                    onNewReply={rep => setLocalReplies(prev => ({ ...prev, [r.id]: [...(prev[r.id] ?? (r.replies || [])), rep] }))}
+                                  />
+                                </div>
+                              </div>
+
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {/* ── Agents section ── */}
+      <div className="platform-section-card">
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+          <h3 style={{ margin: 0 }}>Onboarding Staff Accounts</h3>
+          <button
+            className="platform-action-btn"
+            onClick={() => { setShowCreateForm((v) => !v); setCreateError(''); setCreateSuccess(''); }}
+          >
+            <PlusCircle size={16} />
+            {showCreateForm ? 'Cancel' : 'Add Staff'}
+          </button>
+        </div>
+
+        {createSuccess && (
+          <div style={{ background: '#d1fae5', color: '#065f46', padding: '0.6rem 1rem', borderRadius: '8px', marginBottom: '1rem', fontSize: '0.875rem' }}>
+            {createSuccess}
+          </div>
+        )}
+
+        {showCreateForm && (
+          <form onSubmit={handleCreate} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '1.25rem', marginBottom: '1.25rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '0.75rem' }}>
+              {[
+                { name: 'first_name', label: 'First Name', type: 'text',     required: true },
+                { name: 'last_name',  label: 'Last Name',  type: 'text',     required: true },
+                { name: 'email',      label: 'Email',      type: 'email',    required: true },
+                { name: 'password',   label: 'Password',   type: 'password', required: true },
+                { name: 'phone',      label: 'Phone',      type: 'tel',      required: false },
+              ].map((f) => (
+                <div key={f.name}>
+                  <label style={labelStyle}>{f.label}</label>
+                  <input
+                    type={f.type}
+                    required={f.required}
+                    value={form[f.name]}
+                    onChange={(e) => setForm((prev) => ({ ...prev, [f.name]: e.target.value }))}
+                    style={inputStyle}
+                  />
+                </div>
+              ))}
+            </div>
+            {createError && (
+              <div style={{ background: '#fee2e2', color: '#991b1b', padding: '0.5rem 0.75rem', borderRadius: '6px', marginTop: '0.75rem', fontSize: '0.82rem' }}>
+                {createError}
+              </div>
+            )}
+            <button type="submit" disabled={creating} className="platform-action-btn" style={{ marginTop: '1rem' }}>
+              {creating ? 'Creating…' : 'Create Staff Account'}
+            </button>
+          </form>
+        )}
+
+        {loadingAgents ? (
+          <p className="platform-empty">Loading staff…</p>
+        ) : agents.length === 0 ? (
+          <p className="platform-empty">No onboarding staff yet. Add one above.</p>
+        ) : (
+          <div className="platform-table-wrapper">
+            <table className="platform-table">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Email</th>
+                  <th>Active Tasks</th>
+                  <th>Completed</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {agents.map((a) => (
+                  <tr key={a.id}>
+                    <td className="platform-td-bold">{a.full_name}</td>
+                    <td style={{ fontSize: '0.85rem' }}>{a.email}</td>
+                    <td>{a.active_schools}</td>
+                    <td>{a.completed_schools}</td>
+                    <td>
+                      <span style={{
+                        background: a.is_active ? '#d1fae5' : '#fee2e2',
+                        color: a.is_active ? '#065f46' : '#991b1b',
+                        padding: '0.2rem 0.6rem', borderRadius: '20px',
+                        fontSize: '0.75rem', fontWeight: 600,
+                      }}>
+                        {a.is_active ? 'Active' : 'Inactive'}
+                      </span>
+                    </td>
+                    <td>
+                      <div style={{ display: 'flex', gap: '0.5rem' }}>
+                        <button
+                          title={a.is_active ? 'Deactivate' : 'Activate'}
+                          onClick={() => handleToggleActive(a)}
+                          style={{ background: 'none', border: 'none', cursor: 'pointer', color: a.is_active ? '#059669' : '#94a3b8', display: 'flex', padding: '2px' }}
+                        >
+                          {a.is_active ? <ToggleRight size={20} /> : <ToggleLeft size={20} />}
+                        </button>
+                        <button
+                          title="Delete"
+                          onClick={() => handleDelete(a)}
+                          style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', display: 'flex', padding: '2px' }}
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════════════════
+   CONTACTS TAB
+   ══════════════════════════════════════════════════════════ */
+const CONTACT_STATUS_COLORS = {
+  new:         { bg: '#dbeafe', color: '#1e40af' },
+  assigned:    { bg: '#fef3c7', color: '#92400e' },
+  in_progress: { bg: '#ede9fe', color: '#5b21b6' },
+  resolved:    { bg: '#d1fae5', color: '#065f46' },
+};
+
+function ContactsTab() {
+  const [inquiries, setInquiries]   = useState([]);
+  const [agents, setAgents]         = useState([]);
+  const [counts, setCounts]         = useState({});
+  const [loading, setLoading]       = useState(true);
+  const [statusFilter, setStatusFilter] = useState('');
+  const [search, setSearch]         = useState('');
+  const [expanded, setExpanded]     = useState(null);
+  const [assignOpen, setAssignOpen] = useState({});  // { [id]: { agentId, note } }
+  const [saving, setSaving]         = useState({});
+  const [localReplies, setLocalReplies] = useState({});  // { [inquiryId]: [reply, ...] }
+  const adminName = localStorage.getItem('platformUserName') || 'EduCare Admin';
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    const params = new URLSearchParams();
+    if (statusFilter) params.append('status', statusFilter);
+    if (search) params.append('search', search);
+    const qs = params.toString();
+    const [cData, aData] = await Promise.all([
+      platformFetch(`contacts/${qs ? '?' + qs : ''}`),
+      platformFetch('onboarding-agents/'),
+    ]);
+    if (cData) { setInquiries(cData.inquiries || []); setCounts(cData.counts || {}); }
+    if (aData) setAgents((aData.agents || []).filter(a => a.is_active));
+    setLoading(false);
+  }, [statusFilter, search]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const patch = async (id, body) => {
+    setSaving(p => ({ ...p, [id]: true }));
+    await platformFetch(`contacts/${id}/`, { method: 'PATCH', body: JSON.stringify(body) });
+    setSaving(p => ({ ...p, [id]: false }));
+    setAssignOpen(p => { const n = { ...p }; delete n[id]; return n; });
+    load();
+  };
+
+  const openAssign = (inq) => setAssignOpen(p => ({
+    ...p, [inq.id]: { agentId: inq.assigned_agent_id || '', note: '' },
+  }));
+  const closeAssign = (id) => setAssignOpen(p => { const n = { ...p }; delete n[id]; return n; });
+  const updateAssign = (id, field, val) => setAssignOpen(p => ({
+    ...p, [id]: { ...p[id], [field]: val },
+  }));
+
+  const STATUS_TABS = [
+    { key: '',            label: 'All',         icon: <ClipboardList size={14} /> },
+    { key: 'new',         label: 'New',         icon: <AlertCircle size={14} /> },
+    { key: 'assigned',    label: 'Assigned',    icon: <UserCheck size={14} /> },
+    { key: 'in_progress', label: 'In Progress', icon: <Clock size={14} /> },
+    { key: 'resolved',    label: 'Resolved',    icon: <CheckCircle2 size={14} /> },
+  ];
+
+  return (
+    <div className="platform-tab-content">
+      {/* Status tabs + search */}
+      <div className="platform-section-card" style={{ padding: '0.75rem 1.25rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem' }}>
+          <div style={{ display: 'flex', gap: '0.25rem', flexWrap: 'wrap' }}>
+            {STATUS_TABS.map(t => (
+              <button
+                key={t.key}
+                onClick={() => setStatusFilter(t.key)}
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: '0.3rem',
+                  padding: '0.35rem 0.85rem', borderRadius: '20px', fontSize: '0.82rem',
+                  fontWeight: 600, cursor: 'pointer', border: '1.5px solid',
+                  background: statusFilter === t.key ? '#2563eb' : '#fff',
+                  color: statusFilter === t.key ? '#fff' : '#64748b',
+                  borderColor: statusFilter === t.key ? '#2563eb' : '#e2e8f0',
+                }}
+              >
+                {t.icon} {t.label}
+                {t.key && counts[t.key] > 0 && (
+                  <span style={{
+                    background: statusFilter === t.key ? 'rgba(255,255,255,0.25)' : '#f1f5f9',
+                    color: statusFilter === t.key ? '#fff' : '#374151',
+                    borderRadius: '10px', padding: '0 0.4rem', fontSize: '0.72rem',
+                  }}>{counts[t.key]}</span>
+                )}
+              </button>
+            ))}
+          </div>
+          <div className="platform-search-wrapper" style={{ maxWidth: '260px' }}>
+            <Search size={16} />
+            <input
+              placeholder="Search school, name, email…"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+            />
+            {search && <button className="platform-search-clear" onClick={() => setSearch('')}><X size={14} /></button>}
+          </div>
+        </div>
+      </div>
+
+      {/* Inquiries list */}
+      {loading ? (
+        <div className="platform-loading">Loading contacts…</div>
+      ) : inquiries.length === 0 ? (
+        <div className="platform-section-card">
+          <p className="platform-empty">No contacts match this filter.</p>
+        </div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+          {inquiries.map(inq => {
+            const sc = CONTACT_STATUS_COLORS[inq.status] || CONTACT_STATUS_COLORS.new;
+            const isExpanded = expanded === inq.id;
+            const assignState = assignOpen[inq.id];
+            return (
+              <div key={inq.id} className="platform-section-card" style={{ padding: 0, overflow: 'hidden' }}>
+                {/* Card header */}
+                <div
+                  style={{ padding: '0.85rem 1.25rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap', background: isExpanded ? '#f8fafc' : '#fff' }}
+                  onClick={() => setExpanded(isExpanded ? null : inq.id)}
+                >
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontWeight: 700, fontSize: '0.95rem', color: '#0f172a' }}>{inq.school_name}</div>
+                    <div style={{ fontSize: '0.8rem', color: '#64748b', marginTop: '0.15rem' }}>
+                      {inq.contact_name} &nbsp;·&nbsp; {inq.email}
+                      {inq.phone && <> &nbsp;·&nbsp; {inq.phone}</>}
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexShrink: 0 }}>
+                    <span style={{ ...sc, padding: '0.2rem 0.6rem', borderRadius: '20px', fontSize: '0.75rem', fontWeight: 600, textTransform: 'capitalize' }}>
+                      {inq.status.replace('_', ' ')}
+                    </span>
+                    <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>{formatDate(inq.created_at)}</span>
+                    {isExpanded ? <ChevronUp size={16} color="#94a3b8" /> : <ChevronDown size={16} color="#94a3b8" />}
+                  </div>
+                </div>
+
+                {/* Expanded detail */}
+                {isExpanded && (
+                  <div style={{ borderTop: '1px solid #f1f5f9', padding: '1rem 1.25rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                    <div style={{ display: 'flex', gap: '2rem', flexWrap: 'wrap' }}>
+
+                      {/* Inquiry details */}
+                      <div style={{ flex: '2', minWidth: '240px' }}>
+                        <div style={{ fontSize: '0.78rem', fontWeight: 700, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '0.5rem' }}>Inquiry</div>
+                        <p style={{ fontSize: '0.88rem', color: '#374151', lineHeight: '1.65', margin: '0 0 0.75rem', whiteSpace: 'pre-wrap' }}>{inq.message}</p>
+                        <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap', fontSize: '0.8rem', color: '#64748b' }}>
+                          {inq.expected_students && <span><strong>Students:</strong> {inq.expected_students}</span>}
+                          {inq.expected_staff && <span><strong>Staff:</strong> {inq.expected_staff}</span>}
+                        </div>
+                      </div>
+
+                      {/* Assignment + admin notes */}
+                      <div style={{ flex: '1', minWidth: '220px', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                        <div style={{ fontSize: '0.78rem', fontWeight: 700, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Assignment</div>
+
+                        {assignState ? (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                            <select
+                              value={assignState.agentId}
+                              onChange={e => updateAssign(inq.id, 'agentId', e.target.value)}
+                              style={{ border: '1.5px solid #e2e8f0', borderRadius: '6px', padding: '0.4rem 0.6rem', fontSize: '0.82rem', background: '#fff' }}
+                            >
+                              <option value="">— Unassign —</option>
+                              {agents.map(a => <option key={a.id} value={a.id}>{a.full_name}</option>)}
+                            </select>
+                            <select
+                              value={assignState.status || inq.status}
+                              onChange={e => updateAssign(inq.id, 'status', e.target.value)}
+                              style={{ border: '1.5px solid #e2e8f0', borderRadius: '6px', padding: '0.4rem 0.6rem', fontSize: '0.82rem', background: '#fff' }}
+                            >
+                              <option value="new">New</option>
+                              <option value="assigned">Assigned</option>
+                              <option value="in_progress">In Progress</option>
+                              <option value="resolved">Resolved</option>
+                            </select>
+                            <textarea
+                              placeholder="Add a note (optional)…"
+                              value={assignState.note}
+                              onChange={e => updateAssign(inq.id, 'note', e.target.value)}
+                              rows={2}
+                              style={{ border: '1.5px solid #e2e8f0', borderRadius: '6px', padding: '0.4rem 0.6rem', fontSize: '0.78rem', resize: 'vertical', fontFamily: 'inherit', boxSizing: 'border-box', width: '100%' }}
+                            />
+                            <div style={{ display: 'flex', gap: '0.4rem' }}>
+                              <button
+                                disabled={saving[inq.id]}
+                                onClick={() => patch(inq.id, { agent_id: assignState.agentId || '', status: assignState.status || undefined, note: assignState.note })}
+                                className="platform-action-btn"
+                                style={{ background: '#2563eb', color: '#fff', fontSize: '0.78rem', padding: '0.3rem 0.7rem' }}
+                              >
+                                {saving[inq.id] ? 'Saving…' : 'Save'}
+                              </button>
+                              <button onClick={() => closeAssign(inq.id)} className="platform-action-btn" style={{ fontSize: '0.78rem', padding: '0.3rem 0.7rem' }}>
+                                Cancel
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+                            {inq.assigned_agent ? (
+                              <span style={{ fontSize: '0.83rem', color: '#374151' }}>
+                                <strong>{inq.assigned_agent}</strong>
+                                {inq.assigned_agent_email && <span style={{ color: '#94a3b8' }}> ({inq.assigned_agent_email})</span>}
+                              </span>
+                            ) : (
+                              <span style={{ fontSize: '0.83rem', color: '#94a3b8', fontStyle: 'italic' }}>Unassigned</span>
+                            )}
+                            <button onClick={() => openAssign(inq)} className="platform-action-btn" style={{ fontSize: '0.75rem', padding: '0.25rem 0.6rem', alignSelf: 'flex-start' }}>
+                              {inq.assigned_agent ? 'Reassign' : 'Assign'}
+                            </button>
+                            {inq.status !== 'resolved' && (
+                              <button
+                                onClick={() => patch(inq.id, { status: 'resolved' })}
+                                disabled={saving[inq.id]}
+                                className="platform-action-btn"
+                                style={{ fontSize: '0.75rem', padding: '0.25rem 0.6rem', alignSelf: 'flex-start', background: '#059669', color: '#fff' }}
+                              >
+                                Mark Resolved
+                              </button>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Admin notes history */}
+                        {parseNotes(inq.admin_notes).length > 0 && (
+                          <div>
+                            <div style={{ fontSize: '0.78rem', fontWeight: 700, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '0.4rem' }}>Notes</div>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                              {parseNotes(inq.admin_notes).map((entry, i) => (
+                                <div key={i} style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '8px', padding: '0.5rem 0.75rem' }}>
+                                  {entry.ts && <div style={{ fontSize: '0.7rem', color: '#b45309', fontWeight: 600, marginBottom: '0.15rem' }}>{entry.ts}</div>}
+                                  <div style={{ fontSize: '0.82rem', color: '#374151', whiteSpace: 'pre-wrap' }}>{entry.text}</div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Reply thread */}
+                    <div style={{ borderTop: '1px solid #f1f5f9', paddingTop: '0.75rem' }}>
+                      <ReplyThread
+                        replies={localReplies[inq.id] ?? (inq.replies || [])}
+                        replyEndpoint={`contacts/${inq.id}/reply/`}
+                        senderName={adminName}
+                        onNewReply={r => setLocalReplies(prev => ({ ...prev, [inq.id]: [...(prev[inq.id] ?? (inq.replies || [])), r] }))}
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════════════════
+   SUPPORT TICKETS TAB
+   ══════════════════════════════════════════════════════════ */
+const SUPPORT_STATUS_COLORS = {
+  open:        { bg: '#dbeafe', color: '#1e40af' },
+  assigned:    { bg: '#fef3c7', color: '#92400e' },
+  in_progress: { bg: '#ede9fe', color: '#5b21b6' },
+  resolved:    { bg: '#d1fae5', color: '#065f46' },
+};
+
+function SupportTab() {
+  const [tickets, setTickets]   = useState([]);
+  const [agents, setAgents]     = useState([]);
+  const [counts, setCounts]     = useState({});
+  const [loading, setLoading]   = useState(true);
+  const [statusFilter, setStatusFilter] = useState('');
+  const [search, setSearch]     = useState('');
+  const [expanded, setExpanded] = useState(null);
+  const [assignState, setAssignState] = useState({});   // { [id]: { agentId, note } }
+  const [autoAssigning, setAutoAssigning] = useState(false);
+  const [reopeningId, setReopeningId] = useState(null);
+  const [localReplies, setLocalReplies] = useState({});  // { [ticketId]: [reply, ...] }
+  const adminName = localStorage.getItem('platformUserName') || 'EduCare Admin';
+
+  const fetchTickets = useCallback(async () => {
+    setLoading(true);
+    const params = new URLSearchParams();
+    if (statusFilter) params.set('status', statusFilter);
+    if (search) params.set('search', search);
+    const data = await platformFetch(`support/?${params}`);
+    if (data) {
+      setTickets(data.tickets || []);
+      setCounts(data.counts || {});
+    }
+    setLoading(false);
+  }, [statusFilter, search]);
+
+  useEffect(() => { fetchTickets(); }, [fetchTickets]);
+
+  useEffect(() => {
+    platformFetch('onboarding-agents/').then(d => d && setAgents(d.agents || []));
+  }, []);
+
+  const handleAssign = async (ticketId) => {
+    const st = assignState[ticketId] || {};
+    const body = {};
+    if (st.agentId !== undefined) body.agent_id = st.agentId;
+    if (st.note) body.note = st.note;
+    const data = await platformFetch(`support/${ticketId}/`, { method: 'PATCH', body: JSON.stringify(body) });
+    if (data) {
+      setAssignState(s => { const n = {...s}; delete n[ticketId]; return n; });
+      fetchTickets();
+    }
+  };
+
+  const handleAutoAssign = async () => {
+    setAutoAssigning(true);
+    const data = await platformFetch('support/auto-assign/', { method: 'POST', body: '{}' });
+    if (data) { alert(data.message); fetchTickets(); }
+    setAutoAssigning(false);
+  };
+
+  const handleReopen = async (ticket) => {
+    setReopeningId(ticket.id);
+    const newStatus = ticket.assigned_agent ? 'assigned' : 'open';
+    const data = await platformFetch(`support/${ticket.id}/`, { method: 'PATCH', body: JSON.stringify({ status: newStatus }) });
+    if (data) fetchTickets();
+    setReopeningId(null);
+  };
+
+  const openCount = counts.open || 0;
+
+  return (
+    <div className="platform-tab-content">
+      {/* Header row */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.5rem' }}>
+        <div>
+          <h2 className="platform-section-title" style={{ margin: 0 }}>Support Tickets</h2>
+          <p style={{ margin: '4px 0 0', fontSize: '0.85rem', color: '#64748b' }}>Support requests submitted by school admins</p>
+        </div>
+        <button
+          onClick={handleAutoAssign}
+          disabled={autoAssigning || openCount === 0}
+          style={{ display: 'inline-flex', alignItems: 'center', gap: 7, background: autoAssigning || openCount === 0 ? '#e2e8f0' : '#2563eb', color: autoAssigning || openCount === 0 ? '#94a3b8' : '#fff', border: 'none', borderRadius: 8, padding: '9px 18px', fontWeight: 600, fontSize: '0.88rem', cursor: autoAssigning || openCount === 0 ? 'not-allowed' : 'pointer' }}
+        >
+          <Send size={15} />
+          {autoAssigning ? 'Assigning…' : `Auto-Assign All Open (${openCount})`}
+        </button>
+      </div>
+
+      {/* Status filter chips */}
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '1rem' }}>
+        {[['', 'All'], ['open', 'Open'], ['assigned', 'Assigned'], ['in_progress', 'In Progress'], ['resolved', 'Resolved']].map(([val, lbl]) => (
+          <button key={val} onClick={() => setStatusFilter(val)}
+            style={{ padding: '5px 14px', borderRadius: 20, border: '1px solid', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer',
+              background: statusFilter === val ? '#2563eb' : '#f8fafc',
+              color: statusFilter === val ? '#fff' : '#475569',
+              borderColor: statusFilter === val ? '#2563eb' : '#e2e8f0' }}>
+            {lbl}{val && counts[val] !== undefined ? ` (${counts[val]})` : ''}
+          </button>
+        ))}
+      </div>
+
+      {/* Search */}
+      <div style={{ position: 'relative', marginBottom: '1.25rem', maxWidth: 400 }}>
+        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search by school, subject or email…"
+          style={{ width: '100%', padding: '9px 36px 9px 14px', border: '1px solid #e2e8f0', borderRadius: 8, fontSize: '0.88rem', outline: 'none', boxSizing: 'border-box' }} />
+        {search && <button onClick={() => setSearch('')} style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8' }}><X size={14} /></button>}
+      </div>
+
+      {loading ? <div className="platform-loading">Loading tickets…</div>
+      : tickets.length === 0 ? (
+        <div className="platform-section-card"><p className="platform-empty">No tickets match this filter.</p></div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+          {tickets.map(t => {
+            const sc = SUPPORT_STATUS_COLORS[t.status] || SUPPORT_STATUS_COLORS.open;
+            const isExp = expanded === t.id;
+            const as = assignState[t.id];
+            return (
+              <div key={t.id} className="platform-section-card" style={{ padding: 0, overflow: 'hidden' }}>
+                {/* Card header */}
+                <div onClick={() => setExpanded(isExp ? null : t.id)}
+                  style={{ padding: '0.85rem 1.25rem', cursor: 'pointer', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap', background: isExp ? '#f8fafc' : '#fff' }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontWeight: 700, fontSize: '0.95rem', color: '#0f172a' }}>{t.subject}</div>
+                    <div style={{ fontSize: '0.8rem', color: '#64748b', marginTop: '0.15rem' }}>
+                      {t.school_name} &nbsp;·&nbsp; {t.submitted_by_name} &nbsp;·&nbsp; {t.submitted_by_email}
+                    </div>
+                    <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: 2 }}>
+                      {new Date(t.created_at).toLocaleDateString('en-NG', { day: 'numeric', month: 'short', year: 'numeric' })}
+                      {t.assigned_agent && <> &nbsp;·&nbsp; Agent: <strong>{t.assigned_agent.name}</strong></>}
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+                    <span style={{ background: sc.bg, color: sc.color, fontSize: '0.72rem', fontWeight: 700, padding: '3px 10px', borderRadius: 20 }}>
+                      {t.status.replace('_', ' ')}
+                    </span>
+                    {t.status === 'resolved' && (
+                      <button
+                        onClick={e => { e.stopPropagation(); handleReopen(t); }}
+                        disabled={reopeningId === t.id}
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: 5, background: '#fff', border: '1px solid #d1d5db', borderRadius: 6, padding: '4px 10px', fontSize: '0.75rem', fontWeight: 600, color: '#374151', cursor: reopeningId === t.id ? 'not-allowed' : 'pointer', opacity: reopeningId === t.id ? 0.6 : 1 }}
+                      >
+                        <RefreshCw size={12} />
+                        {reopeningId === t.id ? 'Reopening…' : 'Reopen'}
+                      </button>
+                    )}
+                    {isExp ? <ChevronUp size={16} color="#94a3b8" /> : <ChevronDown size={16} color="#94a3b8" />}
+                  </div>
+                </div>
+
+                {/* Expanded detail */}
+                {isExp && (
+                  <div style={{ padding: '1rem 1.25rem', borderTop: '1px solid #f1f5f9', background: '#fafafa' }}>
+                    <p style={{ margin: '0 0 1rem', fontSize: '0.88rem', color: '#334155', lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>{t.message}</p>
+
+                    {/* Onboarding staff notes */}
+                    {parseNotes(t.agent_notes).length > 0 && (
+                      <div style={{ background: '#f0fdf4', border: '1px solid #86efac', borderRadius: 8, padding: '10px 14px', marginBottom: '0.75rem' }}>
+                        <strong style={{ display: 'block', fontSize: '0.78rem', color: '#15803d', marginBottom: 6 }}>Notes from Onboarding Staff</strong>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                          {parseNotes(t.agent_notes).map((entry, i) => (
+                            <div key={i} style={{ fontSize: '0.82rem', color: '#166534' }}>
+                              {entry.ts && <span style={{ fontSize: '0.72rem', color: '#15803d', display: 'block', marginBottom: 1 }}>{entry.ts}</span>}
+                              <p style={{ margin: 0, whiteSpace: 'pre-wrap' }}>{entry.text}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Assign agent */}
+                    <div style={{ display: 'flex', alignItems: 'flex-end', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '0.75rem' }}>
+                      <div style={{ flex: 1, minWidth: 180 }}>
+                        <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, color: '#374151', marginBottom: 4 }}>Assign to agent</label>
+                        <select value={as?.agentId ?? (t.assigned_agent?.id || '')}
+                          onChange={e => setAssignState(s => ({ ...s, [t.id]: { ...s[t.id], agentId: e.target.value } }))}
+                          style={{ width: '100%', padding: '7px 10px', border: '1px solid #d1d5db', borderRadius: 7, fontSize: '0.85rem' }}>
+                          <option value="">— Unassigned —</option>
+                          {agents.map(a => <option key={a.id} value={a.id}>{a.first_name} {a.last_name}</option>)}
+                        </select>
+                      </div>
+                      <div style={{ flex: 2, minWidth: 200 }}>
+                        <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, color: '#374151', marginBottom: 4 }}>Note (optional)</label>
+                        <input value={as?.note || ''} placeholder="Leave a note for the agent…"
+                          onChange={e => setAssignState(s => ({ ...s, [t.id]: { ...s[t.id], note: e.target.value } }))}
+                          style={{ width: '100%', padding: '7px 10px', border: '1px solid #d1d5db', borderRadius: 7, fontSize: '0.85rem', boxSizing: 'border-box' }} />
+                      </div>
+                      <button onClick={() => handleAssign(t.id)}
+                        style={{ padding: '8px 18px', background: '#2563eb', color: '#fff', border: 'none', borderRadius: 7, fontWeight: 600, fontSize: '0.85rem', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                        Save
+                      </button>
+                    </div>
+
+                    {/* Admin notes history */}
+                    {t.admin_notes && (
+                      <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 8, padding: '10px 14px', fontSize: '0.82rem', color: '#78350f', whiteSpace: 'pre-wrap', marginBottom: '0.75rem' }}>
+                        <strong style={{ display: 'block', marginBottom: 4 }}>Admin Notes</strong>
+                        {t.admin_notes}
+                      </div>
+                    )}
+
+                    {/* Reply thread */}
+                    <div style={{ borderTop: '1px solid #f1f5f9', paddingTop: '0.75rem' }}>
+                      <ReplyThread
+                        replies={localReplies[t.id] ?? (t.replies || [])}
+                        replyEndpoint={`support/${t.id}/reply/`}
+                        senderName={adminName}
+                        onNewReply={r => setLocalReplies(prev => ({ ...prev, [t.id]: [...(prev[t.id] ?? (t.replies || [])), r] }))}
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════════════════
    SETTINGS TAB
    ══════════════════════════════════════════════════════════ */
 function SettingsTab() {
@@ -726,31 +1830,35 @@ function PlatformDashboard() {
   };
 
   const tabs = [
-    { key: 'overview', label: 'Overview', icon: <LayoutDashboard size={20} /> },
-    { key: 'schools', label: 'Schools', icon: <School size={20} /> },
-    { key: 'revenue', label: 'Revenue', icon: <DollarSign size={20} /> },
-    { key: 'settings', label: 'Settings', icon: <Settings size={20} /> },
+    { key: 'overview',   label: 'Overview',   icon: <LayoutDashboard size={20} /> },
+    { key: 'schools',    label: 'Schools',    icon: <School size={20} /> },
+    { key: 'revenue',    label: 'Revenue',    icon: <DollarSign size={20} /> },
+    { key: 'onboarding', label: 'Onboarding', icon: <UserCheck size={20} /> },
+    { key: 'contacts',   label: 'Contacts',   icon: <MessageSquare size={20} /> },
+    { key: 'support',    label: 'Support',    icon: <HeartHandshake size={20} /> },
+    { key: 'settings',   label: 'Settings',   icon: <Settings size={20} /> },
   ];
 
   const tabTitles = {
-    overview: 'Platform Overview',
-    schools: 'Manage Schools',
-    revenue: 'Revenue Analytics',
-    settings: 'Settings',
+    overview:   'Platform Overview',
+    schools:    'Manage Schools',
+    revenue:    'Revenue Analytics',
+    onboarding: 'Onboarding Management',
+    contacts:   'Contact Inquiries',
+    support:    'Support Tickets',
+    settings:   'Settings',
   };
 
   const renderTab = () => {
     switch (activeTab) {
-      case 'overview':
-        return <OverviewTab />;
-      case 'schools':
-        return <SchoolsTab />;
-      case 'revenue':
-        return <RevenueTab />;
-      case 'settings':
-        return <SettingsTab />;
-      default:
-        return <OverviewTab />;
+      case 'overview':   return <OverviewTab />;
+      case 'schools':    return <SchoolsTab />;
+      case 'revenue':    return <RevenueTab />;
+      case 'onboarding': return <OnboardingMgmtTab />;
+      case 'contacts':   return <ContactsTab />;
+      case 'support':    return <SupportTab />;
+      case 'settings':   return <SettingsTab />;
+      default:           return <OverviewTab />;
     }
   };
 

@@ -14,6 +14,7 @@ PUBLIC_ROUTES = [
     r'^/api/token/',
     r'^/api/portal/',
     r'^/api/superadmin/',
+    r'^/api/onboarding/',
     r'^/admin/',
     r'^/static/',
     r'^/media/',
@@ -108,7 +109,7 @@ class TenantMiddleware(MiddlewareMixin):
         school_slug = match.group(1)
 
         # Skip if slug is a known non-tenant route
-        non_tenant_slugs = ['public', 'webhooks', 'token', 'portal', 'superadmin', 'admin']
+        non_tenant_slugs = ['public', 'webhooks', 'token', 'portal', 'superadmin', 'admin', 'onboarding']
         if school_slug in non_tenant_slugs:
             return None
 
@@ -217,7 +218,18 @@ class SubscriptionValidationMiddleware(MiddlewareMixin):
                 'message': message
             }, status=402)
 
+        # Track grace period state on request for response headers
+        request.is_grace_period = subscription.is_in_grace_period()
+        request.grace_days_remaining = subscription.get_grace_days_remaining() if request.is_grace_period else 0
+
         return None
+
+    def process_response(self, request, response):
+        """Attach grace period headers to responses during grace period."""
+        if getattr(request, 'is_grace_period', False):
+            response['X-Subscription-Grace-Period'] = 'true'
+            response['X-Grace-Days-Remaining'] = str(getattr(request, 'grace_days_remaining', 0))
+        return response
 
 
 def get_current_school(request):

@@ -284,7 +284,7 @@ const ParentGradeReport = () => {
         {/* Header */}
         <div className="report-header">
           <div className="school-logo">
-            <img src="/logo.png" alt="School Logo" />
+            <img src={reportData?.school_logo || '/logo.svg'} alt="School Logo" />
           </div>
           <h1 className="school-name">{reportData?.school_name || 'School Name'}</h1>
           <h2 className="report-title">Student Result Management System</h2>

@@ -2,11 +2,13 @@ import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import API_BASE_URL from '../config';
 import { useSchool } from '../contexts/SchoolContext';
+import ImportStudentsModal from './ImportStudentsModal';
 
 import './CreateStudentForm.css';
 
 const CreateStudentForm = ({ onSuccess }) => {
-  const { buildApiUrl } = useSchool();
+  const { buildApiUrl, featureLimits } = useSchool();
+  const [showImportModal, setShowImportModal] = useState(false);
   const [formData, setFormData] = useState({
     first_name: '',
     middle_name: '',
@@ -254,7 +256,25 @@ const CreateStudentForm = ({ onSuccess }) => {
   return (
     <div className="create-student-wrapper">
       <div className="create-student-container">
-        <h3>Create Student</h3>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
+          <h3 style={{ margin: 0 }}>Create Student</h3>
+          <button type="button" className="import-students-btn" onClick={() => setShowImportModal(true)}>
+            Import Students
+          </button>
+        </div>
+        {featureLimits?.max_students > 0 && featureLimits.current_students / featureLimits.max_students >= 0.8 && (
+          <div style={{
+            padding: '0.6rem 0.9rem', borderRadius: '8px', marginBottom: '1rem',
+            fontSize: '0.85rem',
+            background: featureLimits.current_students >= featureLimits.max_students ? '#fee2e2' : '#fef3c7',
+            color: featureLimits.current_students >= featureLimits.max_students ? '#991b1b' : '#92400e',
+            border: `1px solid ${featureLimits.current_students >= featureLimits.max_students ? '#fca5a5' : '#fde68a'}`,
+          }}>
+            {featureLimits.current_students >= featureLimits.max_students
+              ? `Student limit reached (${featureLimits.current_students}/${featureLimits.max_students}). Upgrade your plan to add more.`
+              : `Approaching student limit: ${featureLimits.current_students} of ${featureLimits.max_students} used.`}
+          </div>
+        )}
         <form onSubmit={handleSubmit} className="create-student-form">
           <input type="text" name="first_name" placeholder="First Name" value={formData.first_name} onChange={handleChange} required />
           <input type="text" name="middle_name" placeholder="Middle Name (optional)" value={formData.middle_name} onChange={handleChange} />
@@ -358,6 +378,13 @@ const CreateStudentForm = ({ onSuccess }) => {
           </p>
         )}
       </div>
+
+      {showImportModal && (
+        <ImportStudentsModal
+          onClose={() => setShowImportModal(false)}
+          onSuccess={() => setShowImportModal(false)}
+        />
+      )}
     </div>
   );
 };

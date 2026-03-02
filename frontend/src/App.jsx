@@ -23,7 +23,7 @@ import {
   PricingPage,
   SchoolRegistration,
   ContactSales,
-  PublicKnowledgeBase,
+  PublicUserGuide,
 } from './pages/public';
 
 // Portal pages
@@ -31,6 +31,9 @@ import { PortalLogin, PortalDashboard } from './pages/portal';
 
 // Platform admin pages
 import { PlatformLogin, PlatformDashboard } from './pages/platform';
+
+// Onboarding team pages
+import { OnboardingLogin, OnboardingDashboard } from './pages/onboarding';
 
 // School login page wrapper
 function SchoolLoginPage() {
@@ -267,8 +270,8 @@ function App() {
           {/* Contact Sales */}
           <Route path="/contact-sales" element={<ContactSales />} />
 
-          {/* Public Knowledge Base */}
-          <Route path="/knowledge-base" element={<PublicKnowledgeBase />} />
+          {/* Public User Guide */}
+          <Route path="/user-guide" element={<PublicUserGuide />} />
 
           {/* Admin Portal */}
           <Route path="/portal" element={<PortalLogin />} />
@@ -277,6 +280,10 @@ function App() {
           {/* Platform Admin Routes */}
           <Route path="/platform/login" element={<PlatformLogin />} />
           <Route path="/platform/dashboard" element={<PlatformDashboard />} />
+
+          {/* Onboarding Team Routes */}
+          <Route path="/onboarding/login" element={<OnboardingLogin />} />
+          <Route path="/onboarding/dashboard" element={<OnboardingDashboard />} />
 
           {/* Password Reset Routes - Public (global) */}
           <Route path="/forgot-password" element={<ForgotPassword />} />

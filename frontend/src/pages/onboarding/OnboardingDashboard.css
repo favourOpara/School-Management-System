@@ -1,0 +1,734 @@
+/* ═══════════════════════════════════════════════
+   Onboarding Dashboard
+   ═══════════════════════════════════════════════ */
+
+/* ── Layout ── */
+.ob-dash {
+  min-height: 100vh;
+  background: #f1f5f9;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Header ── */
+.ob-header {
+  background: linear-gradient(135deg, #0f172a, #1e3a8a);
+  color: #fff;
+  padding: 1rem 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  position: sticky;
+  top: 0;
+  z-index: 50;
+}
+
+.ob-header-left {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+.ob-header-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.ob-header-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.ob-header-sub {
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.65);
+}
+
+.ob-logout-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #fff;
+  border-radius: 8px;
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: background 0.2s;
+  white-space: nowrap;
+}
+
+.ob-logout-btn:hover {
+  background: rgba(255, 255, 255, 0.22);
+}
+
+/* ── Tabs ── */
+.ob-tabs {
+  display: flex;
+  gap: 0.25rem;
+  padding: 0 1.5rem;
+  background: #fff;
+  border-bottom: 1px solid #e2e8f0;
+  overflow-x: auto;
+}
+
+.ob-tab {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.9rem 1.1rem;
+  border: none;
+  background: none;
+  color: #64748b;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  white-space: nowrap;
+  transition: color 0.2s, border-color 0.2s;
+}
+
+.ob-tab:hover {
+  color: #2563eb;
+}
+
+.ob-tab.active {
+  color: #2563eb;
+  border-bottom-color: #2563eb;
+  font-weight: 600;
+}
+
+/* ── Main area ── */
+.ob-main {
+  flex: 1;
+  padding: 1.5rem;
+  max-width: 900px;
+  width: 100%;
+  margin: 0 auto;
+  box-sizing: border-box;
+}
+
+/* ── Loading / Empty ── */
+.ob-loading,
+.ob-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  color: #94a3b8;
+  padding: 4rem 2rem;
+  text-align: center;
+}
+
+.ob-spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid #e2e8f0;
+  border-top-color: #2563eb;
+  border-radius: 50%;
+  animation: ob-spin 0.7s linear infinite;
+  display: inline-block;
+}
+
+@keyframes ob-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ── School list ── */
+.ob-school-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+/* ── School Card ── */
+.ob-card {
+  background: #fff;
+  border-radius: 12px;
+  border: 1.5px solid #e2e8f0;
+  overflow: hidden;
+  transition: box-shadow 0.2s, border-color 0.2s;
+}
+
+.ob-card:hover {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+}
+
+.ob-card--active {
+  border-color: #93c5fd;
+}
+
+.ob-card--completed {
+  border-color: #6ee7b7;
+  opacity: 0.85;
+}
+
+/* Card header (clickable) */
+.ob-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.25rem;
+  cursor: pointer;
+  gap: 1rem;
+}
+
+.ob-card-left {
+  flex: 1;
+  min-width: 0;
+}
+
+.ob-card-school {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #0f172a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ob-card-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-top: 0.2rem;
+  flex-wrap: wrap;
+}
+
+.ob-card-plan {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #2563eb;
+  background: #eff6ff;
+  padding: 0.15rem 0.5rem;
+  border-radius: 20px;
+}
+
+.ob-card-reg {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.78rem;
+  color: #64748b;
+}
+
+.ob-card-right {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-shrink: 0;
+  color: #94a3b8;
+}
+
+/* Status badge */
+.ob-status-badge {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.25rem 0.6rem;
+  border-radius: 20px;
+}
+
+.ob-badge--done {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+/* Progress bar */
+.ob-progress-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.ob-progress-bar {
+  width: 80px;
+  height: 6px;
+  background: #e2e8f0;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.ob-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #2563eb, #7c3aed);
+  border-radius: 10px;
+  transition: width 0.3s ease;
+}
+
+.ob-progress-chip {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #475569;
+  white-space: nowrap;
+}
+
+.ob-done-date {
+  color: #059669;
+  font-weight: 600;
+}
+
+/* Info bar */
+.ob-card-info {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1.25rem;
+  padding: 0.5rem 1.25rem 0.75rem;
+  border-top: 1px solid #f1f5f9;
+  font-size: 0.8rem;
+  color: #64748b;
+}
+
+.ob-card-info span {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.ob-card-agent {
+  color: #2563eb;
+  font-weight: 600;
+}
+
+/* Expanded body */
+.ob-card-body {
+  padding: 1rem 1.25rem 1.25rem;
+  border-top: 1px solid #f1f5f9;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+/* Claim button */
+.ob-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.6rem 1.1rem;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.ob-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.ob-btn--claim {
+  background: #2563eb;
+  color: #fff;
+  align-self: flex-start;
+}
+
+.ob-btn--claim:hover:not(:disabled) {
+  background: #1d4ed8;
+}
+
+.ob-btn--save {
+  background: #f1f5f9;
+  color: #334155;
+  border: 1.5px solid #e2e8f0;
+}
+
+.ob-btn--save:hover:not(:disabled) {
+  background: #e2e8f0;
+}
+
+.ob-btn--complete {
+  background: #059669;
+  color: #fff;
+}
+
+.ob-btn--complete:hover:not(:disabled) {
+  background: #047857;
+}
+
+/* Checklist */
+.ob-checklist-title {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #374151;
+  margin-bottom: 0.25rem;
+}
+
+.ob-checklist {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.ob-checklist--readonly {
+  opacity: 0.75;
+}
+
+.ob-checklist-item {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  cursor: pointer;
+  font-size: 0.875rem;
+  color: #374151;
+}
+
+.ob-checklist-item input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.ob-checklist-icon {
+  color: #64748b;
+  display: flex;
+}
+
+span.ob-checked {
+  text-decoration: line-through;
+  color: #94a3b8;
+}
+
+/* Admin notes banner */
+.ob-admin-notes {
+  background: #fffbeb;
+  border: 1.5px solid #fde68a;
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.ob-admin-notes-label {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #92400e;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Note entry bubble (used in both admin + staff history) */
+.ob-note-history {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 0.25rem;
+}
+
+.ob-note-entry {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 0.55rem 0.85rem;
+}
+
+.ob-note-entry--admin {
+  background: transparent;
+  border: none;
+  padding: 0;
+}
+
+.ob-note-ts {
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #94a3b8;
+  margin-bottom: 0.2rem;
+}
+
+.ob-note-entry--admin .ob-note-ts {
+  color: #b45309;
+}
+
+.ob-note-text {
+  font-size: 0.875rem;
+  color: #374151;
+  line-height: 1.6;
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+.ob-notes-empty {
+  font-size: 0.83rem;
+  color: #94a3b8;
+  font-style: italic;
+  margin: 0 0 0.25rem;
+}
+
+/* Notes */
+.ob-notes-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.ob-notes-label {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #374151;
+}
+
+.ob-notes {
+  width: 100%;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 0.65rem 0.85rem;
+  font-size: 0.875rem;
+  color: #374151;
+  resize: vertical;
+  background: #f8fafc;
+  box-sizing: border-box;
+  font-family: inherit;
+  transition: border-color 0.2s;
+}
+
+.ob-notes:focus {
+  outline: none;
+  border-color: #2563eb;
+  background: #fff;
+}
+
+.ob-notes:disabled {
+  background: #f8fafc;
+  color: #94a3b8;
+}
+
+.ob-notes-readonly {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+  color: #475569;
+  background: #f8fafc;
+  padding: 0.6rem 0.85rem;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  margin-top: 0.75rem;
+}
+
+/* Card actions */
+.ob-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.ob-save-msg {
+  font-size: 0.8rem;
+  color: #059669;
+  font-weight: 600;
+}
+
+/* Completed banner */
+.ob-completed-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  background: #d1fae5;
+  color: #065f46;
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+/* ── Responsive ── */
+@media (max-width: 600px) {
+  .ob-header {
+    padding: 0.85rem 1rem;
+  }
+
+  .ob-tabs {
+    padding: 0 1rem;
+  }
+
+  .ob-tab {
+    padding: 0.75rem 0.75rem;
+    font-size: 0.82rem;
+  }
+
+  .ob-main {
+    padding: 1rem;
+  }
+
+  .ob-card-header {
+    padding: 0.85rem 1rem;
+    flex-wrap: wrap;
+  }
+
+  .ob-card-right {
+    flex-wrap: wrap;
+  }
+
+  .ob-card-info {
+    padding: 0.4rem 1rem 0.6rem;
+  }
+}
+
+/* ── Reply Thread ── */
+.ob-reply-thread {
+  margin-top: 1rem;
+  border-top: 1px solid #e5e7eb;
+  padding-top: 0.85rem;
+}
+
+.ob-reply-heading {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #374151;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 0.6rem;
+}
+
+.ob-reply-empty {
+  font-size: 0.82rem;
+  color: #94a3b8;
+  font-style: italic;
+  margin: 0 0 0.75rem;
+}
+
+.ob-reply-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+  max-height: 220px;
+  overflow-y: auto;
+  padding: 2px;
+}
+
+.ob-reply-bubble {
+  border-radius: 8px;
+  padding: 0.55rem 0.85rem;
+}
+
+.ob-reply-agent {
+  background: #f0fdf4;
+  border: 1px solid #86efac;
+}
+
+.ob-reply-admin {
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+}
+
+.ob-reply-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.2rem;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+
+.ob-reply-sender {
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.ob-reply-agent .ob-reply-sender { color: #15803d; }
+.ob-reply-admin .ob-reply-sender { color: #1d4ed8; }
+
+.ob-reply-time {
+  font-size: 0.68rem;
+  color: #94a3b8;
+}
+
+.ob-reply-status {
+  margin-left: 0.4rem;
+  font-size: 0.65rem;
+}
+
+.ob-reply-sent { color: #16a34a; }
+.ob-reply-fail { color: #dc2626; }
+
+.ob-reply-text {
+  margin: 0;
+  font-size: 0.83rem;
+  color: #374151;
+  white-space: pre-wrap;
+  line-height: 1.5;
+}
+
+.ob-reply-compose {
+  display: flex;
+  gap: 0.5rem;
+  align-items: flex-end;
+}
+
+.ob-reply-input {
+  flex: 1;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 7px;
+  padding: 0.45rem 0.7rem;
+  font-size: 0.83rem;
+  font-family: inherit;
+  resize: vertical;
+  outline: none;
+  box-sizing: border-box;
+  transition: border-color 0.15s;
+}
+
+.ob-reply-input:focus {
+  border-color: #2563eb;
+}
+
+.ob-reply-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.45rem 0.9rem;
+  background: #2563eb;
+  color: #fff;
+  border: none;
+  border-radius: 7px;
+  font-weight: 600;
+  font-size: 0.82rem;
+  cursor: pointer;
+  white-space: nowrap;
+  height: fit-content;
+  transition: background 0.15s;
+}
+
+.ob-reply-btn:hover:not(.ob-reply-btn--disabled) {
+  background: #1d4ed8;
+}
+
+.ob-reply-btn--disabled {
+  background: #e2e8f0;
+  color: #94a3b8;
+  cursor: not-allowed;
+}
+
+.ob-reply-error {
+  color: #dc2626;
+  font-size: 0.78rem;
+  margin: 0.35rem 0 0;
+}
+

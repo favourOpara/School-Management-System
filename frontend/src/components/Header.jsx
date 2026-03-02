@@ -9,7 +9,7 @@ const Header = () => {
       <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
         {/* Logo */}
         <div className="flex items-center space-x-2">
-        <img src="/logo.png" alt="School Logo" className="h-10 w-auto max-w-[150px] object-contain" />
+        <img src="/logo.svg" alt="School Logo" className="h-10 w-auto max-w-[150px] object-contain" />
           <span className="font-semibold text-xl text-gray-800">School Management System</span>
         </div>
 

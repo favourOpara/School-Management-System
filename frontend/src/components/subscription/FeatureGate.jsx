@@ -22,8 +22,8 @@ function FeatureGate({ feature, children, fallback }) {
       case 'import':
         return {
           title: 'CSV Import Not Available',
-          message: 'Upgrade to Premium to import students and data via CSV/Excel files.',
-          plan: 'Premium',
+          message: 'Upgrade to Standard or Premium to import students and data via CSV/Excel files.',
+          plan: 'Standard or Premium',
         };
       case 'create_admin':
         return {

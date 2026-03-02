@@ -322,16 +322,19 @@ def get_feature_limits(school):
         'is_trial': subscription.status == 'trial',
         'billing_cycle': subscription.billing_cycle,
         'current_period_end': subscription.current_period_end,
+        'is_in_grace_period': subscription.is_in_grace_period(),
+        'grace_period_end': subscription.get_grace_period_end().isoformat() if subscription.get_grace_period_end() else None,
+        'grace_days_remaining': subscription.get_grace_days_remaining(),
     }
 
 
 def _get_user_counts(school):
-    """Get current user counts by role for a school."""
+    """Get current user counts by role for a school. Excludes graduated students."""
     from users.models import CustomUser
     from django.db.models import Count
 
     counts_qs = (
-        CustomUser.objects.filter(school=school, is_active=True)
+        CustomUser.objects.filter(school=school, is_active=True, is_graduated=False)
         .values('role')
         .annotate(count=Count('id'))
     )
@@ -384,7 +387,9 @@ def check_user_limit(school, role):
 
 def check_trial_expiry(subscription):
     """
-    Check if a trial subscription has expired. If so, mark it as expired.
+    Check if a subscription has passed its period end.
+    Transitions to grace_period (if grace days > 0) or expired.
+    Also checks if grace period has elapsed.
     Called from middleware on every request.
 
     Returns:
@@ -392,11 +397,27 @@ def check_trial_expiry(subscription):
     """
     from django.utils import timezone
 
-    if subscription.status == 'trial' and subscription.current_period_end:
+    # Check if trial/active subscription has passed its end date
+    if subscription.status in ('trial', 'active') and subscription.current_period_end:
         if timezone.now() > subscription.current_period_end:
+            if subscription.plan.grace_period_days > 0:
+                subscription.status = 'grace_period'
+                subscription.save(update_fields=['status'])
+                # Grace period is still usable — return True
+                return True
+            else:
+                subscription.status = 'expired'
+                subscription.save(update_fields=['status'])
+                return False
+
+    # Check if grace period has elapsed
+    if subscription.status == 'grace_period':
+        grace_end = subscription.get_grace_period_end()
+        if grace_end and timezone.now() > grace_end:
             subscription.status = 'expired'
             subscription.save(update_fields=['status'])
             return False
+        return True  # Still in grace period — allow access
 
     if subscription.status == 'expired':
         return False

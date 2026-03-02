@@ -70,6 +70,12 @@ class School(models.Model):
         help_text="Current term - Set when first session is created"
     )
 
+    # Lesson notes setting
+    lesson_note_weeks_per_term = models.PositiveSmallIntegerField(
+        default=12,
+        help_text="Number of weeks per term — sets how many lesson notes each teacher must submit per subject"
+    )
+
     # School status
     is_active = models.BooleanField(default=True, help_text="Whether the school is active")
     is_verified = models.BooleanField(default=False, help_text="Whether the school has been verified")
@@ -109,7 +115,6 @@ class SubscriptionPlan(models.Model):
     Defines the subscription tiers available for schools.
     """
     PLAN_CHOICES = [
-        ('free', 'Free Trial'),
         ('basic', 'Basic'),
         ('standard', 'Standard'),
         ('premium', 'Premium'),
@@ -162,12 +167,12 @@ class SubscriptionPlan(models.Model):
         help_text="Maximum students per XLSX import (0 = not available)"
     )
     max_students = models.IntegerField(
-        default=50,
+        default=300,
         validators=[MinValueValidator(0)],
         help_text="Maximum student accounts (0 = unlimited)"
     )
     max_teachers = models.IntegerField(
-        default=5,
+        default=20,
         validators=[MinValueValidator(0)],
         help_text="Maximum teacher accounts (0 = unlimited)"
     )
@@ -177,7 +182,7 @@ class SubscriptionPlan(models.Model):
         help_text="Maximum principal accounts (0 = unlimited)"
     )
     max_parents = models.IntegerField(
-        default=50,
+        default=300,
         validators=[MinValueValidator(0)],
         help_text="Maximum parent accounts (0 = unlimited)"
     )
@@ -191,7 +196,17 @@ class SubscriptionPlan(models.Model):
     trial_days = models.IntegerField(
         default=30,
         validators=[MinValueValidator(0)],
-        help_text="Number of trial days for new schools"
+        help_text="Number of trial days for new schools (standard free trial)"
+    )
+    termly_trial_days = models.IntegerField(
+        default=120,
+        validators=[MinValueValidator(0)],
+        help_text="Number of trial days for the termly free trial (approx. one full school term)"
+    )
+    grace_period_days = models.IntegerField(
+        default=5,
+        validators=[MinValueValidator(0)],
+        help_text="Number of grace days after expiry before full lockout (0 = no grace)"
     )
 
     # Status
@@ -221,8 +236,10 @@ class Subscription(models.Model):
     Tracks a school's subscription status and billing information.
     """
     STATUS_CHOICES = [
+        ('pending', 'Pending'),
         ('trial', 'Trial'),
         ('active', 'Active'),
+        ('grace_period', 'Grace Period'),
         ('past_due', 'Past Due'),
         ('cancelled', 'Cancelled'),
         ('expired', 'Expired'),
@@ -267,6 +284,17 @@ class Subscription(models.Model):
         help_text="Saved card authorization for recurring charges"
     )
 
+    # Auto-debit (charge authorization) settings
+    auto_debit_enabled = models.BooleanField(
+        default=False,
+        help_text="Whether to automatically charge saved card on renewal"
+    )
+    paystack_billing_email = models.CharField(
+        max_length=255,
+        blank=True,
+        help_text="Customer email on file with Paystack for charge_authorization calls"
+    )
+
     # Billing period
     current_period_start = models.DateTimeField(null=True, blank=True)
     current_period_end = models.DateTimeField(null=True, blank=True)
@@ -274,6 +302,25 @@ class Subscription(models.Model):
     # Email rate limiting
     emails_sent_today = models.IntegerField(default=0)
     email_counter_reset_date = models.DateField(default=timezone.now)
+
+    # Expiry warning tracking
+    last_expiry_warning_sent = models.CharField(
+        max_length=20,
+        blank=True,
+        default='',
+        help_text="Last expiry warning milestone sent (pre_7, pre_3, pre_1, grace_1, grace_2, grace_3, grace_4, grace_5)"
+    )
+
+    # Auto-debit retry tracking
+    auto_debit_retry_count = models.IntegerField(
+        default=0,
+        help_text="Number of failed auto-debit attempts in the current renewal cycle"
+    )
+    auto_debit_next_retry = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="When to attempt the next auto-debit retry"
+    )
 
     # Timestamps
     created_at = models.DateTimeField(auto_now_add=True)
@@ -288,8 +335,29 @@ class Subscription(models.Model):
         return f"{self.school.name} - {self.plan.display_name} ({self.status})"
 
     def is_active_or_trial(self):
-        """Check if subscription is in a usable state."""
-        return self.status in ['trial', 'active']
+        """Check if subscription is in a usable state (including grace period)."""
+        return self.status in ['trial', 'active', 'grace_period']
+
+    def is_in_grace_period(self):
+        """Check if subscription is currently in grace period."""
+        return self.status == 'grace_period'
+
+    def get_grace_period_end(self):
+        """Calculate when grace period ends."""
+        if self.current_period_end and self.plan:
+            from datetime import timedelta
+            return self.current_period_end + timedelta(days=self.plan.grace_period_days)
+        return None
+
+    def get_grace_days_remaining(self):
+        """Get number of days remaining in grace period."""
+        if not self.is_in_grace_period() or not self.current_period_end:
+            return 0
+        gp_end = self.get_grace_period_end()
+        if gp_end:
+            delta = gp_end - timezone.now()
+            return max(0, delta.days)
+        return 0
 
     def is_expired(self):
         """Check if subscription has expired."""
@@ -460,6 +528,160 @@ class PortalUser(models.Model):
         return f"{self.first_name} {self.last_name}"
 
 
+class OnboardingAgent(models.Model):
+    """
+    EduCare internal onboarding staff.
+    These are EduCare employees who help new schools get set up after registration.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    # Authentication
+    email = models.EmailField(unique=True)
+    password = models.CharField(max_length=128)
+
+    # Profile
+    first_name = models.CharField(max_length=50)
+    last_name = models.CharField(max_length=50)
+    phone = models.CharField(max_length=20, blank=True)
+
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    last_login = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ['first_name', 'last_name']
+        verbose_name = 'Onboarding Agent'
+        verbose_name_plural = 'Onboarding Agents'
+
+    def __str__(self):
+        return f"{self.get_full_name()} ({self.email})"
+
+    def set_password(self, raw_password):
+        from django.contrib.auth.hashers import make_password
+        self.password = make_password(raw_password)
+
+    def check_password(self, raw_password):
+        from django.contrib.auth.hashers import check_password
+        return check_password(raw_password, self.password)
+
+    def get_full_name(self):
+        return f"{self.first_name} {self.last_name}".strip()
+
+
+class OnboardingRecord(models.Model):
+    """
+    Tracks onboarding progress for a school.
+    Auto-created when a school registers so agents can claim and track setup tasks.
+    """
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('in_progress', 'In Progress'),
+        ('completed', 'Completed'),
+        ('skipped', 'Skipped'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    school = models.OneToOneField(
+        School,
+        on_delete=models.CASCADE,
+        related_name='onboarding'
+    )
+    agent = models.ForeignKey(
+        OnboardingAgent,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='assigned_schools'
+    )
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+
+    # Registration context
+    registration_type = models.CharField(max_length=50, blank=True)
+
+    # Onboarding checklist
+    students_imported = models.BooleanField(default=False)
+    teachers_added = models.BooleanField(default=False)
+    classes_setup = models.BooleanField(default=False)
+    subjects_setup = models.BooleanField(default=False)
+    parents_added = models.BooleanField(default=False)
+    attendance_configured = models.BooleanField(default=False)
+    grading_configured = models.BooleanField(default=False)
+
+    notes = models.TextField(blank=True)          # filled by onboarding staff
+    admin_notes = models.TextField(blank=True)    # filled by platform admin on reassignment
+
+    assigned_at = models.DateTimeField(null=True, blank=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = 'Onboarding Record'
+        verbose_name_plural = 'Onboarding Records'
+
+    def __str__(self):
+        return f"Onboarding: {self.school.name} ({self.status})"
+
+    def get_checklist_progress(self):
+        """Returns (completed_count, total_count)."""
+        fields = [
+            self.students_imported, self.teachers_added, self.classes_setup,
+            self.subjects_setup, self.parents_added,
+            self.attendance_configured, self.grading_configured,
+        ]
+        return sum(1 for f in fields if f), len(fields)
+
+
+class ContactInquiry(models.Model):
+    """
+    Stores contact/sales inquiries submitted from the landing page or any public form.
+    Platform admin can view, assign to onboarding staff, and track resolution.
+    """
+    STATUS_CHOICES = [
+        ('new', 'New'),
+        ('assigned', 'Assigned'),
+        ('in_progress', 'In Progress'),
+        ('resolved', 'Resolved'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    # Submitted form data
+    school_name = models.CharField(max_length=255)
+    contact_name = models.CharField(max_length=255)
+    email = models.EmailField()
+    phone = models.CharField(max_length=20, blank=True)
+    message = models.TextField()
+    expected_students = models.IntegerField(null=True, blank=True)
+    expected_staff = models.IntegerField(null=True, blank=True)
+    source = models.CharField(max_length=50, default='contact_sales')  # e.g. contact_sales, landing_page
+
+    # Management
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='new')
+    assigned_agent = models.ForeignKey(
+        OnboardingAgent,
+        null=True, blank=True,
+        on_delete=models.SET_NULL,
+        related_name='assigned_contacts',
+    )
+    admin_notes = models.TextField(blank=True)
+
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    assigned_at = models.DateTimeField(null=True, blank=True)
+    resolved_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = 'Contact Inquiry'
+        verbose_name_plural = 'Contact Inquiries'
+
+    def __str__(self):
+        return f"{self.school_name} — {self.contact_name} ({self.status})"
+
+
 class SchoolInvitation(models.Model):
     """
     Tracks invitations sent to potential schools/admins.
@@ -488,3 +710,102 @@ class SchoolInvitation(models.Model):
     def is_valid(self):
         """Check if the invitation is still valid."""
         return not self.is_used and timezone.now() < self.expires_at
+
+
+class SupportTicket(models.Model):
+    """
+    Support requests submitted by school admins from within the school management system.
+    Platform admin can view, assign to onboarding staff, and auto-distribute.
+    """
+    STATUS_CHOICES = [
+        ('open', 'Open'),
+        ('assigned', 'Assigned'),
+        ('in_progress', 'In Progress'),
+        ('resolved', 'Resolved'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    school = models.ForeignKey(
+        School, on_delete=models.CASCADE, related_name='support_tickets'
+    )
+
+    # Snapshot of submitter at time of submission
+    submitted_by_name = models.CharField(max_length=255)
+    submitted_by_email = models.EmailField()
+
+    subject = models.CharField(max_length=255)
+    message = models.TextField()
+
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='open')
+    assigned_agent = models.ForeignKey(
+        OnboardingAgent,
+        null=True, blank=True,
+        on_delete=models.SET_NULL,
+        related_name='support_tickets',
+    )
+
+    # Notes (append-only via _append_note helper)
+    agent_notes = models.TextField(blank=True)
+    admin_notes = models.TextField(blank=True)
+
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    assigned_at = models.DateTimeField(null=True, blank=True)
+    resolved_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = 'Support Ticket'
+        verbose_name_plural = 'Support Tickets'
+
+    def __str__(self):
+        return f"{self.school.name} — {self.subject} ({self.status})"
+
+
+class StaffReply(models.Model):
+    """
+    A reply sent from EduCare staff (platform admin or onboarding agent) to a school.
+
+    Links to exactly one of: SupportTicket, ContactInquiry, or OnboardingRecord.
+    The reply is emailed to the school via send_educare_email() (bypasses school quotas).
+    Both platform admin and onboarding agents can see and send replies.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    # Link to parent record — only one should be set
+    support_ticket = models.ForeignKey(
+        SupportTicket, null=True, blank=True, on_delete=models.CASCADE, related_name='replies'
+    )
+    contact_inquiry = models.ForeignKey(
+        ContactInquiry, null=True, blank=True, on_delete=models.CASCADE, related_name='replies'
+    )
+    onboarding_record = models.ForeignKey(
+        OnboardingRecord, null=True, blank=True, on_delete=models.CASCADE, related_name='replies'
+    )
+
+    # Sender
+    sent_by_agent = models.ForeignKey(
+        OnboardingAgent, null=True, blank=True, on_delete=models.SET_NULL, related_name='sent_replies'
+    )
+    sent_by_admin = models.BooleanField(default=False)  # True when sent by platform admin
+    sender_name = models.CharField(max_length=255)       # snapshot at send time
+
+    # Content
+    message = models.TextField()
+
+    # Delivery
+    recipient_email = models.EmailField()
+    recipient_name = models.CharField(max_length=255, blank=True)
+    email_sent = models.BooleanField(default=False)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['created_at']
+        verbose_name = 'Staff Reply'
+        verbose_name_plural = 'Staff Replies'
+
+    def __str__(self):
+        return f"Reply by {self.sender_name} at {self.created_at:%d %b %Y %H:%M}"
+

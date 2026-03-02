@@ -341,16 +341,22 @@ class StudentDetailSerializer(serializers.ModelSerializer):
 class TeacherDetailSerializer(serializers.ModelSerializer):
     full_name = serializers.SerializerMethodField()
     assigned_subjects = serializers.SerializerMethodField()
+    last_login = serializers.SerializerMethodField()
 
     class Meta:
         model = CustomUser
         fields = [
             'id', 'username', 'first_name', 'last_name', 'full_name',
-            'role', 'gender', 'email', 'phone_number', 'assigned_subjects'
+            'role', 'gender', 'email', 'phone_number', 'assigned_subjects', 'last_login'
         ]
 
     def get_full_name(self, obj):
         return f"{obj.first_name} {obj.last_name}"
+
+    def get_last_login(self, obj):
+        if obj.last_login:
+            return obj.last_login.strftime('%Y-%m-%d %H:%M')
+        return None
 
     def get_assigned_subjects(self, obj):
         subjects = Subject.objects.filter(teacher=obj).select_related('class_session__classroom')

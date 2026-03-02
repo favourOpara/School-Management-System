@@ -70,6 +70,39 @@ class Command(BaseCommand):
             )
         )
 
+        # Add subscription expiry check job (runs hourly)
+        scheduler.add_job(
+            lambda: call_command('check_subscription_expiry'),
+            trigger=IntervalTrigger(hours=1),
+            id='check_subscription_expiry',
+            name='Check subscription expiry and send warnings (hourly)',
+            replace_existing=True,
+            max_instances=1,
+        )
+        self.stdout.write(self.style.SUCCESS('Added job: Check subscription expiry (hourly)'))
+
+        # Add job to deactivate graduated students past 30-day grace period (runs daily)
+        scheduler.add_job(
+            lambda: call_command('deactivate_graduated_students'),
+            trigger=IntervalTrigger(days=1),
+            id='deactivate_graduated_students',
+            name='Deactivate graduated student accounts past 30-day grace period (daily)',
+            replace_existing=True,
+            max_instances=1,
+        )
+        self.stdout.write(self.style.SUCCESS('Added job: Deactivate graduated students past grace period (daily)'))
+
+        # Add job to send deferred graduation emails once quota resets (runs daily)
+        scheduler.add_job(
+            lambda: call_command('send_deferred_graduation_emails'),
+            trigger=IntervalTrigger(days=1),
+            id='send_deferred_graduation_emails',
+            name='Send deferred graduation emails after quota reset (daily)',
+            replace_existing=True,
+            max_instances=1,
+        )
+        self.stdout.write(self.style.SUCCESS('Added job: Send deferred graduation emails (daily)'))
+
         # Add job to delete old job executions (runs daily)
         scheduler.add_job(
             delete_old_job_executions,

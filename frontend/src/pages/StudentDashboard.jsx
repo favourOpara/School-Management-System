@@ -17,10 +17,11 @@ import MySubjectGrades from '../components/MySubjectGrades';
 import FeeStatus from '../components/FeeStatus';
 import MyClasses from '../components/MyClasses';
 import StudentWelcome from '../components/StudentWelcome';
+import StudentLessonNotes from '../components/StudentLessonNotes';
 import { useSchool } from '../contexts/SchoolContext';
 import './StudentDashboard.css';
 
-const KnowledgeBase = React.lazy(() => import('../components/KnowledgeBase'));
+const UserGuide = React.lazy(() => import('../components/UserGuide'));
 
 const getGreeting = () => {
   const hour = new Date().getHours();
@@ -93,10 +94,12 @@ const StudentDashboard = () => {
             <p className="student-dashboard-section-text">Adjust your account settings and preferences.</p>
           </div>
         );
-      case 'knowledge-base':
+      case 'lesson-notes':
+        return <StudentLessonNotes />;
+      case 'user-guide':
         return (
           <Suspense fallback={<div className="kb-loading">Loading...</div>}>
-            <KnowledgeBase userRole="student" />
+            <UserGuide userRole="student" />
           </Suspense>
         );
       default:

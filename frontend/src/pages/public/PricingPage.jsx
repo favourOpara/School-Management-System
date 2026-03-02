@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
-  GraduationCap,
   Check,
   X,
   ArrowRight,
@@ -9,38 +8,19 @@ import {
   Menu,
   ChevronDown,
   Building2,
+  HeartHandshake,
 } from 'lucide-react';
 import './PricingPage.css';
 
 const plans = [
   {
-    name: 'Free Trial',
-    description: 'Try EduCare free for 1 month',
-    monthlyPrice: 0,
-    annualPrice: 0,
-    features: [
-      { text: 'Free for 1 month', included: true },
-      { text: '20 Emails/Day', included: true },
-      { text: '1 Admin Account', included: true },
-      { text: '1 Principal Account', included: true },
-      { text: '50 Students & Parents cap', included: true },
-      { text: '5 Teachers cap', included: true },
-      { text: 'Student Academics, Attendance & Grades', included: true },
-      { text: 'Analytics Dashboard', included: true },
-      { text: 'No Proprietor Account', included: false },
-      { text: 'XLSX Import', included: false },
-      { text: 'Priority Support', included: false },
-    ],
-    cta: 'Start Free Trial',
-    popular: false,
-  },
-  {
     name: 'Basic',
     description: 'For small schools getting started',
-    monthlyPrice: 15000,
-    annualPrice: 150000,
+    monthlyPrice: 20000,
+    annualPrice: 200000,
+    maxStudents: 300,
     features: [
-      { text: '100 Emails/Day', included: true },
+      { text: '300 Emails/Day', included: true },
       { text: '2 Admin Accounts', included: true },
       { text: '2 Principal Accounts', included: true },
       { text: '300 Students & Parents cap', included: true },
@@ -51,16 +31,16 @@ const plans = [
       { text: 'XLSX Import', included: false },
       { text: 'Priority Support', included: false },
     ],
-    cta: 'Get Started',
     popular: false,
   },
   {
     name: 'Standard',
     description: 'Most popular for growing schools',
-    monthlyPrice: 35000,
-    annualPrice: 350000,
+    monthlyPrice: 40000,
+    annualPrice: 400000,
+    maxStudents: 700,
     features: [
-      { text: '500 Emails/Day', included: true },
+      { text: '700 Emails/Day', included: true },
       { text: '4 Admin Accounts', included: true },
       { text: '4 Principal Accounts', included: true },
       { text: '700 Students & Parents cap', included: true },
@@ -72,7 +52,6 @@ const plans = [
       { text: '1 Proprietor Account', included: true },
       { text: 'Priority Support', included: false },
     ],
-    cta: 'Get Started',
     popular: true,
   },
   {
@@ -80,8 +59,9 @@ const plans = [
     description: 'For large institutions',
     monthlyPrice: 75000,
     annualPrice: 750000,
+    maxStudents: 1000,
     features: [
-      { text: '1,000 Emails/Day', included: true },
+      { text: '2,000 Emails/Day', included: true },
       { text: '7 Admin Accounts', included: true },
       { text: '2 Proprietor Accounts', included: true },
       { text: '7 Principal Accounts', included: true },
@@ -92,11 +72,12 @@ const plans = [
       { text: 'XLSX Import (500 rows/import)', included: true },
       { text: 'Download Database', included: true },
       { text: 'Teacher Attendance Marking', included: true },
-      { text: 'Guidance Counsellor Account', included: true },
+      { text: 'Guidance Counsellor Account', included: true, comingSoon: true },
       { text: 'Staff Management Platform', included: true },
+      { text: 'AI Lesson Note Review (Admin)', included: true, aiFeature: true },
+      { text: 'AI Academic Assistant (Students)', included: true, aiFeature: true },
       { text: 'Priority Support', included: true },
     ],
-    cta: 'Get Started',
     popular: false,
   },
 ];
@@ -104,7 +85,7 @@ const plans = [
 const faqs = [
   {
     question: 'Can I try EduCare before subscribing?',
-    answer: 'Yes! We offer a 1-month free trial to get started. The trial includes up to 50 students, 5 teachers, 1 principal, 20 emails per day, and full access to academics, attendance, grades, and analytics. No credit card required.',
+    answer: 'Yes! Every plan includes two free trial options — a 30-day trial or a termly trial (4 months, roughly one full school term). Both include full access to all features in the chosen plan with no credit card required. After your trial ends, you\'ll be invited to subscribe to continue.',
   },
   {
     question: 'How does billing work?',
@@ -142,8 +123,14 @@ function PricingPage() {
     return `₦${price.toLocaleString()}`;
   };
 
-  const handlePlanSelect = (plan) => {
-    navigate('/register', { state: { planId: plan.name.toLowerCase(), annual } });
+  const handlePlanSelect = (plan, registrationType) => {
+    navigate('/register', {
+      state: {
+        planId: plan.name.toLowerCase(),
+        annual,
+        registrationType,
+      }
+    });
   };
 
   return (
@@ -152,10 +139,7 @@ function PricingPage() {
       <nav className="pricing-nav">
         <div className="pricing-nav-container">
           <Link to="/" className="pricing-logo">
-            <div className="pricing-logo-icon">
-              <GraduationCap />
-            </div>
-            <span className="pricing-logo-text">EduCare</span>
+            <img src="/logo.svg" alt="EduCare" style={{height: '60px', width: 'auto'}} />
           </Link>
 
           <div className="pricing-nav-links">
@@ -197,8 +181,19 @@ function PricingPage() {
             <span className="pricing-hero-title-gradient">For Your School</span>
           </h1>
           <p className="pricing-hero-subtitle">
-            Start with a 30-day free trial. No credit card required.
+            Start with a 30-day or full termly (4-month) free trial. No credit card required.
           </p>
+
+          {/* Onboarding promise — prominent in hero */}
+          <div className="pricing-onboarding-hero-badge">
+            <div className="pricing-onboarding-hero-badge-icon">
+              <HeartHandshake size={22} />
+            </div>
+            <div className="pricing-onboarding-hero-badge-text">
+              <strong>Free expert onboarding included with every plan.</strong>
+              <span> Our specialist sets up your students, teachers, classes & more within 24 hours — no DIY.</span>
+            </div>
+          </div>
 
           <div className="pricing-toggle">
             <button
@@ -229,6 +224,7 @@ function PricingPage() {
               <div className="pricing-plan-header">
                 <h3 className="pricing-plan-name">{plan.name}</h3>
                 <p className="pricing-plan-description">{plan.description}</p>
+                <span className="pricing-plan-trial-badge">30-day or 4-month free trial</span>
               </div>
               <div className="pricing-plan-price">
                 <span className="pricing-plan-amount">
@@ -238,6 +234,21 @@ function PricingPage() {
                   <span className="pricing-plan-period">/{annual ? 'year' : 'month'}</span>
                 )}
               </div>
+              {plan.monthlyPrice > 0 && (
+                <div className="pricing-per-student">
+                  {(() => {
+                    const price = annual ? plan.annualPrice : plan.monthlyPrice;
+                    const months = annual ? 12 : 1;
+                    const perStudent = Math.round(price / (plan.maxStudents * months));
+                    return (
+                      <>
+                        <span className="pricing-per-student-amount">₦{perStudent.toLocaleString()}</span>
+                        <span className="pricing-per-student-label"> per student/month</span>
+                      </>
+                    );
+                  })()}
+                </div>
+              )}
               <div className="pricing-plan-features">
                 <ul className="pricing-plan-features-list">
                   {plan.features.map((feature, idx) => (
@@ -248,18 +259,59 @@ function PricingPage() {
                         <X className="x" />
                       )}
                       <span>{feature.text}</span>
+                      {feature.comingSoon && (
+                        <span className="pricing-feature-badge coming-soon">Coming Soon</span>
+                      )}
+                      {feature.aiFeature && (
+                        <span className="pricing-feature-badge ai-feature">✨ AI</span>
+                      )}
                     </li>
                   ))}
                 </ul>
               </div>
-              <button
-                onClick={() => handlePlanSelect(plan)}
-                className={`pricing-plan-btn ${plan.popular ? 'primary' : 'secondary'}`}
-              >
-                {plan.cta}
-              </button>
+              <div className="pricing-plan-actions">
+                <button
+                  onClick={() => handlePlanSelect(plan, 'trial')}
+                  className="pricing-plan-btn primary"
+                >
+                  30-Day Free Trial
+                </button>
+                <button
+                  onClick={() => handlePlanSelect(plan, 'termly_trial')}
+                  className="pricing-plan-btn primary"
+                >
+                  Termly Trial — 4 Months
+                </button>
+                <button
+                  onClick={() => handlePlanSelect(plan, 'subscribe')}
+                  className="pricing-plan-btn secondary"
+                >
+                  Subscribe Now
+                </button>
+              </div>
             </div>
           ))}
+        </div>
+      </section>
+
+      {/* Onboarding Callout */}
+      <section className="pricing-onboarding-callout">
+        <div className="pricing-onboarding-callout-inner">
+          <div className="pricing-onboarding-callout-icon">
+            <HeartHandshake size={32} />
+          </div>
+          <div className="pricing-onboarding-callout-text">
+            <h3>Free Expert Onboarding — Included with Every Plan</h3>
+            <p>
+              After you sign up, a dedicated EduCare onboarding specialist will reach out within 24 hours
+              to personally help you set up students, teachers, classes, subjects, parents, and more.
+              No extra cost. No DIY headaches.
+            </p>
+          </div>
+          <button onClick={() => navigate('/register')} className="pricing-onboarding-callout-btn">
+            Get Started Free
+            <ArrowRight size={18} />
+          </button>
         </div>
       </section>
 
@@ -358,10 +410,7 @@ function PricingPage() {
       <footer className="pricing-footer">
         <div className="pricing-footer-container">
           <div className="pricing-footer-brand">
-            <div className="pricing-footer-logo">
-              <GraduationCap />
-            </div>
-            <span className="pricing-footer-name">EduCare</span>
+            <img src="/logo-white.svg" alt="EduCare" style={{height: '60px', width: 'auto'}} />
           </div>
           <div className="pricing-footer-links">
             <Link to="/">Home</Link>

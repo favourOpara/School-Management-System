@@ -281,7 +281,7 @@ class GradingConfiguration(models.Model):
     
     # Grade component percentages (must total 100%)
     attendance_percentage = models.PositiveIntegerField(
-        help_text="Percentage weight for attendance (5-20%)"
+        help_text="Percentage weight for attendance (0-20%). Set to 0 to disable attendance tracking."
     )
     assignment_percentage = models.PositiveIntegerField(
         help_text="Percentage weight for assignments (5-20%)"
@@ -348,8 +348,8 @@ class GradingConfiguration(models.Model):
             )
 
         # Validate attendance and assignment ranges
-        if not (5 <= self.attendance_percentage <= 20):
-            raise ValidationError("Attendance percentage must be between 5% and 20%")
+        if not (0 <= self.attendance_percentage <= 20):
+            raise ValidationError("Attendance percentage must be between 0% and 20%")
 
         if not (5 <= self.assignment_percentage <= 20):
             raise ValidationError("Assignment percentage must be between 5% and 20%")
@@ -1418,3 +1418,207 @@ class StaffManagementSettings(models.Model):
 
     def __str__(self):
         return f"Staff Settings ({self.school.name})"
+
+
+class DeferredGraduationEmail(models.Model):
+    """
+    Stores graduation emails that could not be sent immediately due to daily quota limits.
+    The send_deferred_graduation_emails management command processes these daily.
+    """
+    EMAIL_TYPE_STUDENT = 'student'
+    EMAIL_TYPE_PARENT_PER_CHILD = 'parent_per_child'
+    EMAIL_TYPE_PARENT_ALL_GRADUATED = 'parent_all_graduated'
+
+    EMAIL_TYPE_CHOICES = [
+        (EMAIL_TYPE_STUDENT, 'Student Graduation Email'),
+        (EMAIL_TYPE_PARENT_PER_CHILD, 'Parent — Per Graduating Child'),
+        (EMAIL_TYPE_PARENT_ALL_GRADUATED, 'Parent — All Children Graduated'),
+    ]
+
+    school = models.ForeignKey(
+        School,
+        on_delete=models.CASCADE,
+        related_name='deferred_graduation_emails'
+    )
+    recipient = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='deferred_graduation_emails'
+    )
+    # The graduating student — used for parent_per_child emails to personalise content
+    student = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='graduation_emails_as_graduant'
+    )
+    email_type = models.CharField(max_length=30, choices=EMAIL_TYPE_CHOICES)
+    deactivation_date = models.DateTimeField()
+    login_url = models.CharField(max_length=500)
+    is_sent = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    sent_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ['created_at']
+
+    def __str__(self):
+        return f"DeferredGraduationEmail({self.email_type}, {self.recipient.username}, sent={self.is_sent})"
+
+
+class LessonTopicPlan(models.Model):
+    """
+    A teacher's planned topic for a specific week in a subject for the current term.
+    One plan per week per subject per teacher. The admin sets how many weeks are in a term
+    (school.lesson_note_weeks_per_term), which determines how many plans each teacher must create.
+    """
+    school = models.ForeignKey(
+        School,
+        on_delete=models.CASCADE,
+        related_name='lesson_topic_plans'
+    )
+    teacher = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='lesson_topic_plans'
+    )
+    subject = models.ForeignKey(
+        'academics.Subject',
+        on_delete=models.CASCADE,
+        related_name='lesson_topic_plans'
+    )
+    week_number = models.PositiveSmallIntegerField(
+        help_text="Which week of the term this topic covers (1 to lesson_note_weeks_per_term)"
+    )
+    topic = models.CharField(max_length=200)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ('teacher', 'subject', 'week_number')
+        ordering = ['week_number']
+
+    def __str__(self):
+        return f"Week {self.week_number}: {self.topic} ({self.subject})"
+
+
+class LessonNote(models.Model):
+    """
+    A teacher's lesson note that goes through admin review before being sent to students.
+    Flow: draft → pending_review → (needs_revision →) approved → sent
+    AI review (Groq) is available for standard/premium/custom plan schools.
+    """
+    STATUS_DRAFT = 'draft'
+    STATUS_PENDING = 'pending_review'
+    STATUS_NEEDS_REVISION = 'needs_revision'
+    STATUS_APPROVED = 'approved'
+    STATUS_SENT = 'sent'
+
+    STATUS_CHOICES = [
+        ('draft', 'Draft'),
+        ('pending_review', 'Pending Review'),
+        ('needs_revision', 'Needs Revision'),
+        ('approved', 'Approved'),
+        ('sent', 'Sent'),
+    ]
+
+    AI_RATING_GOOD = 'good'
+    AI_RATING_NEEDS_IMPROVEMENT = 'needs_improvement'
+    AI_RATING_POOR = 'poor'
+
+    AI_RATING_CHOICES = [
+        ('good', 'Good'),
+        ('needs_improvement', 'Needs Improvement'),
+        ('poor', 'Poor'),
+    ]
+
+    school = models.ForeignKey(
+        School,
+        on_delete=models.CASCADE,
+        related_name='lesson_notes'
+    )
+    teacher = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='lesson_notes_as_teacher'
+    )
+    subject = models.ForeignKey(
+        'academics.Subject',
+        on_delete=models.CASCADE,
+        related_name='lesson_notes'
+    )
+    class_session = models.ForeignKey(
+        'academics.ClassSession',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='lesson_notes'
+    )
+    topic_plan = models.OneToOneField(
+        LessonTopicPlan,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='lesson_note',
+        help_text="The topic plan slot this note belongs to"
+    )
+    topic = models.CharField(max_length=200)
+    content = models.TextField(blank=True, help_text="Typed lesson note content")
+    file = models.FileField(
+        upload_to='lesson_notes/',
+        null=True,
+        blank=True,
+        help_text="Optional PDF or DOCX file attachment"
+    )
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='draft')
+
+    # Admin review
+    admin_feedback = models.TextField(blank=True, help_text="Feedback from admin to teacher")
+    reviewed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='reviewed_lesson_notes'
+    )
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+
+    # Approval
+    approved_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='approved_lesson_notes'
+    )
+    approved_at = models.DateTimeField(null=True, blank=True)
+
+    # AI review (Groq — available on standard/premium/custom plans only)
+    ai_feedback = models.TextField(blank=True)
+    ai_rating = models.CharField(max_length=20, choices=AI_RATING_CHOICES, blank=True)
+    ai_reviewed_at = models.DateTimeField(null=True, blank=True)
+    ai_feedback_sent_to_teacher = models.BooleanField(
+        default=False,
+        help_text="True if the AI feedback was sent to the teacher as admin feedback"
+    )
+
+    # Sent to students
+    sent_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='sent_lesson_notes'
+    )
+    sent_at = models.DateTimeField(null=True, blank=True)
+
+    submitted_at = models.DateTimeField(null=True, blank=True, help_text="When teacher submitted for review")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"LessonNote({self.topic}, {self.teacher.username}, {self.status})"

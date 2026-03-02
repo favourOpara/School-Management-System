@@ -67,9 +67,30 @@ class Class(models.Model):
         default=False,
         help_text="If True, students and subjects in this class must select a department (Science/Arts/Commercial)"
     )
+    next_class = models.ForeignKey(
+        'self',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='previous_classes',
+        help_text="The class students advance to after this one. Leave empty for the final class."
+    )
+    is_final_class = models.BooleanField(
+        default=False,
+        help_text="If True, students completing this class will graduate."
+    )
 
     class Meta:
         unique_together = ('school', 'name')
+
+    def clean(self):
+        from django.core.exceptions import ValidationError
+        if self.is_final_class and self.next_class:
+            raise ValidationError("A final class cannot have a next class.")
+        if self.next_class and self.next_class == self:
+            raise ValidationError("A class cannot point to itself.")
+        if self.next_class and self.school_id and self.next_class.school_id != self.school_id:
+            raise ValidationError("Next class must belong to the same school.")
 
     def __str__(self):
         return self.name

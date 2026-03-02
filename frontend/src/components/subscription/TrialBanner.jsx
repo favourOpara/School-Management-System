@@ -4,11 +4,11 @@ import { useSchool } from '../../contexts/SchoolContext';
 import { useNavigate } from 'react-router-dom';
 
 function TrialBanner() {
-  const { isTrialPeriod, getTrialDaysLeft, schoolSlug } = useSchool();
+  const { isTrialPeriod, getTrialDaysLeft, schoolSlug, isInGracePeriod } = useSchool();
   const navigate = useNavigate();
   const [dismissed, setDismissed] = useState(false);
 
-  if (!isTrialPeriod() || dismissed) {
+  if (!isTrialPeriod() || dismissed || (isInGracePeriod && isInGracePeriod())) {
     return null;
   }
 

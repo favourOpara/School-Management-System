@@ -344,7 +344,7 @@ const MyClasses = () => {
                 onClick={() => setActiveTab('notes')}
               >
                 <FileText size={14} />
-                Notes ({selectedSubject.recent_notes.length})
+                Notes ({(selectedSubject.lesson_notes?.length || 0) + selectedSubject.recent_notes.length})
               </button>
               <button
                 className={`tab-btn ${activeTab === 'announcements' ? 'active' : ''}`}
@@ -366,22 +366,67 @@ const MyClasses = () => {
             <div className="modal-tab-content">
               {activeTab === 'notes' && (
                 <div className="notes-list">
-                  {selectedSubject.recent_notes.length === 0 ? (
+                  {/* Lesson Notes (from teacher lesson note system) */}
+                  {selectedSubject.lesson_notes && selectedSubject.lesson_notes.length > 0 && (
+                    <>
+                      {selectedSubject.lesson_notes.map((note) => (
+                        <div key={`ln-${note.id}`} className="content-item note-item">
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.35rem' }}>
+                            {note.week_number != null && (
+                              <span style={{
+                                background: '#eff6ff', color: '#1d4ed8', borderRadius: '6px',
+                                padding: '0.15rem 0.5rem', fontSize: '0.72rem', fontWeight: 700, flexShrink: 0,
+                              }}>
+                                Week {note.week_number}
+                              </span>
+                            )}
+                            <h4 style={{ margin: 0 }}>{note.topic}</h4>
+                          </div>
+                          {note.content && (
+                            <p className="content-description" style={{ whiteSpace: 'pre-wrap' }}>
+                              {note.content.length > 200 ? note.content.slice(0, 200) + '…' : note.content}
+                            </p>
+                          )}
+                          {note.file_url && (
+                            <a
+                              href={note.file_url}
+                              target="_blank"
+                              rel="noreferrer"
+                              style={{
+                                display: 'inline-flex', alignItems: 'center', gap: '0.3rem',
+                                fontSize: '0.78rem', color: '#2563eb', fontWeight: 600,
+                                textDecoration: 'none', marginBottom: '0.35rem',
+                              }}
+                            >
+                              📎 Download Attachment
+                            </a>
+                          )}
+                          <div className="content-meta">
+                            <Clock size={12} />
+                            <span>{formatDate(note.sent_at)}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </>
+                  )}
+
+                  {/* General subject content notes (legacy) */}
+                  {selectedSubject.recent_notes.map((note) => (
+                    <div key={`sc-${note.id}`} className="content-item note-item">
+                      <h4>{note.title}</h4>
+                      <p className="content-description">{note.description}</p>
+                      <div className="content-meta">
+                        <Clock size={12} />
+                        <span>{formatDate(note.created_at)}</span>
+                      </div>
+                    </div>
+                  ))}
+
+                  {(!selectedSubject.lesson_notes?.length && !selectedSubject.recent_notes.length) && (
                     <div className="empty-content">
                       <FileText size={32} color="#9ca3af" />
                       <p>No notes yet</p>
                     </div>
-                  ) : (
-                    selectedSubject.recent_notes.map((note) => (
-                      <div key={note.id} className="content-item note-item">
-                        <h4>{note.title}</h4>
-                        <p className="content-description">{note.description}</p>
-                        <div className="content-meta">
-                          <Clock size={12} />
-                          <span>{formatDate(note.created_at)}</span>
-                        </div>
-                      </div>
-                    ))
                   )}
                 </div>
               )}

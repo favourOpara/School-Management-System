@@ -27,6 +27,8 @@ import {
   Database,
   Download,
   Shield,
+  ToggleLeft,
+  ToggleRight,
 } from 'lucide-react';
 import SchoolConfiguration from '../../components/SchoolConfiguration';
 import API_BASE_URL, { getSchoolSlug } from '../../config';
@@ -69,6 +71,13 @@ function PortalDashboard() {
   const [upgradeError, setUpgradeError] = useState('');
   const [selectedUpgradePlan, setSelectedUpgradePlan] = useState(null);
   const [upgradeBillingCycle, setUpgradeBillingCycle] = useState('monthly');
+  const [upgradeSaveCard, setUpgradeSaveCard] = useState(false);
+
+  // Auto-debit state
+  const [autoDebitLoading, setAutoDebitLoading] = useState(false);
+  const [removeCardLoading, setRemoveCardLoading] = useState(false);
+  const [removeCardConfirm, setRemoveCardConfirm] = useState(false);
+  const [autoDebitError, setAutoDebitError] = useState(null);
 
   useEffect(() => {
     // Check if user is authenticated (using portal-specific token)
@@ -172,9 +181,9 @@ function PortalDashboard() {
     setShowUpgradeModal(true);
     setUpgradeError('');
     setUpgradeLoading(true);
+    setUpgradeSaveCard(subscription?.has_saved_card || false);
     try {
       const token = localStorage.getItem('portalAccessToken');
-      const slug = localStorage.getItem('portalSchoolSlug');
       const response = await fetch(`${API_BASE_URL}/api/portal/subscription/plans/`, {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -187,6 +196,49 @@ function PortalDashboard() {
       setUpgradeError(err.message);
     } finally {
       setUpgradeLoading(false);
+    }
+  };
+
+  const handleToggleAutoDebit = async () => {
+    try {
+      setAutoDebitLoading(true);
+      setAutoDebitError(null);
+      const token = localStorage.getItem('portalAccessToken');
+      const res = await fetch(`${API_BASE_URL}/api/portal/billing/auto-debit/toggle/`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to update auto-renewal');
+      await fetchSubscriptionInfo();
+    } catch (err) {
+      setAutoDebitError(err.message);
+    } finally {
+      setAutoDebitLoading(false);
+    }
+  };
+
+  const handleRemoveCard = async () => {
+    if (!removeCardConfirm) {
+      setRemoveCardConfirm(true);
+      return;
+    }
+    try {
+      setRemoveCardLoading(true);
+      setAutoDebitError(null);
+      const token = localStorage.getItem('portalAccessToken');
+      const res = await fetch(`${API_BASE_URL}/api/portal/billing/saved-card/remove/`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to remove card');
+      setRemoveCardConfirm(false);
+      await fetchSubscriptionInfo();
+    } catch (err) {
+      setAutoDebitError(err.message);
+    } finally {
+      setRemoveCardLoading(false);
     }
   };
 
@@ -207,6 +259,7 @@ function PortalDashboard() {
           plan_id: selectedUpgradePlan,
           billing_cycle: upgradeBillingCycle,
           callback_url: `${window.location.origin}/payment/callback?from=portal`,
+          save_card: upgradeSaveCard,
         }),
       });
       const data = await response.json();
@@ -302,7 +355,7 @@ function PortalDashboard() {
             <p>Admin Portal</p>
             {subscription && (
               <span className={`portal-plan-badge ${subscription.status || 'trial'}`}>
-                {subscription.plan?.display_name || 'Free Trial'}
+                {subscription.plan?.display_name || 'No Plan'}
               </span>
             )}
           </div>
@@ -447,15 +500,18 @@ function PortalDashboard() {
                   <div className="portal-subscription-card">
                     <div className="portal-subscription-header">
                       <h3>Current Plan</h3>
-                      <span className={`portal-subscription-badge ${subscription?.status || 'trial'}`}>
+                      <span className={`portal-subscription-badge ${subscription?.status || 'pending'}`}>
                         {subscription?.status === 'active' ? 'Active' :
                          subscription?.status === 'trial' ? 'Trial' :
-                         subscription?.status || 'Trial'}
+                         subscription?.status === 'pending' ? 'Pending Payment' :
+                         subscription?.status === 'grace_period' ? 'Grace Period' :
+                         subscription?.status === 'expired' ? 'Expired' :
+                         subscription?.status || 'Pending'}
                       </span>
                     </div>
                     <div className="portal-subscription-plan">
-                      <h2>{subscription?.plan?.display_name || 'Free Trial'}</h2>
-                      <p>{subscription?.plan?.description || 'Try all features free for 30 days'}</p>
+                      <h2>{subscription?.plan?.display_name || 'No Plan'}</h2>
+                      <p>{subscription?.plan?.description || 'Select a plan to get started'}</p>
                     </div>
                     {subscription?.current_period_end && (
                       <div className="portal-subscription-period">
@@ -469,6 +525,63 @@ function PortalDashboard() {
                       View Plans & Upgrade
                       <ChevronRight size={18} />
                     </button>
+                  </div>
+
+                  {/* Auto-Renewal Card */}
+                  <div className="portal-subscription-card" style={{ marginTop: '16px' }}>
+                    <div className="portal-subscription-header">
+                      <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <CreditCard size={18} />
+                        Auto-Renewal
+                      </h3>
+                    </div>
+
+                    {autoDebitError && (
+                      <p style={{ color: '#ef4444', fontSize: '13px', marginBottom: '12px' }}>{autoDebitError}</p>
+                    )}
+
+                    {subscription?.has_saved_card ? (
+                      <div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                          <div>
+                            <p style={{ fontWeight: 600, marginBottom: '2px' }}>
+                              {subscription.auto_debit_enabled ? 'Auto-renewal is on' : 'Auto-renewal is off'}
+                            </p>
+                            <p style={{ fontSize: '13px', color: '#6b7280' }}>Card saved securely via Paystack</p>
+                          </div>
+                          <button
+                            onClick={handleToggleAutoDebit}
+                            disabled={autoDebitLoading}
+                            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center' }}
+                            title={subscription.auto_debit_enabled ? 'Disable auto-renewal' : 'Enable auto-renewal'}
+                          >
+                            {autoDebitLoading ? (
+                              <Loader2 size={28} style={{ animation: 'spin 1s linear infinite', color: '#3b82f6' }} />
+                            ) : subscription.auto_debit_enabled ? (
+                              <ToggleRight size={36} style={{ color: '#3b82f6' }} />
+                            ) : (
+                              <ToggleLeft size={36} style={{ color: '#9ca3af' }} />
+                            )}
+                          </button>
+                        </div>
+                        <button
+                          onClick={handleRemoveCard}
+                          disabled={removeCardLoading}
+                          style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '13px', color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+                        >
+                          {removeCardLoading ? (
+                            <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} />
+                          ) : (
+                            <Trash2 size={14} />
+                          )}
+                          {removeCardConfirm ? 'Confirm — remove saved card?' : 'Remove saved card'}
+                        </button>
+                      </div>
+                    ) : (
+                      <p style={{ fontSize: '13px', color: '#6b7280' }}>
+                        No saved card on file. On your next payment, check "Save card for automatic renewal" to enable auto-renewal.
+                      </p>
+                    )}
                   </div>
 
                   <div className="portal-subscription-features">
@@ -669,6 +782,27 @@ function PortalDashboard() {
               </button>
             </div>
 
+            {/* Save card option */}
+            {selectedUpgradePlan && upgradePlans.find(p => p.id === selectedUpgradePlan && (upgradeBillingCycle === 'annual' ? p.annual_price : p.monthly_price) > 0) && (
+              <label style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', padding: '12px 16px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0', cursor: 'pointer', marginBottom: '16px' }}>
+                <input
+                  type="checkbox"
+                  checked={upgradeSaveCard}
+                  onChange={(e) => setUpgradeSaveCard(e.target.checked)}
+                  style={{ marginTop: '2px' }}
+                />
+                <div>
+                  <div style={{ fontWeight: 600, fontSize: '14px', marginBottom: '2px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <CreditCard size={15} />
+                    Save card for automatic renewal
+                  </div>
+                  <p style={{ fontSize: '12px', color: '#6b7280', margin: 0 }}>
+                    Card stored securely by Paystack. We'll auto-charge at renewal so you never lose access. Toggle off anytime.
+                  </p>
+                </div>
+              </label>
+            )}
+
             {upgradeError && (
               <div className="portal-error-message">
                 <AlertCircle size={16} />
@@ -697,7 +831,7 @@ function PortalDashboard() {
                       {isCurrent && <span className="current-badge">Current Plan</span>}
                       <h3>{plan.display_name}</h3>
                       <p className="plan-price">
-                        {price > 0 ? `₦${price.toLocaleString()}` : 'Free'}
+                        {price > 0 ? `₦${price.toLocaleString()}` : 'Contact Sales'}
                         {price > 0 && <span>/{upgradeBillingCycle === 'annual' ? 'year' : 'month'}</span>}
                       </p>
                       <p className="plan-desc">{plan.description}</p>
@@ -851,10 +985,10 @@ function AdminAccountsTab({
         </button>
       </div>
 
-      {!adminLimits.can_create && adminLimits.plan_name === 'Free Trial' && (
+      {!adminLimits.can_create && adminLimits.current_count >= adminLimits.max_admins && (
         <div className="portal-upgrade-notice">
           <AlertCircle size={18} />
-          <span>Upgrade to a paid plan to create additional admin accounts</span>
+          <span>Upgrade your plan to create additional admin accounts</span>
           <button onClick={openUpgradeModal} className="portal-inline-link">View Plans</button>
         </div>
       )}

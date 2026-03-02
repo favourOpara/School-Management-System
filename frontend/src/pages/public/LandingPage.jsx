@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
-  GraduationCap,
   Users,
   BarChart3,
   CreditCard,
@@ -29,6 +28,11 @@ import {
   Activity,
   Cloud,
   Sparkles,
+  HeartHandshake,
+  Phone,
+  UserCheck,
+  Briefcase,
+  TrendingUp,
 } from 'lucide-react';
 import AOS from 'aos';
 import 'aos/dist/aos.css';
@@ -107,6 +111,30 @@ const features = [
     description: 'Bulk import students from Excel/CSV and export any data for external reporting.',
     color: 'slate',
   },
+  {
+    icon: HeartHandshake,
+    title: 'Expert Onboarding Support',
+    description: 'A dedicated onboarding expert reaches out within 24 hours to personally set up your students, teachers, classes, and more — free of charge.',
+    color: 'blue',
+  },
+  {
+    icon: UserCheck,
+    title: 'Parent Management',
+    description: 'Invite parents, link them to their children, and give them a dedicated portal to track attendance, grades, fees, and school announcements.',
+    color: 'violet',
+  },
+  {
+    icon: Briefcase,
+    title: 'Staff Management',
+    description: 'Manage non-teaching staff records, roles, and access. Keep your entire workforce organised in one place alongside your academic team.',
+    color: 'rose',
+  },
+  {
+    icon: TrendingUp,
+    title: 'Proprietor Forecast Overview',
+    description: 'A dedicated proprietor dashboard with revenue forecasts, enrolment trends, fee collection projections, and school-wide performance analytics.',
+    color: 'sky',
+  },
 ];
 
 const valuePillars = [
@@ -135,19 +163,19 @@ const howItWorks = [
     step: 1,
     icon: Building2,
     title: 'Register Your School',
-    description: 'Create your school account in minutes. Choose your plan and configure your school profile.',
+    description: 'Create your school account in minutes. Choose your plan and start your free trial — no credit card required.',
   },
   {
     step: 2,
-    icon: Settings,
-    title: 'Set Up Your System',
-    description: 'Add classes, subjects, and teachers. Import existing student data from Excel spreadsheets.',
+    icon: Phone,
+    title: 'Meet Your Onboarding Expert',
+    description: 'Within 24 hours, a dedicated EduCare specialist contacts you to personally set up your students, teachers, classes, subjects, and more.',
   },
   {
     step: 3,
     icon: Rocket,
-    title: 'Start Managing',
-    description: 'Your school is live. Track attendance, manage fees, generate report cards, and more.',
+    title: 'Go Live, Fully Set Up',
+    description: 'Your school is fully configured and ready. Track attendance, collect fees, generate report cards, and manage everything from one dashboard.',
   },
 ];
 
@@ -186,15 +214,12 @@ function LandingPage() {
       <nav className={`landing-nav ${scrolled ? 'scrolled' : ''}`}>
         <div className="landing-nav-container">
           <Link to="/" className="landing-logo">
-            <div className="landing-logo-icon">
-              <GraduationCap />
-            </div>
-            <span className="landing-logo-text">EduCare</span>
+            <img src={scrolled ? '/logo.svg' : '/logo-white.svg'} alt="EduCare" style={{height: '60px', width: 'auto'}} />
           </Link>
 
           <div className="landing-nav-links">
             <Link to="/pricing" className="landing-nav-link">Pricing</Link>
-            <Link to="/knowledge-base" className="landing-nav-link">Knowledge Base</Link>
+            <Link to="/user-guide" className="landing-nav-link">User Guide</Link>
             <Link to="/contact-sales" className="landing-nav-link">Contact</Link>
             <button onClick={() => navigate('/portal')} className="landing-signin-btn">
               Sign In
@@ -215,7 +240,7 @@ function LandingPage() {
         <div className={`landing-mobile-menu ${mobileMenuOpen ? 'open' : ''}`}>
           <div className="landing-mobile-menu-links">
             <Link to="/pricing" className="landing-mobile-link">Pricing</Link>
-            <Link to="/knowledge-base" className="landing-mobile-link">Knowledge Base</Link>
+            <Link to="/user-guide" className="landing-mobile-link">User Guide</Link>
             <Link to="/contact-sales" className="landing-mobile-link">Contact</Link>
             <button onClick={() => { setMobileMenuOpen(false); navigate('/portal'); }} className="landing-mobile-signin">
               Sign In
@@ -284,18 +309,33 @@ function LandingPage() {
                 </button>
               </div>
 
-              <div className="landing-hero-highlights" data-aos="fade-up" data-aos-delay="400">
+              {/* Onboarding promise card — inside the hero */}
+              <div className="landing-hero-onboarding-card" data-aos="fade-up" data-aos-delay="380">
+                <div className="landing-hero-onboarding-card-icon">
+                  <HeartHandshake size={20} />
+                </div>
+                <div>
+                  <p className="landing-hero-onboarding-card-title">
+                    Free Onboarding — No DIY Required
+                  </p>
+                  <p className="landing-hero-onboarding-card-text">
+                    Our expert contacts you within 24 hours to personally set up your entire school — students, teachers, classes, subjects & more.
+                  </p>
+                </div>
+              </div>
+
+              <div className="landing-hero-highlights" data-aos="fade-up" data-aos-delay="440">
                 <div className="landing-hero-highlight-item">
                   <CheckCircle size={16} />
                   <span>No credit card required</span>
                 </div>
                 <div className="landing-hero-highlight-item">
                   <CheckCircle size={16} />
-                  <span>Set up in 10 minutes</span>
+                  <span>Expert onboarding included</span>
                 </div>
                 <div className="landing-hero-highlight-item">
                   <CheckCircle size={16} />
-                  <span>Free plan available</span>
+                  <span>30-day or termly free trial</span>
                 </div>
               </div>
             </div>
@@ -322,8 +362,7 @@ function LandingPage() {
                       {/* Sidebar */}
                       <div className="landing-hero-sidebar">
                         <div className="landing-hero-sidebar-logo">
-                          <GraduationCap size={16} />
-                          <span>EduCare</span>
+                          <img src="/logo-white.svg" alt="EduCare" style={{height: '60px', width: 'auto'}} />
                         </div>
                         <div className="landing-hero-sidebar-menu">
                           <div className="landing-hero-sidebar-item active">
@@ -460,6 +499,50 @@ function LandingPage() {
         </div>
       </section>
 
+      {/* Zero Setup Strip — first thing visible on scroll */}
+      <section className="landing-zero-setup">
+        <div className="landing-zero-setup-container">
+          <div className="landing-zero-setup-left" data-aos="fade-right">
+            <span className="landing-zero-setup-eyebrow">INCLUDED WITH EVERY PLAN</span>
+            <h2 className="landing-zero-setup-title">
+              We Set Up Your School.<br />You Just Show Up.
+            </h2>
+            <p className="landing-zero-setup-subtitle">
+              Forget spending days importing spreadsheets and figuring out configurations.
+              Our dedicated onboarding expert contacts you within <strong>24 hours</strong> of
+              signing up and personally sets everything up — completely free, no strings attached.
+            </p>
+            <button onClick={() => navigate('/register')} className="landing-zero-setup-cta">
+              Start Free — Onboarding Included
+              <ArrowRight size={18} />
+            </button>
+          </div>
+
+          <div className="landing-zero-setup-right" data-aos="fade-left" data-aos-delay="100">
+            <div className="landing-zero-setup-grid">
+              {[
+                { emoji: '👩‍🎓', label: 'Students' },
+                { emoji: '👨‍🏫', label: 'Teachers' },
+                { emoji: '🏫', label: 'Classes' },
+                { emoji: '📚', label: 'Subjects' },
+                { emoji: '👪', label: 'Parents' },
+                { emoji: '✅', label: 'Attendance' },
+                { emoji: '📊', label: 'Grading' },
+                { emoji: '💳', label: 'Fee Setup' },
+              ].map((item) => (
+                <div key={item.label} className="landing-zero-setup-item">
+                  <span className="landing-zero-setup-item-emoji">{item.emoji}</span>
+                  <span className="landing-zero-setup-item-label">{item.label}</span>
+                </div>
+              ))}
+            </div>
+            <p className="landing-zero-setup-tagline">
+              Everything. Done for you. Free.
+            </p>
+          </div>
+        </div>
+      </section>
+
       {/* Value Proposition Pillars */}
       <section className="landing-pillars">
         <div className="landing-pillars-container">
@@ -494,8 +577,17 @@ function LandingPage() {
           <div className="landing-features-grid">
             {features.map((feature, index) => {
               const Icon = feature.icon;
+              const col = index % 4;
               return (
-                <div key={index} className="landing-feature-card" data-aos="fade-up" data-aos-delay={(index % 3) * 100}>
+                <div
+                  key={index}
+                  className="landing-feature-card"
+                  data-aos="fade-up"
+                  data-aos-delay={col * 80}
+                >
+                  <span className="landing-feature-card-num">
+                    {String(index + 1).padStart(2, '0')}
+                  </span>
                   <div className={`landing-feature-icon ${feature.color}`}>
                     <Icon />
                   </div>
@@ -547,6 +639,70 @@ function LandingPage() {
         </div>
       </section>
 
+      {/* Onboarding Support Section */}
+      <section className="landing-onboarding-section">
+        <div className="landing-onboarding-container">
+          <div className="landing-onboarding-text" data-aos="fade-right">
+            <span className="landing-onboarding-badge">WHITE-GLOVE SERVICE</span>
+            <h2 className="landing-onboarding-title">
+              We Don't Just Hand You Software.<br />
+              <span className="landing-onboarding-title-accent">We Onboard Your Entire School.</span>
+            </h2>
+            <p className="landing-onboarding-subtitle">
+              Every EduCare school — whether on a free trial or a paid plan — gets a dedicated onboarding expert
+              who reaches out within 24 hours of signing up. Completely free. No exceptions.
+            </p>
+            <div className="landing-onboarding-items">
+              {[
+                { label: 'Students & Parents', desc: 'Add and link profiles, import from spreadsheets' },
+                { label: 'Teachers & Subjects', desc: 'Create accounts, assign subjects and classes' },
+                { label: 'Classes & Sessions', desc: 'Set up class structure, arms, and academic terms' },
+                { label: 'Attendance & Grading', desc: 'Configure grading scales and attendance tracking' },
+              ].map((item, i) => (
+                <div key={i} className="landing-onboarding-item">
+                  <div className="landing-onboarding-item-check">
+                    <CheckCircle size={18} />
+                  </div>
+                  <div>
+                    <strong>{item.label}</strong>
+                    <span> — {item.desc}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <button onClick={() => navigate('/register')} className="landing-onboarding-cta">
+              Get Started — Onboarding Included
+              <ArrowRight size={18} />
+            </button>
+          </div>
+
+          <div className="landing-onboarding-card-wrap" data-aos="fade-left" data-aos-delay="100">
+            <div className="landing-onboarding-card">
+              <div className="landing-onboarding-card-header">
+                <div className="landing-onboarding-card-icon">
+                  <HeartHandshake size={28} />
+                </div>
+                <div>
+                  <p className="landing-onboarding-card-title">Your Onboarding Expert</p>
+                  <p className="landing-onboarding-card-sub">Assigned to you within 24 hours</p>
+                </div>
+              </div>
+              <div className="landing-onboarding-card-body">
+                <p className="landing-onboarding-card-quote">
+                  "We'll set up your entire school system together — students, teachers, classes,
+                  grading, everything. You focus on running your school. We handle the setup."
+                </p>
+                <div className="landing-onboarding-card-tags">
+                  {['Free of Charge', 'All Plans Included', 'Hands-On Setup'].map((tag) => (
+                    <span key={tag} className="landing-onboarding-tag">{tag}</span>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Security & Compliance */}
       <section className="landing-security-section">
         <div className="landing-security-section-pattern" />
@@ -583,7 +739,7 @@ function LandingPage() {
             <div className="landing-cta-content">
               <h2 className="landing-cta-title">Ready to Transform Your School?</h2>
               <p className="landing-cta-description">
-                Start your free trial today — no credit card required. Set up your school in under 10 minutes.
+                Start your free trial today — choose 30 days or a full term (4 months). No credit card required.
               </p>
               <div className="landing-cta-buttons">
                 <button onClick={() => navigate('/register')} className="landing-cta-btn-primary">
@@ -605,10 +761,7 @@ function LandingPage() {
           <div className="landing-footer-grid">
             <div>
               <div className="landing-footer-brand">
-                <div className="landing-footer-logo">
-                  <GraduationCap />
-                </div>
-                <span className="landing-footer-name">EduCare</span>
+                <img src="/logo-white.svg" alt="EduCare" style={{height: '60px', width: 'auto'}} />
               </div>
               <p className="landing-footer-description">
                 The modern school management platform built for schools that want to do more with less.

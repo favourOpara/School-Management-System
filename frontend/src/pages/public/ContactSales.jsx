@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
-  GraduationCap,
   Mail,
   Phone,
   MapPin,
@@ -121,10 +120,7 @@ function ContactSales() {
       <nav className="contact-nav">
         <div className="contact-nav-container">
           <Link to="/" className="contact-logo">
-            <div className="contact-logo-icon">
-              <GraduationCap />
-            </div>
-            <span className="contact-logo-text">EduCare</span>
+            <img src="/logo.svg" alt="EduCare" style={{height: '60px', width: 'auto'}} />
           </Link>
 
           <div className="contact-nav-links">
@@ -419,10 +415,7 @@ function ContactSales() {
       <footer className="contact-footer">
         <div className="contact-footer-container">
           <div className="contact-footer-brand">
-            <div className="contact-footer-logo">
-              <GraduationCap />
-            </div>
-            <span className="contact-footer-name">EduCare</span>
+            <img src="/logo-white.svg" alt="EduCare" style={{height: '60px', width: 'auto'}} />
           </div>
           <div className="contact-footer-links">
             <Link to="/">Home</Link>

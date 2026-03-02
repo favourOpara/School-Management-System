@@ -6,31 +6,36 @@ from django.dispatch import receiver
 from django.utils import timezone
 from datetime import timedelta
 
-from .models import School, Subscription, SubscriptionPlan
+from .models import School, Subscription, SubscriptionPlan, OnboardingRecord
 
 
 @receiver(post_save, sender=School)
 def create_default_subscription(sender, instance, created, **kwargs):
     """
-    Create a default trial subscription when a new school is created.
+    Create a default subscription when a new school is created outside
+    the registration flow (e.g. via Django admin panel).
 
-    This ensures every school has a subscription record.
+    Schools created via the registration API already get a subscription
+    in the serializer's create() method, so this is a safety net only.
     """
     if created and not hasattr(instance, 'subscription'):
-        # Get the free trial plan
-        free_plan = SubscriptionPlan.objects.filter(name='free').first()
+        # Default to Basic plan
+        basic_plan = SubscriptionPlan.objects.filter(name='basic', is_active=True).first()
 
-        if free_plan:
-            trial_end = timezone.now() + timedelta(days=free_plan.trial_days)
+        if basic_plan:
+            trial_end = timezone.now() + timedelta(days=basic_plan.trial_days)
 
             Subscription.objects.create(
                 school=instance,
-                plan=free_plan,
+                plan=basic_plan,
                 status='trial',
                 billing_cycle='monthly',
                 current_period_start=timezone.now(),
                 current_period_end=trial_end,
             )
+
+        # Ensure an onboarding record exists for every new school
+        OnboardingRecord.objects.get_or_create(school=instance)
 
 
 @receiver(pre_save, sender=Subscription)
@@ -63,7 +68,9 @@ def handle_subscription_status_change(sender, instance, **kwargs):
                 # Handle specific status changes
                 if instance.status == 'expired':
                     _handle_subscription_expired(instance)
-                elif instance.status == 'active' and old_instance.status == 'trial':
+                elif instance.status == 'grace_period':
+                    _handle_grace_period_started(instance)
+                elif instance.status == 'active' and old_instance.status in ('trial', 'grace_period', 'expired'):
                     _handle_trial_to_active(instance)
 
         except Subscription.DoesNotExist:
@@ -73,54 +80,35 @@ def handle_subscription_status_change(sender, instance, **kwargs):
 def _handle_subscription_expired(subscription):
     """
     Handle actions when subscription expires.
+    Sends EduCare-branded lockout notification.
     """
-    # Optionally deactivate school or send notification
     try:
-        from logs.email_service import send_notification_email
-        from users.models import CustomUser
+        from .educare_emails import send_expired_lockout_email
+        send_expired_lockout_email(subscription)
+    except Exception:
+        pass
 
-        admins = CustomUser.objects.filter(
-            school=subscription.school,
-            role='admin',
-            is_active=True
-        )
 
-        for admin in admins:
-            send_notification_email(
-                recipient_user=admin,
-                title="Subscription Expired",
-                message=f"Your {subscription.plan.display_name} subscription has expired. "
-                        f"Please renew to continue accessing all features.",
-                notification_type='subscription_expired',
-                priority='high'
-            )
+def _handle_grace_period_started(subscription):
+    """
+    Handle subscription entering grace period.
+    Sends EduCare-branded grace period start notification.
+    """
+    try:
+        from .educare_emails import send_grace_period_start_email
+        send_grace_period_start_email(subscription)
     except Exception:
         pass
 
 
 def _handle_trial_to_active(subscription):
     """
-    Handle conversion from trial to active subscription.
+    Handle conversion from trial/grace_period/expired to active subscription.
+    Sends EduCare-branded welcome email.
     """
     try:
-        from logs.email_service import send_notification_email
-        from users.models import CustomUser
-
-        admins = CustomUser.objects.filter(
-            school=subscription.school,
-            role='admin',
-            is_active=True
-        )
-
-        for admin in admins:
-            send_notification_email(
-                recipient_user=admin,
-                title="Subscription Activated",
-                message=f"Welcome to {subscription.plan.display_name}! "
-                        f"Your subscription is now active. Thank you for choosing EduCare.",
-                notification_type='subscription_activated',
-                priority='medium'
-            )
+        from .educare_emails import send_educare_welcome_email
+        send_educare_welcome_email(subscription)
     except Exception:
         pass
 

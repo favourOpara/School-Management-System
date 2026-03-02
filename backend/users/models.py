@@ -97,6 +97,10 @@ class CustomUser(AbstractUser):
     password_reset_token = models.CharField(max_length=100, null=True, blank=True)
     password_reset_sent_at = models.DateTimeField(null=True, blank=True)
 
+    # Graduation fields
+    is_graduated = models.BooleanField(default=False)
+    graduation_date = models.DateTimeField(null=True, blank=True)
+
     USERNAME_FIELD = 'username'
     REQUIRED_FIELDS = ['first_name', 'last_name']
 

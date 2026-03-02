@@ -3,11 +3,13 @@ import axios from 'axios';
 import Select from 'react-select';
 import API_BASE_URL from '../config';
 import { useSchool } from '../contexts/SchoolContext';
+import ImportParentsModal from './ImportParentsModal';
 
 import './CreateParentForm.css';
 
 const CreateParentForm = () => {
-  const { buildApiUrl } = useSchool();
+  const { buildApiUrl, featureLimits } = useSchool();
+  const [showImportModal, setShowImportModal] = useState(false);
   const [formData, setFormData] = useState({
     username: '',
     password: '',
@@ -101,7 +103,25 @@ const CreateParentForm = () => {
   return (
     <div className="create-parent-wrapper">
       <div className="create-parent-container">
-        <h2>Create Parent Account</h2>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
+          <h2 style={{ margin: 0 }}>Create Parent Account</h2>
+          <button type="button" className="import-students-btn" onClick={() => setShowImportModal(true)}>
+            Import Parents
+          </button>
+        </div>
+        {featureLimits?.max_parents > 0 && featureLimits.current_parents / featureLimits.max_parents >= 0.8 && (
+          <div style={{
+            padding: '0.6rem 0.9rem', borderRadius: '8px', marginBottom: '1rem',
+            fontSize: '0.85rem',
+            background: featureLimits.current_parents >= featureLimits.max_parents ? '#fee2e2' : '#fef3c7',
+            color: featureLimits.current_parents >= featureLimits.max_parents ? '#991b1b' : '#92400e',
+            border: `1px solid ${featureLimits.current_parents >= featureLimits.max_parents ? '#fca5a5' : '#fde68a'}`,
+          }}>
+            {featureLimits.current_parents >= featureLimits.max_parents
+              ? `Parent limit reached (${featureLimits.current_parents}/${featureLimits.max_parents}). Upgrade your plan to add more.`
+              : `Approaching parent limit: ${featureLimits.current_parents} of ${featureLimits.max_parents} used.`}
+          </div>
+        )}
         <form className="create-parent-form" onSubmit={handleSubmit}>
           <input type="text" name="username" placeholder="Username" value={formData.username} onChange={handleChange} required />
           <input type="password" name="password" placeholder="Password" value={formData.password} onChange={handleChange} required />
@@ -139,6 +159,13 @@ const CreateParentForm = () => {
 
         {message && <p className="form-message">{message}</p>}
       </div>
+
+      {showImportModal && (
+        <ImportParentsModal
+          onClose={() => setShowImportModal(false)}
+          onSuccess={() => setShowImportModal(false)}
+        />
+      )}
     </div>
   );
 };

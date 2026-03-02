@@ -27,9 +27,25 @@ class DepartmentSerializer(serializers.ModelSerializer):
 
 
 class ClassSerializer(serializers.ModelSerializer):
+    next_class_name = serializers.CharField(source='next_class.name', read_only=True, default=None)
+
     class Meta:
         model = Class
-        fields = ['id', 'name', 'description', 'has_departments']
+        fields = ['id', 'name', 'description', 'has_departments', 'next_class', 'next_class_name', 'is_final_class']
+
+    def validate(self, data):
+        next_class = data.get('next_class')
+        is_final = data.get('is_final_class', False)
+        if is_final and next_class:
+            raise serializers.ValidationError({'is_final_class': 'A final class cannot have a next class.'})
+        if next_class and self.instance and next_class.pk == self.instance.pk:
+            raise serializers.ValidationError({'next_class': 'A class cannot point to itself.'})
+        if next_class:
+            request = self.context.get('request')
+            school = getattr(request, 'school', None) if request else None
+            if school and next_class.school_id != school.id:
+                raise serializers.ValidationError({'next_class': 'Next class must belong to the same school.'})
+        return data
 
 
 class ClassSessionSerializer(serializers.ModelSerializer):

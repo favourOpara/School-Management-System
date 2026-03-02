@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { useLoading } from '../context/LoadingContext';
 import { useSchool } from '../contexts/SchoolContext';
@@ -24,6 +24,8 @@ const ClassManagementForm = () => {
 
   const [classes, setClasses] = useState([]);
   const [sessions, setSessions] = useState([]);
+  const [progressionChains, setProgressionChains] = useState([]);
+  const [progressionSaving, setProgressionSaving] = useState({});
   const [inheritanceData, setInheritanceData] = useState({
     source_academic_year: '',
     source_term: '',
@@ -56,9 +58,21 @@ const ClassManagementForm = () => {
     }
   };
 
+  const fetchProgressionChains = async () => {
+    try {
+      const res = await axios.get(buildApiUrl('/academics/classes/progression/'), {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setProgressionChains(res.data.chains || []);
+    } catch (err) {
+      console.error('Error fetching progression chains:', err);
+    }
+  };
+
   useEffect(() => {
     fetchClasses();
     fetchSessions();
+    fetchProgressionChains();
   }, [token]);
 
   const isValidAcademicYear = (year) => {
@@ -256,6 +270,79 @@ const ClassManagementForm = () => {
     }
   };
 
+  const handleProgressionChange = async (classId, field, value) => {
+    const cls = classes.find(c => c.id === classId);
+    if (!cls) return;
+
+    let patchData = {};
+
+    if (field === 'is_final_class') {
+      patchData.is_final_class = value;
+      if (value) {
+        patchData.next_class = null;
+      }
+    } else if (field === 'next_class') {
+      patchData.next_class = value === '' ? null : parseInt(value, 10);
+    }
+
+    setProgressionSaving(prev => ({ ...prev, [classId]: true }));
+
+    try {
+      await axios.patch(buildApiUrl(`/academics/classes/${classId}/`), patchData, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      await fetchClasses();
+      await fetchProgressionChains();
+      setMessage(`Progression updated for ${cls.name}.`);
+      setError('');
+    } catch (err) {
+      const detail = err.response?.data
+        ? (typeof err.response.data === 'string' ? err.response.data : JSON.stringify(err.response.data))
+        : 'Please try again.';
+      setError(`Failed to update progression for ${cls.name}: ${detail}`);
+    } finally {
+      setProgressionSaving(prev => ({ ...prev, [classId]: false }));
+    }
+  };
+
+  const buildProgressionChainDisplay = useCallback(() => {
+    if (!progressionChains || progressionChains.length === 0) {
+      if (classes.length === 0) return [];
+      // Build chains from classes data as fallback
+      const classMap = {};
+      classes.forEach(cls => { classMap[cls.id] = cls; });
+
+      const startClasses = classes.filter(cls => {
+        return !classes.some(other => other.next_class === cls.id);
+      });
+
+      const chains = [];
+      const visited = new Set();
+
+      startClasses.forEach(start => {
+        if (visited.has(start.id)) return;
+        const chain = [];
+        let current = start;
+        while (current && !visited.has(current.id)) {
+          visited.add(current.id);
+          chain.push(current);
+          current = current.next_class ? classMap[current.next_class] : null;
+        }
+        if (chain.length > 0) chains.push(chain);
+      });
+
+      // Add any standalone classes not in any chain
+      classes.forEach(cls => {
+        if (!visited.has(cls.id)) {
+          chains.push([cls]);
+        }
+      });
+
+      return chains;
+    }
+    return progressionChains;
+  }, [progressionChains, classes]);
+
   return (
     <div className="class-management-page">
       <div className="page-header">
@@ -371,7 +458,183 @@ const ClassManagementForm = () => {
         </div>
       </div>
 
-      {/* Section 3: Copy from Previous Session */}
+      {/* Section 3: Class Progression */}
+      <div className="class-mgmt-section">
+        <div className="class-section-header">
+          <h2>Class Progression</h2>
+          <p className="section-description">Configure the promotion path between classes (e.g., J.S.S.1 promotes to J.S.S.2)</p>
+        </div>
+        <div className="section-content" style={{ maxWidth: '640px' }}>
+          {classes.length === 0 ? (
+            <p style={{ color: '#6b7280', fontSize: '0.95rem' }}>No classes created yet. Add class names above to configure progression.</p>
+          ) : (
+            <>
+              {/* Progression Chain Preview */}
+              {(() => {
+                const chains = buildProgressionChainDisplay();
+                const hasAnyProgression = classes.some(cls => cls.next_class || cls.is_final_class);
+                if (!hasAnyProgression) return null;
+                return (
+                  <div className="subsection">
+                    <h3 className="subsection-title">Progression Chains</h3>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                      {chains.map((chain, chainIndex) => {
+                        const chainItems = Array.isArray(chain) ? chain : (chain.classes || []);
+                        if (chainItems.length === 0) return null;
+                        return (
+                          <div
+                            key={chainIndex}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              flexWrap: 'wrap',
+                              gap: '0.5rem',
+                              padding: '0.875rem 1rem',
+                              backgroundColor: '#f0f9ff',
+                              border: '1px solid #bae6fd',
+                              borderRadius: '6px',
+                              fontSize: '0.95rem',
+                              fontWeight: 500,
+                              color: '#0c4a6e'
+                            }}
+                          >
+                            {chainItems.map((cls, index) => {
+                              const classObj = typeof cls === 'object' ? cls : classes.find(c => c.id === cls);
+                              const className = classObj ? (classObj.name || classObj.class_name) : `Class ${cls}`;
+                              const isFinal = classObj?.is_final_class;
+                              const isLast = index === chainItems.length - 1;
+                              return (
+                                <React.Fragment key={classObj?.id || index}>
+                                  <span style={{
+                                    padding: '0.25rem 0.625rem',
+                                    backgroundColor: isFinal ? '#fef3c7' : '#ffffff',
+                                    border: isFinal ? '1px solid #f59e0b' : '1px solid #e5e7eb',
+                                    borderRadius: '4px',
+                                    fontSize: '0.875rem',
+                                    color: isFinal ? '#92400e' : '#111827'
+                                  }}>
+                                    {className}
+                                    {isFinal && (
+                                      <span style={{
+                                        marginLeft: '0.375rem',
+                                        fontSize: '0.75rem',
+                                        fontWeight: 600,
+                                        color: '#d97706',
+                                        textTransform: 'uppercase',
+                                        letterSpacing: '0.05em'
+                                      }}>
+                                        GRADUATION
+                                      </span>
+                                    )}
+                                  </span>
+                                  {!isLast && (
+                                    <span style={{ color: '#3b82f6', fontWeight: 600, fontSize: '1.1rem' }}>→</span>
+                                  )}
+                                </React.Fragment>
+                              );
+                            })}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* Per-class Progression Settings */}
+              <div className="subsection">
+                <h3 className="subsection-title">Configure Promotion Paths</h3>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                  {classes.map(cls => (
+                    <div
+                      key={cls.id}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '1.25rem',
+                        padding: '0.75rem 1rem',
+                        backgroundColor: '#f9fafb',
+                        border: '1px solid #e5e7eb',
+                        borderRadius: '6px',
+                        flexWrap: 'wrap',
+                        opacity: progressionSaving[cls.id] ? 0.6 : 1,
+                        transition: 'opacity 0.15s ease'
+                      }}
+                    >
+                      <span style={{
+                        fontWeight: 600,
+                        fontSize: '0.9375rem',
+                        color: '#111827',
+                        minWidth: '100px'
+                      }}>
+                        {cls.name}
+                      </span>
+
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <label style={{
+                          fontSize: '0.8125rem',
+                          fontWeight: 500,
+                          color: '#374151',
+                          whiteSpace: 'nowrap'
+                        }}>
+                          Promotes to:
+                        </label>
+                        <select
+                          value={cls.is_final_class ? '' : (cls.next_class || '')}
+                          onChange={(e) => handleProgressionChange(cls.id, 'next_class', e.target.value)}
+                          disabled={cls.is_final_class || progressionSaving[cls.id]}
+                          className="form-input"
+                          style={{
+                            width: '160px',
+                            maxWidth: '160px',
+                            padding: '0.375rem 0.5rem',
+                            fontSize: '0.8125rem',
+                            backgroundColor: cls.is_final_class ? '#f3f4f6' : 'transparent',
+                            cursor: cls.is_final_class ? 'not-allowed' : 'pointer'
+                          }}
+                        >
+                          <option value="">None</option>
+                          {classes
+                            .filter(other => other.id !== cls.id)
+                            .map(other => (
+                              <option key={other.id} value={other.id}>{other.name}</option>
+                            ))
+                          }
+                        </select>
+                      </div>
+
+                      <label style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.375rem',
+                        cursor: progressionSaving[cls.id] ? 'not-allowed' : 'pointer',
+                        whiteSpace: 'nowrap'
+                      }}>
+                        <input
+                          type="checkbox"
+                          checked={cls.is_final_class || false}
+                          onChange={(e) => handleProgressionChange(cls.id, 'is_final_class', e.target.checked)}
+                          disabled={progressionSaving[cls.id]}
+                          style={{ width: '16px', height: '16px', accentColor: '#f59e0b', cursor: 'inherit' }}
+                        />
+                        <span style={{ fontSize: '0.8125rem', fontWeight: 500, color: '#374151' }}>
+                          Final Class
+                        </span>
+                      </label>
+
+                      {progressionSaving[cls.id] && (
+                        <span style={{ fontSize: '0.8125rem', color: '#6b7280', fontStyle: 'italic' }}>Saving...</span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* Section 4: Copy from Previous Session */}
       <div className="class-mgmt-section">
         <div className="class-section-header">
           <h2>Session Migration</h2>
@@ -493,6 +756,7 @@ const ClassManagementForm = () => {
           </form>
         </div>
       </div>
+
     </div>
   );
 };

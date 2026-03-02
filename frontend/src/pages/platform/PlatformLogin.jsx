@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
-  GraduationCap,
   Eye,
   EyeOff,
   Loader2,
@@ -81,10 +80,7 @@ function PlatformLogin() {
 
       <nav className="platform-login-nav">
         <Link to="/" className="platform-login-logo">
-          <div className="platform-login-logo-icon">
-            <GraduationCap />
-          </div>
-          <span className="platform-login-logo-text">EduCare</span>
+          <img src="/logo-white.svg" alt="EduCare" style={{height: '60px', width: 'auto'}} />
         </Link>
       </nav>
 

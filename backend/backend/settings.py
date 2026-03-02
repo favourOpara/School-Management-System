@@ -204,6 +204,7 @@ SIMPLE_JWT = {
     'ROTATE_REFRESH_TOKENS': False,
     'BLACKLIST_AFTER_ROTATION': False,
     'AUTH_HEADER_TYPES': ('Bearer',),
+    'UPDATE_LAST_LOGIN': True,
 }
 
 # Frontend URL for email verification links
@@ -266,6 +267,11 @@ SCHEDULER_DEFAULT = True
 # ============================================================================
 PAYSTACK_SECRET_KEY = config('PAYSTACK_SECRET_KEY', default='sk_test_xxxxx')
 PAYSTACK_PUBLIC_KEY = config('PAYSTACK_PUBLIC_KEY', default='pk_test_xxxxx')
+
+# ============================================================================
+# GROQ AI CONFIGURATION (Lesson Note Review)
+# ============================================================================
+GROQ_API_KEY = config('GROQ_API_KEY', default='')
 
 # ============================================================================
 # MULTI-TENANCY SETTINGS

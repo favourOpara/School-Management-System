@@ -15,7 +15,7 @@ import { useSchool } from '../contexts/SchoolContext';
 
 import './ParentDashboard.css';
 
-const KnowledgeBase = React.lazy(() => import('../components/KnowledgeBase'));
+const UserGuide = React.lazy(() => import('../components/UserGuide'));
 
 const getGreeting = () => {
   const hour = new Date().getHours();
@@ -518,10 +518,10 @@ const ParentDashboard = () => {
             <p className="parent-dashboard-section-text">Adjust your account settings and notification preferences.</p>
           </div>
         );
-      case 'knowledge-base':
+      case 'user-guide':
         return (
           <Suspense fallback={<div className="kb-loading">Loading...</div>}>
-            <KnowledgeBase userRole="parent" />
+            <UserGuide userRole="parent" />
           </Suspense>
         );
       default:

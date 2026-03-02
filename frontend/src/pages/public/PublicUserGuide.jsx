@@ -1,9 +1,9 @@
 import React, { useState, Suspense } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { GraduationCap, Menu, X, Shield, BookOpen, Users, UserCheck, User, Building2 } from 'lucide-react';
-import './PublicKnowledgeBase.css';
+import { Menu, X, Shield, BookOpen, Users, UserCheck, User, Building2 } from 'lucide-react';
+import './PublicUserGuide.css';
 
-const KnowledgeBase = React.lazy(() => import('../../components/KnowledgeBase'));
+const UserGuide = React.lazy(() => import('../../components/UserGuide'));
 
 const roles = [
   { id: 'admin', label: 'Admin', icon: Shield },
@@ -14,7 +14,7 @@ const roles = [
   { id: 'proprietor', label: 'Proprietor', icon: Building2 },
 ];
 
-export default function PublicKnowledgeBase() {
+export default function PublicUserGuide() {
   const navigate = useNavigate();
   const [selectedRole, setSelectedRole] = useState('admin');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -32,13 +32,12 @@ export default function PublicKnowledgeBase() {
       <nav className={`landing-nav ${scrolled ? 'scrolled' : ''}`}>
         <div className="landing-nav-container">
           <Link to="/" className="landing-logo">
-            <div className="landing-logo-icon"><GraduationCap /></div>
-            <span className="landing-logo-text">EduCare</span>
+            <img src="/logo.svg" alt="EduCare" style={{height: '60px', width: 'auto'}} />
           </Link>
 
           <div className="landing-nav-links">
             <Link to="/pricing" className="landing-nav-link">Pricing</Link>
-            <Link to="/knowledge-base" className="landing-nav-link active">Knowledge Base</Link>
+            <Link to="/user-guide" className="landing-nav-link active">User Guide</Link>
             <Link to="/contact-sales" className="landing-nav-link">Contact</Link>
             <button onClick={() => navigate('/portal')} className="landing-signin-btn">Sign In</button>
             <button onClick={() => navigate('/register')} className="landing-cta-btn">Get Started Free</button>
@@ -52,7 +51,7 @@ export default function PublicKnowledgeBase() {
         <div className={`landing-mobile-menu ${mobileMenuOpen ? 'open' : ''}`}>
           <div className="landing-mobile-menu-links">
             <Link to="/pricing" className="landing-mobile-link">Pricing</Link>
-            <Link to="/knowledge-base" className="landing-mobile-link">Knowledge Base</Link>
+            <Link to="/user-guide" className="landing-mobile-link">User Guide</Link>
             <Link to="/contact-sales" className="landing-mobile-link">Contact</Link>
             <button onClick={() => { setMobileMenuOpen(false); navigate('/portal'); }} className="landing-mobile-signin">Sign In</button>
             <button onClick={() => navigate('/register')} className="landing-mobile-cta">Get Started Free</button>
@@ -82,7 +81,7 @@ export default function PublicKnowledgeBase() {
         </div>
 
         <Suspense fallback={<div className="kb-loading">Loading...</div>}>
-          <KnowledgeBase userRole={selectedRole} />
+          <UserGuide userRole={selectedRole} />
         </Suspense>
       </div>
 

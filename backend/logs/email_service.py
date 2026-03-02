@@ -403,6 +403,331 @@ def send_password_reset_email(user, reset_url):
         return False
 
 
+def send_graduation_email_student(student, deactivation_date, login_url):
+    """
+    Send a graduation congratulations email to a student with grace period notice.
+
+    Args:
+        student: CustomUser object (student)
+        deactivation_date: datetime — when the account will be deactivated (graduation_date + 30 days)
+        login_url: URL string for the student portal login
+
+    Returns:
+        bool: True if email sent successfully, False otherwise
+    """
+    if not student.email:
+        logger.warning(f"Student {student.username} has no email address for graduation email")
+        return False
+
+    if not _check_email_limit(student):
+        logger.warning(f"Email limit reached — skipping graduation email to {student.email}")
+        return False
+
+    try:
+        sender = _get_sender(student)
+        sender_name = sender["name"]
+        accent = sender["accent_color"]
+        logo_url = sender["logo"]
+        subject = f"[{sender_name}] Congratulations on Your Graduation!"
+
+        logo_html = f'<img src="{logo_url}" alt="{sender_name}" style="max-width:80px;height:auto;margin-bottom:10px;">' if logo_url else ''
+        deactivation_str = deactivation_date.strftime('%B %d, %Y')
+
+        html_content = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <style>
+                body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
+                .container {{ max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9f9f9; }}
+                .header {{ background-color: {accent}; color: white; padding: 30px 20px; text-align: center; border-radius: 5px 5px 0 0; }}
+                .content {{ background-color: white; padding: 30px; border-radius: 0 0 5px 5px; }}
+                .highlight-box {{ background-color: #f0fdf4; border-left: 4px solid #22c55e; padding: 15px; margin: 20px 0; }}
+                .warning {{ background-color: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin: 20px 0; }}
+                .button {{ display: inline-block; padding: 15px 30px; background-color: {accent}; color: white; text-decoration: none; border-radius: 5px; margin: 20px 0; font-weight: bold; }}
+                .footer {{ margin-top: 20px; padding-top: 20px; border-top: 1px solid #ddd; text-align: center; font-size: 12px; color: #666; }}
+                ul {{ padding-left: 20px; }}
+                li {{ margin-bottom: 6px; }}
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    {logo_html}
+                    <h1>&#127891; Congratulations, {student.first_name}!</h1>
+                </div>
+                <div class="content">
+                    <h2>Dear {student.first_name} {student.last_name},</h2>
+
+                    <div class="highlight-box">
+                        <p><strong>You have successfully graduated from {sender_name}!</strong></p>
+                        <p>This is a remarkable achievement and we are incredibly proud of everything you have accomplished. Congratulations on completing your education with us — we wish you all the best in your future endeavors.</p>
+                    </div>
+
+                    <div class="warning">
+                        <p><strong>&#9888;&#65039; Important: Download Your Reports Before {deactivation_str}</strong></p>
+                        <p>Your student account will remain active for <strong>30 days</strong> so you can download your report cards and academic records. After <strong>{deactivation_str}</strong>, your account will be deactivated and you will no longer be able to log in.</p>
+                        <p>Please take this time to download:</p>
+                        <ul>
+                            <li>Your report cards for all terms</li>
+                            <li>Your attendance reports</li>
+                            <li>Any other academic records you may need</li>
+                        </ul>
+                    </div>
+
+                    <div style="text-align: center;">
+                        <a href="{login_url}" class="button">Log In &amp; Download Reports</a>
+                    </div>
+
+                    <p style="margin-top: 20px; font-size: 12px; color: #666;">
+                        Or copy and paste this link into your browser:<br>
+                        <a href="{login_url}">{login_url}</a>
+                    </p>
+
+                    <p style="margin-top: 30px;">Once again, congratulations on this wonderful achievement. We are proud to have been a part of your educational journey.</p>
+
+                    <p>Warm regards,<br><strong>{sender_name} Team</strong></p>
+                </div>
+                <div class="footer">
+                    <p><strong>This is an automated email from {sender_name}.</strong></p>
+                    <p>Please do not reply to this email.</p>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+
+        recipient_name = f"{student.first_name} {student.last_name}".strip() or student.username
+        logger.info(f"Sending graduation email to student {student.email}")
+        _send_email(subject, html_content, student.email, recipient_name, sender)
+        logger.info(f"Graduation email sent successfully to student {student.email}")
+        return True
+
+    except Exception as e:
+        logger.error(f"Failed to send graduation email to student {student.email}: {str(e)}")
+        return False
+
+
+def send_parent_all_children_graduated_email(parent, parent_deactivation_date, login_url):
+    """
+    Send a notice to a parent when ALL their children have graduated,
+    informing them that their own account will be deactivated in 3 months.
+
+    Args:
+        parent: CustomUser object (parent)
+        parent_deactivation_date: datetime — when the parent account will be deactivated
+        login_url: URL string for the parent portal login
+
+    Returns:
+        bool: True if email sent successfully, False otherwise
+    """
+    if not parent.email:
+        logger.warning(f"Parent {parent.username} has no email address for all-children-graduated notice")
+        return False
+
+    if not _check_email_limit(parent):
+        logger.warning(f"Email limit reached — skipping all-children-graduated email to {parent.email}")
+        return False
+
+    try:
+        sender = _get_sender(parent)
+        sender_name = sender["name"]
+        accent = sender["accent_color"]
+        logo_url = sender["logo"]
+        subject = f"[{sender_name}] All Your Children Have Graduated — Account Notice"
+
+        logo_html = f'<img src="{logo_url}" alt="{sender_name}" style="max-width:80px;height:auto;margin-bottom:10px;">' if logo_url else ''
+        deactivation_str = parent_deactivation_date.strftime('%B %d, %Y')
+
+        html_content = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <style>
+                body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
+                .container {{ max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9f9f9; }}
+                .header {{ background-color: {accent}; color: white; padding: 30px 20px; text-align: center; border-radius: 5px 5px 0 0; }}
+                .content {{ background-color: white; padding: 30px; border-radius: 0 0 5px 5px; }}
+                .highlight-box {{ background-color: #f0fdf4; border-left: 4px solid #22c55e; padding: 15px; margin: 20px 0; }}
+                .warning {{ background-color: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin: 20px 0; }}
+                .button {{ display: inline-block; padding: 15px 30px; background-color: {accent}; color: white; text-decoration: none; border-radius: 5px; margin: 20px 0; font-weight: bold; }}
+                .footer {{ margin-top: 20px; padding-top: 20px; border-top: 1px solid #ddd; text-align: center; font-size: 12px; color: #666; }}
+                ul {{ padding-left: 20px; }}
+                li {{ margin-bottom: 6px; }}
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    {logo_html}
+                    <h1>All Children Have Graduated</h1>
+                </div>
+                <div class="content">
+                    <h2>Dear {parent.first_name} {parent.last_name},</h2>
+
+                    <div class="highlight-box">
+                        <p><strong>All of your children have now successfully graduated from {sender_name}.</strong></p>
+                        <p>Congratulations on this wonderful milestone! We are proud to have been part of your family's educational journey.</p>
+                    </div>
+
+                    <div class="warning">
+                        <p><strong>&#9888;&#65039; Important: Your Parent Account Will Be Deactivated on {deactivation_str}</strong></p>
+                        <p>Since all of your children have completed their education with us, your parent account will remain active for <strong>3 months</strong> and will be automatically deactivated on <strong>{deactivation_str}</strong>.</p>
+                        <p>Before that date, you may still log in to:</p>
+                        <ul>
+                            <li>View and download your children's report cards</li>
+                            <li>Access historical attendance and grade records</li>
+                            <li>Download any receipts or payment records</li>
+                        </ul>
+                        <p>If you have a new child enrolling in the future, please contact the school administration to reactivate your account or create a new one.</p>
+                    </div>
+
+                    <div style="text-align: center;">
+                        <a href="{login_url}" class="button">Log In to Parent Portal</a>
+                    </div>
+
+                    <p style="margin-top: 20px; font-size: 12px; color: #666;">
+                        Or copy and paste this link into your browser:<br>
+                        <a href="{login_url}">{login_url}</a>
+                    </p>
+
+                    <p style="margin-top: 30px;">Thank you for being a valued part of our school community. We wish your family all the best!</p>
+
+                    <p>Warm regards,<br><strong>{sender_name} Team</strong></p>
+                </div>
+                <div class="footer">
+                    <p><strong>This is an automated email from {sender_name}.</strong></p>
+                    <p>Please do not reply to this email.</p>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+
+        recipient_name = f"{parent.first_name} {parent.last_name}".strip() or parent.username
+        logger.info(f"Sending all-children-graduated notice to parent {parent.email}")
+        _send_email(subject, html_content, parent.email, recipient_name, sender)
+        logger.info(f"All-children-graduated notice sent successfully to parent {parent.email}")
+        return True
+
+    except Exception as e:
+        logger.error(f"Failed to send all-children-graduated email to parent {parent.email}: {str(e)}")
+        return False
+
+
+def send_graduation_email_parent(parent, student, deactivation_date, login_url):
+    """
+    Send a graduation notification email to a parent with grace period notice.
+
+    Args:
+        parent: CustomUser object (parent)
+        student: CustomUser object (the graduating student)
+        deactivation_date: datetime — when the student's account will be deactivated
+        login_url: URL string for the parent portal login
+
+    Returns:
+        bool: True if email sent successfully, False otherwise
+    """
+    if not parent.email:
+        logger.warning(f"Parent {parent.username} has no email address for graduation email")
+        return False
+
+    if not _check_email_limit(parent):
+        logger.warning(f"Email limit reached — skipping graduation email to parent {parent.email}")
+        return False
+
+    try:
+        sender = _get_sender(parent)
+        sender_name = sender["name"]
+        accent = sender["accent_color"]
+        logo_url = sender["logo"]
+        subject = f"[{sender_name}] {student.first_name} {student.last_name} Has Graduated!"
+
+        logo_html = f'<img src="{logo_url}" alt="{sender_name}" style="max-width:80px;height:auto;margin-bottom:10px;">' if logo_url else ''
+        deactivation_str = deactivation_date.strftime('%B %d, %Y')
+
+        html_content = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <style>
+                body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
+                .container {{ max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9f9f9; }}
+                .header {{ background-color: {accent}; color: white; padding: 30px 20px; text-align: center; border-radius: 5px 5px 0 0; }}
+                .content {{ background-color: white; padding: 30px; border-radius: 0 0 5px 5px; }}
+                .highlight-box {{ background-color: #f0fdf4; border-left: 4px solid #22c55e; padding: 15px; margin: 20px 0; }}
+                .warning {{ background-color: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin: 20px 0; }}
+                .button {{ display: inline-block; padding: 15px 30px; background-color: {accent}; color: white; text-decoration: none; border-radius: 5px; margin: 20px 0; font-weight: bold; }}
+                .footer {{ margin-top: 20px; padding-top: 20px; border-top: 1px solid #ddd; text-align: center; font-size: 12px; color: #666; }}
+                ul {{ padding-left: 20px; }}
+                li {{ margin-bottom: 6px; }}
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    {logo_html}
+                    <h1>&#127891; Graduation Notice</h1>
+                </div>
+                <div class="content">
+                    <h2>Dear {parent.first_name} {parent.last_name},</h2>
+
+                    <div class="highlight-box">
+                        <p><strong>Congratulations! Your child, {student.first_name} {student.last_name}, has successfully graduated from {sender_name}!</strong></p>
+                        <p>We are pleased to inform you of this wonderful achievement. Please join us in celebrating this milestone and wishing {student.first_name} all the best in the next chapter of their life.</p>
+                    </div>
+
+                    <div class="warning">
+                        <p><strong>&#9888;&#65039; Action Required: Download Reports Before {deactivation_str}</strong></p>
+                        <p>Your child's student account will remain active for <strong>30 days</strong> to allow time to download academic records. After <strong>{deactivation_str}</strong>, the account will be deactivated.</p>
+                        <p>Please remind {student.first_name} to download:</p>
+                        <ul>
+                            <li>Report cards for all completed terms</li>
+                            <li>Attendance reports</li>
+                            <li>Any other academic records needed for future reference</li>
+                        </ul>
+                    </div>
+
+                    <div style="background-color: #f8f9fa; border-left: 4px solid #6b7280; padding: 15px; margin: 20px 0;">
+                        <p><strong>&#8505;&#65039; Note About Your Parent Account</strong></p>
+                        <p>Once all of your children have graduated, your parent account will also be deactivated <strong>3 months</strong> after the last graduation. You will receive a separate email with the exact deactivation date when that time comes.</p>
+                    </div>
+
+                    <p>You can log in to your parent account to access your child's historical records as well:</p>
+
+                    <div style="text-align: center;">
+                        <a href="{login_url}" class="button">Log In to Parent Portal</a>
+                    </div>
+
+                    <p style="margin-top: 20px; font-size: 12px; color: #666;">
+                        Or copy and paste this link into your browser:<br>
+                        <a href="{login_url}">{login_url}</a>
+                    </p>
+
+                    <p style="margin-top: 30px;">Thank you for entrusting us with {student.first_name}'s education. We wish your family all the best!</p>
+
+                    <p>Warm regards,<br><strong>{sender_name} Team</strong></p>
+                </div>
+                <div class="footer">
+                    <p><strong>This is an automated email from {sender_name}.</strong></p>
+                    <p>Please do not reply to this email.</p>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+
+        recipient_name = f"{parent.first_name} {parent.last_name}".strip() or parent.username
+        logger.info(f"Sending graduation email to parent {parent.email}")
+        _send_email(subject, html_content, parent.email, recipient_name, sender)
+        logger.info(f"Graduation email sent successfully to parent {parent.email}")
+        return True
+
+    except Exception as e:
+        logger.error(f"Failed to send graduation email to parent {parent.email}: {str(e)}")
+        return False
+
+
 def test_email_configuration():
     """
     Test email configuration by sending a test email via SMTP.

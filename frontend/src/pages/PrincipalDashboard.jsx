@@ -19,6 +19,7 @@ import AttendanceMarking from '../components/AttendanceMarking';
 import Settings from '../components/Settings';
 import ViewResults from '../components/ViewResults';
 import ReviewQuestions from '../components/ReviewQuestions';
+import LessonNoteReview from '../components/LessonNoteReview';
 import ReportSheet from '../components/ReportSheet';
 import AdminFeeReceipts from '../components/AdminFeeReceipts';
 import TopHeader from '../components/TopHeader';
@@ -26,7 +27,7 @@ import AdminProfileSettings from '../components/AdminProfileSettings';
 import { useSchool } from '../contexts/SchoolContext';
 import './AdminDashboard.css';
 
-const KnowledgeBase = React.lazy(() => import('../components/KnowledgeBase'));
+const UserGuide = React.lazy(() => import('../components/UserGuide'));
 
 const getGreeting = () => {
   const hour = new Date().getHours();
@@ -126,10 +127,12 @@ const PrincipalDashboard = () => {
         return <ViewResults />;
       case 'review-questions':
         return <ReviewQuestions />;
-      case 'knowledge-base':
+      case 'lesson-note-review':
+        return <LessonNoteReview />;
+      case 'user-guide':
         return (
           <Suspense fallback={<div className="kb-loading">Loading...</div>}>
-            <KnowledgeBase userRole="principal" />
+            <UserGuide userRole="principal" />
           </Suspense>
         );
       default:

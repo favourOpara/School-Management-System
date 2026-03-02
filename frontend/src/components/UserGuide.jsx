@@ -8,7 +8,7 @@ import {
   BarChart3, TrendingUp, Building2, UserCheck, Clock,
   HelpCircle, Shield, Bell, Upload, Palette
 } from 'lucide-react';
-import './KnowledgeBase.css';
+import './UserGuide.css';
 
 // ─── Content definitions per role ────────────────────────────────────
 
@@ -367,6 +367,53 @@ const adminContent = [
         <div className="kb-tip">
           <Lightbulb className="kb-tip-icon" />
           <p>Always ensure all grading is complete and report cards are generated before moving to the next term. Once you move, teachers can no longer edit grades for the previous term.</p>
+        </div>
+      </>
+    ),
+  },
+  {
+    id: 'graduation',
+    icon: <GraduationCap />,
+    color: 'green',
+    title: 'Student Graduation',
+    desc: 'What happens when final-year students graduate, grace period, account deactivation',
+    body: (
+      <>
+        <h3>When Do Students Graduate?</h3>
+        <p>Students in the school's <strong>final class</strong> are automatically graduated when you move to a new academic session. The system identifies graduating students and processes them during the session transition.</p>
+
+        <h3>What Happens at Graduation</h3>
+        <ul>
+          <li>The student is marked as <strong>Graduated</strong> in the system</li>
+          <li>The student receives an <strong>in-app notification</strong> and a <strong>congratulations email</strong></li>
+          <li>The student's parent(s) also receive in-app and email notifications</li>
+          <li>The student's account remains <strong>active for 30 days</strong> so they can download their reports</li>
+        </ul>
+
+        <h3>The 30-Day Grace Period</h3>
+        <p>After graduation, students have a <strong>30-day grace period</strong> during which their account remains fully active. They can still log in to:</p>
+        <ul>
+          <li>Download all their report cards (any term, any year)</li>
+          <li>View their attendance reports</li>
+          <li>Access their academic history</li>
+        </ul>
+        <p>After 30 days, the student's account is automatically deactivated and they can no longer log in.</p>
+
+        <h3>Account Deactivation</h3>
+        <p>Deactivation is handled automatically by the system each day — no manual action is required from the admin.</p>
+        <ul>
+          <li><strong>Student accounts</strong> — deactivated exactly <strong>30 days</strong> after graduation</li>
+          <li><strong>Parent accounts</strong> — deactivated <strong>3 months (90 days)</strong> after their last child's graduation, but only once all linked children have graduated</li>
+        </ul>
+
+        <div className="kb-note">
+          <Info className="kb-note-icon" />
+          <p>Students receive a graduation email with the exact date their account will be deactivated and a prompt to download their reports. Parents receive an individual email per graduating child plus a separate notice (with exact deactivation date) when all their children have graduated.</p>
+        </div>
+
+        <div className="kb-tip">
+          <Lightbulb className="kb-tip-icon" />
+          <p>Before moving to a new session, make sure all report cards for the graduating class are generated and report access is enabled, so graduating students can download their records during the grace period.</p>
         </div>
       </>
     ),
@@ -756,6 +803,57 @@ const studentContent = [
       </>
     ),
   },
+  {
+    id: 'graduation',
+    icon: <GraduationCap />,
+    color: 'green',
+    title: 'After Graduation',
+    desc: 'What happens to your account, grace period, and downloading your records',
+    body: (
+      <>
+        <h3>Congratulations on Graduating!</h3>
+        <p>When you complete your final year and your school processes the session transition, you will be marked as a graduate. You will receive a congratulations notification and email.</p>
+
+        <h3>Your 30-Day Grace Period</h3>
+        <p>Your account will <strong>remain active for 30 days</strong> after graduation. During this time you can still log in normally to:</p>
+        <ul>
+          <li>Download your report cards for all terms</li>
+          <li>View your attendance reports</li>
+          <li>Access your full academic history</li>
+        </ul>
+
+        <h3>What to Download Before Your Account is Deactivated</h3>
+        <div className="kb-steps">
+          <div className="kb-step">
+            <span className="kb-step-num">1</span>
+            <span className="kb-step-text">Log in to your student account as normal</span>
+          </div>
+          <div className="kb-step">
+            <span className="kb-step-num">2</span>
+            <span className="kb-step-text">Go to <strong>Report Card</strong> in the sidebar</span>
+          </div>
+          <div className="kb-step">
+            <span className="kb-step-num">3</span>
+            <span className="kb-step-text">Download your report card PDF for each term you completed</span>
+          </div>
+          <div className="kb-step">
+            <span className="kb-step-num">4</span>
+            <span className="kb-step-text">Visit <strong>Attendance Report</strong> to download your attendance records</span>
+          </div>
+        </div>
+
+        <div className="kb-note">
+          <Info className="kb-note-icon" />
+          <p>After the 30-day grace period, your account will be deactivated and you will no longer be able to log in. The exact deactivation date is included in your graduation email — make sure to download all your records before that date.</p>
+        </div>
+
+        <div className="kb-tip">
+          <Lightbulb className="kb-tip-icon" />
+          <p>Save your downloaded report cards somewhere safe — on your device, a USB drive, or cloud storage like Google Drive. These are your official academic records.</p>
+        </div>
+      </>
+    ),
+  },
 ];
 
 const parentContent = [
@@ -922,6 +1020,44 @@ const parentContent = [
         <div className="kb-note">
           <Info className="kb-note-icon" />
           <p>Report cards are only available when the school admin enables access. If you can't see reports, they may not have been released yet.</p>
+        </div>
+      </>
+    ),
+  },
+  {
+    id: 'graduation',
+    icon: <GraduationCap />,
+    color: 'green',
+    title: "Your Child's Graduation",
+    desc: 'What happens when your child graduates, grace period, and downloading records',
+    body: (
+      <>
+        <h3>When Your Child Graduates</h3>
+        <p>When your child completes their final year, the school will process graduation as part of the session transition. You will receive both an <strong>in-app notification</strong> and a <strong>congratulations email</strong> informing you of your child's graduation.</p>
+
+        <h3>The 30-Day Grace Period</h3>
+        <p>Your child's student account will remain active for <strong>30 days</strong> after graduation. During this period, your child can still log in and download their academic records. After 30 days, the student account is automatically deactivated.</p>
+
+        <h3>What Your Child Should Download</h3>
+        <p>Please remind your child to log in to their student account and download the following before the account is deactivated:</p>
+        <ul>
+          <li>Report cards for all completed terms</li>
+          <li>Attendance reports</li>
+          <li>Any other academic records they may need for future reference (e.g., for higher institution applications)</li>
+        </ul>
+
+        <h3>Your Parent Account</h3>
+        <p>Your parent account remains active after your child graduates and stays accessible during the student's 30-day grace period. However, once <strong>all</strong> of your linked children have graduated, your parent account will also be deactivated — <strong>3 months after the last child's graduation date</strong>.</p>
+        <p>When that happens, you will receive a separate email with the exact date your account will be deactivated.</p>
+
+        <div className="kb-note">
+          <Info className="kb-note-icon" />
+          <p>If you have multiple children, your parent account will not be deactivated until all of them have graduated. As long as one child is still enrolled, your account remains fully active.</p>
+        </div>
+
+        <div className="kb-tip">
+          <Lightbulb className="kb-tip-icon" />
+          <p>Help your child save their downloaded report cards in a safe place (USB drive, Google Drive, email) as these serve as their official academic records for university applications and employment. You have up to 3 months after their graduation to access historical records from your parent portal.</p>
         </div>
       </>
     ),
@@ -1100,6 +1236,45 @@ const principalContent = [
       </>
     ),
   },
+  {
+    id: 'graduation',
+    icon: <GraduationCap />,
+    color: 'green',
+    title: 'Student Graduation',
+    desc: 'What happens when final-year students graduate, grace periods, account deactivation',
+    body: (
+      <>
+        <h3>When Do Students Graduate?</h3>
+        <p>Students in the school's <strong>final class</strong> are automatically graduated when the admin moves to a new academic session. The system identifies graduating students and processes them during the session transition.</p>
+
+        <h3>What Happens at Graduation</h3>
+        <ul>
+          <li>The student is marked as <strong>Graduated</strong> in the system</li>
+          <li>The student and their parent(s) receive <strong>in-app notifications</strong> and <strong>congratulations emails</strong></li>
+          <li>The student's account remains <strong>active for 30 days</strong> to allow report downloads</li>
+          <li>The parent's account remains active until <strong>3 months after their last child's graduation</strong></li>
+        </ul>
+
+        <h3>Student Account — 30-Day Grace Period</h3>
+        <p>After graduation, students can still log in for 30 days to download their report cards, attendance records, and other academic data. After 30 days, the account is automatically deactivated by the system.</p>
+
+        <h3>Parent Account — 3-Month Grace Period</h3>
+        <p>Parent accounts are deactivated 3 months after all their children have graduated. If a parent still has an active (non-graduated) child enrolled, their account remains fully active. The parent receives a specific email with the exact date their account will be deactivated.</p>
+
+        <h3>Automatic Deactivation</h3>
+        <p>Deactivation runs automatically every day — no action is required from you or the admin:</p>
+        <ul>
+          <li><strong>Students</strong> — deactivated 30 days after graduation date</li>
+          <li><strong>Parents</strong> — deactivated 90 days after their last child's graduation date</li>
+        </ul>
+
+        <div className="kb-note">
+          <Info className="kb-note-icon" />
+          <p>Students and parents are clearly notified via email of their account deactivation dates. As principal, ensure all report cards are generated and report access is enabled before the session transition so students can download their records during the grace period.</p>
+        </div>
+      </>
+    ),
+  },
 ];
 
 const proprietorContent = [
@@ -1188,17 +1363,17 @@ const proprietorContent = [
 // ─── Role-to-content map ─────────────────────────────────────────────
 
 const roleContentMap = {
-  admin: { title: 'Admin Knowledge Base', desc: 'Everything you need to manage your school', sections: adminContent },
-  teacher: { title: 'Teacher Knowledge Base', desc: 'Guides for teaching and grading', sections: teacherContent },
-  student: { title: 'Student Knowledge Base', desc: 'Help with your school experience', sections: studentContent },
-  parent: { title: 'Parent Knowledge Base', desc: "Stay informed about your child's education", sections: parentContent },
-  principal: { title: 'Principal Knowledge Base', desc: 'School management at a glance', sections: principalContent },
-  proprietor: { title: 'Proprietor Knowledge Base', desc: 'Monitor and configure your school', sections: proprietorContent },
+  admin: { title: 'Admin User Guide', desc: 'Everything you need to manage your school', sections: adminContent },
+  teacher: { title: 'Teacher User Guide', desc: 'Guides for teaching and grading', sections: teacherContent },
+  student: { title: 'Student User Guide', desc: 'Help with your school experience', sections: studentContent },
+  parent: { title: 'Parent User Guide', desc: "Stay informed about your child's education", sections: parentContent },
+  principal: { title: 'Principal User Guide', desc: 'School management at a glance', sections: principalContent },
+  proprietor: { title: 'Proprietor User Guide', desc: 'Monitor and configure your school', sections: proprietorContent },
 };
 
 // ─── Component ───────────────────────────────────────────────────────
 
-export default function KnowledgeBase({ userRole }) {
+export default function UserGuide({ userRole }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [openSection, setOpenSection] = useState(null);
 
@@ -1232,7 +1407,7 @@ export default function KnowledgeBase({ userRole }) {
       {openSection && (
         <div className="kb-breadcrumb">
           <button className="kb-breadcrumb-link" onClick={() => setOpenSection(null)}>
-            Knowledge Base
+            User Guide
           </button>
           <span className="kb-breadcrumb-sep">/</span>
           <span className="kb-breadcrumb-current">

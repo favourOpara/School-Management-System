@@ -110,7 +110,24 @@ from .views import (
     move_to_next_session,
     revert_to_previous_session,
     get_current_session_info,
-    get_all_available_sessions
+    get_all_available_sessions,
+    graduation_email_preview,
+    teacher_lesson_notes,
+    teacher_lesson_note_detail,
+    admin_lesson_notes_list,
+    admin_lesson_note_ai_review,
+    admin_lesson_note_update_status,
+    admin_lesson_note_send,
+    student_lesson_notes,
+    student_lesson_note_ai_explain,
+    teacher_lesson_note_send,
+    teacher_topic_plans,
+    teacher_topic_plan_detail,
+    admin_lesson_note_weeks_setting,
+    admin_lesson_note_teacher_list,
+    admin_lesson_note_teacher_detail,
+    admin_notify_all_incomplete,
+    admin_notify_teacher_incomplete,
 )
 
 urlpatterns = [
@@ -299,6 +316,7 @@ urlpatterns = [
     # ============================================================================
     path('session/move-to-next-term/', move_to_next_term, name='move-to-next-term'),
     path('session/move-to-next-session/', move_to_next_session, name='move-to-next-session'),
+    path('session/graduation-email-preview/', graduation_email_preview, name='graduation-email-preview'),
     path('session/revert/', revert_to_previous_session, name='revert-to-previous-session'),
     path('session/info/', get_current_session_info, name='get-current-session-info'),
     path('session/all/', get_all_available_sessions, name='get-all-available-sessions'),
@@ -315,6 +333,32 @@ urlpatterns = [
     path('staff/settings/', manage_staff_settings, name='staff-settings'),
     path('staff/dashboard-stats/', staff_dashboard_stats, name='staff-dashboard-stats'),
     path('staff/unassigned-teachers/', unassigned_teachers, name='staff-unassigned-teachers'),
+
+    # ============================================================================
+    # LESSON NOTES URLS
+    # ============================================================================
+    # Teacher
+    # Teacher — topic plans
+    path('topic-plans/', teacher_topic_plans, name='topic-plans-list'),
+    path('topic-plans/<int:plan_id>/', teacher_topic_plan_detail, name='topic-plan-detail'),
+    # Teacher — lesson notes (upload against a topic plan)
+    path('lesson-notes/', teacher_lesson_notes, name='lesson-notes-list'),
+    path('lesson-notes/<int:note_id>/', teacher_lesson_note_detail, name='lesson-note-detail'),
+    # Admin/Principal — settings + teacher tracking
+    path('admin/lesson-notes/weeks/', admin_lesson_note_weeks_setting, name='admin-lesson-note-weeks'),
+    path('admin/lesson-notes/teachers/', admin_lesson_note_teacher_list, name='admin-lesson-note-teacher-list'),
+    path('admin/lesson-notes/teachers/<int:teacher_id>/', admin_lesson_note_teacher_detail, name='admin-lesson-note-teacher-detail'),
+    path('admin/lesson-notes/notify-all/', admin_notify_all_incomplete, name='admin-lesson-note-notify-all'),
+    path('admin/lesson-notes/notify/<int:teacher_id>/', admin_notify_teacher_incomplete, name='admin-lesson-note-notify-teacher'),
+    # Admin/Principal — per-note review actions
+    path('admin/lesson-notes/', admin_lesson_notes_list, name='admin-lesson-notes-list'),
+    path('admin/lesson-notes/<int:note_id>/ai-review/', admin_lesson_note_ai_review, name='admin-lesson-note-ai-review'),
+    path('admin/lesson-notes/<int:note_id>/update-status/', admin_lesson_note_update_status, name='admin-lesson-note-update-status'),
+    path('admin/lesson-notes/<int:note_id>/send/', admin_lesson_note_send, name='admin-lesson-note-send'),
+    # Student / Parent
+    path('lesson-notes/for-students/', student_lesson_notes, name='student-lesson-notes'),
+    path('lesson-notes/<int:note_id>/ai-explain/', student_lesson_note_ai_explain, name='student-lesson-note-ai-explain'),
+    path('lesson-notes/<int:note_id>/teacher-send/', teacher_lesson_note_send, name='teacher-lesson-note-send'),
 
     # Teacher endpoints
     path('staff/book-on/', book_on, name='staff-book-on'),
