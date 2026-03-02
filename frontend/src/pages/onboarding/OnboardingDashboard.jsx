@@ -58,10 +58,19 @@ const REG_LABELS = {
 /* ══════════════════════════════════════════════════════════
    SHARED REPLY THREAD COMPONENT (onboarding agent)
    ══════════════════════════════════════════════════════════ */
-function ReplyThread({ replies = [], replyEndpoint, agentName, onNewReply }) {
+function ReplyThread({ thread = [], replies = [], replyEndpoint, agentName, onNewReply }) {
   const [message, setMessage] = useState('');
   const [sending, setSending] = useState(false);
   const [error, setError] = useState('');
+
+  // Use unified thread if available; normalise old replies format as fallback
+  const items = thread.length > 0 ? thread : replies.map(r => ({
+    direction: 'outbound',
+    sender_name: r.sender_name,
+    message: r.message,
+    created_at: r.created_at,
+    email_sent: r.email_sent,
+  }));
 
   const handleSend = async () => {
     if (!message.trim()) return;
@@ -86,28 +95,31 @@ function ReplyThread({ replies = [], replyEndpoint, agentName, onNewReply }) {
         <MessageCircle size={13} /> Conversation with School
       </div>
 
-      {replies.length === 0 ? (
-        <p className="ob-reply-empty">No replies yet. Send the first message below.</p>
+      {items.length === 0 ? (
+        <p className="ob-reply-empty">No messages yet. Send the first message below.</p>
       ) : (
         <div className="ob-reply-list">
-          {[...replies].sort((a, b) => new Date(a.created_at) - new Date(b.created_at)).map(r => (
-            <div key={r.id} className={`ob-reply-bubble ${r.sent_by_admin ? 'ob-reply-admin' : 'ob-reply-agent'}`}>
-              <div className="ob-reply-meta">
-                <span className="ob-reply-sender">
-                  {r.sent_by_admin ? '🛡 Admin' : `👤 ${r.sender_name}`}
-                </span>
-                <span className="ob-reply-time">
-                  {new Date(r.created_at).toLocaleDateString('en-NG', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
-                  {!r.sent_by_admin && (
-                    <span className={`ob-reply-status ${r.email_sent ? 'ob-reply-sent' : 'ob-reply-fail'}`}>
-                      {r.email_sent ? '✓ emailed' : '⚠ not sent'}
-                    </span>
-                  )}
-                </span>
+          {[...items].sort((a, b) => new Date(a.created_at) - new Date(b.created_at)).map((item, i) => {
+            const outbound = item.direction === 'outbound';
+            return (
+              <div key={i} className={`ob-reply-bubble ${outbound ? 'ob-reply-agent' : 'ob-reply-school'}`}>
+                <div className="ob-reply-meta">
+                  <span className="ob-reply-sender">
+                    {outbound ? `👤 ${item.sender_name}` : `🏫 ${item.sender_name}`}
+                  </span>
+                  <span className="ob-reply-time">
+                    {new Date(item.created_at).toLocaleDateString('en-NG', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                    {outbound && item.email_sent !== undefined && (
+                      <span className={`ob-reply-status ${item.email_sent ? 'ob-reply-sent' : 'ob-reply-fail'}`}>
+                        {item.email_sent ? '✓ emailed' : '⚠ not sent'}
+                      </span>
+                    )}
+                  </span>
+                </div>
+                <p className="ob-reply-text">{item.message}</p>
               </div>
-              <p className="ob-reply-text">{r.message}</p>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
@@ -172,7 +184,7 @@ const onboardFetch = async (path, options = {}) => {
 function SchoolCard({ record, onUpdate, readOnly }) {
   const [expanded, setExpanded] = useState(false);
   const [checklist, setChecklist] = useState({ ...record.checklist });
-  const [localReplies, setLocalReplies] = useState(record.replies || []);
+  const [localReplies, setLocalReplies] = useState(record.thread || []);
   const agentName = localStorage.getItem('onboardingUserName') || 'Onboarding Agent';
   const [newNote, setNewNote] = useState('');
   const [saving, setSaving] = useState(false);
@@ -211,7 +223,14 @@ function SchoolCard({ record, onUpdate, readOnly }) {
       {/* Header */}
       <div className="ob-card-header" onClick={() => setExpanded((v) => !v)}>
         <div className="ob-card-left">
-          <div className="ob-card-school">{record.school_name}</div>
+          <div className="ob-card-school" style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
+            {record.school_name}
+            {record.unread_school_messages > 0 && (
+              <span style={{ background: '#dc2626', color: '#fff', borderRadius: '999px', fontSize: '0.62rem', fontWeight: 700, padding: '1px 6px', lineHeight: 1.4 }}>
+                {record.unread_school_messages} new
+              </span>
+            )}
+          </div>
           <div className="ob-card-meta">
             <span className="ob-card-plan">{record.plan_name}</span>
             <span className="ob-card-reg">
@@ -334,7 +353,7 @@ function SchoolCard({ record, onUpdate, readOnly }) {
 
           {/* Reply thread */}
           <ReplyThread
-            replies={localReplies}
+            thread={localReplies}
             replyEndpoint={`schools/${record.id}/reply/`}
             agentName={agentName}
             onNewReply={r => setLocalReplies(prev => [...prev, r])}

@@ -31,6 +31,9 @@ public_urlpatterns = [
     path('resend-verification/', views.PortalResendVerificationView.as_view(), name='portal-resend-verification'),
     path('send-email-otp/', views.SendEmailOTPView.as_view(), name='send-email-otp'),
     path('verify-email-otp/', views.VerifyEmailOTPView.as_view(), name='verify-email-otp'),
+    # Conversation reply link (school replies via email link)
+    path('conversation/<uuid:token>/', views.ConversationThreadView.as_view(), name='conversation-thread'),
+    path('conversation/<uuid:token>/reply/', views.ConversationReplyView.as_view(), name='conversation-reply'),
 ]
 
 # Webhook URLs

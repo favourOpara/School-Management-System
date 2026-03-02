@@ -25,6 +25,7 @@ import {
   ContactSales,
   PublicUserGuide,
 } from './pages/public';
+import Conversation from './pages/public/Conversation';
 
 // Portal pages
 import { PortalLogin, PortalDashboard, PortalVerifyEmail } from './pages/portal';
@@ -272,6 +273,9 @@ function App() {
 
           {/* Public User Guide */}
           <Route path="/user-guide" element={<PublicUserGuide />} />
+
+          {/* School conversation reply link (token-based, no auth) */}
+          <Route path="/conversation/:token" element={<Conversation />} />
 
           {/* Admin Portal */}
           <Route path="/portal" element={<PortalLogin />} />

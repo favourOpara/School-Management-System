@@ -16,7 +16,7 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .models import School, SubscriptionPlan, Subscription, PaymentHistory, PortalUser, SupportTicket, OnboardingAgent
+from .models import School, SubscriptionPlan, Subscription, PaymentHistory, PortalUser, SupportTicket, OnboardingAgent, OnboardingRecord, SchoolMessage
 from .serializers import (
     SchoolSerializer,
     SchoolPublicSerializer,
@@ -2224,3 +2224,90 @@ class SupportTicketReopenView(APIView):
         ticket.save(update_fields=['status', 'resolved_at', 'updated_at'])
 
         return Response({'message': 'Ticket reopened.', 'ticket': _serialize_ticket(ticket)})
+
+
+# ---------------------------------------------------------------------------
+# Public conversation thread (no auth — token is the credential)
+# ---------------------------------------------------------------------------
+
+def _build_thread(record):
+    """Merge StaffReply (outbound) and SchoolMessage (inbound) into a sorted thread."""
+    items = []
+    for r in record.replies.all():
+        items.append({
+            'direction': 'outbound',
+            'sender_name': r.sender_name,
+            'message': r.message,
+            'created_at': r.created_at.isoformat(),
+            'email_sent': r.email_sent,
+        })
+    for m in record.school_messages.all():
+        items.append({
+            'direction': 'inbound',
+            'sender_name': m.sender_name,
+            'message': m.content,
+            'created_at': m.created_at.isoformat(),
+            'is_read': m.is_read,
+        })
+    return sorted(items, key=lambda x: x['created_at'])
+
+
+class ConversationThreadView(APIView):
+    """
+    GET /api/public/conversation/<token>/
+    Returns the full conversation thread for a school's onboarding record.
+    No authentication required — the token acts as a unique access key.
+    """
+    permission_classes = [AllowAny]
+
+    def get(self, request, token):
+        try:
+            record = OnboardingRecord.objects.select_related('school').get(conversation_token=token)
+        except OnboardingRecord.DoesNotExist:
+            return Response({'error': 'Conversation not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        return Response({
+            'school_name': record.school.name,
+            'thread': _build_thread(record),
+        })
+
+
+class ConversationReplyView(APIView):
+    """
+    POST /api/public/conversation/<token>/reply/
+    School submits a reply via the conversation link in their email.
+    Body: { sender_name, content }
+    """
+    permission_classes = [AllowAny]
+
+    def post(self, request, token):
+        try:
+            record = OnboardingRecord.objects.select_related('school').get(conversation_token=token)
+        except OnboardingRecord.DoesNotExist:
+            return Response({'error': 'Conversation not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        sender_name = (request.data.get('sender_name') or '').strip()
+        content = (request.data.get('content') or '').strip()
+
+        if not sender_name:
+            return Response({'error': 'Your name is required.'}, status=status.HTTP_400_BAD_REQUEST)
+        if not content:
+            return Response({'error': 'Message cannot be empty.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        msg = SchoolMessage.objects.create(
+            onboarding_record=record,
+            sender_name=sender_name,
+            sender_email=record.school.email or '',
+            content=content,
+        )
+
+        return Response({
+            'message': 'Reply sent.',
+            'reply': {
+                'direction': 'inbound',
+                'sender_name': msg.sender_name,
+                'message': msg.content,
+                'created_at': msg.created_at.isoformat(),
+                'is_read': msg.is_read,
+            },
+        }, status=status.HTTP_201_CREATED)

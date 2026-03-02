@@ -737,10 +737,19 @@ const parseNotes = (str) => {
 /* ══════════════════════════════════════════════════════════
    SHARED REPLY THREAD COMPONENT (platform admin)
    ══════════════════════════════════════════════════════════ */
-function ReplyThread({ replies = [], replyEndpoint, onNewReply, senderName }) {
+function ReplyThread({ thread = [], replies = [], replyEndpoint, onNewReply, senderName }) {
   const [message, setMessage] = useState('');
   const [sending, setSending] = useState(false);
   const [error, setError] = useState('');
+
+  // Use unified thread if available; normalise old replies format as fallback
+  const items = thread.length > 0 ? thread : replies.map(r => ({
+    direction: 'outbound',
+    sender_name: r.sender_name,
+    message: r.message,
+    created_at: r.created_at,
+    email_sent: r.email_sent,
+  }));
 
   const handleSend = async () => {
     if (!message.trim()) return;
@@ -766,32 +775,35 @@ function ReplyThread({ replies = [], replyEndpoint, onNewReply, senderName }) {
       </div>
 
       {/* Thread */}
-      {replies.length === 0 ? (
-        <p style={{ fontSize: '0.82rem', color: '#94a3b8', fontStyle: 'italic', margin: '0 0 0.75rem' }}>No replies yet. Send the first message below.</p>
+      {items.length === 0 ? (
+        <p style={{ fontSize: '0.82rem', color: '#94a3b8', fontStyle: 'italic', margin: '0 0 0.75rem' }}>No messages yet. Send the first message below.</p>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '0.75rem', maxHeight: '220px', overflowY: 'auto', padding: '2px' }}>
-          {[...replies].sort((a, b) => new Date(a.created_at) - new Date(b.created_at)).map(r => (
-            <div key={r.id} style={{
-              background: r.sent_by_admin ? '#eff6ff' : '#f0fdf4',
-              border: `1px solid ${r.sent_by_admin ? '#bfdbfe' : '#86efac'}`,
-              borderRadius: '8px', padding: '0.55rem 0.85rem',
-            }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.2rem' }}>
-                <span style={{ fontSize: '0.72rem', fontWeight: 700, color: r.sent_by_admin ? '#1d4ed8' : '#15803d' }}>
-                  {r.sent_by_admin ? '🛡 Admin' : `👤 ${r.sender_name}`}
-                </span>
-                <span style={{ fontSize: '0.68rem', color: '#94a3b8' }}>
-                  {new Date(r.created_at).toLocaleDateString('en-NG', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
-                  {r.sent_by_admin && (
-                    <span style={{ marginLeft: '0.4rem', color: r.email_sent ? '#16a34a' : '#dc2626', fontSize: '0.65rem' }}>
-                      {r.email_sent ? '✓ emailed' : '⚠ not sent'}
-                    </span>
-                  )}
-                </span>
+          {[...items].sort((a, b) => new Date(a.created_at) - new Date(b.created_at)).map((item, i) => {
+            const outbound = item.direction === 'outbound';
+            return (
+              <div key={i} style={{
+                background: outbound ? '#eff6ff' : '#f0fdf4',
+                border: `1px solid ${outbound ? '#bfdbfe' : '#86efac'}`,
+                borderRadius: '8px', padding: '0.55rem 0.85rem',
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.2rem' }}>
+                  <span style={{ fontSize: '0.72rem', fontWeight: 700, color: outbound ? '#1d4ed8' : '#15803d' }}>
+                    {outbound ? `🛡 ${item.sender_name || 'EduCare'}` : `🏫 ${item.sender_name}`}
+                  </span>
+                  <span style={{ fontSize: '0.68rem', color: '#94a3b8' }}>
+                    {new Date(item.created_at).toLocaleDateString('en-NG', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                    {outbound && item.email_sent !== undefined && (
+                      <span style={{ marginLeft: '0.4rem', color: item.email_sent ? '#16a34a' : '#dc2626', fontSize: '0.65rem' }}>
+                        {item.email_sent ? '✓ emailed' : '⚠ not sent'}
+                      </span>
+                    )}
+                  </span>
+                </div>
+                <p style={{ margin: 0, fontSize: '0.83rem', color: '#374151', whiteSpace: 'pre-wrap', lineHeight: 1.5 }}>{item.message}</p>
               </div>
-              <p style={{ margin: 0, fontSize: '0.83rem', color: '#374151', whiteSpace: 'pre-wrap', lineHeight: 1.5 }}>{r.message}</p>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
@@ -962,7 +974,14 @@ function OnboardingMgmtTab() {
                         onClick={() => hasDetail && setExpandedRow(isExpanded ? null : r.id)}
                       >
                         <td>
-                          <div className="platform-td-bold">{r.school_name}</div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <span className="platform-td-bold">{r.school_name}</span>
+                            {r.unread_school_messages > 0 && (
+                              <span style={{ background: '#dc2626', color: '#fff', borderRadius: '999px', fontSize: '0.65rem', fontWeight: 700, padding: '1px 6px', lineHeight: 1.4 }}>
+                                {r.unread_school_messages} new
+                              </span>
+                            )}
+                          </div>
                           <div style={{ fontSize: '0.75rem', color: '#64748b' }}>{r.school_email}</div>
                         </td>
                         <td>{r.plan_name}</td>
@@ -1147,10 +1166,10 @@ function OnboardingMgmtTab() {
                                 {/* Reply thread */}
                                 <div style={{ marginTop: '1rem', borderTop: '1px solid #f1f5f9', paddingTop: '0.75rem' }}>
                                   <ReplyThread
-                                    replies={localReplies[r.id] ?? (r.replies || [])}
+                                    thread={localReplies[r.id] ?? (r.thread || [])}
                                     replyEndpoint={`onboarding-queue/${r.id}/reply/`}
                                     senderName={adminName}
-                                    onNewReply={rep => setLocalReplies(prev => ({ ...prev, [r.id]: [...(prev[r.id] ?? (r.replies || [])), rep] }))}
+                                    onNewReply={rep => setLocalReplies(prev => ({ ...prev, [r.id]: [...(prev[r.id] ?? (r.thread || [])), rep] }))}
                                   />
                                 </div>
                               </div>

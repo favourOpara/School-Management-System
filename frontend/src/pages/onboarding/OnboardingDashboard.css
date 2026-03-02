@@ -638,6 +638,12 @@ span.ob-checked {
   border: 1px solid #bfdbfe;
 }
 
+/* Inbound: school replied via conversation link */
+.ob-reply-school {
+  background: #fefce8;
+  border: 1px solid #fde68a;
+}
+
 .ob-reply-meta {
   display: flex;
   justify-content: space-between;
@@ -654,6 +660,7 @@ span.ob-checked {
 
 .ob-reply-agent .ob-reply-sender { color: #15803d; }
 .ob-reply-admin .ob-reply-sender { color: #1d4ed8; }
+.ob-reply-school .ob-reply-sender { color: #92400e; }
 
 .ob-reply-time {
   font-size: 0.68rem;

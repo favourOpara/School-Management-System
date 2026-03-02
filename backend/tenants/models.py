@@ -638,6 +638,9 @@ class OnboardingRecord(models.Model):
     notes = models.TextField(blank=True)          # filled by onboarding staff
     admin_notes = models.TextField(blank=True)    # filled by platform admin on reassignment
 
+    # Conversation link token — used by schools to reply via the web page
+    conversation_token = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
+
     assigned_at = models.DateTimeField(null=True, blank=True)
     completed_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -836,4 +839,30 @@ class StaffReply(models.Model):
 
     def __str__(self):
         return f"Reply by {self.sender_name} at {self.created_at:%d %b %Y %H:%M}"
+
+
+class SchoolMessage(models.Model):
+    """
+    An inbound message from a school, submitted via the conversation reply link.
+    Paired with StaffReply to form a full two-way thread on an OnboardingRecord.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    onboarding_record = models.ForeignKey(
+        OnboardingRecord,
+        on_delete=models.CASCADE,
+        related_name='school_messages',
+    )
+    sender_name = models.CharField(max_length=255)
+    sender_email = models.EmailField(blank=True)
+    content = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    is_read = models.BooleanField(default=False)
+
+    class Meta:
+        ordering = ['created_at']
+        verbose_name = 'School Message'
+        verbose_name_plural = 'School Messages'
+
+    def __str__(self):
+        return f"Message from {self.sender_name} ({self.onboarding_record.school.name})"
 

@@ -14,7 +14,8 @@ from django.utils import timezone
 from datetime import timedelta
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from .models import School, Subscription, SubscriptionPlan, PaymentHistory, OnboardingAgent, OnboardingRecord, ContactInquiry, SupportTicket, StaffReply
+from django.conf import settings
+from .models import School, Subscription, SubscriptionPlan, PaymentHistory, OnboardingAgent, OnboardingRecord, ContactInquiry, SupportTicket, StaffReply, SchoolMessage
 from .serializers import SchoolSerializer
 from .permissions import check_trial_expiry
 from users.models import CustomUser
@@ -646,7 +647,8 @@ class PlatformOnboardingQueueView(IsPlatformAdmin):
                 'admin_notes': r.admin_notes or '',
                 'assigned_at': r.assigned_at.isoformat() if r.assigned_at else None,
                 'completed_at': r.completed_at.isoformat() if r.completed_at else None,
-                'replies': [_serialize_reply(rep) for rep in r.replies.all()],
+                'thread': _build_thread(r),
+                'unread_school_messages': r.school_messages.filter(is_read=False).count(),
             })
 
         return Response({'records': data, 'total': len(data)})
@@ -942,7 +944,29 @@ class PlatformSupportAutoAssignView(IsPlatformAdmin):
 # Platform Admin — Reply to schools (support, contacts, onboarding)
 # ─────────────────────────────────────────────────────────────
 
-def _send_staff_reply_email(reply, subject_line, recipient_name, recipient_email):
+def _build_thread(record):
+    """Merge StaffReply (outbound) + SchoolMessage (inbound) into a sorted thread."""
+    items = []
+    for r in record.replies.all():
+        items.append({
+            'direction': 'outbound',
+            'sender_name': r.sender_name,
+            'message': r.message,
+            'created_at': r.created_at.isoformat(),
+            'email_sent': r.email_sent,
+        })
+    for m in record.school_messages.all():
+        items.append({
+            'direction': 'inbound',
+            'sender_name': m.sender_name,
+            'message': m.content,
+            'created_at': m.created_at.isoformat(),
+            'is_read': m.is_read,
+        })
+    return sorted(items, key=lambda x: x['created_at'])
+
+
+def _send_staff_reply_email(reply, subject_line, recipient_name, recipient_email, reply_url=None):
     """Send the reply email and update email_sent flag."""
     from .educare_emails import send_educare_email
     body_html = f'''
@@ -964,6 +988,8 @@ def _send_staff_reply_email(reply, subject_line, recipient_name, recipient_email
         subject=subject_line,
         heading='Reply from EduCare Support',
         body_html=body_html,
+        cta_text='Reply to this message' if reply_url else None,
+        cta_url=reply_url,
     )
     reply.email_sent = sent
     reply.save(update_fields=['email_sent'])
@@ -1078,15 +1104,25 @@ class PlatformOnboardingReplyView(IsPlatformAdmin):
             recipient_name=record.school.name,
         )
 
+        reply_url = f"{settings.FRONTEND_URL}/conversation/{record.conversation_token}"
         _send_staff_reply_email(
             reply=reply,
             subject_line=f'Message from EduCare — {record.school.name}',
             recipient_name=record.school.name,
             recipient_email=record.school.email,
+            reply_url=reply_url,
         )
+
+        # Mark any unread school messages as read now that admin is active
+        record.school_messages.filter(is_read=False).update(is_read=True)
 
         return Response({
             'message': 'Reply sent.',
-            'reply': _serialize_reply(reply),
-            'email_sent': reply.email_sent,
+            'reply': {
+                'direction': 'outbound',
+                'sender_name': reply.sender_name,
+                'message': reply.message,
+                'created_at': reply.created_at.isoformat(),
+                'email_sent': reply.email_sent,
+            },
         })

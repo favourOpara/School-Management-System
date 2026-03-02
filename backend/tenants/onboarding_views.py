@@ -13,7 +13,8 @@ from rest_framework.response import Response
 from rest_framework import status
 from django.utils import timezone
 
-from .models import OnboardingAgent, OnboardingRecord, ContactInquiry, SupportTicket, StaffReply
+from django.conf import settings
+from .models import OnboardingAgent, OnboardingRecord, ContactInquiry, SupportTicket, StaffReply, SchoolMessage
 
 
 def _append_note(existing: str, new_text: str) -> str:
@@ -173,7 +174,8 @@ class OnboardingSchoolsView(IsOnboardingAgent):
                 'admin_notes': r.admin_notes,
                 'assigned_at': r.assigned_at.isoformat() if r.assigned_at else None,
                 'completed_at': r.completed_at.isoformat() if r.completed_at else None,
-                'replies': [_serialize_reply(rep) for rep in r.replies.all()],
+                'thread': _build_thread(r),
+                'unread_school_messages': r.school_messages.filter(is_read=False).count(),
             })
 
         return Response({'schools': data, 'total': len(data)})
@@ -401,7 +403,29 @@ def _serialize_reply(r):
     }
 
 
-def _send_agent_reply_email(reply):
+def _build_thread(record):
+    """Merge StaffReply (outbound) + SchoolMessage (inbound) into a sorted thread."""
+    items = []
+    for r in record.replies.all():
+        items.append({
+            'direction': 'outbound',
+            'sender_name': r.sender_name,
+            'message': r.message,
+            'created_at': r.created_at.isoformat(),
+            'email_sent': r.email_sent,
+        })
+    for m in record.school_messages.all():
+        items.append({
+            'direction': 'inbound',
+            'sender_name': m.sender_name,
+            'message': m.content,
+            'created_at': m.created_at.isoformat(),
+            'is_read': m.is_read,
+        })
+    return sorted(items, key=lambda x: x['created_at'])
+
+
+def _send_agent_reply_email(reply, reply_url=None):
     """Send the reply email from an onboarding agent and update email_sent flag."""
     from .educare_emails import send_educare_email
     body_html = f'''
@@ -417,13 +441,14 @@ def _send_agent_reply_email(reply):
             <a href="mailto:office@figilschools.com" style="color: #2563eb;">office@figilschools.com</a>.
         </p>
     '''
-    from .educare_emails import EDUCARE_SENDER_EMAIL
     sent = send_educare_email(
         recipient_email=reply.recipient_email,
         recipient_name=reply.recipient_name or 'School Admin',
         subject='Reply from EduCare Support',
         heading='Reply from EduCare Support',
         body_html=body_html,
+        cta_text='Reply to this message' if reply_url else None,
+        cta_url=reply_url,
     )
     reply.email_sent = sent
     reply.save(update_fields=['email_sent'])
@@ -528,10 +553,19 @@ class OnboardingSchoolReplyView(IsOnboardingAgent):
             recipient_email=record.school.email,
             recipient_name=record.school.name,
         )
-        _send_agent_reply_email(reply)
+        reply_url = f"{settings.FRONTEND_URL}/conversation/{record.conversation_token}"
+        _send_agent_reply_email(reply, reply_url=reply_url)
+
+        # Mark any unread school messages as read now that agent is active
+        record.school_messages.filter(is_read=False).update(is_read=True)
 
         return Response({
             'message': 'Reply sent.',
-            'reply': _serialize_reply(reply),
-            'email_sent': reply.email_sent,
+            'reply': {
+                'direction': 'outbound',
+                'sender_name': reply.sender_name,
+                'message': reply.message,
+                'created_at': reply.created_at.isoformat(),
+                'email_sent': reply.email_sent,
+            },
         })
