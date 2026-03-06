@@ -96,8 +96,11 @@ class TenantMiddleware(MiddlewareMixin):
                         request.subscription = getattr(request.school, 'subscription', None)
                         return None
 
-                # No school found - let the request fail gracefully
-                return None
+                # No school found — block the request to prevent cross-tenant data leakage
+                return JsonResponse({
+                    'error': 'School context required',
+                    'message': 'Your account is not associated with a school. Please contact support.'
+                }, status=403)
 
         # Extract school slug from path: /api/<school_slug>/...
         match = re.match(r'^/api/([a-z0-9-]+)/', path)

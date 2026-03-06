@@ -1671,15 +1671,19 @@ class AssessmentDetailView(APIView):
     """
     permission_classes = [IsTeacherOrAdmin]
 
-    def get_object(self, pk, user):
+    def get_object(self, pk, user, request=None):
         """Get assessment and verify permissions"""
+        school = getattr(request, 'school', None) if request else None
         try:
-            assessment = Assessment.objects.select_related(
+            qs = Assessment.objects.filter(pk=pk)
+            if school:
+                qs = qs.filter(subject__class_session__classroom__school=school)
+            assessment = qs.select_related(
                 'subject',
                 'subject__class_session',
                 'subject__class_session__classroom',
                 'created_by'
-            ).prefetch_related('questions').get(pk=pk)
+            ).prefetch_related('questions').get()
 
             # Check if user has permission to access this assessment
             if user.role == 'teacher' and assessment.created_by != user:
@@ -1691,13 +1695,13 @@ class AssessmentDetailView(APIView):
 
     def get(self, request, pk):
         """Get assessment details"""
-        assessment = self.get_object(pk, request.user)
+        assessment = self.get_object(pk, request.user, request)
         serializer = AssessmentSerializer(assessment)
         return Response(serializer.data)
 
     def delete(self, request, pk):
         """Delete an assessment (soft delete)"""
-        assessment = self.get_object(pk, request.user)
+        assessment = self.get_object(pk, request.user, request)
         assessment.is_active = False
         assessment.save()
         return Response(
@@ -1916,9 +1920,17 @@ class AdminAssessmentListView(APIView):
 
     def get(self, request):
         """List all assessments with optional filters"""
-        assessments = Assessment.objects.filter(
-            is_active=True
-        ).select_related(
+        school = getattr(request, 'school', None)
+        assessments = Assessment.objects.filter(is_active=True)
+
+        if school:
+            assessments = assessments.filter(
+                subject__class_session__classroom__school=school
+            )
+        else:
+            return Response({'assessments': [], 'count': 0})
+
+        assessments = assessments.select_related(
             'subject',
             'subject__class_session',
             'subject__class_session__classroom',
@@ -1959,8 +1971,12 @@ class AdminDeleteAssessmentView(APIView):
 
     def delete(self, request, pk):
         """Delete assessment permanently"""
+        school = getattr(request, 'school', None)
         try:
-            assessment = Assessment.objects.get(pk=pk)
+            qs = Assessment.objects.filter(pk=pk)
+            if school:
+                qs = qs.filter(subject__class_session__classroom__school=school)
+            assessment = qs.get()
 
             # Store info for response message
             assessment_title = assessment.title
@@ -1987,8 +2003,12 @@ class ToggleAssessmentReleaseView(APIView):
 
     def post(self, request, pk):
         """Toggle release status"""
+        school = getattr(request, 'school', None)
         try:
-            assessment = Assessment.objects.get(pk=pk, is_active=True)
+            qs = Assessment.objects.filter(pk=pk, is_active=True)
+            if school:
+                qs = qs.filter(subject__class_session__classroom__school=school)
+            assessment = qs.get()
             assessment.is_released = not assessment.is_released
             assessment.save()
 
@@ -2013,10 +2033,15 @@ class UnlockAllAssessmentsView(APIView):
         """Unlock all assessments matching filters"""
         from django.db.models import Q
 
-        assessments = Assessment.objects.filter(
-            is_active=True,
-            is_released=False
-        )
+        school = getattr(request, 'school', None)
+        assessments = Assessment.objects.filter(is_active=True, is_released=False)
+
+        if school:
+            assessments = assessments.filter(
+                subject__class_session__classroom__school=school
+            )
+        else:
+            return Response({'message': 'No assessments unlocked', 'count': 0})
 
         # Apply filters if provided
         academic_year = request.data.get('academic_year')
@@ -2087,6 +2112,8 @@ class UnlockForPaidStudentsView(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
+        school = getattr(request, 'school', None)
+
         # Get assessments matching the filters
         assessments = Assessment.objects.filter(
             is_active=True,
@@ -2094,6 +2121,11 @@ class UnlockForPaidStudentsView(APIView):
             subject__class_session__academic_year=academic_year,
             subject__class_session__term=term
         )
+
+        if school:
+            assessments = assessments.filter(
+                subject__class_session__classroom__school=school
+            )
 
         if subject_id:
             assessments = assessments.filter(subject_id=subject_id)
@@ -2108,15 +2140,18 @@ class UnlockForPaidStudentsView(APIView):
         elif assessment_type == 'exam':
             assessments = assessments.filter(assessment_type='final_exam')
 
-        # Get students who have fully paid fees
-        # Students are considered paid if payment_status is 'PAID' or amount_paid >= fee_structure.amount
+        # Get students who have fully paid fees (scoped to this school)
         from django.db.models import F
-        paid_students = StudentFeeRecord.objects.filter(
+        fee_qs = StudentFeeRecord.objects.all()
+        if school:
+            fee_qs = fee_qs.filter(student__school=school)
+
+        paid_students = fee_qs.filter(
             payment_status='PAID'
         ).values_list('student_id', flat=True).distinct()
 
         # Also include students where amount_paid >= fee amount
-        fully_paid_students = StudentFeeRecord.objects.filter(
+        fully_paid_students = fee_qs.filter(
             amount_paid__gte=F('fee_structure__amount')
         ).values_list('student_id', flat=True).distinct()
 
@@ -2175,21 +2210,30 @@ class UnlockForPaidStudentsSingleView(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
+        school = getattr(request, 'school', None)
         try:
-            assessment = Assessment.objects.get(id=assessment_id, is_active=True)
+            qs = Assessment.objects.filter(id=assessment_id, is_active=True)
+            if school:
+                qs = qs.filter(subject__class_session__classroom__school=school)
+            assessment = qs.get()
         except Assessment.DoesNotExist:
             return Response(
                 {"detail": "Assessment not found"},
                 status=status.HTTP_404_NOT_FOUND
             )
 
-        # Get students who have fully paid fees
+        # Get students who have fully paid fees (scoped to this school)
         from django.db.models import F
-        paid_students = StudentFeeRecord.objects.filter(
+        from schooladmin.models import StudentFeeRecord as SFR
+        fee_qs = SFR.objects.all()
+        if school:
+            fee_qs = fee_qs.filter(student__school=school)
+
+        paid_students = fee_qs.filter(
             payment_status='PAID'
         ).values_list('student_id', flat=True).distinct()
 
-        fully_paid_students = StudentFeeRecord.objects.filter(
+        fully_paid_students = fee_qs.filter(
             amount_paid__gte=F('fee_structure__amount')
         ).values_list('student_id', flat=True).distinct()
 
@@ -2245,8 +2289,12 @@ class GetClassStudentsView(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
+        school = getattr(request, 'school', None)
         try:
-            class_session = ClassSession.objects.get(id=class_session_id)
+            qs = ClassSession.objects.filter(id=class_session_id)
+            if school:
+                qs = qs.filter(classroom__school=school)
+            class_session = qs.get()
         except ClassSession.DoesNotExist:
             return Response(
                 {"detail": "Class session not found"},
@@ -2261,10 +2309,11 @@ class GetClassStudentsView(APIView):
 
         # Get assessments for this class session and type
         if assessment_id:
-            # Filter by specific assessment
+            # Filter by specific assessment (scoped to this school via class_session)
             assessments = Assessment.objects.filter(
                 id=assessment_id,
-                is_active=True
+                is_active=True,
+                subject__class_session=class_session,
             )
         else:
             # Filter by type
@@ -2352,16 +2401,21 @@ class UnlockForSelectedStudentsView(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
+        school = getattr(request, 'school', None)
+
         # Check if unlocking individual assessment or bulk
         if assessment_id:
             # Individual assessment unlock
             try:
-                assessments = Assessment.objects.filter(id=assessment_id, is_active=True)
-                if not assessments.exists():
+                qs = Assessment.objects.filter(id=assessment_id, is_active=True)
+                if school:
+                    qs = qs.filter(subject__class_session__classroom__school=school)
+                if not qs.exists():
                     return Response(
                         {"detail": "Assessment not found"},
                         status=status.HTTP_404_NOT_FOUND
                     )
+                assessments = qs
             except Exception as e:
                 return Response(
                     {"detail": f"Error: {str(e)}"},
@@ -2386,6 +2440,11 @@ class UnlockForSelectedStudentsView(APIView):
                 subject__class_session__academic_year=academic_year,
                 subject__class_session__term=term
             )
+
+            if school:
+                assessments = assessments.filter(
+                    subject__class_session__classroom__school=school
+                )
 
             if subject_id:
                 assessments = assessments.filter(subject_id=subject_id)

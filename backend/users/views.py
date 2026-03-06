@@ -360,7 +360,7 @@ def list_teachers(request):
     if school:
         teachers = CustomUser.objects.filter(role='teacher', school=school)
     else:
-        teachers = CustomUser.objects.filter(role='teacher')
+        teachers = CustomUser.objects.none()
     serializer = TeacherDetailSerializer(teachers, many=True)
     return Response(serializer.data)
 
@@ -373,7 +373,7 @@ def list_principals(request):
     if school:
         principals = CustomUser.objects.filter(role='principal', school=school)
     else:
-        principals = CustomUser.objects.filter(role='principal')
+        principals = CustomUser.objects.none()
     serializer = TeacherDetailSerializer(principals, many=True)
     return Response(serializer.data)
 
@@ -386,7 +386,7 @@ def list_parents(request):
     if school:
         parents = CustomUser.objects.filter(role='parent', school=school)
     else:
-        parents = CustomUser.objects.filter(role='parent')
+        parents = CustomUser.objects.none()
 
     response_data = []
     for parent in parents:
@@ -442,9 +442,11 @@ def list_students(request):
             class_session__term=term,
             is_active=True
         )
-        # Apply school filter if available
+        # Apply school filter — always require a valid school to prevent cross-tenant leakage
         if school:
             student_sessions_query = student_sessions_query.filter(student__school=school)
+        else:
+            student_sessions_query = student_sessions_query.none()
 
         student_sessions = student_sessions_query.select_related('student', 'class_session__classroom')
         students = [ss.student for ss in student_sessions]
@@ -453,7 +455,7 @@ def list_students(request):
         if school:
             students = CustomUser.objects.filter(role='student', school=school)
         else:
-            students = CustomUser.objects.filter(role='student')
+            students = CustomUser.objects.none()
 
     serializer = StudentDetailSerializer(students, many=True)
     return Response(serializer.data)
@@ -642,11 +644,17 @@ def individual_student_history(request, student_id):
     """
     Returns complete academic history for a specific student
     """
+    school = getattr(request, 'school', None)
     try:
-        student = CustomUser.objects.get(id=student_id, role='student')
+        qs = CustomUser.objects.filter(id=student_id, role='student')
+        if school:
+            qs = qs.filter(school=school)
+        else:
+            qs = qs.filter(school__isnull=False)
+        student = qs.get()
     except CustomUser.DoesNotExist:
         return Response({'error': 'Student not found'}, status=404)
-    
+
     # Get all sessions for this student
     student_sessions = StudentSession.objects.filter(
         student=student
