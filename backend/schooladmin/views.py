@@ -1472,18 +1472,21 @@ def sync_attendance_to_grades(request):
             status=status.HTTP_404_NOT_FOUND
         )
     
-    # Get all class sessions for this academic year and term
+    school = getattr(request, 'school', None)
+
+    # Get all class sessions for this academic year and term (school-scoped)
     class_sessions = ClassSession.objects.filter(
         academic_year=academic_year,
-        term=term
+        term=term,
+        classroom__school=school
     )
-    
+
     if not class_sessions.exists():
         return Response(
             {"detail": f"No class sessions found for {academic_year} - {term}"},
             status=status.HTTP_404_NOT_FOUND
         )
-    
+
     # Check if there are any attendance records at all
     total_attendance_records = AttendanceRecord.objects.filter(
         class_session__in=class_sessions
@@ -2504,12 +2507,15 @@ def get_test_completion_stats(request):
             status=status.HTTP_400_BAD_REQUEST
         )
 
+    school = getattr(request, 'school', None)
+
     try:
 
-        # Get all class sessions for the selected academic year and term
+        # Get all class sessions for the selected academic year and term (school-scoped)
         class_sessions = ClassSession.objects.filter(
             academic_year=academic_year,
-            term=term
+            term=term,
+            classroom__school=school
         ).select_related('classroom')
 
 
@@ -3320,11 +3326,16 @@ def get_students_for_report(request):
             status=status.HTTP_400_BAD_REQUEST
         )
 
+    school = getattr(request, 'school', None)
+
     try:
         # If class_id is provided, filter by specific class
         if class_id:
             from academics.models import Class
-            classroom = Class.objects.get(id=class_id)
+            qs = Class.objects.filter(id=class_id)
+            if school:
+                qs = qs.filter(school=school)
+            classroom = qs.get()
 
             class_session = ClassSession.objects.filter(
                 classroom=classroom,
@@ -3349,7 +3360,8 @@ def get_students_for_report(request):
             # No class_id provided - get all students for this academic year and term
             all_class_sessions = ClassSession.objects.filter(
                 academic_year=academic_year,
-                term=term
+                term=term,
+                classroom__school=school
             )
 
             # DO NOT filter by is_active - we need to access historical student data!
@@ -3954,12 +3966,15 @@ def get_exam_completion_stats(request):
             status=status.HTTP_400_BAD_REQUEST
         )
 
+    school = getattr(request, 'school', None)
+
     try:
 
-        # Get all class sessions for the selected academic year and term
+        # Get all class sessions for the selected academic year and term (school-scoped)
         class_sessions = ClassSession.objects.filter(
             academic_year=academic_year,
-            term=term
+            term=term,
+            classroom__school=school
         ).select_related('classroom')
 
 
@@ -7395,10 +7410,13 @@ def get_subject_grading_stats(request):
                 status=status.HTTP_404_NOT_FOUND
             )
 
-    # Get all class sessions for this academic year and term
+    school = getattr(request, 'school', None)
+
+    # Get all class sessions for this academic year and term (school-scoped)
     class_sessions = ClassSession.objects.filter(
         academic_year=academic_year,
-        term=term
+        term=term,
+        classroom__school=school
     )
 
     # Get all subjects for these class sessions
@@ -10079,10 +10097,13 @@ def move_to_next_term(request):
                         description=component.description
                     )
 
-            # Get all current class sessions
+            school = getattr(request, 'school', None)
+
+            # Get all current class sessions (school-scoped)
             current_class_sessions = ClassSession.objects.filter(
                 academic_year=current_year,
-                term=current_term
+                term=current_term,
+                classroom__school=school
             )
 
             class_mapping = {}  # Map old class session to new class session
@@ -10385,10 +10406,13 @@ def move_to_next_session(request):
                             description=component.description
                         )
 
-            # Get all current class sessions
+            school = getattr(request, 'school', None)
+
+            # Get all current class sessions (school-scoped)
             current_class_sessions = ClassSession.objects.filter(
                 academic_year=current_year,
-                term=current_term
+                term=current_term,
+                classroom__school=school
             )
 
             class_mapping = {}  # Map old class to promoted class session
@@ -10785,23 +10809,28 @@ def revert_to_previous_session(request):
                     status=status.HTTP_404_NOT_FOUND
                 )
 
-            # Delete current session data
+            school = getattr(request, 'school', None)
+
+            # Delete current session data (school-scoped to prevent cross-tenant deletion)
             # Delete class sessions (cascades to subjects)
             ClassSession.objects.filter(
                 academic_year=current_year,
-                term=current_term
+                term=current_term,
+                classroom__school=school
             ).delete()
 
             # Delete student sessions
             StudentSession.objects.filter(
                 class_session__academic_year=current_year,
-                class_session__term=current_term
+                class_session__term=current_term,
+                class_session__classroom__school=school
             ).delete()
 
             # Delete fee structures
             FeeStructure.objects.filter(
                 academic_year=current_year,
-                term=current_term
+                term=current_term,
+                school=school
             ).delete()
 
             # Delete grade components for current config
