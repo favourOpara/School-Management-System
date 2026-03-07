@@ -19,8 +19,12 @@ PUBLIC_ROUTES = [
     r'^/static/',
     r'^/media/',
     r'^/__debug__/',
-    # Token-based unauthenticated routes (email verification, password reset)
+    # Unauthenticated routes (email verification, password reset)
     r'^/api/users/verify-email/',
+    r'^/api/users/verify-and-change-password/',
+    r'^/api/users/token-branding/',
+    r'^/api/users/resend-verification/',
+    r'^/api/users/forgot-password/',
     r'^/api/users/reset-password/',
 ]
 
