@@ -19,6 +19,9 @@ PUBLIC_ROUTES = [
     r'^/static/',
     r'^/media/',
     r'^/__debug__/',
+    # Token-based unauthenticated routes (email verification, password reset)
+    r'^/api/users/verify-email/',
+    r'^/api/users/reset-password/',
 ]
 
 # Legacy routes that should redirect (for backwards compatibility)
