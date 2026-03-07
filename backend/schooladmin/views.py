@@ -8763,11 +8763,13 @@ def download_fee_receipt(request, receipt_id):
             status=status.HTTP_403_FORBIDDEN
         )
 
+    school = getattr(request, 'school', None)
     try:
-        # Get the receipt
-        receipt = FeeReceipt.objects.select_related(
-            'student', 'student__classroom', 'issued_by'
-        ).get(id=receipt_id)
+        # Get the receipt — scoped to this school
+        qs = FeeReceipt.objects.select_related('student', 'student__classroom', 'issued_by')
+        if school:
+            qs = qs.filter(student__school=school)
+        receipt = qs.get(id=receipt_id)
 
         # Check permissions based on role
         if user.role == 'parent':
@@ -8777,7 +8779,7 @@ def download_fee_receipt(request, receipt_id):
                     {"detail": "You don't have access to this receipt"},
                     status=status.HTTP_403_FORBIDDEN
                 )
-        # Admins and principals can access any receipt (no additional check needed)
+        # Admins and principals can access any receipt within their school
 
         # Get the student's fee records to fetch payment history.
         # A student may have multiple fee records for the same term (different fee structures).
@@ -8826,10 +8828,16 @@ def get_admin_fee_receipts(request):
         term = request.query_params.get('term', None)
         class_id = request.query_params.get('class_id', None)
 
-        # Build query
+        school = getattr(request, 'school', None)
+
+        # Build query — scoped to this school
         receipts_query = FeeReceipt.objects.select_related(
             'student', 'student__classroom', 'issued_by'
-        ).all()
+        )
+        if school:
+            receipts_query = receipts_query.filter(student__school=school)
+        else:
+            receipts_query = receipts_query.none()
 
         if academic_year:
             receipts_query = receipts_query.filter(academic_year=academic_year)
@@ -8860,10 +8868,12 @@ def get_admin_fee_receipts(request):
                 'issued_by': f"{receipt.issued_by.first_name} {receipt.issued_by.last_name}" if receipt.issued_by else 'System'
             })
 
-        # Get available academic sessions
-        available_sessions = ClassSession.objects.values(
+        # Get available academic sessions (school-scoped)
+        available_sessions = ClassSession.objects.filter(
+            classroom__school=school
+        ).values(
             'academic_year', 'term'
-        ).distinct().order_by('-academic_year', 'term')
+        ).distinct().order_by('-academic_year', 'term') if school else ClassSession.objects.none().values('academic_year', 'term')
 
         sessions_list = [
             {
@@ -8907,11 +8917,13 @@ def download_admin_fee_receipt(request, receipt_id):
     from schooladmin.pdf_generator import generate_fee_receipt_pdf
     from django.http import HttpResponse
 
+    school = getattr(request, 'school', None)
     try:
-        # Get the receipt
-        receipt = FeeReceipt.objects.select_related(
-            'student', 'student__classroom', 'issued_by'
-        ).get(id=receipt_id)
+        # Get the receipt — scoped to this school
+        qs = FeeReceipt.objects.select_related('student', 'student__classroom', 'issued_by')
+        if school:
+            qs = qs.filter(student__school=school)
+        receipt = qs.get(id=receipt_id)
 
         # Get the student's fee records to fetch payment history.
         # A student may have multiple fee records for the same term (different fee structures).
@@ -8928,7 +8940,7 @@ def download_admin_fee_receipt(request, receipt_id):
             payment_history = []
 
         # Generate PDF
-        pdf = generate_fee_receipt_pdf(receipt, payment_history, school=getattr(request, "school", None))
+        pdf = generate_fee_receipt_pdf(receipt, payment_history, school=school)
 
         # Create HTTP response with PDF
         response = HttpResponse(pdf, content_type='application/pdf')
@@ -9029,10 +9041,13 @@ def get_parent_fee_receipts(request):
                 'class_name': class_name
             })
 
-        # Get available academic sessions (all sessions, not just active)
-        available_sessions = ClassSession.objects.values(
+        # Get available academic sessions (school-scoped)
+        school = getattr(request, 'school', None)
+        available_sessions = ClassSession.objects.filter(
+            classroom__school=school
+        ).values(
             'academic_year', 'term'
-        ).distinct().order_by('-academic_year', 'term')
+        ).distinct().order_by('-academic_year', 'term') if school else ClassSession.objects.none().values('academic_year', 'term')
 
         sessions_list = [
             {
