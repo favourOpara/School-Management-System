@@ -1637,6 +1637,186 @@
   font-size: 0.95rem;
 }
 
+/* Find Your School Section */
+.landing-find-school-section {
+  padding: 5rem 0;
+  background: #f8faff;
+  border-top: 1px solid #e8edf5;
+}
+
+.landing-find-school-container {
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 0 1.5rem;
+  text-align: center;
+}
+
+.landing-find-school-header {
+  margin-bottom: 2rem;
+}
+
+.landing-find-school-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  border-radius: 14px;
+  color: #fff;
+  margin-bottom: 1rem;
+}
+
+.landing-find-school-title {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #1a202c;
+  margin: 0 0 0.5rem;
+}
+
+.landing-find-school-subtitle {
+  font-size: 1rem;
+  color: #64748b;
+  margin: 0;
+  line-height: 1.6;
+}
+
+.landing-find-school-search {
+  position: relative;
+}
+
+.landing-find-school-input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.landing-find-school-search-icon {
+  position: absolute;
+  left: 1rem;
+  color: #94a3b8;
+  pointer-events: none;
+  flex-shrink: 0;
+}
+
+.landing-find-school-input {
+  width: 100%;
+  padding: 0.9rem 3rem 0.9rem 2.75rem;
+  font-size: 1rem;
+  border: 2px solid #e2e8f0;
+  border-radius: 12px;
+  outline: none;
+  background: #fff;
+  color: #1a202c;
+  transition: border-color 0.2s;
+  box-sizing: border-box;
+}
+
+.landing-find-school-input:focus {
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.12);
+}
+
+.landing-find-school-spinner {
+  position: absolute;
+  right: 1rem;
+  width: 18px;
+  height: 18px;
+  border: 2px solid #e2e8f0;
+  border-top-color: #667eea;
+  border-radius: 50%;
+  animation: landing-spin 0.7s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes landing-spin {
+  to { transform: rotate(360deg); }
+}
+
+.landing-find-school-results {
+  margin-top: 0.5rem;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  text-align: left;
+}
+
+.landing-find-school-result-item {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+  width: 100%;
+  padding: 0.875rem 1rem;
+  border: none;
+  background: #fff;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.15s;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.landing-find-school-result-item:last-child {
+  border-bottom: none;
+}
+
+.landing-find-school-result-item:hover {
+  background: #f0f4ff;
+}
+
+.landing-find-school-result-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  background: #eef2ff;
+  border-radius: 8px;
+  color: #667eea;
+  flex-shrink: 0;
+}
+
+.landing-find-school-result-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.landing-find-school-result-name {
+  display: block;
+  font-weight: 600;
+  color: #1a202c;
+  font-size: 0.95rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.landing-find-school-result-url {
+  display: block;
+  font-size: 0.8rem;
+  color: #94a3b8;
+  margin-top: 1px;
+}
+
+.landing-find-school-result-arrow {
+  color: #94a3b8;
+  flex-shrink: 0;
+  transition: transform 0.15s;
+}
+
+.landing-find-school-result-item:hover .landing-find-school-result-arrow {
+  transform: translateX(3px);
+  color: #667eea;
+}
+
+.landing-find-school-no-result {
+  padding: 1.25rem 1rem;
+  color: #64748b;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
 /* CTA Section */
 .landing-cta-section {
   padding: 6rem 0;

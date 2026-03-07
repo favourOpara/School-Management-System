@@ -84,6 +84,25 @@ class PublicSchoolInfoView(APIView):
             )
 
 
+class PublicSchoolSearchView(APIView):
+    """
+    Search for schools by name (for users who forgot their school URL).
+    GET /api/public/search-school/?q=school+name
+    """
+    authentication_classes = []
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        q = request.query_params.get('q', '').strip()
+        if not q or len(q) < 2:
+            return Response([])
+        schools = School.objects.filter(
+            name__icontains=q,
+            is_active=True,
+        ).values('name', 'slug')[:10]
+        return Response(list(schools))
+
+
 class SlugCheckView(APIView):
     """
     Check if a school slug/URL is available.

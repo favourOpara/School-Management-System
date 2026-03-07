@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   Users,
@@ -33,7 +33,10 @@ import {
   UserCheck,
   Briefcase,
   TrendingUp,
+  Search,
+  LogIn,
 } from 'lucide-react';
+import { API_BASE_URL } from '../../config';
 import AOS from 'aos';
 import 'aos/dist/aos.css';
 import './LandingPage.css';
@@ -192,6 +195,31 @@ function LandingPage() {
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [schoolQuery, setSchoolQuery] = useState('');
+  const [schoolResults, setSchoolResults] = useState([]);
+  const [schoolSearching, setSchoolSearching] = useState(false);
+  const searchTimeout = useRef(null);
+
+  const handleSchoolSearch = (value) => {
+    setSchoolQuery(value);
+    clearTimeout(searchTimeout.current);
+    if (value.trim().length < 2) {
+      setSchoolResults([]);
+      return;
+    }
+    setSchoolSearching(true);
+    searchTimeout.current = setTimeout(async () => {
+      try {
+        const res = await fetch(`${API_BASE_URL}/api/public/search-school/?q=${encodeURIComponent(value.trim())}`);
+        const data = await res.json();
+        setSchoolResults(data);
+      } catch {
+        setSchoolResults([]);
+      } finally {
+        setSchoolSearching(false);
+      }
+    }, 350);
+  };
 
   useEffect(() => {
     AOS.init({
@@ -807,6 +835,62 @@ function LandingPage() {
                 </div>
               );
             })}
+          </div>
+        </div>
+      </section>
+
+      {/* Find Your School */}
+      <section className="landing-find-school-section">
+        <div className="landing-find-school-container" data-aos="fade-up">
+          <div className="landing-find-school-header">
+            <div className="landing-find-school-icon">
+              <LogIn size={24} />
+            </div>
+            <h2 className="landing-find-school-title">Already have an account?</h2>
+            <p className="landing-find-school-subtitle">
+              Search for your school by name to sign in as a student, parent, teacher, or staff.
+            </p>
+          </div>
+          <div className="landing-find-school-search">
+            <div className="landing-find-school-input-wrap">
+              <Search size={18} className="landing-find-school-search-icon" />
+              <input
+                type="text"
+                className="landing-find-school-input"
+                placeholder="Type your school name..."
+                value={schoolQuery}
+                onChange={(e) => handleSchoolSearch(e.target.value)}
+                autoComplete="off"
+              />
+              {schoolSearching && <div className="landing-find-school-spinner" />}
+            </div>
+
+            {schoolQuery.trim().length >= 2 && (
+              <div className="landing-find-school-results">
+                {schoolResults.length > 0 ? (
+                  schoolResults.map((school) => (
+                    <button
+                      key={school.slug}
+                      className="landing-find-school-result-item"
+                      onClick={() => navigate(`/${school.slug}`)}
+                    >
+                      <div className="landing-find-school-result-icon">
+                        <Building2 size={18} />
+                      </div>
+                      <div className="landing-find-school-result-info">
+                        <span className="landing-find-school-result-name">{school.name}</span>
+                        <span className="landing-find-school-result-url">/{school.slug}</span>
+                      </div>
+                      <ArrowRight size={16} className="landing-find-school-result-arrow" />
+                    </button>
+                  ))
+                ) : !schoolSearching ? (
+                  <div className="landing-find-school-no-result">
+                    No school found matching "<strong>{schoolQuery}</strong>". Try a different name or contact your school admin.
+                  </div>
+                ) : null}
+              </div>
+            )}
           </div>
         </div>
       </section>

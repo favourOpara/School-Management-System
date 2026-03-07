@@ -23,6 +23,7 @@ public_urlpatterns = [
     path('plans/', views.PublicPlanListView.as_view(), name='public-plans'),
     path('school/<slug:slug>/', views.PublicSchoolInfoView.as_view(), name='public-school-info'),
     path('check-slug/<slug:slug>/', views.SlugCheckView.as_view(), name='check-slug'),
+    path('search-school/', views.PublicSchoolSearchView.as_view(), name='search-school'),
     path('register/', views.SchoolRegistrationView.as_view(), name='school-registration'),
     path('check-trial/', views.CheckTrialEligibilityView.as_view(), name='check-trial'),
     path('contact-sales/', views.ContactSalesView.as_view(), name='contact-sales'),
