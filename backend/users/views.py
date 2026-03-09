@@ -726,18 +726,25 @@ class UserRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
         logger.info(f"[VIEW UPDATE] Request data: {request.data}")
         return super().update(request, *args, **kwargs)
 
+    def perform_destroy(self, instance):
+        # Delete user files from storage before removing the DB record
+        if instance.profile_picture:
+            try:
+                instance.profile_picture.delete(save=False)
+            except Exception:
+                pass
+        if instance.avatar:
+            try:
+                instance.avatar.delete(save=False)
+            except Exception:
+                pass
+        instance.delete()
+
     def perform_update(self, serializer):
         from rest_framework.exceptions import ValidationError as DRFValidationError
 
         instance = serializer.instance
         password = self.request.data.get('password')
-
-        # If admin is uploading a new profile photo, delete the old one from storage first
-        if self.request.FILES.get('profile_picture') and instance.profile_picture:
-            try:
-                instance.profile_picture.delete(save=False)
-            except Exception:
-                pass
 
         # For students, validate that a ClassSession exists for the target
         # classroom + year + term BEFORE saving — same guard as on creation.

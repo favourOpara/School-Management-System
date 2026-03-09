@@ -11293,6 +11293,11 @@ def teacher_lesson_note_detail(request, note_id):
     if request.method == 'DELETE':
         if user.role not in ('teacher',) or note.status != LessonNote.STATUS_DRAFT:
             return Response({'detail': 'Only draft notes can be deleted by the teacher.'}, status=status.HTTP_400_BAD_REQUEST)
+        if note.file:
+            try:
+                note.file.delete(save=False)
+            except Exception:
+                pass
         note.delete()
         return Response({'detail': 'Deleted.'}, status=status.HTTP_204_NO_CONTENT)
 
@@ -11325,6 +11330,11 @@ def teacher_lesson_note_detail(request, note_id):
     note.topic = topic
     note.content = content
     if file_obj:
+        if note.file:
+            try:
+                note.file.delete(save=False)
+            except Exception:
+                pass
         note.file = file_obj
 
     if submit_now and note.status in (LessonNote.STATUS_DRAFT, LessonNote.STATUS_NEEDS_REVISION):

@@ -133,6 +133,15 @@ class SchoolConfigurationSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("Invalid hex color format. Use format: #RRGGBB")
         return value
 
+    def update(self, instance, validated_data):
+        # Delete old logo from storage when a new one is uploaded
+        if 'logo' in validated_data and validated_data['logo'] and instance.logo:
+            try:
+                instance.logo.delete(save=False)
+            except Exception:
+                pass
+        return super().update(instance, validated_data)
+
 
 
 class SubscriptionSerializer(serializers.ModelSerializer):
