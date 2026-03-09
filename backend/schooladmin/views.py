@@ -10198,6 +10198,9 @@ def move_to_next_term(request):
                 class_session__term=current_term
             ).update(is_active=False)
 
+            # Delete uploaded files from the retiring term
+            _cleanup_term_files(school, current_class_sessions.values_list('id', flat=True))
+
             return Response({
                 "message": f"Successfully moved to {next_term} {current_year}",
                 "new_term": next_term,
@@ -10746,6 +10749,9 @@ def move_to_next_session(request):
                 class_session__term=current_term,
                 is_active=True
             ).update(is_active=False)
+
+            # Delete uploaded files from the retiring session
+            _cleanup_term_files(school, current_class_sessions.values_list('id', flat=True))
 
             return Response({
                 "message": f"Successfully moved to {next_term} {next_year}",
@@ -11573,6 +11579,84 @@ def admin_lesson_note_ai_review(request, note_id):
         'status': note.status,
         'email_warning': email_warning,
     })
+
+
+def _cleanup_term_files(school, class_session_ids):
+    """
+    Delete all uploaded files (and their DB records) associated with the given
+    ClassSession IDs. Called when admin moves to the next term or session.
+
+    File deletion goes through Django's storage API — works with any backend
+    (Cloudinary, S3, local disk, etc.). No backend-specific code here.
+
+    Deletes:
+      - Lesson note files + DB records
+      - Assignment submission files + DB records
+      - Subject content files (ContentFile) + DB records
+      - SubjectContent DB records
+      - Exam question images (keeps Question/Assessment records for grade history)
+    """
+    import logging
+    from .models import LessonNote
+    from academics.models import SubjectContent, ContentFile, AssignmentSubmission, Question
+
+    logger = logging.getLogger(__name__)
+
+    if not class_session_ids:
+        return
+
+    cs_ids = list(class_session_ids)
+
+    # 1. Lesson note files + DB records
+    notes = LessonNote.objects.filter(school=school, class_session_id__in=cs_ids)
+    for note in notes:
+        if note.file:
+            try:
+                note.file.delete(save=False)
+            except Exception:
+                pass
+    notes.delete()
+
+    # 2. Assignment submission files (model.delete() handles SubmissionFile cleanup)
+    for submission in AssignmentSubmission.objects.filter(
+        assignment__subject__class_session_id__in=cs_ids
+    ):
+        try:
+            submission.delete()
+        except Exception:
+            pass
+
+    # 3. ContentFile files + DB records
+    content_files = ContentFile.objects.filter(
+        content__subject__class_session_id__in=cs_ids
+    )
+    for cf in content_files:
+        if cf.file:
+            try:
+                cf.file.delete(save=False)
+            except Exception:
+                pass
+    content_files.delete()
+
+    # 4. SubjectContent DB records (files already removed above)
+    SubjectContent.objects.filter(subject__class_session_id__in=cs_ids).delete()
+
+    # 5. Exam question images (keep Question + Assessment records for grade history)
+    for question in Question.objects.filter(
+        assessment__subject__class_session_id__in=cs_ids,
+        image__isnull=False,
+    ).exclude(image=''):
+        try:
+            question.image.delete(save=False)
+            question.image = None
+            question.save(update_fields=['image'])
+        except Exception:
+            pass
+
+    logger.info(
+        f'_cleanup_term_files: cleaned up files for school={school.id}, '
+        f'class_sessions={cs_ids}'
+    )
 
 
 def _delete_superseded_lesson_notes(approved_note):

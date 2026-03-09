@@ -732,6 +732,13 @@ class UserRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
         instance = serializer.instance
         password = self.request.data.get('password')
 
+        # If admin is uploading a new profile photo, delete the old one from storage first
+        if self.request.FILES.get('profile_picture') and instance.profile_picture:
+            try:
+                instance.profile_picture.delete(save=False)
+            except Exception:
+                pass
+
         # For students, validate that a ClassSession exists for the target
         # classroom + year + term BEFORE saving — same guard as on creation.
         if instance.role == 'student' or serializer.validated_data.get('role') == 'student':

@@ -30,15 +30,29 @@ class Command(BaseCommand):
 
         # ── Students ────────────────────────────────────────────────────────
         student_cutoff = now - timedelta(days=STUDENT_GRACE_DAYS)
-        students_qs = CustomUser.objects.filter(
+        students_to_deactivate = list(CustomUser.objects.filter(
             role='student',
             is_graduated=True,
             is_active=True,
             graduation_date__lte=student_cutoff
-        )
-        student_count = students_qs.count()
+        ))
+        student_count = len(students_to_deactivate)
         if student_count:
-            students_qs.update(is_active=False)
+            # Delete profile photos and avatars from storage before deactivating
+            for student in students_to_deactivate:
+                if student.profile_picture:
+                    try:
+                        student.profile_picture.delete(save=False)
+                    except Exception:
+                        pass
+                if student.avatar:
+                    try:
+                        student.avatar.delete(save=False)
+                    except Exception:
+                        pass
+
+            student_ids = [s.id for s in students_to_deactivate]
+            CustomUser.objects.filter(id__in=student_ids).update(is_active=False)
             self.stdout.write(
                 self.style.SUCCESS(
                     f'Deactivated {student_count} graduated student account(s) '
@@ -84,6 +98,13 @@ class Command(BaseCommand):
 
         parent_count = len(parents_to_deactivate)
         if parent_count:
+            # Delete parent avatars from storage before deactivating
+            for parent in CustomUser.objects.filter(id__in=parents_to_deactivate):
+                if parent.avatar:
+                    try:
+                        parent.avatar.delete(save=False)
+                    except Exception:
+                        pass
             CustomUser.objects.filter(id__in=parents_to_deactivate).update(is_active=False)
             self.stdout.write(
                 self.style.SUCCESS(
