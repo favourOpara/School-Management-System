@@ -97,6 +97,11 @@ portal_urlpatterns = [
     # Database export (Standard+ plans only)
     path('database/download/', views.PortalDownloadDatabaseView.as_view(), name='portal-database-download'),
 
+    # Report card bulk download
+    path('report-cards/terms/', views.PortalAvailableTermsView.as_view(), name='portal-report-card-terms'),
+    path('report-cards/students/search/', views.PortalStudentSearchView.as_view(), name='portal-student-search'),
+    path('report-cards/download/', views.PortalDownloadReportCardsView.as_view(), name='portal-report-cards-download'),
+
     # Auto-debit management
     path('billing/auto-debit/toggle/', views.ToggleAutoDebitView.as_view(), name='portal-toggle-auto-debit'),
     path('billing/saved-card/remove/', views.RemoveSavedCardView.as_view(), name='portal-remove-saved-card'),

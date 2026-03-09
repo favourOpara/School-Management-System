@@ -1948,6 +1948,152 @@ class PortalDownloadDatabaseView(APIView):
             return Response({'error': 'Failed to generate export.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
+class PortalAvailableTermsView(APIView):
+    """
+    List all academic years/terms that have grading configs for this school.
+    GET /api/portal/report-cards/terms/
+    """
+    authentication_classes = []
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        portal_user = get_portal_user_from_token(request)
+        if not portal_user:
+            return Response({'error': 'Authentication required'}, status=status.HTTP_401_UNAUTHORIZED)
+
+        from schooladmin.models import GradingConfiguration
+        configs = GradingConfiguration.objects.filter(
+            school=portal_user.school
+        ).order_by('-academic_year', 'term').values('academic_year', 'term', 'is_active')
+
+        return Response([{
+            'academic_year': c['academic_year'],
+            'term': c['term'],
+            'is_active': c['is_active'],
+            'label': f"{c['term']} {c['academic_year']}",
+        } for c in configs])
+
+
+class PortalStudentSearchView(APIView):
+    """
+    Search students by name/username for the report card download form.
+    GET /api/portal/report-cards/students/search/?q=name
+    """
+    authentication_classes = []
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        portal_user = get_portal_user_from_token(request)
+        if not portal_user:
+            return Response({'error': 'Authentication required'}, status=status.HTTP_401_UNAUTHORIZED)
+
+        q = request.query_params.get('q', '').strip()
+        if len(q) < 2:
+            return Response([])
+
+        from django.db.models import Q as DQ
+        from users.models import CustomUser
+        students = CustomUser.objects.filter(
+            school=portal_user.school, role='student'
+        ).filter(
+            DQ(first_name__icontains=q) | DQ(last_name__icontains=q) | DQ(username__icontains=q)
+        ).values('id', 'first_name', 'last_name', 'username')[:20]
+
+        return Response([{
+            'id': s['id'],
+            'name': f"{s['first_name']} {s['last_name']}".strip() or s['username'],
+            'username': s['username'],
+        } for s in students])
+
+
+class PortalDownloadReportCardsView(APIView):
+    """
+    Download report card PDFs as a ZIP file.
+    GET /api/portal/report-cards/download/
+    Query params:
+      scope: all_time | current_term | specific_term | specific_student
+      academic_year: (for specific_term / specific_student with term)
+      term: (for specific_term / specific_student with term)
+      student_id: (for specific_student)
+    """
+    authentication_classes = []
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        portal_user = get_portal_user_from_token(request)
+        if not portal_user:
+            return Response({'error': 'Authentication required'}, status=status.HTTP_401_UNAUTHORIZED)
+
+        school = portal_user.school
+        scope = request.query_params.get('scope', 'all_time')
+        academic_year = request.query_params.get('academic_year')
+        term = request.query_params.get('term')
+        student_id = request.query_params.get('student_id')
+
+        from schooladmin.models import GradingConfiguration
+        from schooladmin.pdf_generator import generate_report_sheet_pdf, build_student_report_context
+        from users.models import CustomUser
+        from django.http import HttpResponse
+        import zipfile, io
+        from datetime import datetime
+
+        # Determine grading configs (terms) to include
+        if scope == 'current_term':
+            config = GradingConfiguration.objects.filter(school=school, is_active=True).first()
+            if not config:
+                return Response({'error': 'No active term found'}, status=status.HTTP_404_NOT_FOUND)
+            configs = [config]
+        elif scope in ('specific_term', 'specific_student') and academic_year and term:
+            config = GradingConfiguration.objects.filter(
+                school=school, academic_year=academic_year, term=term
+            ).first()
+            if not config:
+                return Response({'error': 'Term not found'}, status=status.HTTP_404_NOT_FOUND)
+            configs = [config]
+        else:
+            # all_time or specific_student with no term filter
+            configs = list(GradingConfiguration.objects.filter(school=school).order_by('academic_year', 'term'))
+
+        # Determine students to include
+        if student_id:
+            try:
+                students = [CustomUser.objects.get(id=student_id, role='student', school=school)]
+            except CustomUser.DoesNotExist:
+                return Response({'error': 'Student not found'}, status=status.HTTP_404_NOT_FOUND)
+        else:
+            students = list(CustomUser.objects.filter(role='student', school=school).order_by('last_name', 'first_name'))
+
+        # Generate PDFs into a ZIP
+        zip_buf = io.BytesIO()
+        count = 0
+        with zipfile.ZipFile(zip_buf, 'w', zipfile.ZIP_DEFLATED) as zf:
+            for cfg in configs:
+                for student in students:
+                    ctx = build_student_report_context(school, student, cfg.academic_year, cfg.term)
+                    if ctx is None:
+                        continue
+                    try:
+                        pdf = generate_report_sheet_pdf(ctx)
+                        safe = f"{student.username}_{cfg.academic_year}_{cfg.term}".replace('/', '-').replace(' ', '_')
+                        zf.writestr(f"{safe}.pdf", pdf)
+                        count += 1
+                    except Exception:
+                        pass
+
+        if count == 0:
+            return Response(
+                {'error': 'No report cards found for the selected criteria.'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        zip_buf.seek(0)
+        ts = datetime.now().strftime('%Y%m%d_%H%M%S')
+        filename = f"{school.slug}_report_cards_{ts}.zip"
+        response = HttpResponse(zip_buf.read(), content_type='application/zip')
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+        return response
+
+
 class PublicVerifyPaymentView(APIView):
     """
     Public payment verification after Paystack redirect (no auth required).

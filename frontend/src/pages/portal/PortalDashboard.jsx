@@ -29,6 +29,9 @@ import {
   Shield,
   ToggleLeft,
   ToggleRight,
+  FileText,
+  Search,
+  User,
 } from 'lucide-react';
 import SchoolConfiguration from '../../components/SchoolConfiguration';
 import API_BASE_URL, { getSchoolSlug } from '../../config';
@@ -1395,6 +1398,206 @@ function CredentialsModal({ credentials, onClose }) {
   );
 }
 
+// Report Cards Section Component
+function ReportCardsSection() {
+  const [scope, setScope] = useState('all_time');
+  const [availableTerms, setAvailableTerms] = useState([]);
+  const [selectedTerm, setSelectedTerm] = useState('');
+  const [studentQuery, setStudentQuery] = useState('');
+  const [studentResults, setStudentResults] = useState([]);
+  const [selectedStudent, setSelectedStudent] = useState(null);
+  const [searching, setSearching] = useState(false);
+  const [downloading, setDownloading] = useState(false);
+  const [error, setError] = useState('');
+  const searchTimeout = React.useRef(null);
+
+  // Load available terms on mount
+  useEffect(() => {
+    const token = localStorage.getItem('portalAccessToken');
+    fetch(`${API_BASE_URL}/api/portal/report-cards/terms/`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then(r => r.json())
+      .then(data => { if (Array.isArray(data)) setAvailableTerms(data); })
+      .catch(() => {});
+  }, []);
+
+  const handleStudentSearch = (val) => {
+    setStudentQuery(val);
+    setSelectedStudent(null);
+    clearTimeout(searchTimeout.current);
+    if (val.trim().length < 2) { setStudentResults([]); return; }
+    setSearching(true);
+    searchTimeout.current = setTimeout(async () => {
+      try {
+        const token = localStorage.getItem('portalAccessToken');
+        const res = await fetch(`${API_BASE_URL}/api/portal/report-cards/students/search/?q=${encodeURIComponent(val.trim())}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const data = await res.json();
+        setStudentResults(Array.isArray(data) ? data : []);
+      } catch { setStudentResults([]); }
+      finally { setSearching(false); }
+    }, 350);
+  };
+
+  const handleDownload = async () => {
+    setError('');
+    if (scope === 'specific_student' && !selectedStudent) {
+      setError('Please select a student first.'); return;
+    }
+    if ((scope === 'specific_term') && !selectedTerm) {
+      setError('Please select a term first.'); return;
+    }
+
+    const params = new URLSearchParams({ scope });
+    if (selectedTerm && (scope === 'specific_term' || (scope === 'specific_student' && selectedTerm))) {
+      const [ay, t] = selectedTerm.split('||');
+      params.append('academic_year', ay);
+      params.append('term', t);
+    }
+    if (selectedStudent) params.append('student_id', selectedStudent.id);
+
+    setDownloading(true);
+    try {
+      const token = localStorage.getItem('portalAccessToken');
+      const res = await fetch(`${API_BASE_URL}/api/portal/report-cards/download/?${params}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) {
+        const d = await res.json();
+        throw new Error(d.error || 'Download failed');
+      }
+      const blob = await res.blob();
+      const cd = res.headers.get('Content-Disposition');
+      let filename = 'report_cards.zip';
+      if (cd) { const m = cd.match(/filename="?([^"]+)"?/); if (m) filename = m[1]; }
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = filename;
+      document.body.appendChild(a); a.click(); a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      setError(err.message || 'Download failed');
+    } finally {
+      setDownloading(false);
+    }
+  };
+
+  const showTermSelector = scope === 'specific_term' || scope === 'specific_student';
+
+  return (
+    <div className="report-cards-section">
+      <div className="report-cards-header">
+        <div className="report-cards-header-icon"><FileText size={20} /></div>
+        <div>
+          <h4 className="report-cards-title">Report Cards</h4>
+          <p className="report-cards-subtitle">Download student report card PDFs as a ZIP archive.</p>
+        </div>
+      </div>
+
+      <div className="report-cards-scope">
+        <label className="rc-scope-label">What do you want to download?</label>
+        <div className="rc-scope-options">
+          {[
+            { value: 'all_time', label: 'All students, all time' },
+            { value: 'current_term', label: 'Current term only' },
+            { value: 'specific_term', label: 'Specific term' },
+            { value: 'specific_student', label: 'Specific student' },
+          ].map(opt => (
+            <label key={opt.value} className={`rc-scope-option ${scope === opt.value ? 'selected' : ''}`}>
+              <input
+                type="radio"
+                name="rc-scope"
+                value={opt.value}
+                checked={scope === opt.value}
+                onChange={() => { setScope(opt.value); setError(''); setSelectedTerm(''); setSelectedStudent(null); setStudentQuery(''); setStudentResults([]); }}
+              />
+              <span>{opt.label}</span>
+            </label>
+          ))}
+        </div>
+      </div>
+
+      {scope === 'specific_student' && (
+        <div className="rc-student-search">
+          <label className="rc-field-label">Search student</label>
+          <div className="rc-search-input-wrap">
+            <Search size={16} className="rc-search-icon" />
+            <input
+              type="text"
+              className="rc-search-input"
+              placeholder="Type student name..."
+              value={selectedStudent ? selectedStudent.name : studentQuery}
+              onChange={e => { setSelectedStudent(null); handleStudentSearch(e.target.value); }}
+              autoComplete="off"
+            />
+            {searching && <div className="rc-search-spinner" />}
+            {selectedStudent && <div className="rc-selected-badge"><User size={12} />{selectedStudent.name}</div>}
+          </div>
+          {!selectedStudent && studentQuery.trim().length >= 2 && studentResults.length > 0 && (
+            <div className="rc-search-results">
+              {studentResults.map(s => (
+                <button
+                  key={s.id}
+                  className="rc-search-result-item"
+                  onClick={() => { setSelectedStudent(s); setStudentQuery(''); setStudentResults([]); }}
+                >
+                  <User size={14} />
+                  <span className="rc-result-name">{s.name}</span>
+                  <span className="rc-result-username">({s.username})</span>
+                </button>
+              ))}
+            </div>
+          )}
+          {!selectedStudent && studentQuery.trim().length >= 2 && studentResults.length === 0 && !searching && (
+            <p className="rc-no-results">No students found.</p>
+          )}
+        </div>
+      )}
+
+      {showTermSelector && (
+        <div className="rc-term-select">
+          <label className="rc-field-label">
+            {scope === 'specific_student' ? 'Filter by term (optional)' : 'Select term'}
+          </label>
+          <select
+            className="rc-select"
+            value={selectedTerm}
+            onChange={e => setSelectedTerm(e.target.value)}
+          >
+            <option value="">{scope === 'specific_student' ? '— All terms —' : '— Select a term —'}</option>
+            {availableTerms.map(t => (
+              <option key={`${t.academic_year}||${t.term}`} value={`${t.academic_year}||${t.term}`}>
+                {t.label}{t.is_active ? ' (current)' : ''}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+
+      {error && (
+        <div className="portal-error-message">
+          <AlertCircle size={16} />
+          <span>{error}</span>
+        </div>
+      )}
+
+      <button
+        className="portal-download-btn rc-download-btn"
+        onClick={handleDownload}
+        disabled={downloading}
+      >
+        {downloading ? (
+          <><Loader2 className="spinning" size={18} />Generating ZIP...</>
+        ) : (
+          <><Download size={18} />Download Report Cards</>
+        )}
+      </button>
+    </div>
+  );
+}
+
 // Database Download Tab Component
 function DatabaseDownloadTab({ subscription, openUpgradeModal }) {
   const [format, setFormat] = useState('xlsx');
@@ -1546,6 +1749,9 @@ function DatabaseDownloadTab({ subscription, openUpgradeModal }) {
           </>
         )}
       </button>
+
+      <div className="rc-divider" />
+      <ReportCardsSection />
     </div>
   );
 }

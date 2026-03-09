@@ -598,3 +598,146 @@ def generate_report_sheet_pdf(context):
     pdf = buffer.getvalue()
     buffer.close()
     return pdf
+
+
+def build_student_report_context(school, student, academic_year, term):
+    """
+    Build the context dict needed by generate_report_sheet_pdf for one student/term.
+    Returns None if the student has no enrollment or grading config for that term.
+    Used by the portal bulk report card download.
+    """
+    from datetime import datetime
+    from django.db.models import Q
+    from schooladmin.models import GradingConfiguration, StudentSession, GradeSummary
+    from academics.models import Subject
+
+    # Grading config
+    try:
+        grading_config = GradingConfiguration.objects.get(
+            school=school, academic_year=academic_year, term=term
+        )
+    except GradingConfiguration.DoesNotExist:
+        return None
+
+    # Student's class session for this term
+    student_session = StudentSession.objects.filter(
+        student=student,
+        class_session__academic_year=academic_year,
+        class_session__term=term,
+    ).select_related('class_session', 'class_session__classroom').first()
+    if not student_session:
+        return None
+
+    class_session = student_session.class_session
+
+    subjects = Subject.objects.filter(class_session=class_session).select_related('teacher')
+    if student_session.student.department:
+        subjects = subjects.filter(
+            Q(department=student_session.student.department) | Q(department='General')
+        )
+
+    subjects_data = []
+    for subject in subjects:
+        try:
+            gs = GradeSummary.objects.get(
+                student=student, subject=subject, grading_config=grading_config
+            )
+            att_pct = grading_config.attendance_percentage
+            asgn_pct = grading_config.assignment_percentage
+            test_pct = grading_config.test_percentage
+            exam_pct = grading_config.exam_percentage
+
+            t1_max = att_pct + asgn_pct
+            first_test = (float(gs.attendance_score) + float(gs.assignment_score)) * (20 / t1_max) if t1_max > 0 else 0
+            second_test = float(gs.test_score) * (20 / test_pct) if test_pct > 0 else 0
+            exam = float(gs.exam_score) * (60 / exam_pct) if exam_pct > 0 else 0
+            total = first_test + second_test + exam
+
+            from schooladmin.views import get_report_grade
+            letter = get_report_grade(total)
+            subjects_data.append({
+                'subject_name': subject.name,
+                'first_test_score': round(first_test, 2),
+                'second_test_score': round(second_test, 2),
+                'exam_score': round(exam, 2),
+                'total_score': round(total, 2),
+                'letter_grade': letter,
+            })
+        except GradeSummary.DoesNotExist:
+            subjects_data.append({
+                'subject_name': subject.name,
+                'first_test_score': 0, 'second_test_score': 0,
+                'exam_score': 0, 'total_score': 0, 'letter_grade': 'F9',
+            })
+
+    grand_total = sum(s['total_score'] for s in subjects_data)
+    average = round(grand_total / len(subjects_data), 2) if subjects_data else 0
+
+    # Class position
+    all_sessions = StudentSession.objects.filter(class_session=class_session).select_related('student')
+    averages = []
+    for ss in all_sessions:
+        s_subjects = Subject.objects.filter(class_session=class_session)
+        if ss.student.department:
+            s_subjects = s_subjects.filter(
+                Q(department=ss.student.department) | Q(department='General')
+            )
+        tot, cnt = 0, 0
+        for subj in s_subjects:
+            try:
+                g = GradeSummary.objects.get(student=ss.student, subject=subj, grading_config=grading_config)
+                tot += float(g.total_score); cnt += 1
+            except GradeSummary.DoesNotExist:
+                pass
+        averages.append({'student_id': ss.student.id, 'average': tot / cnt if cnt else 0})
+    averages.sort(key=lambda x: x['average'], reverse=True)
+    position = next((i + 1 for i, s in enumerate(averages) if s['student_id'] == student.id), None)
+
+    # Student photo as base64
+    photo_url = None
+    if student.profile_picture:
+        try:
+            import base64, requests as _req
+            r = _req.get(student.profile_picture.url, timeout=10)
+            r.raise_for_status()
+            ct = r.headers.get('Content-Type', 'image/jpeg')
+            photo_url = f'data:{ct};base64,{base64.b64encode(r.content).decode()}'
+        except Exception:
+            pass
+
+    # Logo as base64
+    logo_url = None
+    try:
+        import base64, os
+        from django.conf import settings as _s
+        logo_path = os.path.join(_s.BASE_DIR, '..', 'frontend', 'public', 'logo.png')
+        if os.path.exists(logo_path):
+            with open(logo_path, 'rb') as f:
+                logo_url = f'data:image/png;base64,{base64.b64encode(f.read()).decode()}'
+    except Exception:
+        pass
+
+    term_text = "ONE" if term == "First Term" else "TWO" if term == "Second Term" else "THREE"
+
+    return {
+        'student': {
+            'id': student.id,
+            'student_id': student.username,
+            'name': student.get_full_name(),
+            'class': class_session.classroom.name,
+            'department': student_session.student.department or '',
+            'photo_url': photo_url,
+        },
+        'session': {'academic_year': academic_year, 'term': term},
+        'term_text': term_text,
+        'grading_config': {'first_test_max': 20, 'second_test_max': 20, 'exam_max': 60, 'total_max': 100},
+        'subjects': subjects_data,
+        'summary': {
+            'grand_total': round(grand_total, 2),
+            'average': average,
+            'position': position,
+            'total_students': len(averages),
+        },
+        'logo_url': logo_url,
+        'generated_date': datetime.now().strftime('%m/%d/%Y, %H:%M:%S'),
+    }
