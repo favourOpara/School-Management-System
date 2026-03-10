@@ -636,6 +636,17 @@ class Assessment(models.Model):
         default=False,
         help_text="Whether students can see this assessment (controlled by admin)"
     )
+    UNLOCK_STRATEGY_CHOICES = [
+        ('paid', 'Paid Fees'),
+        ('attendance', 'Attendance Today'),
+        ('both', 'Paid + Present Today'),
+    ]
+    unlock_strategy = models.CharField(
+        max_length=20,
+        blank=True,
+        choices=UNLOCK_STRATEGY_CHOICES,
+        help_text="Strategy used when unlocking access for this assessment"
+    )
 
     class Meta:
         ordering = ['-assessment_date', '-created_at']

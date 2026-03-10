@@ -3,6 +3,13 @@ from django.db import migrations, models
 import django.db.models.deletion
 
 
+def populate_conversation_tokens(apps, schema_editor):
+    OnboardingRecord = apps.get_model('tenants', 'OnboardingRecord')
+    for record in OnboardingRecord.objects.all():
+        record.conversation_token = uuid.uuid4()
+        record.save(update_fields=['conversation_token'])
+
+
 class Migration(migrations.Migration):
 
     dependencies = [
@@ -10,7 +17,16 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
+        # Step 1: Add as nullable (no unique yet) so existing rows get null
         migrations.AddField(
+            model_name='onboardingrecord',
+            name='conversation_token',
+            field=models.UUIDField(null=True, editable=False),
+        ),
+        # Step 2: Populate a unique UUID for every existing row
+        migrations.RunPython(populate_conversation_tokens, migrations.RunPython.noop),
+        # Step 3: Make it non-null and unique
+        migrations.AlterField(
             model_name='onboardingrecord',
             name='conversation_token',
             field=models.UUIDField(default=uuid.uuid4, editable=False, unique=True),

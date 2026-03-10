@@ -29,6 +29,11 @@ from .views import (
     UnlockForPaidStudentsSingleView,
     GetClassStudentsView,
     UnlockForSelectedStudentsView,
+    UnlockForAttendanceTodayView,
+    UnlockForPaidAndPresentView,
+    GetNotUnlockedStudentsView,
+    CheckEmailCapForLockedView,
+    SendLockedStudentNotificationsView,
     StudentAvailableAssessmentsView,
     StudentSubmitAssessmentView,
     get_student_class_info,
@@ -112,6 +117,11 @@ urlpatterns = [
     path('admin/assessments/unlock-for-paid-single/', UnlockForPaidStudentsSingleView.as_view(), name='unlock-for-paid-single'),
     path('admin/assessments/class-students/', GetClassStudentsView.as_view(), name='get-class-students'),
     path('admin/assessments/unlock-for-selected/', UnlockForSelectedStudentsView.as_view(), name='unlock-for-selected-students'),
+    path('admin/assessments/unlock-attendance/', UnlockForAttendanceTodayView.as_view(), name='unlock-attendance-today'),
+    path('admin/assessments/unlock-paid-and-present/', UnlockForPaidAndPresentView.as_view(), name='unlock-paid-and-present'),
+    path('admin/assessments/not-unlocked/', GetNotUnlockedStudentsView.as_view(), name='not-unlocked-students'),
+    path('admin/assessments/check-email-cap/', CheckEmailCapForLockedView.as_view(), name='check-email-cap-locked'),
+    path('admin/assessments/notify-locked/', SendLockedStudentNotificationsView.as_view(), name='notify-locked-students'),
 
     # Student assessment endpoints
     path('student/assessments/', StudentAvailableAssessmentsView.as_view(), name='student-assessments'),

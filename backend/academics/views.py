@@ -2114,10 +2114,9 @@ class UnlockForPaidStudentsView(APIView):
 
         school = getattr(request, 'school', None)
 
-        # Get assessments matching the filters
+        # Get assessments matching the filters (no is_released filter so re-runs work)
         assessments = Assessment.objects.filter(
             is_active=True,
-            is_released=False,
             subject__class_session__academic_year=academic_year,
             subject__class_session__term=term
         )
@@ -2158,11 +2157,12 @@ class UnlockForPaidStudentsView(APIView):
         # Combine both queries
         paid_students = set(paid_students) | set(fully_paid_students)
 
-        # Create AssessmentAccess records for paid students
+        # Create AssessmentAccess records for paid students and release
         from .models import StudentSession, AssessmentAccess
 
         access_count = 0
-        for assessment in assessments:
+        assessments_list = list(assessments)
+        for assessment in assessments_list:
             # Get students in the assessment's class who have paid
             student_sessions = StudentSession.objects.filter(
                 class_session=assessment.subject.class_session,
@@ -2181,9 +2181,13 @@ class UnlockForPaidStudentsView(APIView):
                 )
                 access_count += 1
 
+            assessment.is_released = True
+            assessment.unlock_strategy = 'paid'
+            assessment.save(update_fields=['is_released', 'unlock_strategy'])
+
         return Response({
-            'message': f'Successfully unlocked {assessments.count()} assessment(s) for {len(paid_students)} paid student(s)',
-            'assessments_count': assessments.count(),
+            'message': f'Successfully unlocked {len(assessments_list)} assessment(s) for {len(paid_students)} paid student(s)',
+            'assessments_count': len(assessments_list),
             'students_count': len(paid_students),
             'access_records': access_count
         })
@@ -2258,6 +2262,10 @@ class UnlockForPaidStudentsSingleView(APIView):
                 }
             )
             access_count += 1
+
+        assessment.is_released = True
+        assessment.unlock_strategy = 'paid'
+        assessment.save(update_fields=['is_released', 'unlock_strategy'])
 
         return Response({
             'message': f'Successfully unlocked "{assessment.title}" for {access_count} paid student(s)',
@@ -2484,6 +2492,417 @@ class UnlockForSelectedStudentsView(APIView):
             'students_count': students.count(),
             'access_records': access_count
         })
+
+
+def _get_assessment_queryset(request, assessment_type, academic_year, term, subject_id=None):
+    """Helper to build a filtered Assessment queryset."""
+    from django.db.models import Q
+    school = getattr(request, 'school', None)
+    qs = Assessment.objects.filter(
+        is_active=True,
+        subject__class_session__academic_year=academic_year,
+        subject__class_session__term=term,
+    )
+    if school:
+        qs = qs.filter(subject__class_session__classroom__school=school)
+    if subject_id:
+        qs = qs.filter(subject_id=subject_id)
+    if assessment_type == 'test':
+        qs = qs.filter(
+            Q(assessment_type='test_1') | Q(assessment_type='test_2') | Q(assessment_type='mid_term')
+        )
+    elif assessment_type == 'exam':
+        qs = qs.filter(assessment_type='final_exam')
+    return qs
+
+
+def _get_paid_student_ids(school):
+    """Return set of student IDs who have fully paid fees for a school."""
+    from django.db.models import F
+    from schooladmin.models import StudentFeeRecord
+    fee_qs = StudentFeeRecord.objects.all()
+    if school:
+        fee_qs = fee_qs.filter(student__school=school)
+    paid = set(fee_qs.filter(payment_status='PAID').values_list('student_id', flat=True))
+    fully_paid = set(fee_qs.filter(amount_paid__gte=F('fee_structure__amount')).values_list('student_id', flat=True))
+    return paid | fully_paid
+
+
+class UnlockForAttendanceTodayView(APIView):
+    """
+    Unlock assessments for students who marked attendance today.
+    POST /api/academics/admin/assessments/unlock-attendance/
+    Body: academic_year, term, assessment_type (required), subject_id (optional)
+    """
+    permission_classes = [permissions.IsAuthenticated, IsPrincipalOrAdmin]
+
+    def post(self, request):
+        from django.utils import timezone
+        from attendance.models import AttendanceRecord
+        from .models import StudentSession, AssessmentAccess
+
+        academic_year = request.data.get('academic_year')
+        term = request.data.get('term')
+        assessment_type = request.data.get('assessment_type')
+        subject_id = request.data.get('subject_id')
+
+        if not all([academic_year, term, assessment_type]):
+            return Response({'detail': 'academic_year, term, and assessment_type are required'}, status=status.HTTP_400_BAD_REQUEST)
+
+        today = timezone.localdate()
+        assessments_list = list(_get_assessment_queryset(request, assessment_type, academic_year, term, subject_id))
+
+        access_count = 0
+        for assessment in assessments_list:
+            class_student_ids = StudentSession.objects.filter(
+                class_session=assessment.subject.class_session,
+                is_active=True,
+            ).values_list('student_id', flat=True)
+
+            present_ids = AttendanceRecord.objects.filter(
+                school_day__date=today,
+                student_id__in=class_student_ids,
+            ).values_list('student_id', flat=True).distinct()
+
+            for student_id in present_ids:
+                AssessmentAccess.objects.update_or_create(
+                    assessment=assessment,
+                    student_id=student_id,
+                    defaults={'is_unlocked': True, 'unlocked_by': request.user},
+                )
+                access_count += 1
+
+            assessment.is_released = True
+            assessment.unlock_strategy = 'attendance'
+            assessment.save(update_fields=['is_released', 'unlock_strategy'])
+
+        return Response({
+            'assessments_count': len(assessments_list),
+            'access_records': access_count,
+        })
+
+
+class UnlockForPaidAndPresentView(APIView):
+    """
+    Unlock assessments for students who BOTH paid fees AND marked attendance today.
+    POST /api/academics/admin/assessments/unlock-paid-and-present/
+    Body: academic_year, term, assessment_type (required), subject_id (optional)
+    """
+    permission_classes = [permissions.IsAuthenticated, IsPrincipalOrAdmin]
+
+    def post(self, request):
+        from django.utils import timezone
+        from attendance.models import AttendanceRecord
+        from .models import StudentSession, AssessmentAccess
+
+        academic_year = request.data.get('academic_year')
+        term = request.data.get('term')
+        assessment_type = request.data.get('assessment_type')
+        subject_id = request.data.get('subject_id')
+
+        if not all([academic_year, term, assessment_type]):
+            return Response({'detail': 'academic_year, term, and assessment_type are required'}, status=status.HTTP_400_BAD_REQUEST)
+
+        school = getattr(request, 'school', None)
+        today = timezone.localdate()
+        paid_ids = _get_paid_student_ids(school)
+        assessments_list = list(_get_assessment_queryset(request, assessment_type, academic_year, term, subject_id))
+
+        access_count = 0
+        for assessment in assessments_list:
+            class_student_ids = StudentSession.objects.filter(
+                class_session=assessment.subject.class_session,
+                is_active=True,
+            ).values_list('student_id', flat=True)
+
+            present_ids = set(AttendanceRecord.objects.filter(
+                school_day__date=today,
+                student_id__in=class_student_ids,
+            ).values_list('student_id', flat=True).distinct())
+
+            qualified_ids = present_ids & paid_ids
+
+            for student_id in qualified_ids:
+                AssessmentAccess.objects.update_or_create(
+                    assessment=assessment,
+                    student_id=student_id,
+                    defaults={'is_unlocked': True, 'unlocked_by': request.user},
+                )
+                access_count += 1
+
+            assessment.is_released = True
+            assessment.unlock_strategy = 'both'
+            assessment.save(update_fields=['is_released', 'unlock_strategy'])
+
+        return Response({
+            'assessments_count': len(assessments_list),
+            'access_records': access_count,
+        })
+
+
+class GetNotUnlockedStudentsView(APIView):
+    """
+    Return students NOT yet unlocked for assessments in the selection, grouped by class.
+    GET /api/academics/admin/assessments/not-unlocked/
+    Params: academic_year, term, assessment_type (required), subject_id (optional)
+    """
+    permission_classes = [permissions.IsAuthenticated, IsPrincipalOrAdmin]
+
+    def get(self, request):
+        from .models import StudentSession, AssessmentAccess, AssessmentSubmission
+
+        academic_year = request.GET.get('academic_year')
+        term = request.GET.get('term')
+        assessment_type = request.GET.get('assessment_type')
+        subject_id = request.GET.get('subject_id')
+
+        if not all([academic_year, term, assessment_type]):
+            return Response({'detail': 'academic_year, term, and assessment_type are required'}, status=status.HTTP_400_BAD_REQUEST)
+
+        assessments_list = list(_get_assessment_queryset(request, assessment_type, academic_year, term, subject_id))
+        if not assessments_list:
+            return Response({'classes': [], 'total_locked': 0})
+
+        # Determine the dominant strategy from the assessments
+        strategies = set(a.unlock_strategy for a in assessments_list if a.unlock_strategy)
+        strategy = strategies.pop() if len(strategies) == 1 else ('both' if strategies else '')
+
+        # Group assessments by class_session
+        from collections import defaultdict
+        class_assessments = defaultdict(list)
+        for a in assessments_list:
+            class_assessments[a.subject.class_session_id].append(a)
+
+        classes_data = []
+        total_locked = 0
+
+        for class_session_id, class_assessment_list in class_assessments.items():
+            first = class_assessment_list[0]
+            class_session = first.subject.class_session
+            class_name = class_session.classroom.name
+
+            # All students in this class
+            student_sessions = StudentSession.objects.filter(
+                class_session=class_session,
+                is_active=True,
+            ).select_related('student')
+
+            locked_students = []
+            for ss in student_sessions:
+                student = ss.student
+                # Check if student has any access record for any assessment in this class
+                access = AssessmentAccess.objects.filter(
+                    assessment__in=class_assessment_list,
+                    student=student,
+                    is_unlocked=True,
+                ).exists()
+
+                if access:
+                    continue  # Already unlocked
+
+                # Check if student already submitted all assessments (no need to unlock)
+                submitted_count = AssessmentSubmission.objects.filter(
+                    assessment__in=class_assessment_list,
+                    student=student,
+                ).count()
+                if submitted_count >= len(class_assessment_list):
+                    continue  # Already done
+
+                locked_students.append({
+                    'id': student.id,
+                    'name': f"{student.first_name} {student.last_name}".strip(),
+                    'username': student.username,
+                })
+
+            if locked_students:
+                classes_data.append({
+                    'class_session_id': class_session_id,
+                    'class_name': class_name,
+                    'locked_count': len(locked_students),
+                    'students': locked_students,
+                })
+                total_locked += len(locked_students)
+
+        return Response({
+            'classes': classes_data,
+            'total_locked': total_locked,
+            'strategy': strategy,
+        })
+
+
+class CheckEmailCapForLockedView(APIView):
+    """
+    Check whether sending notifications to locked students would exceed the email cap.
+    GET /api/academics/admin/assessments/check-email-cap/
+    Params: academic_year, term, assessment_type (required), subject_id (optional)
+    """
+    permission_classes = [permissions.IsAuthenticated, IsPrincipalOrAdmin]
+
+    def get(self, request):
+        from .models import StudentSession, AssessmentAccess, AssessmentSubmission
+        from logs.email_service import check_email_cap_for_count
+        from collections import defaultdict
+
+        academic_year = request.GET.get('academic_year')
+        term = request.GET.get('term')
+        assessment_type = request.GET.get('assessment_type')
+        subject_id = request.GET.get('subject_id')
+
+        if not all([academic_year, term, assessment_type]):
+            return Response({'detail': 'academic_year, term, and assessment_type are required'}, status=status.HTTP_400_BAD_REQUEST)
+
+        assessments_list = list(_get_assessment_queryset(request, assessment_type, academic_year, term, subject_id))
+        if not assessments_list:
+            return Response({'needed': 0, 'would_exceed': False, 'remaining': None})
+
+        class_assessments = defaultdict(list)
+        for a in assessments_list:
+            class_assessments[a.subject.class_session_id].append(a)
+
+        locked_student_ids = set()
+        for class_assessment_list in class_assessments.values():
+            first = class_assessment_list[0]
+            student_sessions = StudentSession.objects.filter(
+                class_session=first.subject.class_session,
+                is_active=True,
+            ).select_related('student')
+
+            for ss in student_sessions:
+                student = ss.student
+                access = AssessmentAccess.objects.filter(
+                    assessment__in=class_assessment_list,
+                    student=student,
+                    is_unlocked=True,
+                ).exists()
+                if access:
+                    continue
+                submitted = AssessmentSubmission.objects.filter(
+                    assessment__in=class_assessment_list,
+                    student=student,
+                ).count()
+                if submitted >= len(class_assessment_list):
+                    continue
+                locked_student_ids.add(student.id)
+
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+        locked_students = User.objects.filter(id__in=locked_student_ids).prefetch_related('parents')
+
+        emails_needed = 0
+        for student in locked_students:
+            if student.email:
+                emails_needed += 1
+            for parent in student.parents.all():
+                if parent.email:
+                    emails_needed += 1
+
+        school = getattr(request, 'school', None)
+        cap_info = check_email_cap_for_count(school, emails_needed)
+        cap_info['locked_students'] = len(locked_student_ids)
+        return Response(cap_info)
+
+
+class SendLockedStudentNotificationsView(APIView):
+    """
+    Send email notifications to students not yet unlocked and their parents.
+    POST /api/academics/admin/assessments/notify-locked/
+    Body: academic_year, term, assessment_type (required), subject_id (optional)
+    """
+    permission_classes = [permissions.IsAuthenticated, IsPrincipalOrAdmin]
+
+    def post(self, request):
+        from django.utils import timezone
+        from attendance.models import AttendanceRecord
+        from .models import StudentSession, AssessmentAccess, AssessmentSubmission
+        from logs.email_service import send_assessment_locked_student_email, send_assessment_locked_parent_email
+        from collections import defaultdict
+
+        academic_year = request.data.get('academic_year')
+        term = request.data.get('term')
+        assessment_type = request.data.get('assessment_type')
+        subject_id = request.data.get('subject_id')
+
+        if not all([academic_year, term, assessment_type]):
+            return Response({'detail': 'academic_year, term, and assessment_type are required'}, status=status.HTTP_400_BAD_REQUEST)
+
+        school = getattr(request, 'school', None)
+        today = timezone.localdate()
+        assessments_list = list(_get_assessment_queryset(request, assessment_type, academic_year, term, subject_id))
+        if not assessments_list:
+            return Response({'sent': 0, 'skipped': 0})
+
+        # Determine strategy from assessments
+        strategies = set(a.unlock_strategy for a in assessments_list if a.unlock_strategy)
+        strategy = strategies.pop() if len(strategies) == 1 else 'both'
+
+        # Get paid students set (needed for 'both' strategy reason breakdown)
+        paid_ids = _get_paid_student_ids(school) if strategy in ('paid', 'both') else set()
+
+        class_assessments = defaultdict(list)
+        for a in assessments_list:
+            class_assessments[a.subject.class_session_id].append(a)
+
+        assessment_type_label = 'exam' if assessment_type == 'exam' else 'test'
+        sent = skipped = 0
+
+        for class_assessment_list in class_assessments.values():
+            first = class_assessment_list[0]
+            student_sessions = StudentSession.objects.filter(
+                class_session=first.subject.class_session,
+                is_active=True,
+            ).select_related('student')
+
+            for ss in student_sessions:
+                student = ss.student
+                access = AssessmentAccess.objects.filter(
+                    assessment__in=class_assessment_list,
+                    student=student,
+                    is_unlocked=True,
+                ).exists()
+                if access:
+                    continue
+                submitted = AssessmentSubmission.objects.filter(
+                    assessment__in=class_assessment_list,
+                    student=student,
+                ).count()
+                if submitted >= len(class_assessment_list):
+                    continue
+
+                # Determine reason
+                if strategy == 'paid':
+                    reason = 'unpaid'
+                elif strategy == 'attendance':
+                    reason = 'absent'
+                else:  # 'both' — check individually
+                    is_paid = student.id in paid_ids
+                    is_present = AttendanceRecord.objects.filter(
+                        school_day__date=today,
+                        student=student,
+                    ).exists()
+                    if not is_paid and not is_present:
+                        reason = 'both'
+                    elif not is_paid:
+                        reason = 'unpaid'
+                    else:
+                        reason = 'absent'
+
+                # Email student
+                ok = send_assessment_locked_student_email(student, request.user, assessment_type_label, reason)
+                if ok:
+                    sent += 1
+                else:
+                    skipped += 1
+
+                # Email parents
+                for parent in student.parents.all():
+                    student_name = f"{student.first_name} {student.last_name}".strip() or student.username
+                    ok = send_assessment_locked_parent_email(parent, student_name, request.user, assessment_type_label, reason)
+                    if ok:
+                        sent += 1
+                    else:
+                        skipped += 1
+
+        return Response({'sent': sent, 'skipped': skipped})
 
 
 # ========================

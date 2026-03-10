@@ -608,8 +608,8 @@ def build_student_report_context(school, student, academic_year, term):
     """
     from datetime import datetime
     from django.db.models import Q
-    from schooladmin.models import GradingConfiguration, StudentSession, GradeSummary
-    from academics.models import Subject
+    from schooladmin.models import GradingConfiguration, GradeSummary
+    from academics.models import Subject, StudentSession
 
     # Grading config
     try:

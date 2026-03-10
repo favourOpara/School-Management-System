@@ -194,6 +194,204 @@ def send_bulk_notification_emails(notifications):
     return stats
 
 
+def check_email_cap_for_count(school, emails_needed):
+    """
+    Check (without incrementing) whether sending `emails_needed` emails
+    would exceed the school's daily cap.
+    Returns a dict: {would_exceed, remaining, needed, daily_limit}
+    """
+    subscription = getattr(school, 'subscription', None)
+    if not subscription:
+        return {'would_exceed': False, 'remaining': None, 'needed': emails_needed, 'daily_limit': None}
+    plan = getattr(subscription, 'plan', None)
+    if not plan or plan.max_daily_emails == 0:
+        return {'would_exceed': False, 'remaining': None, 'needed': emails_needed, 'daily_limit': None}
+
+    from django.utils import timezone
+    today = timezone.now().date()
+    if subscription.email_counter_reset_date != today:
+        emails_sent = 0
+    else:
+        emails_sent = subscription.emails_sent_today
+
+    remaining = max(0, plan.max_daily_emails - emails_sent)
+    return {
+        'would_exceed': emails_needed > remaining,
+        'remaining': remaining,
+        'needed': emails_needed,
+        'daily_limit': plan.max_daily_emails,
+    }
+
+
+def send_assessment_locked_student_email(student, school_ref_user, assessment_type_label, reason):
+    """
+    Notify a student that a test/exam was conducted but they couldn't access it.
+    reason: 'absent' | 'unpaid' | 'both'
+    school_ref_user: an admin/principal user from the school (for sender info + cap check)
+    """
+    if not student.email:
+        return False
+    if not _check_email_limit(school_ref_user):
+        return False
+
+    try:
+        sender = _get_sender(school_ref_user)
+        sender_name = sender['name']
+        accent = sender['accent_color']
+        logo_url = sender['logo']
+        logo_html = f'<img src="{logo_url}" alt="{sender_name}" style="max-width:80px;height:auto;margin-bottom:10px;">' if logo_url else ''
+
+        if reason == 'absent':
+            reason_text = (
+                f"Our records show that you were <strong>not present in school</strong> on the day the {assessment_type_label} was conducted. "
+                f"As a result, you were unable to access it."
+            )
+            action_text = "Please contact the school administration to schedule a date to write the missed assessment."
+        elif reason == 'unpaid':
+            reason_text = (
+                f"Our records indicate that your <strong>school fees are outstanding</strong>. "
+                f"Access to the {assessment_type_label} requires payment of fees to be completed."
+            )
+            action_text = "Please settle your outstanding fees and contact the school administration to arrange access."
+        else:  # both
+            reason_text = (
+                f"Our records show that you were <strong>not present in school</strong> on the day the {assessment_type_label} was conducted, "
+                f"and your <strong>school fees are also outstanding</strong>."
+            )
+            action_text = "Please settle your outstanding fees and contact the school administration to schedule a date to write the missed assessment."
+
+        subject = f"[{sender_name}] Missed {assessment_type_label.title()} — Action Required"
+        student_name = f"{student.first_name} {student.last_name}".strip() or student.username
+
+        html_content = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <style>
+                body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
+                .container {{ max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9f9f9; }}
+                .header {{ background-color: {accent}; color: white; padding: 20px; text-align: center; border-radius: 5px 5px 0 0; }}
+                .content {{ background-color: white; padding: 30px; border-radius: 0 0 5px 5px; }}
+                .alert-box {{ border-left: 4px solid #f59e0b; background: #fffbeb; padding: 15px 20px; border-radius: 4px; margin: 16px 0; }}
+                .action-box {{ border-left: 4px solid {accent}; background: #f0f9ff; padding: 15px 20px; border-radius: 4px; margin: 16px 0; }}
+                .footer {{ margin-top: 20px; padding-top: 20px; border-top: 1px solid #ddd; text-align: center; font-size: 12px; color: #666; }}
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    {logo_html}
+                    <h2>Missed {assessment_type_label.title()} Notification</h2>
+                </div>
+                <div class="content">
+                    <p>Dear <strong>{student_name}</strong>,</p>
+                    <p>This is to inform you that a <strong>{assessment_type_label}</strong> was recently conducted at {sender_name}.</p>
+                    <div class="alert-box">
+                        <p>{reason_text}</p>
+                    </div>
+                    <div class="action-box">
+                        <p><strong>What to do:</strong> {action_text}</p>
+                    </div>
+                    <p>Please do not ignore this notice. Early action will help ensure your academic records are complete.</p>
+                </div>
+                <div class="footer">
+                    <p>This is an automated notification from {sender_name}. Please do not reply to this email.</p>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+        _send_email(subject, html_content, student.email, student_name, sender)
+        return True
+    except Exception as e:
+        logger.error(f"Failed to send assessment locked email to student {student.email}: {e}")
+        return False
+
+
+def send_assessment_locked_parent_email(parent, student_name, school_ref_user, assessment_type_label, reason):
+    """
+    Notify a parent that their child missed a test/exam.
+    reason: 'absent' | 'unpaid' | 'both'
+    """
+    if not parent.email:
+        return False
+    if not _check_email_limit(school_ref_user):
+        return False
+
+    try:
+        sender = _get_sender(school_ref_user)
+        sender_name = sender['name']
+        accent = sender['accent_color']
+        logo_url = sender['logo']
+        logo_html = f'<img src="{logo_url}" alt="{sender_name}" style="max-width:80px;height:auto;margin-bottom:10px;">' if logo_url else ''
+
+        if reason == 'absent':
+            reason_text = (
+                f"Our records indicate that <strong>{student_name}</strong> was <strong>not present in school</strong> "
+                f"on the day the {assessment_type_label} was conducted and therefore could not access it."
+            )
+            action_text = f"Please contact the school administration to schedule a date for {student_name} to write the missed assessment."
+        elif reason == 'unpaid':
+            reason_text = (
+                f"Our records indicate that <strong>{student_name}</strong>'s <strong>school fees are outstanding</strong>. "
+                f"Access to the {assessment_type_label} requires payment of fees to be completed."
+            )
+            action_text = f"Please settle the outstanding fees and contact the school administration to arrange access for {student_name}."
+        else:  # both
+            reason_text = (
+                f"Our records show that <strong>{student_name}</strong> was <strong>not present in school</strong> on the day the {assessment_type_label} was conducted, "
+                f"and their <strong>school fees are also outstanding</strong>."
+            )
+            action_text = f"Please settle the outstanding fees and contact the school administration to schedule a date for {student_name} to write the missed assessment."
+
+        subject = f"[{sender_name}] Your Child Missed a {assessment_type_label.title()} — Action Required"
+        parent_name = f"{parent.first_name} {parent.last_name}".strip() or parent.username
+
+        html_content = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <style>
+                body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
+                .container {{ max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9f9f9; }}
+                .header {{ background-color: {accent}; color: white; padding: 20px; text-align: center; border-radius: 5px 5px 0 0; }}
+                .content {{ background-color: white; padding: 30px; border-radius: 0 0 5px 5px; }}
+                .alert-box {{ border-left: 4px solid #f59e0b; background: #fffbeb; padding: 15px 20px; border-radius: 4px; margin: 16px 0; }}
+                .action-box {{ border-left: 4px solid {accent}; background: #f0f9ff; padding: 15px 20px; border-radius: 4px; margin: 16px 0; }}
+                .footer {{ margin-top: 20px; padding-top: 20px; border-top: 1px solid #ddd; text-align: center; font-size: 12px; color: #666; }}
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    {logo_html}
+                    <h2>Student Missed {assessment_type_label.title()} Notification</h2>
+                </div>
+                <div class="content">
+                    <p>Dear <strong>{parent_name}</strong>,</p>
+                    <p>This is to inform you that a <strong>{assessment_type_label}</strong> was recently conducted at {sender_name}.</p>
+                    <div class="alert-box">
+                        <p>{reason_text}</p>
+                    </div>
+                    <div class="action-box">
+                        <p><strong>What to do:</strong> {action_text}</p>
+                    </div>
+                    <p>Please act promptly to avoid any impact on {student_name}'s academic records.</p>
+                </div>
+                <div class="footer">
+                    <p>This is an automated notification from {sender_name}. Please do not reply to this email.</p>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+        _send_email(subject, html_content, parent.email, parent_name, sender)
+        return True
+    except Exception as e:
+        logger.error(f"Failed to send assessment locked email to parent {parent.email}: {e}")
+        return False
+
+
 def send_verification_email(user, verification_url):
     """
     Send email verification with password change link

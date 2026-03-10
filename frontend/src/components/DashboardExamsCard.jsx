@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import Select from 'react-select';
-import { FileText } from 'lucide-react';
+import { FileText, Lock, Users } from 'lucide-react';
 import ExamSubjectsModal from './ExamSubjectsModal';
 import ExamStudentScoresModal from './ExamStudentScoresModal';
+import NotYetUnlockedModal from './NotYetUnlockedModal';
 import API_BASE_URL from '../config';
 import { useSchool } from '../contexts/SchoolContext';
+import { useDialog } from '../contexts/DialogContext';
 
 import './DashboardExamsCard.css';
 
@@ -16,37 +18,22 @@ const termOptions = [
 ];
 
 const getExamBarColor = (pct) => {
-  if (pct < 40) return '#d32f2f';  // Red for poor completion
-  if (pct < 60) return '#f9a825';  // Orange for fair completion
-  if (pct < 80) return '#fbc02d';  // Yellow for good completion
-  return '#388e3c';                // Green for excellent completion
+  if (pct < 40) return '#d32f2f';
+  if (pct < 60) return '#f9a825';
+  if (pct < 80) return '#fbc02d';
+  return '#388e3c';
 };
 
 const selectStyles = {
-  control: (base) => ({
-    ...base,
-    fontSize: '0.95rem',
-    color: '#222',
-    backgroundColor: '#fff',
-    borderColor: '#ccc',
-  }),
-  singleValue: (base) => ({
-    ...base,
-    color: '#222',
-  }),
-  placeholder: (base) => ({
-    ...base,
-    color: '#555',
-  }),
-  menu: (base) => ({
-    ...base,
-    fontSize: '0.95rem',
-    color: '#222',
-  }),
+  control: (base) => ({ ...base, fontSize: '0.95rem', color: '#222', backgroundColor: '#fff', borderColor: '#ccc' }),
+  singleValue: (base) => ({ ...base, color: '#222' }),
+  placeholder: (base) => ({ ...base, color: '#555' }),
+  menu: (base) => ({ ...base, fontSize: '0.95rem', color: '#222' }),
 };
 
 const DashboardExamsCard = () => {
   const { buildApiUrl } = useSchool();
+  const { showConfirm, showAlert } = useDialog();
   const [academicYears, setAcademicYears] = useState([]);
   const [selectedYear, setSelectedYear] = useState(null);
   const [selectedTerm, setSelectedTerm] = useState(termOptions[0]);
@@ -56,40 +43,40 @@ const DashboardExamsCard = () => {
   const [error, setError] = useState('');
   const [selectedClass, setSelectedClass] = useState(null);
   const [selectedSubject, setSelectedSubject] = useState(null);
+  const [unlocking, setUnlocking] = useState(null);
+  const [lastStrategy, setLastStrategy] = useState(null);
+  const [showNotUnlocked, setShowNotUnlocked] = useState(false);
+  const [notUnlockedCount, setNotUnlockedCount] = useState(null);
 
   const token = localStorage.getItem('accessToken');
   const headers = { Authorization: `Bearer ${token}` };
 
   useEffect(() => {
+    setLastStrategy(null);
+    setNotUnlockedCount(null);
+  }, [selectedYear, selectedTerm]);
+
+  useEffect(() => {
     const fetchYears = async () => {
       try {
-        // First, get the current active session
         const sessionInfoRes = await axios.get(buildApiUrl('/schooladmin/session/info/'), { headers });
         const currentYear = sessionInfoRes.data.academic_year;
         const currentTerm = sessionInfoRes.data.current_term;
-
-        // Then get all available sessions
         const res = await axios.get(buildApiUrl('/academics/sessions/'), { headers });
         if (Array.isArray(res.data)) {
           const years = [...new Set(res.data.map(s => s.academic_year))].sort();
           const options = years.map(y => ({ value: y, label: y }));
           setAcademicYears(options);
-
-          // Set the current active session as default
           const currentYearOption = options.find(opt => opt.value === currentYear);
           if (currentYearOption) {
             setSelectedYear(currentYearOption);
             const currentTermOption = termOptions.find(opt => opt.value === currentTerm);
-            if (currentTermOption) {
-              setSelectedTerm(currentTermOption);
-            }
+            if (currentTermOption) setSelectedTerm(currentTermOption);
           } else if (options.length > 0) {
-            // Fallback to the last year if current year is not found
             setSelectedYear(options[options.length - 1]);
           }
         }
-      } catch (err) {
-        console.error('Error fetching academic years:', err);
+      } catch {
         setError('Failed to load academic years');
       }
     };
@@ -99,48 +86,31 @@ const DashboardExamsCard = () => {
   useEffect(() => {
     const fetchExamStats = async () => {
       if (!selectedYear || !selectedTerm || (window.innerWidth <= 768 && !isFiltered)) return;
-
       setLoading(true);
       setError('');
-
       try {
         const response = await axios.get(buildApiUrl('/schooladmin/analytics/exams/'), {
-          params: {
-            academic_year: selectedYear.value,
-            term: selectedTerm.value
-          },
-          headers
+          params: { academic_year: selectedYear.value, term: selectedTerm.value },
+          headers,
         });
-
         if (response.data.stats) {
           setClassStats(response.data.stats);
-
-          if (response.data.stats.length === 0) {
-            setError(`No exam data found for ${selectedYear.value} - ${selectedTerm.value}.`);
-          }
+          if (response.data.stats.length === 0) setError(`No exam data found for ${selectedYear.value} - ${selectedTerm.value}.`);
         }
-
       } catch (err) {
-        console.error('Error fetching exam stats:', err);
         setClassStats([]);
-        if (err.response?.status === 404) {
-          setError(`Exam data not found for ${selectedYear.value} - ${selectedTerm.value}.`);
-        } else {
-          setError('Failed to load exam completion data. Please try again.');
-        }
+        if (err.response?.status === 404) setError(`Exam data not found for ${selectedYear.value} - ${selectedTerm.value}.`);
+        else setError('Failed to load exam completion data. Please try again.');
       } finally {
         setLoading(false);
       }
     };
-
     fetchExamStats();
   }, [selectedYear, selectedTerm, isFiltered]);
 
   const toggleFilters = () => {
     setIsFiltered(!isFiltered);
-    if (!isFiltered) {
-      setError('');
-    }
+    if (!isFiltered) setError('');
   };
 
   const handleRetry = () => {
@@ -156,12 +126,70 @@ const DashboardExamsCard = () => {
     return totalPossible > 0 ? Math.round((totalCompleted / totalPossible) * 100) : 0;
   };
 
-  const handleClassClick = (classData) => {
-    setSelectedClass(classData);
+  const checkStrategyWarning = async (strategy) => {
+    if (lastStrategy && lastStrategy !== strategy) {
+      const strategyLabels = { paid: 'Paid Fees', attendance: 'Present Today', both: 'Paid + Present Today' };
+      const proceed = await showConfirm({
+        title: 'Switch Unlock Strategy?',
+        message: `You previously unlocked using "${strategyLabels[lastStrategy]}". Switching to "${strategyLabels[strategy]}" may unlock additional students who don't meet the previous criteria. Are you sure?`,
+        confirmText: 'Switch & Continue',
+        cancelText: 'Cancel',
+        confirmButtonClass: 'confirm-btn-warning',
+      });
+      return proceed;
+    }
+    return true;
   };
 
-  const handleSubjectClick = (subjectData) => {
-    setSelectedSubject(subjectData);
+  const handleUnlock = async (strategy) => {
+    if (!selectedYear || !selectedTerm) {
+      showAlert({ type: 'warning', message: 'Please select academic year and term first.' });
+      return;
+    }
+
+    const ok = await checkStrategyWarning(strategy);
+    if (!ok) return;
+
+    const strategyLabels = { paid: 'Paid Fees', attendance: 'Present Today', both: 'Paid + Present Today' };
+    const confirmed = await showConfirm({
+      title: `Unlock Exams — ${strategyLabels[strategy]}`,
+      message: strategy === 'paid'
+        ? `Unlock all exams for ${selectedYear.label} - ${selectedTerm.label} for students who have paid their fees?`
+        : strategy === 'attendance'
+        ? `Unlock all exams for ${selectedYear.label} - ${selectedTerm.label} for students who marked attendance today?`
+        : `Unlock all exams for ${selectedYear.label} - ${selectedTerm.label} for students who both paid their fees AND marked attendance today?`,
+      confirmText: 'Unlock',
+      cancelText: 'Cancel',
+    });
+    if (!confirmed) return;
+
+    const endpoints = {
+      paid: '/academics/admin/assessments/unlock-for-paid/',
+      attendance: '/academics/admin/assessments/unlock-attendance/',
+      both: '/academics/admin/assessments/unlock-paid-and-present/',
+    };
+
+    setUnlocking(strategy);
+    try {
+      const res = await axios.post(
+        buildApiUrl(endpoints[strategy]),
+        { academic_year: selectedYear.value, term: selectedTerm.value, assessment_type: 'exam' },
+        { headers }
+      );
+      setLastStrategy(strategy);
+      const count = res.data.access_records ?? res.data.students_count ?? 0;
+      showAlert({ type: 'success', message: `Exams unlocked for ${count} student(s).` });
+
+      const notRes = await axios.get(buildApiUrl('/academics/admin/assessments/not-unlocked/'), {
+        params: { academic_year: selectedYear.value, term: selectedTerm.value, assessment_type: 'exam' },
+        headers,
+      });
+      setNotUnlockedCount(notRes.data.total_locked ?? 0);
+    } catch (err) {
+      showAlert({ type: 'error', message: err.response?.data?.detail || 'Failed to unlock exams. Please try again.' });
+    } finally {
+      setUnlocking(null);
+    }
   };
 
   return (
@@ -175,35 +203,46 @@ const DashboardExamsCard = () => {
           </div>
         </div>
 
+        {/* Unlock buttons */}
+        <div className="exams-unlock-section">
+          <p className="exams-unlock-label">Unlock exams for:</p>
+          <div className="exams-unlock-btns">
+            <button
+              className={`exams-unlock-btn ${lastStrategy === 'paid' ? 'active' : ''}`}
+              onClick={() => handleUnlock('paid')}
+              disabled={!!unlocking || !selectedYear || !selectedTerm}
+            >
+              {unlocking === 'paid' ? '...' : '💳 Paid Fees'}
+            </button>
+            <button
+              className={`exams-unlock-btn ${lastStrategy === 'attendance' ? 'active' : ''}`}
+              onClick={() => handleUnlock('attendance')}
+              disabled={!!unlocking || !selectedYear || !selectedTerm}
+            >
+              {unlocking === 'attendance' ? '...' : '📋 Present Today'}
+            </button>
+            <button
+              className={`exams-unlock-btn ${lastStrategy === 'both' ? 'active' : ''}`}
+              onClick={() => handleUnlock('both')}
+              disabled={!!unlocking || !selectedYear || !selectedTerm}
+            >
+              {unlocking === 'both' ? '...' : '✅ Paid + Present'}
+            </button>
+          </div>
+          {notUnlockedCount !== null && (
+            <button className="exams-not-unlocked-btn" onClick={() => setShowNotUnlocked(true)}>
+              <Lock size={14} />
+              <span>{notUnlockedCount > 0 ? `${notUnlockedCount} student(s) not yet unlocked` : 'All students unlocked'}</span>
+              {notUnlockedCount > 0 && <Users size={13} />}
+            </button>
+          )}
+        </div>
+
         <div className="exams-filters">
-          <Select
-            options={academicYears}
-            value={selectedYear}
-            onChange={setSelectedYear}
-            placeholder="Year"
-            styles={selectStyles}
-            className="exams-filter-select"
-          />
-          <Select
-            options={termOptions}
-            value={selectedTerm}
-            onChange={setSelectedTerm}
-            placeholder="Term"
-            styles={selectStyles}
-            className="exams-filter-select"
-          />
-          <button
-            className="exams-dashboard-filter-btn"
-            onClick={toggleFilters}
-          >
-            Filter
-          </button>
-          <button
-            className="exams-dashboard-close-btn"
-            onClick={toggleFilters}
-          >
-            Close
-          </button>
+          <Select options={academicYears} value={selectedYear} onChange={setSelectedYear} placeholder="Year" styles={selectStyles} className="exams-filter-select" />
+          <Select options={termOptions} value={selectedTerm} onChange={setSelectedTerm} placeholder="Term" styles={selectStyles} className="exams-filter-select" />
+          <button className="exams-dashboard-filter-btn" onClick={toggleFilters}>Filter</button>
+          <button className="exams-dashboard-close-btn" onClick={toggleFilters}>Close</button>
         </div>
 
         <ul className="exams-class-list">
@@ -212,53 +251,23 @@ const DashboardExamsCard = () => {
           ) : error ? (
             <li className="exams-error-data">
               <div style={{ textAlign: 'center', padding: '20px' }}>
-                <p style={{ color: '#d32f2f', marginBottom: '10px', fontWeight: '500' }}>
-                  {error}
-                </p>
-                <button
-                  onClick={handleRetry}
-                  style={{
-                    padding: '8px 16px',
-                    backgroundColor: '#1565c0',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '4px',
-                    cursor: 'pointer',
-                    fontSize: '0.9rem'
-                  }}
-                >
-                  Retry
-                </button>
+                <p style={{ color: '#d32f2f', marginBottom: '10px', fontWeight: '500' }}>{error}</p>
+                <button onClick={handleRetry} style={{ padding: '8px 16px', backgroundColor: '#1565c0', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '0.9rem' }}>Retry</button>
               </div>
             </li>
           ) : window.innerWidth <= 768 && !isFiltered ? (
             <li className="exams-no-data">Select filters and click 'Filter' to view data</li>
           ) : classStats.length === 0 ? (
-            <li className="exams-no-data">
-              {selectedYear && selectedTerm ?
-                `No exam data available for ${selectedYear.label} - ${selectedTerm.label}` :
-                'No exam data available'
-              }
-            </li>
+            <li className="exams-no-data">{selectedYear && selectedTerm ? `No exam data available for ${selectedYear.label} - ${selectedTerm.label}` : 'No exam data available'}</li>
           ) : (
             classStats.map(cls => (
-              <li key={cls.class_id} onClick={() => handleClassClick(cls)}>
+              <li key={cls.class_id} onClick={() => setSelectedClass(cls)}>
                 <span className="exams-class-name">
                   {cls.class_name}
-                  {cls.total_subjects === 0 && (
-                    <span style={{ fontSize: '0.8rem', color: '#666', marginLeft: '8px' }}>
-                      (No subjects)
-                    </span>
-                  )}
+                  {cls.total_subjects === 0 && <span style={{ fontSize: '0.8rem', color: '#666', marginLeft: '8px' }}>(No subjects)</span>}
                 </span>
                 <div className="exams-progress-bar">
-                  <div
-                    className="exams-filled"
-                    style={{
-                      width: `${cls.completion_percentage}%`,
-                      backgroundColor: getExamBarColor(cls.completion_percentage)
-                    }}
-                  />
+                  <div className="exams-filled" style={{ width: `${cls.completion_percentage}%`, backgroundColor: getExamBarColor(cls.completion_percentage) }} />
                 </div>
                 <span className="exams-pct-label">{cls.completion_percentage}%</span>
               </li>
@@ -273,25 +282,24 @@ const DashboardExamsCard = () => {
               {classStats.reduce((sum, cls) => sum + (cls.total_possible_submissions || cls.total_students), 0)} total possible
               {' '}({calculateOverallCompletion()}%)
             </p>
-            <p style={{ fontSize: '0.85rem', color: '#666', marginTop: '5px' }}>
-              Showing data for {selectedYear?.label} - {selectedTerm?.label}
-            </p>
+            <p style={{ fontSize: '0.85rem', color: '#666', marginTop: '5px' }}>Showing data for {selectedYear?.label} - {selectedTerm?.label}</p>
           </div>
         )}
       </div>
 
       {selectedClass && (
-        <ExamSubjectsModal
-          classData={selectedClass}
-          onClose={() => setSelectedClass(null)}
-          onSubjectClick={handleSubjectClick}
-        />
+        <ExamSubjectsModal classData={selectedClass} onClose={() => setSelectedClass(null)} onSubjectClick={setSelectedSubject} />
       )}
-
       {selectedSubject && (
-        <ExamStudentScoresModal
-          subjectData={selectedSubject}
-          onClose={() => setSelectedSubject(null)}
+        <ExamStudentScoresModal subjectData={selectedSubject} onClose={() => setSelectedSubject(null)} />
+      )}
+      {showNotUnlocked && selectedYear && selectedTerm && (
+        <NotYetUnlockedModal
+          academicYear={selectedYear.value}
+          term={selectedTerm.value}
+          assessmentType="exam"
+          onClose={() => setShowNotUnlocked(false)}
+          onStudentUnlocked={() => setNotUnlockedCount(prev => Math.max(0, (prev || 1) - 1))}
         />
       )}
     </div>

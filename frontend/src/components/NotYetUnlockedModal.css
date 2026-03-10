@@ -1,0 +1,324 @@
+.nul-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.45);
+  z-index: 1100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.nul-modal {
+  background: #fff;
+  border-radius: 12px;
+  width: 100%;
+  max-width: 520px;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.18);
+}
+
+.nul-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 1.25rem 1.5rem 1rem;
+  border-bottom: 1px solid #f1f5f9;
+  flex-shrink: 0;
+}
+
+.nul-header-info {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+.nul-header-icon { color: #ef4444; margin-top: 2px; }
+
+.nul-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #1e293b;
+  margin: 0 0 0.2rem;
+}
+
+.nul-subtitle {
+  font-size: 0.8rem;
+  color: #64748b;
+  margin: 0;
+}
+
+.nul-close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #94a3b8;
+  padding: 0.25rem;
+  border-radius: 6px;
+  display: flex;
+  transition: color 0.15s, background 0.15s;
+}
+.nul-close:hover { color: #374151; background: #f1f5f9; }
+
+.nul-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 2.5rem;
+  color: #64748b;
+  font-size: 0.9rem;
+}
+
+.nul-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 2.5rem;
+  color: #64748b;
+}
+.nul-empty-icon { color: #22c55e; }
+.nul-empty p { margin: 0; font-size: 0.95rem; }
+
+.nul-summary-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1.5rem;
+  background: #fef2f2;
+  border-bottom: 1px solid #fee2e2;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+
+.nul-count-badge {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #ef4444;
+}
+
+.nul-strategy-badge {
+  font-size: 0.78rem;
+  color: #64748b;
+  background: #f1f5f9;
+  padding: 0.15rem 0.5rem;
+  border-radius: 99px;
+}
+
+/* Class list */
+.nul-class-list {
+  list-style: none;
+  margin: 0;
+  padding: 0.5rem 0;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.nul-class-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.8rem 1.5rem;
+  cursor: pointer;
+  border-bottom: 1px solid #f8fafc;
+  transition: background 0.15s;
+}
+.nul-class-item:hover { background: #f8fafc; }
+
+.nul-class-info {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  color: #374151;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.nul-class-right {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.nul-lock-count {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #ef4444;
+  background: #fef2f2;
+  padding: 0.2rem 0.5rem;
+  border-radius: 99px;
+}
+
+.nul-chevron { color: #94a3b8; }
+
+/* Student list */
+.nul-students-view {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow: hidden;
+}
+
+.nul-back-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #4f46e5;
+  font-size: 0.83rem;
+  font-weight: 500;
+  padding: 0.75rem 1.5rem 0;
+  transition: color 0.15s;
+}
+.nul-back-btn:hover { color: #3730a3; }
+
+.nul-students-class-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #374151;
+  padding: 0.4rem 1.5rem 0.5rem;
+  margin: 0;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.nul-student-list {
+  list-style: none;
+  margin: 0;
+  padding: 0.25rem 0;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.nul-student-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.7rem 1.5rem;
+  border-bottom: 1px solid #f8fafc;
+}
+
+.nul-student-info {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+}
+
+.nul-student-lock { color: #ef4444; margin-top: 2px; flex-shrink: 0; }
+
+.nul-student-name {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #1e293b;
+}
+
+.nul-student-username {
+  display: block;
+  font-size: 0.78rem;
+  color: #94a3b8;
+}
+
+.nul-reason {
+  display: block;
+  font-size: 0.75rem;
+  color: #ef4444;
+  margin-top: 0.15rem;
+}
+
+.nul-unlock-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.75rem;
+  background: #4f46e5;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-weight: 500;
+  white-space: nowrap;
+  transition: background 0.15s;
+}
+.nul-unlock-btn:hover:not(:disabled) { background: #3730a3; }
+.nul-unlock-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+/* Notify section */
+.nul-notify-section {
+  padding: 1rem 1.5rem;
+  border-top: 1px solid #f1f5f9;
+  background: #fafafa;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.nul-notify-info {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.83rem;
+  color: #64748b;
+}
+.nul-notify-icon { color: #f59e0b; flex-shrink: 0; }
+
+.nul-cap-info {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.8rem;
+  padding: 0.4rem 0.75rem;
+  border-radius: 6px;
+  font-weight: 500;
+}
+.nul-cap-ok { background: #f0fdf4; color: #16a34a; }
+.nul-cap-warn { background: #fffbeb; color: #d97706; }
+
+.nul-notify-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.nul-check-cap-btn,
+.nul-send-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 7px;
+  cursor: pointer;
+  font-size: 0.83rem;
+  font-weight: 500;
+  transition: background 0.15s;
+}
+
+.nul-check-cap-btn {
+  background: #f1f5f9;
+  color: #374151;
+}
+.nul-check-cap-btn:hover:not(:disabled) { background: #e2e8f0; }
+
+.nul-send-btn {
+  background: #4f46e5;
+  color: white;
+}
+.nul-send-btn:hover:not(:disabled) { background: #3730a3; }
+.nul-send-btn:disabled,
+.nul-check-cap-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+@keyframes spin { to { transform: rotate(360deg); } }
+.spinning { animation: spin 0.7s linear infinite; }

@@ -1408,6 +1408,8 @@ function ReportCardsSection() {
   const [selectedStudent, setSelectedStudent] = useState(null);
   const [searching, setSearching] = useState(false);
   const [downloading, setDownloading] = useState(false);
+  const [downloadPhase, setDownloadPhase] = useState('idle'); // 'idle' | 'generating' | 'downloading'
+  const [downloadProgress, setDownloadProgress] = useState(0);
   const [error, setError] = useState('');
   const searchTimeout = React.useRef(null);
 
@@ -1459,8 +1461,11 @@ function ReportCardsSection() {
     if (selectedStudent) params.append('student_id', selectedStudent.id);
 
     setDownloading(true);
+    setDownloadPhase('generating');
+    setDownloadProgress(0);
     try {
       const token = localStorage.getItem('portalAccessToken');
+      // fetch() resolves when headers arrive — server is building ZIP until then
       const res = await fetch(`${API_BASE_URL}/api/portal/report-cards/download/?${params}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -1468,7 +1473,25 @@ function ReportCardsSection() {
         const d = await res.json();
         throw new Error(d.error || 'Download failed');
       }
-      const blob = await res.blob();
+
+      // Headers received — switch to download phase and stream the body
+      const contentLength = res.headers.get('Content-Length');
+      const total = contentLength ? parseInt(contentLength, 10) : 0;
+      setDownloadPhase('downloading');
+
+      const reader = res.body.getReader();
+      const chunks = [];
+      let received = 0;
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        chunks.push(value);
+        received += value.length;
+        if (total > 0) setDownloadProgress(Math.min(Math.round((received / total) * 100), 99));
+      }
+      setDownloadProgress(100);
+
+      const blob = new Blob(chunks, { type: 'application/zip' });
       const cd = res.headers.get('Content-Disposition');
       let filename = 'report_cards.zip';
       if (cd) { const m = cd.match(/filename="?([^"]+)"?/); if (m) filename = m[1]; }
@@ -1481,6 +1504,8 @@ function ReportCardsSection() {
       setError(err.message || 'Download failed');
     } finally {
       setDownloading(false);
+      setDownloadPhase('idle');
+      setDownloadProgress(0);
     }
   };
 
@@ -1583,13 +1608,28 @@ function ReportCardsSection() {
         </div>
       )}
 
+      {downloading && (
+        <div className="rc-progress-wrap">
+          <div className="rc-progress-info">
+            {downloadPhase === 'generating'
+              ? 'Generating ZIP\u2026'
+              : `Downloading\u2026 ${downloadProgress}%`}
+          </div>
+          <div className="rc-progress-track">
+            {downloadPhase === 'generating'
+              ? <div className="rc-progress-indeterminate" />
+              : <div className="rc-progress-fill" style={{ width: `${downloadProgress}%` }} />}
+          </div>
+        </div>
+      )}
+
       <button
         className="portal-download-btn rc-download-btn"
         onClick={handleDownload}
         disabled={downloading}
       >
         {downloading ? (
-          <><Loader2 className="spinning" size={18} />Generating ZIP...</>
+          <><Loader2 className="spinning" size={18} />Please wait...</>
         ) : (
           <><Download size={18} />Download Report Cards</>
         )}

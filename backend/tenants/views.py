@@ -2089,8 +2089,10 @@ class PortalDownloadReportCardsView(APIView):
         zip_buf.seek(0)
         ts = datetime.now().strftime('%Y%m%d_%H%M%S')
         filename = f"{school.slug}_report_cards_{ts}.zip"
-        response = HttpResponse(zip_buf.read(), content_type='application/zip')
+        zip_data = zip_buf.read()
+        response = HttpResponse(zip_data, content_type='application/zip')
         response['Content-Disposition'] = f'attachment; filename="{filename}"'
+        response['Content-Length'] = len(zip_data)
         return response
 
 
