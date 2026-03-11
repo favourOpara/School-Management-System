@@ -1403,6 +1403,7 @@ function ReportCardsSection() {
   const [scope, setScope] = useState('all_time');
   const [availableTerms, setAvailableTerms] = useState([]);
   const [selectedTerm, setSelectedTerm] = useState('');
+  const [selectedSession, setSelectedSession] = useState('');
   const [studentQuery, setStudentQuery] = useState('');
   const [studentResults, setStudentResults] = useState([]);
   const [selectedStudent, setSelectedStudent] = useState(null);
@@ -1448,12 +1449,15 @@ function ReportCardsSection() {
     if (scope === 'specific_student' && !selectedStudent) {
       setError('Please select a student first.'); return;
     }
-    if ((scope === 'specific_term') && !selectedTerm) {
-      setError('Please select a term first.'); return;
+    if (scope === 'specific_session' && !selectedSession) {
+      setError('Please select a session first.'); return;
     }
 
     const params = new URLSearchParams({ scope });
-    if (selectedTerm && (scope === 'specific_term' || (scope === 'specific_student' && selectedTerm))) {
+    if (scope === 'specific_session' && selectedSession) {
+      params.append('academic_year', selectedSession);
+    }
+    if (selectedTerm && scope === 'specific_student') {
       const [ay, t] = selectedTerm.split('||');
       params.append('academic_year', ay);
       params.append('term', t);
@@ -1509,7 +1513,10 @@ function ReportCardsSection() {
     }
   };
 
-  const showTermSelector = scope === 'specific_term' || scope === 'specific_student';
+  const showSessionSelector = scope === 'specific_session';
+  const showTermSelector = scope === 'specific_student';
+  // Unique academic years derived from availableTerms
+  const availableSessions = [...new Set(availableTerms.map(t => t.academic_year))].sort();
 
   return (
     <div className="report-cards-section">
@@ -1527,7 +1534,7 @@ function ReportCardsSection() {
           {[
             { value: 'all_time', label: 'All students, all time' },
             { value: 'current_term', label: 'Current term only' },
-            { value: 'specific_term', label: 'Specific term' },
+            { value: 'specific_session', label: 'Specific session (academic year)' },
             { value: 'specific_student', label: 'Specific student' },
           ].map(opt => (
             <label key={opt.value} className={`rc-scope-option ${scope === opt.value ? 'selected' : ''}`}>
@@ -1536,7 +1543,7 @@ function ReportCardsSection() {
                 name="rc-scope"
                 value={opt.value}
                 checked={scope === opt.value}
-                onChange={() => { setScope(opt.value); setError(''); setSelectedTerm(''); setSelectedStudent(null); setStudentQuery(''); setStudentResults([]); }}
+                onChange={() => { setScope(opt.value); setError(''); setSelectedTerm(''); setSelectedSession(''); setSelectedStudent(null); setStudentQuery(''); setStudentResults([]); }}
               />
               <span>{opt.label}</span>
             </label>
@@ -1581,17 +1588,33 @@ function ReportCardsSection() {
         </div>
       )}
 
+      {showSessionSelector && (
+        <div className="rc-term-select">
+          <label className="rc-field-label">Select session (academic year)</label>
+          <select
+            className="rc-select"
+            value={selectedSession}
+            onChange={e => setSelectedSession(e.target.value)}
+          >
+            <option value="">— Select a session —</option>
+            {availableSessions.map(ay => (
+              <option key={ay} value={ay}>{ay}</option>
+            ))}
+          </select>
+        </div>
+      )}
+
       {showTermSelector && (
         <div className="rc-term-select">
           <label className="rc-field-label">
-            {scope === 'specific_student' ? 'Filter by term (optional)' : 'Select term'}
+            Filter by term (optional)
           </label>
           <select
             className="rc-select"
             value={selectedTerm}
             onChange={e => setSelectedTerm(e.target.value)}
           >
-            <option value="">{scope === 'specific_student' ? '— All terms —' : '— Select a term —'}</option>
+            <option value="">— All terms —</option>
             {availableTerms.map(t => (
               <option key={`${t.academic_year}||${t.term}`} value={`${t.academic_year}||${t.term}`}>
                 {t.label}{t.is_active ? ' (current)' : ''}

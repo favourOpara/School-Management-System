@@ -2011,9 +2011,9 @@ class PortalDownloadReportCardsView(APIView):
     Download report card PDFs as a ZIP file.
     GET /api/portal/report-cards/download/
     Query params:
-      scope: all_time | current_term | specific_term | specific_student
-      academic_year: (for specific_term / specific_student with term)
-      term: (for specific_term / specific_student with term)
+      scope: all_time | current_term | specific_session | specific_student
+      academic_year: (for specific_session / specific_student with optional term filter)
+      term: (for specific_student with optional term filter)
       student_id: (for specific_student)
     """
     authentication_classes = []
@@ -2043,7 +2043,13 @@ class PortalDownloadReportCardsView(APIView):
             if not config:
                 return Response({'error': 'No active term found'}, status=status.HTTP_404_NOT_FOUND)
             configs = [config]
-        elif scope in ('specific_term', 'specific_student') and academic_year and term:
+        elif scope == 'specific_session' and academic_year:
+            configs = list(GradingConfiguration.objects.filter(
+                school=school, academic_year=academic_year
+            ).order_by('term'))
+            if not configs:
+                return Response({'error': 'No terms found for the selected session.'}, status=status.HTTP_404_NOT_FOUND)
+        elif scope == 'specific_student' and academic_year and term:
             config = GradingConfiguration.objects.filter(
                 school=school, academic_year=academic_year, term=term
             ).first()
@@ -2051,7 +2057,7 @@ class PortalDownloadReportCardsView(APIView):
                 return Response({'error': 'Term not found'}, status=status.HTTP_404_NOT_FOUND)
             configs = [config]
         else:
-            # all_time or specific_student with no term filter
+            # all_time or specific_student with no filter
             configs = list(GradingConfiguration.objects.filter(school=school).order_by('academic_year', 'term'))
 
         # Determine students to include

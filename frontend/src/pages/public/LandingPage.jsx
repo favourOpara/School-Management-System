@@ -200,6 +200,31 @@ function LandingPage() {
   const [schoolSearching, setSchoolSearching] = useState(false);
   const searchTimeout = useRef(null);
 
+  // Navbar school search
+  const [navQuery, setNavQuery] = useState('');
+  const [navResults, setNavResults] = useState([]);
+  const [navSearching, setNavSearching] = useState(false);
+  const navSearchTimeout = useRef(null);
+  const navSearchRef = useRef(null);
+
+  const handleNavSearch = (value) => {
+    setNavQuery(value);
+    clearTimeout(navSearchTimeout.current);
+    if (value.trim().length < 2) { setNavResults([]); return; }
+    setNavSearching(true);
+    navSearchTimeout.current = setTimeout(async () => {
+      try {
+        const res = await fetch(`${API_BASE_URL}/api/public/search-school/?q=${encodeURIComponent(value.trim())}`);
+        const data = await res.json();
+        setNavResults(Array.isArray(data) ? data : []);
+      } catch {
+        setNavResults([]);
+      } finally {
+        setNavSearching(false);
+      }
+    }, 350);
+  };
+
   const handleSchoolSearch = (value) => {
     setSchoolQuery(value);
     clearTimeout(searchTimeout.current);
@@ -233,7 +258,18 @@ function LandingPage() {
       setScrolled(window.scrollY > 20);
     };
     window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
+
+    const handleClickOutside = (e) => {
+      if (navSearchRef.current && !navSearchRef.current.contains(e.target)) {
+        setNavResults([]);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
   }, []);
 
   return (
@@ -249,6 +285,42 @@ function LandingPage() {
             <Link to="/pricing" className="landing-nav-link">Pricing</Link>
             <Link to="/user-guide" className="landing-nav-link">User Guide</Link>
             <Link to="/contact-sales" className="landing-nav-link">Contact</Link>
+
+            {/* Navbar school search */}
+            <div className="nav-school-search" ref={navSearchRef}>
+              <div className="nav-search-input-wrap">
+                <Search size={14} className="nav-search-icon" />
+                <input
+                  type="text"
+                  className="nav-search-input"
+                  placeholder="Find your school..."
+                  value={navQuery}
+                  onChange={e => handleNavSearch(e.target.value)}
+                  autoComplete="off"
+                />
+                {navSearching && <div className="nav-search-spinner" />}
+              </div>
+              {navResults.length > 0 && (
+                <div className="nav-search-dropdown">
+                  {navResults.map(school => (
+                    <button
+                      key={school.slug}
+                      className="nav-search-result"
+                      onClick={() => { navigate(`/${school.slug}`); setNavQuery(''); setNavResults([]); }}
+                    >
+                      <LogIn size={13} />
+                      <span>{school.name}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+              {navQuery.trim().length >= 2 && !navSearching && navResults.length === 0 && (
+                <div className="nav-search-dropdown">
+                  <p className="nav-search-empty">No schools found.</p>
+                </div>
+              )}
+            </div>
+
             <button onClick={() => navigate('/portal')} className="landing-signin-btn">
               Sign In
             </button>
@@ -267,6 +339,41 @@ function LandingPage() {
 
         <div className={`landing-mobile-menu ${mobileMenuOpen ? 'open' : ''}`}>
           <div className="landing-mobile-menu-links">
+            {/* Mobile school search */}
+            <div className="nav-school-search nav-school-search--mobile">
+              <div className="nav-search-input-wrap">
+                <Search size={14} className="nav-search-icon" />
+                <input
+                  type="text"
+                  className="nav-search-input"
+                  placeholder="Find your school..."
+                  value={navQuery}
+                  onChange={e => handleNavSearch(e.target.value)}
+                  autoComplete="off"
+                />
+                {navSearching && <div className="nav-search-spinner" />}
+              </div>
+              {navResults.length > 0 && (
+                <div className="nav-search-dropdown">
+                  {navResults.map(school => (
+                    <button
+                      key={school.slug}
+                      className="nav-search-result"
+                      onClick={() => { navigate(`/${school.slug}`); setNavQuery(''); setNavResults([]); setMobileMenuOpen(false); }}
+                    >
+                      <LogIn size={13} />
+                      <span>{school.name}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+              {navQuery.trim().length >= 2 && !navSearching && navResults.length === 0 && (
+                <div className="nav-search-dropdown">
+                  <p className="nav-search-empty">No schools found.</p>
+                </div>
+              )}
+            </div>
+
             <Link to="/pricing" className="landing-mobile-link">Pricing</Link>
             <Link to="/user-guide" className="landing-mobile-link">User Guide</Link>
             <Link to="/contact-sales" className="landing-mobile-link">Contact</Link>
