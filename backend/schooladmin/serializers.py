@@ -149,9 +149,11 @@ class GradingConfigurationSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         academic_year = validated_data.get('academic_year')
         term = validated_data.get('term')
+        school = self.context['request'].school if hasattr(self.context['request'], 'school') else None
 
-        # Check if a configuration already exists for this academic year and term
+        # Check if a configuration already exists for this school, academic year and term
         existing_config = GradingConfiguration.objects.filter(
+            school=school,
             academic_year=academic_year,
             term=term
         ).first()

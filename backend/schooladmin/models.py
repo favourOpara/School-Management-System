@@ -320,7 +320,7 @@ class GradingConfiguration(models.Model):
     )
     
     class Meta:
-        unique_together = ('academic_year', 'term')
+        unique_together = ('school', 'academic_year', 'term')
         ordering = ['-academic_year', 'term']
     
     def clean(self):

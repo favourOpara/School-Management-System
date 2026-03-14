@@ -69,7 +69,8 @@ const ManualGrading = () => {
         });
         setGrades(initialGrades);
       } else {
-        showMessage('Error fetching students', 'error');
+        const errData = await response.json().catch(() => ({}));
+        showMessage(errData.detail || 'Error fetching students', 'error');
       }
     } catch (error) {
       showMessage('Error fetching students', 'error');

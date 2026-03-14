@@ -2186,10 +2186,12 @@ def get_teacher_subjects_for_grading(request):
 
     user = request.user
 
-    # Get subjects where user is the teacher
-    subjects = Subject.objects.filter(
-        teacher=user
-    ).select_related('class_session', 'class_session__classroom')
+    # Get subjects where user is the teacher, scoped to this school
+    school = getattr(request, 'school', None)
+    subjects_qs = Subject.objects.filter(teacher=user).select_related('class_session', 'class_session__classroom')
+    if school:
+        subjects_qs = subjects_qs.filter(class_session__classroom__school=school)
+    subjects = subjects_qs
 
     subjects_data = []
     for subject in subjects:
@@ -2241,9 +2243,13 @@ def get_students_for_manual_grading(request, subject_id):
     from decimal import Decimal
 
     user = request.user
+    school = getattr(request, 'school', None)
 
+    subject_qs = Subject.objects.filter(id=subject_id)
+    if school:
+        subject_qs = subject_qs.filter(class_session__classroom__school=school)
     try:
-        subject = Subject.objects.get(id=subject_id)
+        subject = subject_qs.get()
     except Subject.DoesNotExist:
         return Response(
             {"detail": "Subject not found"},
