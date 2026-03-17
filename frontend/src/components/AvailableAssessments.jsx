@@ -6,7 +6,7 @@ import { useSchool } from '../contexts/SchoolContext';
 import './AvailableAssessments.css';
 
 const AvailableAssessments = () => {
-  const { buildApiUrl } = useSchool();
+  const { buildApiUrl, school } = useSchool();
   const [assessments, setAssessments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -42,8 +42,8 @@ const AvailableAssessments = () => {
   };
 
   const handleStartAssessment = (assessment) => {
-    // Navigate to take assessment page with assessment ID
-    navigate(`/student-dashboard/take-assessment/${assessment.id}`, {
+    const slug = school?.slug || localStorage.getItem('schoolSlug');
+    navigate(`/${slug}/student/take-assessment/${assessment.id}`, {
       state: { assessment }
     });
   };

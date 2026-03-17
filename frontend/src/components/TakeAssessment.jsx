@@ -7,11 +7,12 @@ import { useDialog } from '../contexts/DialogContext';
 import { useSchool } from '../contexts/SchoolContext';
 
 const TakeAssessment = () => {
-  const { buildApiUrl } = useSchool();
+  const { buildApiUrl, school } = useSchool();
   const { showConfirm } = useDialog();
   const { assessmentId } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
+  const slug = school?.slug || localStorage.getItem('schoolSlug');
 
   const [assessment, setAssessment] = useState(location.state?.assessment || null);
   const [answers, setAnswers] = useState({});
@@ -125,7 +126,7 @@ const TakeAssessment = () => {
       const data = await response.json();
 
       // Navigate to results or back to assessments list
-      navigate('/student-dashboard?tab=assessments', {
+      navigate(`/${slug}/student/dashboard?tab=assessments`, {
         state: {
           message: data.message || 'Assessment submitted successfully!',
           submissionId: data.submission_id
@@ -166,7 +167,7 @@ const TakeAssessment = () => {
         <AlertCircle size={48} />
         <h2>Error</h2>
         <p>{error}</p>
-        <button onClick={() => navigate('/student-dashboard?tab=assessments')}>
+        <button onClick={() => navigate(`/${slug}/student/dashboard?tab=assessments`)}>
           Back to Assessments
         </button>
       </div>
@@ -182,7 +183,7 @@ const TakeAssessment = () => {
       <div className="assessment-instructions">
         <button
           className="back-btn"
-          onClick={() => navigate('/student-dashboard?tab=assessments')}
+          onClick={() => navigate(`/${slug}/student/dashboard?tab=assessments`)}
         >
           <ArrowLeft size={20} />
           Back
