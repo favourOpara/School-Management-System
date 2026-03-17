@@ -2364,13 +2364,16 @@ class GetClassStudentsView(APIView):
                 # No explicit access control for this student - check if released
                 has_unlocked = assessments.filter(is_released=True).exists()
 
-            # Get fee balance
-            try:
-                fee_record = StudentFeeRecord.objects.select_related('fee_structure').get(student=student)
+            # Get fee balance (use filter+first to avoid MultipleObjectsReturned)
+            fee_record = StudentFeeRecord.objects.select_related('fee_structure').filter(
+                student=student,
+                fee_structure__school=school
+            ).first()
+            if fee_record:
                 total_fee = float(fee_record.fee_structure.amount)
                 amount_paid = float(fee_record.amount_paid)
-                fee_balance = max(0.0, total_fee - amount_paid)  # Balance cannot be negative
-            except StudentFeeRecord.DoesNotExist:
+                fee_balance = max(0.0, total_fee - amount_paid)
+            else:
                 fee_balance = 0.0
 
             students_data.append({
