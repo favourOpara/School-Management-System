@@ -311,6 +311,82 @@ const ReviewQuestions = () => {
     }
   };
 
+  const handleUnlockForAttendance = async () => {
+    if (!selectedAssessmentType) {
+      setError('Please select assessment type before unlocking');
+      return;
+    }
+
+    const typeLabel = selectedAssessmentType === 'test' ? 'tests' : 'exams';
+    const confirmed = await showConfirm({
+      title: 'Unlock for Present Students',
+      message: `Unlock all ${typeLabel} for students who marked attendance today?`,
+      confirmText: 'Unlock',
+      cancelText: 'Cancel',
+      confirmButtonClass: 'confirm-btn-warning'
+    });
+    if (!confirmed) return;
+
+    try {
+      const token = localStorage.getItem('accessToken');
+      const requestBody = { assessment_type: selectedAssessmentType };
+      if (selectedAcademicYear) requestBody.academic_year = selectedAcademicYear;
+      if (selectedTerm) requestBody.term = selectedTerm;
+      if (selectedSubject) requestBody.subject_id = selectedSubject;
+
+      const response = await fetch(buildApiUrl('/academics/admin/assessments/unlock-attendance/'), {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(requestBody)
+      });
+      if (!response.ok) throw new Error('Failed to unlock for present students');
+      const data = await response.json();
+      showAlert({ type: 'success', message: data.message });
+      if (hasFiltered) await handleSearch();
+    } catch (err) {
+      setError(err.message);
+      showAlert({ type: 'error', message: 'Error: ' + err.message });
+    }
+  };
+
+  const handleUnlockForPaidAndPresent = async () => {
+    if (!selectedAssessmentType) {
+      setError('Please select assessment type before unlocking');
+      return;
+    }
+
+    const typeLabel = selectedAssessmentType === 'test' ? 'tests' : 'exams';
+    const confirmed = await showConfirm({
+      title: 'Unlock for Paid + Present Students',
+      message: `Unlock all ${typeLabel} for students who both paid their fees AND marked attendance today?`,
+      confirmText: 'Unlock',
+      cancelText: 'Cancel',
+      confirmButtonClass: 'confirm-btn-warning'
+    });
+    if (!confirmed) return;
+
+    try {
+      const token = localStorage.getItem('accessToken');
+      const requestBody = { assessment_type: selectedAssessmentType };
+      if (selectedAcademicYear) requestBody.academic_year = selectedAcademicYear;
+      if (selectedTerm) requestBody.term = selectedTerm;
+      if (selectedSubject) requestBody.subject_id = selectedSubject;
+
+      const response = await fetch(buildApiUrl('/academics/admin/assessments/unlock-paid-and-present/'), {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(requestBody)
+      });
+      if (!response.ok) throw new Error('Failed to unlock for paid + present students');
+      const data = await response.json();
+      showAlert({ type: 'success', message: data.message });
+      if (hasFiltered) await handleSearch();
+    } catch (err) {
+      setError(err.message);
+      showAlert({ type: 'error', message: 'Error: ' + err.message });
+    }
+  };
+
   const handleUnlockForPaidStudents = async () => {
     if (!selectedAssessmentType) {
       setError('Please select assessment type before unlocking');
@@ -996,7 +1072,15 @@ const ReviewQuestions = () => {
                       </button>
                       <button className="unlock-paid-btn" onClick={handleUnlockForPaidStudents}>
                         <DollarSign size={18} />
-                        Unlock for Paid Students Only
+                        💳 Paid Fees
+                      </button>
+                      <button className="unlock-attendance-btn" onClick={handleUnlockForAttendance}>
+                        <Users size={18} />
+                        📋 Present Today
+                      </button>
+                      <button className="unlock-both-btn" onClick={handleUnlockForPaidAndPresent}>
+                        <Users size={18} />
+                        ✅ Paid + Present
                       </button>
                       <button className="unlock-selected-btn" onClick={handleOpenUnlockModal}>
                         <Users size={18} />

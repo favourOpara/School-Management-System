@@ -1,12 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import Select from 'react-select';
-import { ClipboardList, Lock, Users } from 'lucide-react';
+import { ClipboardList } from 'lucide-react';
 import TestSubjectsModal from './TestSubjectsModal';
 import TestStudentScoresModal from './TestStudentScoresModal';
-import NotYetUnlockedModal from './NotYetUnlockedModal';
 import './DashboardTestsCard.css';
-import { useDialog } from '../contexts/DialogContext';
 import { useSchool } from '../contexts/SchoolContext';
 
 import API_BASE_URL from '../config';
@@ -32,7 +30,6 @@ const selectStyles = {
 };
 
 const DashboardTestsCard = () => {
-  const { showConfirm, showAlert } = useDialog();
   const { buildApiUrl } = useSchool();
   const [academicYears, setAcademicYears] = useState([]);
   const [selectedYear, setSelectedYear] = useState(null);
@@ -43,19 +40,9 @@ const DashboardTestsCard = () => {
   const [error, setError] = useState('');
   const [selectedClass, setSelectedClass] = useState(null);
   const [selectedSubject, setSelectedSubject] = useState(null);
-  const [unlocking, setUnlocking] = useState(null); // 'paid' | 'attendance' | 'both' | null
-  const [lastStrategy, setLastStrategy] = useState(null); // tracks which button was used last
-  const [showNotUnlocked, setShowNotUnlocked] = useState(false);
-  const [notUnlockedCount, setNotUnlockedCount] = useState(null);
 
   const token = localStorage.getItem('accessToken');
   const headers = { Authorization: `Bearer ${token}` };
-
-  // Reset strategy tracking when year/term changes
-  useEffect(() => {
-    setLastStrategy(null);
-    setNotUnlockedCount(null);
-  }, [selectedYear, selectedTerm]);
 
   useEffect(() => {
     const fetchYears = async () => {
@@ -127,73 +114,6 @@ const DashboardTestsCard = () => {
     return totalPossible > 0 ? Math.round((totalCompleted / totalPossible) * 100) : 0;
   };
 
-  const checkStrategyWarning = async (strategy) => {
-    if (lastStrategy && lastStrategy !== strategy) {
-      const strategyLabels = { paid: 'Paid Fees', attendance: 'Present Today', both: 'Paid + Present Today' };
-      const proceed = await showConfirm({
-        title: 'Switch Unlock Strategy?',
-        message: `You previously unlocked using "${strategyLabels[lastStrategy]}". Switching to "${strategyLabels[strategy]}" may unlock additional students who don't meet the previous criteria. Are you sure?`,
-        confirmText: 'Switch & Continue',
-        cancelText: 'Cancel',
-        confirmButtonClass: 'confirm-btn-warning',
-      });
-      return proceed;
-    }
-    return true;
-  };
-
-  const handleUnlock = async (strategy) => {
-    if (!selectedYear || !selectedTerm) {
-      showAlert({ type: 'warning', message: 'Please select academic year and term first.' });
-      return;
-    }
-
-    const ok = await checkStrategyWarning(strategy);
-    if (!ok) return;
-
-    const strategyLabels = { paid: 'Paid Fees', attendance: 'Present Today', both: 'Paid + Present Today' };
-    const confirmed = await showConfirm({
-      title: `Unlock Tests — ${strategyLabels[strategy]}`,
-      message: strategy === 'paid'
-        ? `Unlock all tests for ${selectedYear.label} - ${selectedTerm.label} for students who have paid their fees?`
-        : strategy === 'attendance'
-        ? `Unlock all tests for ${selectedYear.label} - ${selectedTerm.label} for students who marked attendance today?`
-        : `Unlock all tests for ${selectedYear.label} - ${selectedTerm.label} for students who both paid their fees AND marked attendance today?`,
-      confirmText: 'Unlock',
-      cancelText: 'Cancel',
-    });
-    if (!confirmed) return;
-
-    const endpoints = {
-      paid: '/academics/admin/assessments/unlock-for-paid/',
-      attendance: '/academics/admin/assessments/unlock-attendance/',
-      both: '/academics/admin/assessments/unlock-paid-and-present/',
-    };
-
-    setUnlocking(strategy);
-    try {
-      const res = await axios.post(
-        buildApiUrl(endpoints[strategy]),
-        { academic_year: selectedYear.value, term: selectedTerm.value, assessment_type: 'test' },
-        { headers }
-      );
-      setLastStrategy(strategy);
-      const count = res.data.access_records ?? res.data.students_count ?? 0;
-      showAlert({ type: 'success', message: `Tests unlocked for ${count} student(s).` });
-
-      // Fetch not-unlocked count
-      const notRes = await axios.get(buildApiUrl('/academics/admin/assessments/not-unlocked/'), {
-        params: { academic_year: selectedYear.value, term: selectedTerm.value, assessment_type: 'test' },
-        headers,
-      });
-      setNotUnlockedCount(notRes.data.total_locked ?? 0);
-    } catch (err) {
-      showAlert({ type: 'error', message: err.response?.data?.detail || 'Failed to unlock tests. Please try again.' });
-    } finally {
-      setUnlocking(null);
-    }
-  };
-
   return (
     <div className={`tests-dashboard-wrapper ${isFiltered ? 'tests-filters-active' : ''}`}>
       <div className="dashboard-card tests-dashboard-card">
@@ -203,44 +123,6 @@ const DashboardTestsCard = () => {
             <h2>Tests Average by Class</h2>
             <p>Track test completion rates</p>
           </div>
-        </div>
-
-        {/* Unlock buttons */}
-        <div className="tests-unlock-section">
-          <p className="tests-unlock-label">Unlock tests for:</p>
-          <div className="tests-unlock-btns">
-            <button
-              className={`tests-unlock-btn ${lastStrategy === 'paid' ? 'active' : ''}`}
-              onClick={() => handleUnlock('paid')}
-              disabled={!!unlocking || !selectedYear || !selectedTerm}
-            >
-              {unlocking === 'paid' ? '...' : '💳 Paid Fees'}
-            </button>
-            <button
-              className={`tests-unlock-btn ${lastStrategy === 'attendance' ? 'active' : ''}`}
-              onClick={() => handleUnlock('attendance')}
-              disabled={!!unlocking || !selectedYear || !selectedTerm}
-            >
-              {unlocking === 'attendance' ? '...' : '📋 Present Today'}
-            </button>
-            <button
-              className={`tests-unlock-btn ${lastStrategy === 'both' ? 'active' : ''}`}
-              onClick={() => handleUnlock('both')}
-              disabled={!!unlocking || !selectedYear || !selectedTerm}
-            >
-              {unlocking === 'both' ? '...' : '✅ Paid + Present'}
-            </button>
-          </div>
-          {notUnlockedCount !== null && (
-            <button
-              className="tests-not-unlocked-btn"
-              onClick={() => setShowNotUnlocked(true)}
-            >
-              <Lock size={14} />
-              <span>{notUnlockedCount > 0 ? `${notUnlockedCount} student(s) not yet unlocked` : 'All students unlocked'}</span>
-              {notUnlockedCount > 0 && <Users size={13} />}
-            </button>
-          )}
         </div>
 
         <div className="tests-filters">
@@ -297,15 +179,6 @@ const DashboardTestsCard = () => {
       )}
       {selectedSubject && (
         <TestStudentScoresModal subjectData={selectedSubject} onClose={() => setSelectedSubject(null)} />
-      )}
-      {showNotUnlocked && selectedYear && selectedTerm && (
-        <NotYetUnlockedModal
-          academicYear={selectedYear.value}
-          term={selectedTerm.value}
-          assessmentType="test"
-          onClose={() => setShowNotUnlocked(false)}
-          onStudentUnlocked={() => setNotUnlockedCount(prev => Math.max(0, (prev || 1) - 1))}
-        />
       )}
     </div>
   );
