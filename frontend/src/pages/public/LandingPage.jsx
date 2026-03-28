@@ -206,6 +206,7 @@ function LandingPage() {
   const [navSearching, setNavSearching] = useState(false);
   const navSearchTimeout = useRef(null);
   const navSearchRef = useRef(null);
+  const mobileNavSearchRef = useRef(null);
 
   const handleNavSearch = (value) => {
     setNavQuery(value);
@@ -260,7 +261,9 @@ function LandingPage() {
     window.addEventListener('scroll', handleScroll);
 
     const handleClickOutside = (e) => {
-      if (navSearchRef.current && !navSearchRef.current.contains(e.target)) {
+      const inDesktop = navSearchRef.current && navSearchRef.current.contains(e.target);
+      const inMobile = mobileNavSearchRef.current && mobileNavSearchRef.current.contains(e.target);
+      if (!inDesktop && !inMobile) {
         setNavResults([]);
       }
     };
@@ -340,7 +343,7 @@ function LandingPage() {
         <div className={`landing-mobile-menu ${mobileMenuOpen ? 'open' : ''}`}>
           <div className="landing-mobile-menu-links">
             {/* Mobile school search */}
-            <div className="nav-school-search nav-school-search--mobile">
+            <div className="nav-school-search nav-school-search--mobile" ref={mobileNavSearchRef}>
               <div className="nav-search-input-wrap">
                 <Search size={14} className="nav-search-icon" />
                 <input
@@ -979,7 +982,7 @@ function LandingPage() {
                     <button
                       key={school.slug}
                       className="landing-find-school-result-item"
-                      onClick={() => navigate(`/${school.slug}`)}
+                      onClick={() => { navigate(`/${school.slug}`); setSchoolQuery(''); setSchoolResults([]); }}
                     >
                       <div className="landing-find-school-result-icon">
                         <Building2 size={18} />
