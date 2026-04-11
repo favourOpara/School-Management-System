@@ -46,7 +46,7 @@ def _build_insightwick_html(heading, body_html, cta_text=None, cta_url=None):
         <!-- Header -->
         <div style="background: linear-gradient(135deg, {INSIGHTWICK_ACCENT_COLOR}, #1d4ed8); padding: 32px; text-align: center; border-radius: 12px 12px 0 0;">
             <!-- InsightWick logo (inline SVG — no external image dependency, no whitespace) -->
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 80" width="210" height="56" style="display:inline-block; margin-bottom: 8px;" role="img" aria-label="InsightWick">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 80" width="252" height="56" style="display:inline-block; margin-bottom: 8px;" role="img" aria-label="InsightWick">
               <defs>
                 <linearGradient id="ec-ig" x1="0" y1="0" x2="72" y2="72" gradientUnits="userSpaceOnUse">
                   <stop offset="0%" stop-color="#93c5fd"/>
@@ -65,7 +65,7 @@ def _build_insightwick_html(heading, body_html, cta_text=None, cta_url=None):
               <line x1="62" y1="31" x2="62" y2="50" stroke="white" stroke-width="2.5" stroke-linecap="round" opacity="0.9"/>
               <circle cx="62" cy="54" r="4" fill="white" opacity="0.9"/>
               <text x="88" y="46" font-family="Arial, Helvetica, sans-serif" font-size="32" font-weight="800" letter-spacing="-0.5">
-                <tspan fill="#ffffff">Edu</tspan><tspan fill="#bfdbfe">Care</tspan>
+                <tspan fill="#ffffff">Insight</tspan><tspan fill="#bfdbfe">Wick</tspan>
               </text>
               <text x="91" y="63" font-family="Arial, Helvetica, sans-serif" font-size="9.5" font-weight="600" fill="rgba(255,255,255,0.65)" letter-spacing="3.2">SCHOOL MANAGEMENT</text>
             </svg>
