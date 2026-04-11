@@ -322,7 +322,7 @@ function PortalDashboard() {
           <div className="portal-mobile-header-logo-icon">
             <GraduationCap size={20} />
           </div>
-          <span>EduCare</span>
+          <span>InsightWick</span>
         </Link>
         <button
           className="portal-mobile-menu-btn"
@@ -345,7 +345,7 @@ function PortalDashboard() {
             <div className="portal-sidebar-logo-icon">
               <GraduationCap size={24} />
             </div>
-            <span>EduCare</span>
+            <span>InsightWick</span>
           </Link>
         </div>
 
@@ -676,7 +676,7 @@ function PortalDashboard() {
                 <div className="portal-notification-note">
                   <p>
                     <strong>Note:</strong> Email settings will use the sender name configured in School Branding.
-                    Emails will be sent from: <code>noreply@educare.com</code>
+                    Emails will be sent from: <code>noreply@insightwick.com</code>
                   </p>
                 </div>
               </div>

@@ -422,7 +422,7 @@ function SchoolRegistration() {
       <nav className="register-nav">
         <div className="register-nav-container">
           <Link to="/" className="register-logo">
-            <img src="/logo.svg" alt="EduCare" style={{height: '60px', width: 'auto'}} />
+            <img src="/logo.svg" alt="InsightWick" style={{height: '60px', width: 'auto'}} />
           </Link>
 
           <div className="register-nav-links">
@@ -557,7 +557,7 @@ function SchoolRegistration() {
                 <div>
                   <p className="register-onboarding-notice-title">Your Onboarding Expert Will Reach Out Within 24 Hours</p>
                   <p className="register-onboarding-notice-text">
-                    A dedicated EduCare specialist will contact you at <strong>{formData.admin_email}</strong> to personally
+                    A dedicated InsightWick specialist will contact you at <strong>{formData.admin_email}</strong> to personally
                     help set up your students, teachers, classes, subjects, and more — completely free.
                   </p>
                 </div>
@@ -654,7 +654,7 @@ function SchoolRegistration() {
                       {formData.school_name && getSlug() && (
                         <div className="register-slug-preview">
                           <p>
-                            Your school URL: <strong>educare.com/{getSlug()}</strong>
+                            Your school URL: <strong>insightwick.com/{getSlug()}</strong>
                           </p>
                         </div>
                       )}
@@ -1207,14 +1207,14 @@ function SchoolRegistration() {
       <footer className="register-footer">
         <div className="register-footer-container">
           <div className="register-footer-brand">
-            <img src="/logo.svg" alt="EduCare" style={{height: '60px', width: 'auto'}} />
+            <img src="/logo.svg" alt="InsightWick" style={{height: '60px', width: 'auto'}} />
           </div>
           <div className="register-footer-links">
             <Link to="/pricing">Pricing</Link>
             <Link to="/contact-sales">Contact</Link>
           </div>
           <p className="register-footer-copyright">
-            © {new Date().getFullYear()} EduCare. All rights reserved.
+            © {new Date().getFullYear()} InsightWick. All rights reserved.
           </p>
         </div>
       </footer>

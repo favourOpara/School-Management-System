@@ -84,7 +84,7 @@ const plans = [
 
 const faqs = [
   {
-    question: 'Can I try EduCare before subscribing?',
+    question: 'Can I try InsightWick before subscribing?',
     answer: 'Yes! Every plan includes two free trial options — a 30-day trial or a termly trial (4 months, roughly one full school term). Both include full access to all features in the chosen plan with no credit card required. After your trial ends, you\'ll be invited to subscribe to continue.',
   },
   {
@@ -139,7 +139,7 @@ function PricingPage() {
       <nav className="pricing-nav">
         <div className="pricing-nav-container">
           <Link to="/" className="pricing-logo">
-            <img src="/logo.svg" alt="EduCare" style={{height: '60px', width: 'auto'}} />
+            <img src="/logo.svg" alt="InsightWick" style={{height: '60px', width: 'auto'}} />
           </Link>
 
           <div className="pricing-nav-links">
@@ -303,7 +303,7 @@ function PricingPage() {
           <div className="pricing-onboarding-callout-text">
             <h3>Free Expert Onboarding — Included with Every Plan</h3>
             <p>
-              After you sign up, a dedicated EduCare onboarding specialist will reach out within 24 hours
+              After you sign up, a dedicated InsightWick onboarding specialist will reach out within 24 hours
               to personally help you set up students, teachers, classes, subjects, parents, and more.
               No extra cost. No DIY headaches.
             </p>
@@ -398,7 +398,7 @@ function PricingPage() {
       <section className="pricing-cta">
         <div className="pricing-cta-container">
           <h2>Ready to Get Started?</h2>
-          <p>Join 500+ schools already using EduCare to streamline their operations.</p>
+          <p>Join 500+ schools already using InsightWick to streamline their operations.</p>
           <button onClick={() => navigate('/register')} className="pricing-cta-btn">
             Start Your Free Trial
             <ArrowRight size={20} />
@@ -410,7 +410,7 @@ function PricingPage() {
       <footer className="pricing-footer">
         <div className="pricing-footer-container">
           <div className="pricing-footer-brand">
-            <img src="/logo-white.svg" alt="EduCare" style={{height: '60px', width: 'auto'}} />
+            <img src="/logo-white.svg" alt="InsightWick" style={{height: '60px', width: 'auto'}} />
           </div>
           <div className="pricing-footer-links">
             <Link to="/">Home</Link>
@@ -418,7 +418,7 @@ function PricingPage() {
             <Link to="/register">Register</Link>
           </div>
           <p className="pricing-footer-copyright">
-            © {new Date().getFullYear()} EduCare. All rights reserved.
+            © {new Date().getFullYear()} InsightWick. All rights reserved.
           </p>
         </div>
       </footer>

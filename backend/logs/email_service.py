@@ -10,8 +10,8 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_SENDER_EMAIL = 'office@figilschools.com'
-DEFAULT_SENDER_NAME = 'EduCare'
+DEFAULT_SENDER_EMAIL = 'office@insightwick.com'
+DEFAULT_SENDER_NAME = 'InsightWick'
 
 
 def _get_sender(user=None):
@@ -936,7 +936,7 @@ def test_email_configuration():
     try:
         sender = _get_sender()
         _send_email(
-            "Test Email - EduCare",
+            "Test Email - InsightWick",
             "<html><body><h2>Test Email</h2><p>This is a test email.</p><p>If you receive this, email configuration is working!</p></body></html>",
             DEFAULT_SENDER_EMAIL,
             "Test",

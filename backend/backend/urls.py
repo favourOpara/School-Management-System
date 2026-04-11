@@ -66,7 +66,7 @@ urlpatterns = [
     # Admin Portal routes (for school admin configuration)
     path('api/portal/', include(tenant_portal_urls)),
 
-    # Onboarding agent routes (for EduCare internal onboarding staff)
+    # Onboarding agent routes (for InsightWick internal onboarding staff)
     path('api/onboarding/', include(tenant_onboarding_urls)),
 
     # School-scoped routes (authentication required)

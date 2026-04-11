@@ -9,7 +9,7 @@ This guide will help you deploy the School Management System to Railway with aut
 - Creates SQLite database copy
 - Generates backup summary
 - Compresses everything into a ZIP file
-- **Automatically emails to: office@figilschools.com**
+- **Automatically emails to: office@insightwick.com**
 
 ✅ **Brevo SMTP Email Integration**
 - All emails sent via Brevo SMTP
@@ -73,9 +73,9 @@ EMAIL_PORT=587
 EMAIL_USE_TLS=True
 EMAIL_HOST_USER=your-brevo-login-email
 EMAIL_HOST_PASSWORD=your-brevo-smtp-api-key
-DEFAULT_FROM_EMAIL=office@figilschools.com
+DEFAULT_FROM_EMAIL=office@insightwick.com
 
-BACKUP_EMAIL=office@figilschools.com
+BACKUP_EMAIL=office@insightwick.com
 BACKUP_INTERVAL_DAYS=5
 ```
 
@@ -125,7 +125,7 @@ Railway provides PostgreSQL, but your app uses SQLite. For production, you shoul
 
 The system will automatically:
 - ✅ Create database backups every 5 days
-- ✅ Email ZIP file to office@figilschools.com
+- ✅ Email ZIP file to office@insightwick.com
 - ✅ Include all tables, SQLite file, and summary
 - ✅ Run continuously in the background
 
@@ -135,7 +135,7 @@ To trigger a manual backup from Railway:
 
 ```bash
 # SSH into your Railway service
-railway run python manage.py backup_database --email office@figilschools.com
+railway run python manage.py backup_database --email office@insightwick.com
 ```
 
 ## Monitoring Backups
@@ -147,8 +147,8 @@ Check the scheduler logs in Railway:
 
 You'll see messages like:
 ```
-Starting scheduled backup to office@figilschools.com...
-Scheduled backup completed and sent to office@figilschools.com
+Starting scheduled backup to office@insightwick.com...
+Scheduled backup completed and sent to office@insightwick.com
 ```
 
 ## Troubleshooting
@@ -163,7 +163,7 @@ Scheduled backup completed and sent to office@figilschools.com
 ### Email Not Received
 
 1. Check spam folder
-2. Verify office@figilschools.com is correct
+2. Verify office@insightwick.com is correct
 3. Check Brevo dashboard for email logs
 4. Verify SMTP credentials are valid
 
@@ -213,7 +213,7 @@ railway run python manage.py migrate
 railway run python manage.py createsuperuser
 
 # Manual backup
-railway run python manage.py backup_database --email office@figilschools.com
+railway run python manage.py backup_database --email office@insightwick.com
 
 # Check scheduler status
 railway logs --service scheduler
@@ -222,6 +222,6 @@ railway logs --service scheduler
 ---
 
 **Deployment Date**: 2025-11-26
-**Automated Backup Email**: office@figilschools.com
+**Automated Backup Email**: office@insightwick.com
 **Backup Frequency**: Every 5 days
 **Email Provider**: Brevo SMTP

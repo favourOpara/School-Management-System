@@ -185,7 +185,7 @@ def handle_charge_success(data):
 
                     # Send onboarding welcome email for brand-new paid subscriptions
                     try:
-                        from .educare_emails import send_onboarding_welcome_email
+                        from .insightwick_emails import send_onboarding_welcome_email
                         send_onboarding_welcome_email(subscription, registration_type='subscribe')
                     except Exception as e:
                         logger.error(f"Error sending onboarding email: {str(e)}")
@@ -329,13 +329,13 @@ def handle_invoice_update(data):
     logger.info(f"Invoice updated: {data.get('id')}")
 
 
-# Helper functions for notifications — use EduCare-branded emails
+# Helper functions for notifications — use InsightWick-branded emails
 
 def _send_payment_confirmation(subscription, payment):
-    """Send payment confirmation email via EduCare branding."""
+    """Send payment confirmation email via InsightWick branding."""
     try:
-        from .educare_emails import send_educare_payment_confirmation
-        send_educare_payment_confirmation(subscription, payment)
+        from .insightwick_emails import send_insightwick_payment_confirmation
+        send_insightwick_payment_confirmation(subscription, payment)
     except Exception as e:
         logger.error(f"Error sending payment confirmation: {str(e)}")
 
@@ -343,7 +343,7 @@ def _send_payment_confirmation(subscription, payment):
 def _send_subscription_ending_notification(subscription):
     """Send notification that subscription won't renew."""
     try:
-        from .educare_emails import send_expiry_warning_email
+        from .insightwick_emails import send_expiry_warning_email
         # Calculate days remaining
         if subscription.current_period_end:
             days = (subscription.current_period_end - timezone.now()).days
@@ -357,8 +357,8 @@ def _send_subscription_ending_notification(subscription):
 def _send_cancellation_notification(subscription):
     """Send subscription cancellation confirmation."""
     try:
-        from .educare_emails import send_educare_cancellation_email
-        send_educare_cancellation_email(subscription)
+        from .insightwick_emails import send_insightwick_cancellation_email
+        send_insightwick_cancellation_email(subscription)
     except Exception as e:
         logger.error(f"Error sending cancellation notification: {str(e)}")
 
@@ -366,7 +366,7 @@ def _send_cancellation_notification(subscription):
 def _send_payment_failed_notification(subscription):
     """Send payment failed notification."""
     try:
-        from .educare_emails import send_educare_payment_failed_email
-        send_educare_payment_failed_email(subscription)
+        from .insightwick_emails import send_insightwick_payment_failed_email
+        send_insightwick_payment_failed_email(subscription)
     except Exception as e:
         logger.error(f"Error sending payment failed notification: {str(e)}")

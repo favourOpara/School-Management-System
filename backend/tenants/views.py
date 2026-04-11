@@ -343,7 +343,7 @@ class SendEmailOTPView(APIView):
 
         # Send the email FIRST — only save to DB if it succeeds
         try:
-            from .educare_emails import send_otp_email
+            from .insightwick_emails import send_otp_email
             send_otp_email(email=email, otp=otp, first_name=first_name)
         except Exception as e:
             logger.error(f"Failed to send OTP email to {email}: {e}")
@@ -453,7 +453,7 @@ class PortalResendVerificationView(APIView):
         portal_user.save(update_fields=['email_verification_token'])
 
         try:
-            from .educare_emails import send_verification_email
+            from .insightwick_emails import send_verification_email
             send_verification_email(portal_user)
         except Exception:
             pass

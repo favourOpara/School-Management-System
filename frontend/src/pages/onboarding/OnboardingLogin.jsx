@@ -56,7 +56,7 @@ function OnboardingLogin() {
           <UserCheck size={32} />
         </div>
         <h1 className="ob-login-title">Onboarding Portal</h1>
-        <p className="ob-login-sub">EduCare Onboarding Team Access</p>
+        <p className="ob-login-sub">InsightWick Onboarding Team Access</p>
 
         {error && <div className="ob-login-error">{error}</div>}
 
@@ -68,7 +68,7 @@ function OnboardingLogin() {
               name="email"
               value={form.email}
               onChange={handleChange}
-              placeholder="agent@educare.ng"
+              placeholder="agent@insightwick.ng"
               required
               autoFocus
             />

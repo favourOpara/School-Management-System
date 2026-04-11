@@ -172,7 +172,7 @@ const howItWorks = [
     step: 2,
     icon: Phone,
     title: 'Meet Your Onboarding Expert',
-    description: 'Within 24 hours, a dedicated EduCare specialist contacts you to personally set up your students, teachers, classes, subjects, and more.',
+    description: 'Within 24 hours, a dedicated InsightWick specialist contacts you to personally set up your students, teachers, classes, subjects, and more.',
   },
   {
     step: 3,
@@ -281,7 +281,7 @@ function LandingPage() {
       <nav className={`landing-nav ${scrolled ? 'scrolled' : ''}`}>
         <div className="landing-nav-container">
           <Link to="/" className="landing-logo">
-            <img src={scrolled ? '/logo.svg' : '/logo-white.svg'} alt="EduCare" style={{height: '60px', width: 'auto'}} />
+            <img src={scrolled ? '/logo.svg' : '/logo-white.svg'} alt="InsightWick" style={{height: '60px', width: 'auto'}} />
           </Link>
 
           <div className="landing-nav-links">
@@ -491,7 +491,7 @@ function LandingPage() {
                       </div>
                       <div className="landing-hero-browser-url">
                         <Shield size={12} />
-                        <span>educare.com/yourschool/admin</span>
+                        <span>insightwick.com/yourschool/admin</span>
                       </div>
                     </div>
 
@@ -500,7 +500,7 @@ function LandingPage() {
                       {/* Sidebar */}
                       <div className="landing-hero-sidebar">
                         <div className="landing-hero-sidebar-logo">
-                          <img src="/logo-white.svg" alt="EduCare" style={{height: '60px', width: 'auto'}} />
+                          <img src="/logo-white.svg" alt="InsightWick" style={{height: '60px', width: 'auto'}} />
                         </div>
                         <div className="landing-hero-sidebar-menu">
                           <div className="landing-hero-sidebar-item active">
@@ -714,7 +714,7 @@ function LandingPage() {
               <span className="landing-ai-title-accent">Every Classroom</span>
             </h2>
             <p className="landing-ai-subtitle">
-              EduCare brings AI directly into your school — helping students learn faster and giving teachers smarter, instant feedback on their lesson notes.
+              InsightWick brings AI directly into your school — helping students learn faster and giving teachers smarter, instant feedback on their lesson notes.
             </p>
             <div className="landing-ai-features">
               <div className="landing-ai-feature">
@@ -867,7 +867,7 @@ function LandingPage() {
               <span className="landing-onboarding-title-accent">We Onboard Your Entire School.</span>
             </h2>
             <p className="landing-onboarding-subtitle">
-              Every EduCare school — whether on a free trial or a paid plan — gets a dedicated onboarding expert
+              Every InsightWick school — whether on a free trial or a paid plan — gets a dedicated onboarding expert
               who reaches out within 24 hours of signing up. Completely free. No exceptions.
             </p>
             <div className="landing-onboarding-items">
@@ -1035,7 +1035,7 @@ function LandingPage() {
           <div className="landing-footer-grid">
             <div>
               <div className="landing-footer-brand">
-                <img src="/logo-white.svg" alt="EduCare" style={{height: '60px', width: 'auto'}} />
+                <img src="/logo-white.svg" alt="InsightWick" style={{height: '60px', width: 'auto'}} />
               </div>
               <p className="landing-footer-description">
                 The modern school management platform built for schools that want to do more with less.
@@ -1074,7 +1074,7 @@ function LandingPage() {
             <div className="landing-footer-column">
               <h4>Contact</h4>
               <ul className="landing-footer-links">
-                <li>support@educare.ng</li>
+                <li>support@insightwick.ng</li>
                 <li>+234 800 123 4567</li>
                 <li>Lagos, Nigeria</li>
               </ul>
@@ -1083,7 +1083,7 @@ function LandingPage() {
 
           <div className="landing-footer-bottom">
             <p className="landing-footer-copyright">
-              © {new Date().getFullYear()} EduCare. All rights reserved.
+              © {new Date().getFullYear()} InsightWick. All rights reserved.
             </p>
             <div className="landing-footer-legal">
               <a href="#">Privacy Policy</a>

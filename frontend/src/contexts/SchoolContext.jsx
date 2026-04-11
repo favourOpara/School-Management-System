@@ -178,7 +178,7 @@ export function SchoolProvider({ children }) {
     }
     // Cleanup: reset title when component unmounts
     return () => {
-      document.title = 'EduCare';
+      document.title = 'InsightWick';
     };
   }, [school?.name]);
 

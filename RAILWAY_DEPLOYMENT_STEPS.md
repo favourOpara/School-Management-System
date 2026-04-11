@@ -19,7 +19,7 @@ Before deploying, ensure you have:
 1. ✅ Railway account (https://railway.app)
 2. ✅ GitHub repository with your code
 3. ✅ Brevo SMTP credentials
-4. ✅ office@figilschools.com verified in Brevo
+4. ✅ office@insightwick.com verified in Brevo
 
 ---
 
@@ -86,10 +86,10 @@ EMAIL_PORT=587
 EMAIL_USE_TLS=True
 EMAIL_HOST_USER=your-brevo-login-email
 EMAIL_HOST_PASSWORD=your-brevo-smtp-api-key
-DEFAULT_FROM_EMAIL=office@figilschools.com
+DEFAULT_FROM_EMAIL=office@insightwick.com
 
 # Automated Backup Settings
-BACKUP_EMAIL=office@figilschools.com
+BACKUP_EMAIL=office@insightwick.com
 BACKUP_INTERVAL_DAYS=5
 
 # CORS Configuration
@@ -221,7 +221,7 @@ Before going fully live:
 - [ ] Update ALLOWED_HOSTS with your actual domain
 - [ ] Set up HTTPS (Railway provides automatically)
 - [ ] Configure CORS_ALLOWED_ORIGINS correctly
-- [ ] Verify Brevo sender email (office@figilschools.com)
+- [ ] Verify Brevo sender email (office@insightwick.com)
 - [ ] Set up database backups (if using PostgreSQL)
 - [ ] Test all critical functionality
 
@@ -247,7 +247,7 @@ Brevo Dashboard (https://app.brevo.com):
 
 ### Monitor Backups
 
-Check `office@figilschools.com` inbox:
+Check `office@insightwick.com` inbox:
 - Should receive backup every 5 days
 - Contains database ZIP file
 
@@ -283,7 +283,7 @@ Use PostgreSQL instead of SQLite (see Step 4)
 
 **Solution**:
 1. Verify Brevo credentials in environment variables
-2. Check office@figilschools.com is verified in Brevo
+2. Check office@insightwick.com is verified in Brevo
 3. Check Railway logs for email errors
 
 ### Issue: CORS errors from frontend
@@ -312,7 +312,7 @@ Update CORS_ALLOWED_ORIGINS with your frontend URL
 
 4. **Backup Strategy**
    - Automated backups running every 5 days ✓
-   - Manual backups: `railway run python manage.py backup_database --email office@figilschools.com`
+   - Manual backups: `railway run python manage.py backup_database --email office@insightwick.com`
    - Database snapshots (if using PostgreSQL)
 
 ---
@@ -348,7 +348,7 @@ railway run python manage.py migrate
 railway run python manage.py createsuperuser
 
 # Manual backup
-railway run python manage.py backup_database --email office@figilschools.com
+railway run python manage.py backup_database --email office@insightwick.com
 
 # Restart service
 railway restart

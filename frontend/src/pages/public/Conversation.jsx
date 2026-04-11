@@ -94,7 +94,7 @@ function Conversation() {
     <div className="conv-page">
       <nav className="conv-nav">
         <Link to="/" className="conv-nav-logo">
-          <img src="/logo-white.svg" alt="EduCare" style={{ height: 48, width: 'auto' }} />
+          <img src="/logo-white.svg" alt="InsightWick" style={{ height: 48, width: 'auto' }} />
         </Link>
       </nav>
 
@@ -119,7 +119,7 @@ function Conversation() {
               <div className={`conv-bubble ${msg.direction === 'outbound' ? 'conv-bubble-staff' : 'conv-bubble-school'}`}>
                 <div className="conv-bubble-meta">
                   <span className="conv-sender">
-                    {msg.direction === 'outbound' ? '🛡 EduCare' : `🏫 ${msg.sender_name}`}
+                    {msg.direction === 'outbound' ? '🛡 InsightWick' : `🏫 ${msg.sender_name}`}
                   </span>
                   <span className="conv-time">{formatTime(msg.created_at)}</span>
                 </div>

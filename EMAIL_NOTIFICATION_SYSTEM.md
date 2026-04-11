@@ -2,7 +2,7 @@
 
 ## Overview
 
-The School Management System now has a **fully automated email notification system** that sends emails to teachers, parents, and students for ALL in-app notifications using **office@figilschools.com** as the sender.
+The School Management System now has a **fully automated email notification system** that sends emails to teachers, parents, and students for ALL in-app notifications using **office@insightwick.com** as the sender.
 
 ---
 
@@ -14,7 +14,7 @@ The School Management System now has a **fully automated email notification syst
 - ✅ **Parents**: Email field was already **REQUIRED** (unchanged)
 
 ### 2. **Email Sender Configuration**
-- **Sender Email**: `office@figilschools.com`
+- **Sender Email**: `office@insightwick.com`
 - **SMTP Provider**: Brevo (smtp-relay.brevo.com)
 - **Authentication**: Configured and tested ✓
 
@@ -57,7 +57,7 @@ The system uses **Django signals** to automatically send emails whenever:
 
 ### Email Components
 
-**From**: office@figilschools.com
+**From**: office@insightwick.com
 **To**: User's registered email address
 **Format**: HTML + Plain Text (for compatibility)
 **Priority Indicators**: Visual styling based on priority (high/medium/low)
@@ -83,10 +83,10 @@ The system uses **Django signals** to automatically send emails whenever:
    - Line 31: Made email required for students in `UserCreateSerializer`
 
 2. **`.env`**
-   - Changed `DEFAULT_FROM_EMAIL` to `office@figilschools.com`
+   - Changed `DEFAULT_FROM_EMAIL` to `office@insightwick.com`
 
 3. **`.env.example`**
-   - Updated to reflect office@figilschools.com as default sender
+   - Updated to reflect office@insightwick.com as default sender
 
 ### **New Files Created:**
 
@@ -181,7 +181,7 @@ EMAIL_PORT=587
 EMAIL_USE_TLS=True
 EMAIL_HOST_USER=your-brevo-login-email
 EMAIL_HOST_PASSWORD=your-brevo-smtp-api-key
-DEFAULT_FROM_EMAIL=office@figilschools.com
+DEFAULT_FROM_EMAIL=office@insightwick.com
 ```
 
 ### Railway Deployment
@@ -189,7 +189,7 @@ DEFAULT_FROM_EMAIL=office@figilschools.com
 Make sure to add these environment variables in Railway dashboard:
 
 ```
-DEFAULT_FROM_EMAIL=office@figilschools.com
+DEFAULT_FROM_EMAIL=office@insightwick.com
 EMAIL_HOST_USER=your-brevo-login-email
 EMAIL_HOST_PASSWORD=your-brevo-smtp-api-key
 ```
@@ -215,7 +215,7 @@ railway logs --service web
 
 ### 1. **Brevo SMTP Configuration**
 - Brevo requires sender email verification
-- Make sure `office@figilschools.com` is verified in your Brevo account
+- Make sure `office@insightwick.com` is verified in your Brevo account
 - Check Brevo dashboard for delivery status
 
 ### 2. **User Email Requirements**
@@ -290,7 +290,7 @@ from django.core.mail import send_mail
 send_mail(
     'Test Email',
     'This is a test.',
-    'office@figilschools.com',
+    'office@insightwick.com',
     ['recipient@example.com'],
     fail_silently=False,
 )
@@ -311,7 +311,7 @@ grep -i "email" backend/logs/*.log
 - **Solution**: Verify Brevo credentials in .env file
 
 **Issue**: "Sender email not verified"
-- **Solution**: Verify office@figilschools.com in Brevo dashboard
+- **Solution**: Verify office@insightwick.com in Brevo dashboard
 
 **Issue**: "Rate limit exceeded"
 - **Solution**: Upgrade Brevo plan or spread out notifications
@@ -325,7 +325,7 @@ grep -i "email" backend/logs/*.log
 - ✅ Teachers receive emails for grading reminders and announcements
 - ✅ Parents receive emails for fees, reports, and student activities
 - ✅ Students receive emails for grades, reports, and content uploads
-- ✅ All emails sent from: **office@figilschools.com**
+- ✅ All emails sent from: **office@insightwick.com**
 - ✅ Professional HTML email templates
 - ✅ Automatic triggering via Django signals
 - ✅ Full logging and error handling

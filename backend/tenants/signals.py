@@ -80,10 +80,10 @@ def handle_subscription_status_change(sender, instance, **kwargs):
 def _handle_subscription_expired(subscription):
     """
     Handle actions when subscription expires.
-    Sends EduCare-branded lockout notification.
+    Sends InsightWick-branded lockout notification.
     """
     try:
-        from .educare_emails import send_expired_lockout_email
+        from .insightwick_emails import send_expired_lockout_email
         send_expired_lockout_email(subscription)
     except Exception:
         pass
@@ -92,10 +92,10 @@ def _handle_subscription_expired(subscription):
 def _handle_grace_period_started(subscription):
     """
     Handle subscription entering grace period.
-    Sends EduCare-branded grace period start notification.
+    Sends InsightWick-branded grace period start notification.
     """
     try:
-        from .educare_emails import send_grace_period_start_email
+        from .insightwick_emails import send_grace_period_start_email
         send_grace_period_start_email(subscription)
     except Exception:
         pass
@@ -104,11 +104,11 @@ def _handle_grace_period_started(subscription):
 def _handle_trial_to_active(subscription):
     """
     Handle conversion from trial/grace_period/expired to active subscription.
-    Sends EduCare-branded welcome email.
+    Sends InsightWick-branded welcome email.
     """
     try:
-        from .educare_emails import send_educare_welcome_email
-        send_educare_welcome_email(subscription)
+        from .insightwick_emails import send_insightwick_welcome_email
+        send_insightwick_welcome_email(subscription)
     except Exception:
         pass
 

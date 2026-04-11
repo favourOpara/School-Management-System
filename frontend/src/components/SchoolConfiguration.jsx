@@ -384,7 +384,7 @@ const SchoolConfiguration = () => {
               />
               <p className="field-hint">
                 This name will appear as the sender when emails are sent from your school.
-                Emails will be sent from: <strong>{config.email_sender_name || config.name || 'Your School'} &lt;noreply@educare.com&gt;</strong>
+                Emails will be sent from: <strong>{config.email_sender_name || config.name || 'Your School'} &lt;noreply@insightwick.com&gt;</strong>
               </p>
             </div>
           </div>

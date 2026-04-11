@@ -968,10 +968,10 @@ def _build_thread(record):
 
 def _send_staff_reply_email(reply, subject_line, recipient_name, recipient_email, reply_url=None):
     """Send the reply email and update email_sent flag."""
-    from .educare_emails import send_educare_email
+    from .insightwick_emails import send_insightwick_email
     body_html = f'''
         <p>Hi {recipient_name or 'there'},</p>
-        <p>You have received a reply from the EduCare team regarding your enquiry.</p>
+        <p>You have received a reply from the InsightWick team regarding your enquiry.</p>
         <blockquote style="border-left: 4px solid #3b82f6; padding: 12px 18px;
                            background: #eff6ff; border-radius: 0 8px 8px 0;
                            margin: 20px 0; color: #1e3a5f; font-size: 15px;
@@ -979,14 +979,14 @@ def _send_staff_reply_email(reply, subject_line, recipient_name, recipient_email
         <p style="color: #6b7280; font-size: 13px;">
             If you need further assistance, please submit a new support request from your
             school dashboard or contact us at
-            <a href="mailto:office@figilschools.com" style="color: #2563eb;">office@figilschools.com</a>.
+            <a href="mailto:office@insightwick.com" style="color: #2563eb;">office@insightwick.com</a>.
         </p>
     '''
-    sent = send_educare_email(
+    sent = send_insightwick_email(
         recipient_email=recipient_email,
         recipient_name=recipient_name or 'School Admin',
         subject=subject_line,
-        heading='Reply from EduCare Support',
+        heading='Reply from InsightWick Support',
         body_html=body_html,
         cta_text='Reply to this message' if reply_url else None,
         cta_url=reply_url,
@@ -1011,7 +1011,7 @@ class PlatformSupportReplyView(IsPlatformAdmin):
         if not message:
             return Response({'error': 'Message is required.'}, status=400)
 
-        admin_name = request.data.get('sender_name') or 'EduCare Admin'
+        admin_name = request.data.get('sender_name') or 'InsightWick Admin'
 
         reply = StaffReply.objects.create(
             support_ticket=ticket,
@@ -1052,7 +1052,7 @@ class PlatformContactReplyView(IsPlatformAdmin):
         if not message:
             return Response({'error': 'Message is required.'}, status=400)
 
-        admin_name = request.data.get('sender_name') or 'EduCare Admin'
+        admin_name = request.data.get('sender_name') or 'InsightWick Admin'
 
         reply = StaffReply.objects.create(
             contact_inquiry=inq,
@@ -1093,7 +1093,7 @@ class PlatformOnboardingReplyView(IsPlatformAdmin):
         if not message:
             return Response({'error': 'Message is required.'}, status=400)
 
-        admin_name = request.data.get('sender_name') or 'EduCare Admin'
+        admin_name = request.data.get('sender_name') or 'InsightWick Admin'
 
         reply = StaffReply.objects.create(
             onboarding_record=record,
@@ -1107,7 +1107,7 @@ class PlatformOnboardingReplyView(IsPlatformAdmin):
         reply_url = f"{settings.FRONTEND_URL}/conversation/{record.conversation_token}"
         _send_staff_reply_email(
             reply=reply,
-            subject_line=f'Message from EduCare — {record.school.name}',
+            subject_line=f'Message from InsightWick — {record.school.name}',
             recipient_name=record.school.name,
             recipient_email=record.school.email,
             reply_url=reply_url,

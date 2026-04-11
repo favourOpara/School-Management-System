@@ -209,12 +209,12 @@ SIMPLE_JWT = {
 }
 
 # Frontend URL for email verification links
-FRONTEND_URL = config('FRONTEND_URL', default='https://figilschools.com')
+FRONTEND_URL = config('FRONTEND_URL', default='https://insightwick.com')
 
 # CORS Configuration
 CORS_ALLOWED_ORIGINS = [
-    'https://figilschools.com',
-    'https://www.figilschools.com',
+    'https://insightwick.com',
+    'https://www.insightwick.com',
     'http://localhost:5173',
     'http://localhost:3000',
 ]
@@ -247,7 +247,7 @@ CORS_ALLOW_METHODS = [
 # Email Configuration (Brevo HTTP API via django-anymail)
 # Uses HTTP instead of SMTP — works on Railway and all cloud platforms
 EMAIL_BACKEND = config('EMAIL_BACKEND', default='anymail.backends.brevo.EmailBackend')
-DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='office@figilschools.com')
+DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='office@insightwick.com')
 EMAIL_USE_LOCALTIME = False
 
 ANYMAIL = {

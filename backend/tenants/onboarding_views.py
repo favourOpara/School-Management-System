@@ -2,7 +2,7 @@
 Onboarding agent views.
 Mounted under /api/onboarding/
 
-EduCare internal onboarding staff use these endpoints to log in,
+InsightWick internal onboarding staff use these endpoints to log in,
 see which schools need setup help, claim a school, and track progress.
 """
 from datetime import timedelta
@@ -427,10 +427,10 @@ def _build_thread(record):
 
 def _send_agent_reply_email(reply, reply_url=None):
     """Send the reply email from an onboarding agent and update email_sent flag."""
-    from .educare_emails import send_educare_email
+    from .insightwick_emails import send_insightwick_email
     body_html = f'''
         <p>Hi {reply.recipient_name or 'there'},</p>
-        <p>You have received a reply from the EduCare onboarding team regarding your enquiry.</p>
+        <p>You have received a reply from the InsightWick onboarding team regarding your enquiry.</p>
         <blockquote style="border-left: 4px solid #3b82f6; padding: 12px 18px;
                            background: #eff6ff; border-radius: 0 8px 8px 0;
                            margin: 20px 0; color: #1e3a5f; font-size: 15px;
@@ -438,14 +438,14 @@ def _send_agent_reply_email(reply, reply_url=None):
         <p style="color: #6b7280; font-size: 13px;">
             If you need further assistance, please submit a new support request from your
             school dashboard or contact us at
-            <a href="mailto:office@figilschools.com" style="color: #2563eb;">office@figilschools.com</a>.
+            <a href="mailto:office@insightwick.com" style="color: #2563eb;">office@insightwick.com</a>.
         </p>
     '''
-    sent = send_educare_email(
+    sent = send_insightwick_email(
         recipient_email=reply.recipient_email,
         recipient_name=reply.recipient_name or 'School Admin',
-        subject='Reply from EduCare Support',
-        heading='Reply from EduCare Support',
+        subject='Reply from InsightWick Support',
+        heading='Reply from InsightWick Support',
         body_html=body_html,
         cta_text='Reply to this message' if reply_url else None,
         cta_url=reply_url,

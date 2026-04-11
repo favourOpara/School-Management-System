@@ -807,7 +807,7 @@ function OnboardingDashboard() {
             <UserCheck size={22} />
           </div>
           <div>
-            <div className="ob-header-title">EduCare Onboarding</div>
+            <div className="ob-header-title">InsightWick Onboarding</div>
             <div className="ob-header-sub">Welcome, {agentName}</div>
           </div>
         </div>

@@ -558,8 +558,8 @@ class EmailOTP(models.Model):
 
 class OnboardingAgent(models.Model):
     """
-    EduCare internal onboarding staff.
-    These are EduCare employees who help new schools get set up after registration.
+    InsightWick internal onboarding staff.
+    These are InsightWick employees who help new schools get set up after registration.
     """
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
 
@@ -796,10 +796,10 @@ class SupportTicket(models.Model):
 
 class StaffReply(models.Model):
     """
-    A reply sent from EduCare staff (platform admin or onboarding agent) to a school.
+    A reply sent from InsightWick staff (platform admin or onboarding agent) to a school.
 
     Links to exactly one of: SupportTicket, ContactInquiry, or OnboardingRecord.
-    The reply is emailed to the school via send_educare_email() (bypasses school quotas).
+    The reply is emailed to the school via send_insightwick_email() (bypasses school quotas).
     Both platform admin and onboarding agents can see and send replies.
     """
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)

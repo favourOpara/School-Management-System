@@ -32,7 +32,7 @@ export default function PublicUserGuide() {
       <nav className={`landing-nav ${scrolled ? 'scrolled' : ''}`}>
         <div className="landing-nav-container">
           <Link to="/" className="landing-logo">
-            <img src="/logo.svg" alt="EduCare" style={{height: '60px', width: 'auto'}} />
+            <img src="/logo.svg" alt="InsightWick" style={{height: '60px', width: 'auto'}} />
           </Link>
 
           <div className="landing-nav-links">
@@ -87,7 +87,7 @@ export default function PublicUserGuide() {
 
       {/* Footer */}
       <footer className="pub-kb-footer">
-        <p>© {new Date().getFullYear()} EduCare. All rights reserved.</p>
+        <p>© {new Date().getFullYear()} InsightWick. All rights reserved.</p>
       </footer>
     </div>
   );

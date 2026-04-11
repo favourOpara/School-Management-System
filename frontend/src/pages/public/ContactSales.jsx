@@ -120,7 +120,7 @@ function ContactSales() {
       <nav className="contact-nav">
         <div className="contact-nav-container">
           <Link to="/" className="contact-logo">
-            <img src="/logo.svg" alt="EduCare" style={{height: '60px', width: 'auto'}} />
+            <img src="/logo.svg" alt="InsightWick" style={{height: '60px', width: 'auto'}} />
           </Link>
 
           <div className="contact-nav-links">
@@ -184,7 +184,7 @@ function ContactSales() {
                   </div>
                   <div>
                     <div className="contact-info-label">Email</div>
-                    <div className="contact-info-value">sales@educare.ng</div>
+                    <div className="contact-info-value">sales@insightwick.ng</div>
                   </div>
                 </div>
                 <div className="contact-info-card">
@@ -402,7 +402,7 @@ function ContactSales() {
       <section className="contact-trust">
         <div className="contact-trust-container">
           <h2>Trusted by Leading Institutions</h2>
-          <p>Join hundreds of schools already using EduCare</p>
+          <p>Join hundreds of schools already using InsightWick</p>
           <div className="contact-trust-logos">
             {['University of Lagos', 'Kings College', 'Queens College', 'Corona Schools'].map((name, index) => (
               <div key={index} className="contact-trust-logo">{name}</div>
@@ -415,7 +415,7 @@ function ContactSales() {
       <footer className="contact-footer">
         <div className="contact-footer-container">
           <div className="contact-footer-brand">
-            <img src="/logo-white.svg" alt="EduCare" style={{height: '60px', width: 'auto'}} />
+            <img src="/logo-white.svg" alt="InsightWick" style={{height: '60px', width: 'auto'}} />
           </div>
           <div className="contact-footer-links">
             <Link to="/">Home</Link>
@@ -423,7 +423,7 @@ function ContactSales() {
             <Link to="/register">Register</Link>
           </div>
           <p className="contact-footer-copyright">
-            © {new Date().getFullYear()} EduCare. All rights reserved.
+            © {new Date().getFullYear()} InsightWick. All rights reserved.
           </p>
         </div>
       </footer>

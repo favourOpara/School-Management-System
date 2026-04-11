@@ -5,21 +5,21 @@ from django.contrib.auth.hashers import make_password
 PLATFORM_ADMINS = [
     {
         "username": "platform_admin1",
-        "email": "admin1@figilschools.com",
+        "email": "admin1@insightwick.com",
         "first_name": "Platform",
         "last_name": "Admin",
-        "password": "EduCare@Plt#2026!",
+        "password": "InsightWick@Plt#2026!",
     },
     {
         "username": "platform_admin2",
-        "email": "admin2@figilschools.com",
+        "email": "admin2@insightwick.com",
         "first_name": "Operations",
         "last_name": "Lead",
         "password": "OpsLead@Plt#2026!",
     },
     {
         "username": "platform_admin3",
-        "email": "admin3@figilschools.com",
+        "email": "admin3@insightwick.com",
         "first_name": "Support",
         "last_name": "Manager",
         "password": "SptMgr@Plt#2026!",

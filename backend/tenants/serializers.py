@@ -420,7 +420,7 @@ class SchoolRegistrationSerializer(serializers.Serializer):
                 must_change_password=False
             )
 
-        # Create onboarding record so the EduCare team can track setup progress
+        # Create onboarding record so the InsightWick team can track setup progress
         OnboardingRecord.objects.get_or_create(
             school=school,
             defaults={'registration_type': registration_type},
@@ -430,7 +430,7 @@ class SchoolRegistrationSerializer(serializers.Serializer):
         # For paid subscriptions, the email is triggered by the Paystack webhook on payment success.
         if is_trial:
             try:
-                from .educare_emails import send_onboarding_welcome_email
+                from .insightwick_emails import send_onboarding_welcome_email
                 send_onboarding_welcome_email(subscription, registration_type)
             except Exception:
                 pass  # Never block registration due to email failure

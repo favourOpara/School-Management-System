@@ -118,7 +118,7 @@ function PortalLogin() {
       {/* Navigation */}
       <nav className="portal-login-nav">
         <Link to="/" className="portal-login-logo">
-          <img src="/logo-white.svg" alt="EduCare" style={{height: '60px', width: 'auto'}} />
+          <img src="/logo-white.svg" alt="InsightWick" style={{height: '60px', width: 'auto'}} />
         </Link>
       </nav>
 

@@ -68,7 +68,7 @@ class Command(BaseCommand):
         Failed charges are retried up to MAX_AUTO_DEBIT_RETRIES times (once per day)
         before falling through to grace period.
         """
-        from tenants.educare_emails import (
+        from tenants.insightwick_emails import (
             send_grace_period_start_email,
             send_expired_lockout_email,
             send_auto_debit_retry_email,
@@ -175,7 +175,7 @@ class Command(BaseCommand):
         Retry/disable logic lives in the caller (_handle_new_expirations).
         """
         from tenants.paystack import charge_authorization
-        from tenants.educare_emails import send_educare_payment_confirmation
+        from tenants.insightwick_emails import send_insightwick_payment_confirmation
 
         billing_cycle = subscription.billing_cycle
         amount = (
@@ -237,7 +237,7 @@ class Command(BaseCommand):
             payment.save()
 
             try:
-                send_educare_payment_confirmation(subscription, payment)
+                send_insightwick_payment_confirmation(subscription, payment)
             except Exception as e:
                 logger.error(f"Failed to send auto-debit confirmation for {subscription.school.name}: {e}")
 
@@ -249,7 +249,7 @@ class Command(BaseCommand):
 
     def _handle_grace_period_expirations(self, now, dry_run):
         """Expire subscriptions whose grace period has fully elapsed."""
-        from tenants.educare_emails import send_expired_lockout_email
+        from tenants.insightwick_emails import send_expired_lockout_email
 
         grace_subs = Subscription.objects.filter(
             status='grace_period'
@@ -279,7 +279,7 @@ class Command(BaseCommand):
         Auto-debit users get a "we'll charge your card" notice instead of
         the standard "please renew" warning.
         """
-        from tenants.educare_emails import send_expiry_warning_email, send_auto_debit_warning_email
+        from tenants.insightwick_emails import send_expiry_warning_email, send_auto_debit_warning_email
 
         active_subs = Subscription.objects.filter(
             status__in=['trial', 'active'],
@@ -324,7 +324,7 @@ class Command(BaseCommand):
 
     def _send_grace_period_reminders(self, now, dry_run):
         """Send daily grace period reminders (days 2-5)."""
-        from tenants.educare_emails import send_grace_period_reminder_email
+        from tenants.insightwick_emails import send_grace_period_reminder_email
 
         grace_subs = Subscription.objects.filter(
             status='grace_period',

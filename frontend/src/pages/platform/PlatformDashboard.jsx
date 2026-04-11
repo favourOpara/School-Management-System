@@ -789,7 +789,7 @@ function ReplyThread({ thread = [], replies = [], replyEndpoint, onNewReply, sen
               }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.2rem' }}>
                   <span style={{ fontSize: '0.72rem', fontWeight: 700, color: outbound ? '#1d4ed8' : '#15803d' }}>
-                    {outbound ? `🛡 ${item.sender_name || 'EduCare'}` : `🏫 ${item.sender_name}`}
+                    {outbound ? `🛡 ${item.sender_name || 'InsightWick'}` : `🏫 ${item.sender_name}`}
                   </span>
                   <span style={{ fontSize: '0.68rem', color: '#94a3b8' }}>
                     {new Date(item.created_at).toLocaleDateString('en-NG', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
@@ -846,7 +846,7 @@ function OnboardingMgmtTab() {
   const [assigning, setAssigning] = useState({});      // { [recordId]: true }
   const [reassignOpen, setReassignOpen] = useState({}); // { [recordId]: { agentId, note } }
   const [localReplies, setLocalReplies] = useState({});  // { [recordId]: [reply, ...] }
-  const adminName = localStorage.getItem('platformUserName') || 'EduCare Admin';
+  const adminName = localStorage.getItem('platformUserName') || 'InsightWick Admin';
 
   const loadAgents = useCallback(async () => {
     setLoadingAgents(true);
@@ -1323,7 +1323,7 @@ function ContactsTab() {
   const [assignOpen, setAssignOpen] = useState({});  // { [id]: { agentId, note } }
   const [saving, setSaving]         = useState({});
   const [localReplies, setLocalReplies] = useState({});  // { [inquiryId]: [reply, ...] }
-  const adminName = localStorage.getItem('platformUserName') || 'EduCare Admin';
+  const adminName = localStorage.getItem('platformUserName') || 'InsightWick Admin';
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -1589,7 +1589,7 @@ function SupportTab() {
   const [autoAssigning, setAutoAssigning] = useState(false);
   const [reopeningId, setReopeningId] = useState(null);
   const [localReplies, setLocalReplies] = useState({});  // { [ticketId]: [reply, ...] }
-  const adminName = localStorage.getItem('platformUserName') || 'EduCare Admin';
+  const adminName = localStorage.getItem('platformUserName') || 'InsightWick Admin';
 
   const fetchTickets = useCallback(async () => {
     setLoading(true);
@@ -1803,7 +1803,7 @@ function SettingsTab() {
         <div className="platform-detail-grid">
           <div className="platform-detail-item">
             <span className="platform-detail-label">Platform</span>
-            <span className="platform-detail-value">EduCare School Management</span>
+            <span className="platform-detail-value">InsightWick School Management</span>
           </div>
           <div className="platform-detail-item">
             <span className="platform-detail-label">Logged in as</span>
@@ -1900,7 +1900,7 @@ function PlatformDashboard() {
               <Shield size={24} />
             </div>
             <div>
-              <div className="platform-sidebar-brand-name">EduCare</div>
+              <div className="platform-sidebar-brand-name">InsightWick</div>
               <div className="platform-sidebar-brand-sub">Platform Admin</div>
             </div>
           </div>
