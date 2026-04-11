@@ -12,7 +12,9 @@ export default defineConfig({
     port: 4173,
     allowedHosts: [
       'insightwick.com',
-      'www.insightwick.com'
+      'www.insightwick.com',
+      'figilschools.com',
+      'www.figilschools.com'
     ]
   }
 })
