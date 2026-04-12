@@ -19,39 +19,29 @@ from datetime import timedelta
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # ============================================================================
-# CLOUDINARY CONFIGURATION - Must come before SECRET_KEY and other settings
+# DIGITALOCEAN SPACES CONFIGURATION (S3-compatible file storage)
 # ============================================================================
-import cloudinary
-import cloudinary.uploader
-import cloudinary.api
+AWS_ACCESS_KEY_ID = config('DO_SPACES_KEY')
+AWS_SECRET_ACCESS_KEY = config('DO_SPACES_SECRET')
+AWS_STORAGE_BUCKET_NAME = config('DO_SPACES_BUCKET')
+AWS_S3_REGION_NAME = config('DO_SPACES_REGION', default='nyc3')
+AWS_S3_ENDPOINT_URL = config('DO_SPACES_ENDPOINT', default='https://nyc3.digitaloceanspaces.com')
+AWS_S3_OBJECT_PARAMETERS = {'CacheControl': 'max-age=86400'}
+AWS_DEFAULT_ACL = 'public-read'
+AWS_S3_SIGNATURE_VERSION = 's3v4'
+AWS_S3_FILE_OVERWRITE = False
 
-CLOUDINARY_STORAGE = {
-    'CLOUD_NAME': config('CLOUDINARY_CLOUD_NAME'),
-    'API_KEY': config('CLOUDINARY_API_KEY'),
-    'API_SECRET': config('CLOUDINARY_API_SECRET'),
-}
-
-# Configure cloudinary library
-cloudinary.config(
-    cloud_name=config('CLOUDINARY_CLOUD_NAME'),
-    api_key=config('CLOUDINARY_API_KEY'),
-    api_secret=config('CLOUDINARY_API_SECRET'),
-    secure=True
-)
-
-# Storage configuration - Using Cloudinary for media files
+# Storage configuration - Using DigitalOcean Spaces for media files
 STORAGES = {
     'default': {
-        'BACKEND': 'cloudinary_storage.storage.MediaCloudinaryStorage',
+        'BACKEND': 'storages.backends.s3boto3.S3Boto3Storage',
     },
     'staticfiles': {
         'BACKEND': 'django.contrib.staticfiles.storage.StaticFilesStorage',
     },
 }
 
-# Backwards compatibility for Django < 4.2
-DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
-# Also add STATICFILES_STORAGE for cloudinary_storage compatibility
+DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
 STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.StaticFilesStorage'
 
 # ============================================================================
@@ -75,9 +65,6 @@ if RAILWAY_STATIC_URL:
 # Application definition
 
 INSTALLED_APPS = [
-    # Cloudinary MUST come first to override default storage
-    'cloudinary_storage',
-    'cloudinary',
     # Django core apps
     'django.contrib.admin',
     'django.contrib.auth',

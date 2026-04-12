@@ -1,15 +1,10 @@
-from cloudinary_storage.storage import RawMediaCloudinaryStorage
+from storages.backends.s3boto3 import S3Boto3Storage
 
-class AssignmentFileStorage(RawMediaCloudinaryStorage):
+
+class AssignmentFileStorage(S3Boto3Storage):
     """
-    Custom storage for assignment files that supports all file types including
-    ZIP, PDF, DOCX, etc.
+    Custom storage for assignment and submission files.
+    Uses DigitalOcean Spaces (S3-compatible) with public-read access.
     """
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        # Ensure files are publicly accessible
-        self.CLOUDINARY_RESOURCE_OPTIONS = {
-            'resource_type': 'raw',
-            'type': 'upload',
-            'access_mode': 'public'
-        }
+    default_acl = 'public-read'
+    file_overwrite = False

@@ -371,18 +371,9 @@ class ContentFile(models.Model):
 
     @property
     def download_url(self):
-        """Get the actual Cloudinary URL from the API"""
+        """Get the file URL from DigitalOcean Spaces"""
         if self.file:
-            import cloudinary.api
-            try:
-                # Get the public_id without extension
-                public_id = self.file.name
-                # Fetch the resource from Cloudinary to get the real URL
-                resource = cloudinary.api.resource(public_id, resource_type='raw')
-                return resource.get('secure_url', self.file.url)
-            except:
-                # Fallback to the stored URL if API call fails
-                return self.file.url
+            return self.file.url
         return None
 
 
@@ -565,18 +556,9 @@ class SubmissionFile(models.Model):
 
     @property
     def download_url(self):
-        """Get the actual Cloudinary URL from the API"""
+        """Get the file URL from DigitalOcean Spaces"""
         if self.file:
-            import cloudinary.api
-            try:
-                # Get the public_id without extension
-                public_id = self.file.name
-                # Fetch the resource from Cloudinary to get the real URL
-                resource = cloudinary.api.resource(public_id, resource_type='raw')
-                return resource.get('secure_url', self.file.url)
-            except:
-                # Fallback to the stored URL if API call fails
-                return self.file.url
+            return self.file.url
         return None
 
 
