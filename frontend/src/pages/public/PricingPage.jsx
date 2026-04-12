@@ -398,7 +398,7 @@ function PricingPage() {
       <section className="pricing-cta">
         <div className="pricing-cta-container">
           <h2>Ready to Get Started?</h2>
-          <p>Join 500+ schools already using InsightWick to streamline their operations.</p>
+          <p>Start your free trial today and see why schools choose InsightWick.</p>
           <button onClick={() => navigate('/register')} className="pricing-cta-btn">
             Start Your Free Trial
             <ArrowRight size={20} />

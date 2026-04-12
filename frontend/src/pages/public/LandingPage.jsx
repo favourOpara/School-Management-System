@@ -1074,9 +1074,7 @@ function LandingPage() {
             <div className="landing-footer-column">
               <h4>Contact</h4>
               <ul className="landing-footer-links">
-                <li>support@insightwick.ng</li>
-                <li>+234 800 123 4567</li>
-                <li>Lagos, Nigeria</li>
+                <li>office@insightwick.com</li>
               </ul>
             </div>
           </div>

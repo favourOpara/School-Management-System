@@ -184,25 +184,7 @@ function ContactSales() {
                   </div>
                   <div>
                     <div className="contact-info-label">Email</div>
-                    <div className="contact-info-value">sales@insightwick.ng</div>
-                  </div>
-                </div>
-                <div className="contact-info-card">
-                  <div className="contact-info-icon green">
-                    <Phone />
-                  </div>
-                  <div>
-                    <div className="contact-info-label">Phone</div>
-                    <div className="contact-info-value">+234 800 123 4567</div>
-                  </div>
-                </div>
-                <div className="contact-info-card">
-                  <div className="contact-info-icon purple">
-                    <MapPin />
-                  </div>
-                  <div>
-                    <div className="contact-info-label">Office</div>
-                    <div className="contact-info-value">Lagos, Nigeria</div>
+                    <div className="contact-info-value">office@insightwick.com</div>
                   </div>
                 </div>
               </div>
@@ -394,19 +376,6 @@ function ContactSales() {
                 </form>
               )}
             </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Trust Section */}
-      <section className="contact-trust">
-        <div className="contact-trust-container">
-          <h2>Trusted by Leading Institutions</h2>
-          <p>Join hundreds of schools already using InsightWick</p>
-          <div className="contact-trust-logos">
-            {['University of Lagos', 'Kings College', 'Queens College', 'Corona Schools'].map((name, index) => (
-              <div key={index} className="contact-trust-logo">{name}</div>
-            ))}
           </div>
         </div>
       </section>
