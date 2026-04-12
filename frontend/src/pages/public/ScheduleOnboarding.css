@@ -1,0 +1,332 @@
+/* ScheduleOnboarding.css */
+.so-page {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.so-nav {
+  width: 100%;
+  padding: 16px 32px;
+  display: flex;
+  align-items: center;
+}
+
+.so-nav-logo img { height: 48px; width: auto; }
+
+.so-loading,
+.so-error-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+  color: #fff;
+  gap: 12px;
+  font-size: 15px;
+}
+
+.so-spinner {
+  animation: so-spin 1s linear infinite;
+}
+
+@keyframes so-spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+.so-container {
+  width: 100%;
+  max-width: 640px;
+  margin: 0 auto 48px;
+  padding: 0 16px;
+}
+
+.so-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 14px 14px 0 0;
+  padding: 20px 24px;
+  color: #fff;
+}
+
+.so-header h2 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.so-header p {
+  margin: 2px 0 0;
+  font-size: 13px;
+  color: rgba(255,255,255,0.65);
+}
+
+.so-body {
+  background: #fff;
+  border-radius: 0 0 14px 14px;
+  padding: 28px 24px;
+}
+
+/* ── Intro text ── */
+.so-intro {
+  margin: 0 0 24px;
+  font-size: 14px;
+  color: #374151;
+  line-height: 1.6;
+}
+
+/* ── Already-submitted banner ── */
+.so-existing-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #f0fdf4;
+  border: 1px solid #86efac;
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 13px;
+  color: #166534;
+  margin-bottom: 20px;
+}
+
+/* ── Slot rows ── */
+.so-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.so-slot-row {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 16px;
+}
+
+.so-slot-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 12px;
+}
+
+.so-slot-number {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #dbeafe;
+  color: #1d4ed8;
+  font-size: 12px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.so-remove-btn {
+  margin-left: auto;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #ef4444;
+  display: flex;
+  align-items: center;
+  padding: 2px;
+  border-radius: 4px;
+  transition: background 0.15s;
+}
+
+.so-remove-btn:hover { background: #fee2e2; }
+
+.so-slot-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.so-field-note {
+  grid-column: 1 / -1;
+}
+
+.so-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.so-field label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #6b7280;
+}
+
+.so-optional {
+  font-weight: 400;
+  color: #9ca3af;
+}
+
+.so-input {
+  border: 1.5px solid #d1d5db;
+  border-radius: 7px;
+  padding: 8px 12px;
+  font-size: 14px;
+  font-family: inherit;
+  color: #111827;
+  background: #fff;
+  box-sizing: border-box;
+  transition: border-color 0.15s;
+  width: 100%;
+}
+
+.so-input:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59,130,246,0.1);
+}
+
+/* ── Add slot button ── */
+.so-add-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: none;
+  border: 1.5px dashed #93c5fd;
+  border-radius: 8px;
+  padding: 10px 16px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #2563eb;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+  width: 100%;
+  justify-content: center;
+}
+
+.so-add-btn:hover {
+  background: #eff6ff;
+  border-color: #3b82f6;
+}
+
+/* ── Submit button ── */
+.so-submit-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: #2563eb;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 12px 24px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+  width: 100%;
+}
+
+.so-submit-btn:hover:not(:disabled) { background: #1d4ed8; }
+.so-submit-btn:disabled { opacity: 0.65; cursor: not-allowed; }
+
+/* ── Success state ── */
+.so-success {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  text-align: center;
+  padding: 8px 0;
+}
+
+.so-success-icon {
+  color: #16a34a;
+}
+
+.so-success h3 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.so-success p {
+  margin: 0;
+  font-size: 14px;
+  color: #6b7280;
+  line-height: 1.6;
+}
+
+.so-submitted-slots {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  margin-top: 4px;
+}
+
+.so-submitted-slot {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  background: #f0fdf4;
+  border: 1px solid #86efac;
+  border-radius: 8px;
+  padding: 12px 14px;
+  text-align: left;
+}
+
+.so-slot-date {
+  font-size: 14px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.so-slot-time {
+  font-size: 13px;
+  color: #374151;
+  margin-top: 2px;
+}
+
+.so-slot-note {
+  font-size: 12px;
+  color: #6b7280;
+  margin-top: 3px;
+  font-style: italic;
+}
+
+.so-update-btn {
+  background: none;
+  border: 1.5px solid #d1d5db;
+  border-radius: 8px;
+  padding: 8px 20px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #374151;
+  cursor: pointer;
+  margin-top: 4px;
+  transition: background 0.15s;
+}
+
+.so-update-btn:hover { background: #f9fafb; }
+
+@media (max-width: 480px) {
+  .so-slot-fields {
+    grid-template-columns: 1fr;
+  }
+  .so-field-note {
+    grid-column: 1;
+  }
+  .so-body {
+    padding: 20px 16px;
+  }
+}

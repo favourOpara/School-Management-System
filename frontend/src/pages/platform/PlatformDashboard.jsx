@@ -33,6 +33,7 @@ import {
   RefreshCw,
   MessageCircle,
   Reply,
+  CalendarCheck,
 } from 'lucide-react';
 import API_BASE_URL from '../../config';
 import './PlatformDashboard.css';
@@ -970,15 +971,20 @@ function OnboardingMgmtTab() {
                   return (
                     <React.Fragment key={r.id}>
                       <tr
-                        style={{ cursor: hasDetail ? 'pointer' : 'default', background: isExpanded ? '#f8fafc' : undefined }}
+                        style={{ cursor: hasDetail ? 'pointer' : 'default', background: isExpanded ? '#f8fafc' : r.needs_assignment ? '#fefce8' : undefined }}
                         onClick={() => hasDetail && setExpandedRow(isExpanded ? null : r.id)}
                       >
                         <td>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
                             <span className="platform-td-bold">{r.school_name}</span>
                             {r.unread_school_messages > 0 && (
                               <span style={{ background: '#dc2626', color: '#fff', borderRadius: '999px', fontSize: '0.65rem', fontWeight: 700, padding: '1px 6px', lineHeight: 1.4 }}>
                                 {r.unread_school_messages} new
+                              </span>
+                            )}
+                            {r.needs_assignment && (
+                              <span style={{ display: 'flex', alignItems: 'center', gap: '3px', background: '#fef08a', color: '#854d0e', borderRadius: '999px', fontSize: '0.65rem', fontWeight: 700, padding: '1px 7px', lineHeight: 1.4 }}>
+                                <CalendarCheck size={10} /> Availability submitted
                               </span>
                             )}
                           </div>
@@ -1079,6 +1085,31 @@ function OnboardingMgmtTab() {
                         <tr style={{ background: '#f8fafc' }}>
                           <td colSpan={6} style={{ padding: '0.75rem 1.25rem 1rem', borderTop: '1px solid #e2e8f0' }}>
                             <div style={{ display: 'flex', gap: '2rem', flexWrap: 'wrap' }}>
+
+                              {/* Preferred availability slots */}
+                              {r.preferred_slots?.length > 0 && (
+                                <div style={{ width: '100%', marginBottom: '0.5rem' }}>
+                                  <div style={{ fontSize: '0.78rem', fontWeight: 700, color: '#374151', marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.5px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                    <CalendarCheck size={13} style={{ color: '#16a34a' }} /> School's Available Times
+                                  </div>
+                                  <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap' }}>
+                                    {r.preferred_slots.map((slot, si) => (
+                                      <div key={si} style={{ background: '#f0fdf4', border: '1px solid #86efac', borderRadius: '8px', padding: '8px 12px', fontSize: '0.82rem' }}>
+                                        <div style={{ fontWeight: 600, color: '#166534' }}>
+                                          {new Date(slot.date + 'T00:00:00').toLocaleDateString('en-NG', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}
+                                        </div>
+                                        <div style={{ color: '#374151', marginTop: '2px' }}>{slot.time}</div>
+                                        {slot.note && <div style={{ color: '#6b7280', fontSize: '0.75rem', marginTop: '2px', fontStyle: 'italic' }}>{slot.note}</div>}
+                                      </div>
+                                    ))}
+                                  </div>
+                                  {r.scheduling_submitted_at && (
+                                    <div style={{ fontSize: '0.72rem', color: '#94a3b8', marginTop: '0.4rem' }}>
+                                      Submitted {formatDate(r.scheduling_submitted_at)}
+                                    </div>
+                                  )}
+                                </div>
+                              )}
 
                               {/* Checklist */}
                               <div style={{ flex: '1', minWidth: '220px' }}>

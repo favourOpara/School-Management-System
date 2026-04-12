@@ -176,6 +176,8 @@ class OnboardingSchoolsView(IsOnboardingAgent):
                 'completed_at': r.completed_at.isoformat() if r.completed_at else None,
                 'thread': _build_thread(r),
                 'unread_school_messages': r.school_messages.filter(is_read=False).count(),
+                'preferred_slots': r.preferred_slots or [],
+                'scheduling_submitted_at': r.scheduling_submitted_at.isoformat() if r.scheduling_submitted_at else None,
             })
 
         return Response({'schools': data, 'total': len(data)})

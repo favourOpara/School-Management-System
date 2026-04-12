@@ -2484,3 +2484,60 @@ class ConversationReplyView(APIView):
                 'is_read': msg.is_read,
             },
         }, status=status.HTTP_201_CREATED)
+
+
+class ScheduleOnboardingView(APIView):
+    """
+    GET  /api/public/schedule-onboarding/<token>/
+         Returns school name and any previously submitted slots.
+    POST /api/public/schedule-onboarding/<token>/
+         Saves (or overwrites) the school's preferred availability slots.
+         Body: { slots: [{ date, time, note }] }  — 1 to 3 slots.
+    No authentication required — the scheduling_token acts as the access key.
+    """
+    permission_classes = [AllowAny]
+
+    def _get_record(self, token):
+        try:
+            return OnboardingRecord.objects.select_related('school').get(scheduling_token=token)
+        except OnboardingRecord.DoesNotExist:
+            return None
+
+    def get(self, request, token):
+        record = self._get_record(token)
+        if not record:
+            return Response({'error': 'Link not found.'}, status=status.HTTP_404_NOT_FOUND)
+        return Response({
+            'school_name': record.school.name,
+            'already_submitted': bool(record.scheduling_submitted_at),
+            'submitted_at': record.scheduling_submitted_at.isoformat() if record.scheduling_submitted_at else None,
+            'slots': record.preferred_slots or [],
+        })
+
+    def post(self, request, token):
+        from django.utils import timezone
+
+        record = self._get_record(token)
+        if not record:
+            return Response({'error': 'Link not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        slots = request.data.get('slots', [])
+        if not isinstance(slots, list) or len(slots) == 0:
+            return Response({'error': 'Please provide at least one availability slot.'}, status=status.HTTP_400_BAD_REQUEST)
+        if len(slots) > 3:
+            return Response({'error': 'You can submit up to 3 slots.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        cleaned = []
+        for i, slot in enumerate(slots):
+            date = (slot.get('date') or '').strip()
+            time = (slot.get('time') or '').strip()
+            note = (slot.get('note') or '').strip()
+            if not date or not time:
+                return Response({'error': f'Slot {i + 1} is missing a date or time.'}, status=status.HTTP_400_BAD_REQUEST)
+            cleaned.append({'date': date, 'time': time, 'note': note})
+
+        record.preferred_slots = cleaned
+        record.scheduling_submitted_at = timezone.now()
+        record.save(update_fields=['preferred_slots', 'scheduling_submitted_at'])
+
+        return Response({'message': 'Availability submitted. We will be in touch soon.'}, status=status.HTTP_200_OK)

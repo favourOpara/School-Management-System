@@ -225,12 +225,21 @@ def send_onboarding_welcome_email(subscription, registration_type='trial'):
     """
     Send an onboarding welcome email immediately after a school registers or subscribes.
     Informs them that a dedicated onboarding expert will reach out within 24 hours.
+    Includes a personalised link for the school to submit their available date/time slots.
     Sent for all registration types: trial, termly_trial, and subscribe.
     """
     recipients = _get_subscription_recipients(subscription)
     school_name = subscription.school.name
     plan_name = subscription.plan.display_name
     portal_url = f"{INSIGHTWICK_FRONTEND_URL}/portal"
+
+    # Build the scheduling link from the school's OnboardingRecord
+    scheduling_url = None
+    try:
+        onboarding_record = subscription.school.onboarding
+        scheduling_url = f"{INSIGHTWICK_FRONTEND_URL}/schedule-onboarding/{onboarding_record.scheduling_token}"
+    except Exception:
+        pass
 
     if registration_type in ('trial', 'termly_trial'):
         trial_label = '4-month termly free trial' if registration_type == 'termly_trial' else '30-day free trial'
@@ -268,6 +277,25 @@ def send_onboarding_welcome_email(subscription, registration_type='trial'):
         for label, desc in onboarding_items
     )
 
+    scheduling_block = ''
+    if scheduling_url:
+        scheduling_block = f'''
+        <div style="background:#f0fdf4; border:1.5px solid #86efac; border-radius:10px;
+                    padding:18px 20px; margin:20px 0;">
+            <p style="margin:0 0 8px; font-weight:700; font-size:15px; color:#166534;">
+                📅 Tell us when you're free
+            </p>
+            <p style="margin:0 0 14px; color:#374151; font-size:14px; line-height:1.6;">
+                Speed up your onboarding by letting us know your available dates and times.
+                Your expert will reach out at a time that works for you.
+            </p>
+            <a href="{scheduling_url}"
+               style="display:inline-block; background:#16a34a; color:#fff; font-weight:600;
+                      font-size:14px; padding:10px 20px; border-radius:7px; text-decoration:none;">
+                Pick My Availability
+            </a>
+        </div>'''
+
     body_html = f'''
         <p>Hi there,</p>
         <p>{intro}</p>
@@ -281,6 +309,8 @@ def send_onboarding_welcome_email(subscription, registration_type='trial'):
                 This is a free, included service for all InsightWick schools — no extra charge, no strings attached.
             </p>
         </div>
+
+        {scheduling_block}
 
         <p><strong>Here's what your onboarding expert will help you set up:</strong></p>
         <div style="margin:16px 0;">{items_html}</div>

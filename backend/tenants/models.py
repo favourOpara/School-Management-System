@@ -641,6 +641,11 @@ class OnboardingRecord(models.Model):
     # Conversation link token — used by schools to reply via the web page
     conversation_token = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
 
+    # Scheduling — schools submit their available date/time slots via a public link
+    scheduling_token = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
+    preferred_slots = models.JSONField(default=list, blank=True)  # [{"date": "YYYY-MM-DD", "time": "HH:MM", "note": "..."}]
+    scheduling_submitted_at = models.DateTimeField(null=True, blank=True)
+
     assigned_at = models.DateTimeField(null=True, blank=True)
     completed_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)

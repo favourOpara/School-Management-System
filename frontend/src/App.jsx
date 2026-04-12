@@ -26,6 +26,7 @@ import {
   PublicUserGuide,
 } from './pages/public';
 import Conversation from './pages/public/Conversation';
+import ScheduleOnboarding from './pages/public/ScheduleOnboarding';
 
 // Portal pages
 import { PortalLogin, PortalDashboard, PortalVerifyEmail } from './pages/portal';
@@ -276,6 +277,9 @@ function App() {
 
           {/* School conversation reply link (token-based, no auth) */}
           <Route path="/conversation/:token" element={<Conversation />} />
+
+          {/* Onboarding scheduling (token-based, no auth) */}
+          <Route path="/schedule-onboarding/:token" element={<ScheduleOnboarding />} />
 
           {/* Admin Portal */}
           <Route path="/portal" element={<PortalLogin />} />

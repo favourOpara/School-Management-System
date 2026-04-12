@@ -269,6 +269,32 @@ function SchoolCard({ record, onUpdate, readOnly }) {
       {/* Expanded body */}
       {expanded && (
         <div className="ob-card-body">
+
+          {/* Preferred availability slots */}
+          {record.preferred_slots?.length > 0 && (
+            <div style={{ marginBottom: '1rem' }}>
+              <div className="ob-checklist-title" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <Calendar size={13} /> School's Available Times
+              </div>
+              <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap', marginTop: '0.5rem' }}>
+                {record.preferred_slots.map((slot, si) => (
+                  <div key={si} style={{ background: '#f0fdf4', border: '1px solid #86efac', borderRadius: '8px', padding: '8px 12px', fontSize: '0.82rem' }}>
+                    <div style={{ fontWeight: 600, color: '#166534' }}>
+                      {new Date(slot.date + 'T00:00:00').toLocaleDateString('en-NG', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}
+                    </div>
+                    <div style={{ color: '#374151', marginTop: '2px' }}>{slot.time}</div>
+                    {slot.note && <div style={{ color: '#6b7280', fontSize: '0.75rem', marginTop: '2px', fontStyle: 'italic' }}>{slot.note}</div>}
+                  </div>
+                ))}
+              </div>
+              {record.scheduling_submitted_at && (
+                <div style={{ fontSize: '0.72rem', color: '#94a3b8', marginTop: '0.4rem' }}>
+                  Submitted {formatDate(record.scheduling_submitted_at)}
+                </div>
+              )}
+            </div>
+          )}
+
           <div className="ob-checklist-title">Setup Checklist</div>
           <div className="ob-checklist">
             {CHECKLIST_META.map((item) => (

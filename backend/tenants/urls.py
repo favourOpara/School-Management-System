@@ -35,6 +35,8 @@ public_urlpatterns = [
     # Conversation reply link (school replies via email link)
     path('conversation/<uuid:token>/', views.ConversationThreadView.as_view(), name='conversation-thread'),
     path('conversation/<uuid:token>/reply/', views.ConversationReplyView.as_view(), name='conversation-reply'),
+    # Onboarding scheduling (school submits available date/time slots)
+    path('schedule-onboarding/<uuid:token>/', views.ScheduleOnboardingView.as_view(), name='schedule-onboarding'),
 ]
 
 # Webhook URLs
