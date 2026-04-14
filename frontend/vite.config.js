@@ -13,8 +13,6 @@ export default defineConfig({
     allowedHosts: [
       'insightwick.com',
       'www.insightwick.com',
-      'figilschools.com',
-      'www.figilschools.com'
     ]
   }
 })
