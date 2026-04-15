@@ -967,7 +967,7 @@ function OnboardingMgmtTab() {
                 {queue.map((r) => {
                   const sc = OB_STATUS_COLORS[r.onboarding_status] || OB_STATUS_COLORS.pending;
                   const isExpanded = expandedRow === r.id;
-                  const hasDetail = r.onboarding_status === 'completed' || r.onboarding_status === 'in_progress';
+                  const hasDetail = r.onboarding_status === 'completed' || r.onboarding_status === 'in_progress' || r.preferred_slots?.length > 0;
                   return (
                     <React.Fragment key={r.id}>
                       <tr
