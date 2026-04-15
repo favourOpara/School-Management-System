@@ -156,6 +156,15 @@ class SchoolRegistrationView(APIView):
             # Get the plan
             plan = subscription.plan
 
+            # Build the scheduling URL from the school's OnboardingRecord
+            scheduling_url = None
+            try:
+                from django.conf import settings as _settings
+                onboarding_record = school.onboarding
+                scheduling_url = f"{_settings.FRONTEND_URL}/schedule-onboarding/{onboarding_record.scheduling_token}"
+            except Exception:
+                pass
+
             # Base response data (includes admin credentials for display in portal)
             response_data = {
                 'school': SchoolSerializer(school).data,
@@ -163,7 +172,8 @@ class SchoolRegistrationView(APIView):
                     'username': admin_username,
                     'password': admin_password,
                     'note': 'Save these credentials! They are needed to access the School Management System.'
-                }
+                },
+                'scheduling_url': scheduling_url,
             }
 
             registration_type = serializer.validated_data.get('registration_type', 'trial')

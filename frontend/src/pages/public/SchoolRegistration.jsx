@@ -38,6 +38,7 @@ function SchoolRegistration() {
   const [success, setSuccess] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [adminCredentials, setAdminCredentials] = useState(null); // School system admin credentials
+  const [schedulingUrl, setSchedulingUrl] = useState(null);
   const [slugAvailable, setSlugAvailable] = useState(null);
   const [checkingSlug, setCheckingSlug] = useState(false);
   const [plans, setPlans] = useState([]);
@@ -358,6 +359,9 @@ function SchoolRegistration() {
         if (data.admin_credentials) {
           setAdminCredentials(data.admin_credentials);
         }
+        if (data.scheduling_url) {
+          setSchedulingUrl(data.scheduling_url);
+        }
         // Store flag for first-time setup redirect
         const slug = formData.school_name
           .toLowerCase()
@@ -562,6 +566,31 @@ function SchoolRegistration() {
                   </p>
                 </div>
               </div>
+
+              {schedulingUrl && (
+                <div className="register-credentials-box">
+                  <div className="register-credentials-warning">
+                    <AlertCircle size={20} />
+                    <p><strong>Schedule Your Onboarding</strong> — Use this link to pick a convenient time for your setup session. It was also sent to your email.</p>
+                  </div>
+                  <div className="register-credentials-content">
+                    <div className="register-credential-item">
+                      <span className="register-credential-label">Link:</span>
+                      <code className="register-credential-value" style={{ wordBreak: 'break-all', fontSize: '12px' }}>{schedulingUrl}</code>
+                      <button
+                        type="button"
+                        className="register-copy-btn"
+                        onClick={() => navigator.clipboard.writeText(schedulingUrl)}
+                      >
+                        Copy
+                      </button>
+                    </div>
+                  </div>
+                  <p className="register-credentials-note">
+                    Bookmark or save this link — you can use it anytime to update your preferred slots.
+                  </p>
+                </div>
+              )}
 
               <p className="register-success-text">
                 Your Admin Portal login: <strong>{formData.admin_email}</strong>
